@@ -1,11 +1,8 @@
 import { useState } from "react";
-import CalendarHeader from "@/components/CalendarHeader";
-import CalendarGrid from "@/components/CalendarGrid";
-import FamilySidebar from "@/components/FamilySidebar";
+import TodayView from "@/components/TodayView";
 import EventModal from "@/components/EventModal";
 import MemberModal from "@/components/MemberModal";
-import ThemeToggle from "@/components/ThemeToggle";
-import { addMonths, subMonths } from "date-fns";
+import { isToday } from "date-fns";
 
 interface FamilyMember {
   id: string;
@@ -22,86 +19,70 @@ interface Event {
   endTime: Date;
   memberId: string;
   color: string;
+  categories?: string[];
+  isFocus?: boolean;
+}
+
+interface TodayEvent {
+  id: string;
+  title: string;
+  startTime: Date;
+  endTime: Date;
+  timeOfDay?: string;
+  members: { id: string; name: string; color: string; initials: string }[];
+  categories?: string[];
+  isFocus?: boolean;
 }
 
 export default function Home() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<"month" | "week" | "day">("month");
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [currentDate] = useState(new Date());
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<Event | undefined>();
+  const [selectedEventId, setSelectedEventId] = useState<string>();
 
   // todo: remove mock functionality - Mock data for demonstration
   const [members, setMembers] = useState<FamilyMember[]>([
-    { id: '1', name: 'Sarah Johnson', color: '#8B5CF6' },
-    { id: '2', name: 'Mike Johnson', color: '#EC4899' },
-    { id: '3', name: 'Emma Johnson', color: '#10B981' },
-    { id: '4', name: 'Noah Johnson', color: '#F59E0B' },
+    { id: '1', name: 'Mike V', color: '#8B5CF6' },
+    { id: '2', name: 'Claire V', color: '#EC4899' },
   ]);
-
-  const [selectedMembers, setSelectedMembers] = useState<string[]>(
-    members.map(m => m.id)
-  );
 
   // todo: remove mock functionality - Mock events
   const [events, setEvents] = useState<Event[]>([
     {
       id: '1',
-      title: 'Team Meeting',
-      description: 'Monthly team sync',
-      startTime: new Date(2025, 10, 15, 10, 0),
-      endTime: new Date(2025, 10, 15, 11, 0),
+      title: 'Date Night',
+      description: 'Evening out',
+      startTime: new Date(2025, 10, 15, 19, 30),
+      endTime: new Date(2025, 10, 16, 0, 30),
       color: '#8B5CF6',
-      memberId: '1'
+      memberId: '1',
+      isFocus: true
     },
     {
       id: '2',
-      title: 'Soccer Practice',
-      description: 'Weekly practice session',
-      startTime: new Date(2025, 10, 15, 16, 0),
-      endTime: new Date(2025, 10, 15, 17, 30),
+      title: 'Brunch with Mom',
+      description: 'Family time',
+      startTime: new Date(2025, 10, 15, 15, 0),
+      endTime: new Date(2025, 10, 15, 16, 0),
       color: '#EC4899',
-      memberId: '2'
+      memberId: '2',
+      categories: ['Family', 'Work']
     },
     {
       id: '3',
-      title: 'Dentist Appointment',
-      startTime: new Date(2025, 10, 18, 14, 0),
-      endTime: new Date(2025, 10, 18, 15, 0),
-      color: '#10B981',
-      memberId: '3'
-    },
-    {
-      id: '4',
-      title: 'Piano Lesson',
-      startTime: new Date(2025, 10, 20, 15, 0),
-      endTime: new Date(2025, 10, 20, 16, 0),
-      color: '#F59E0B',
-      memberId: '4'
-    },
-    {
-      id: '5',
-      title: 'Family Dinner',
-      description: 'Celebrating anniversary',
-      startTime: new Date(2025, 10, 22, 18, 30),
-      endTime: new Date(2025, 10, 22, 20, 0),
+      title: 'Yoga',
+      startTime: new Date(2025, 10, 15, 17, 30),
+      endTime: new Date(2025, 10, 15, 18, 30),
       color: '#8B5CF6',
-      memberId: '1'
+      memberId: '1',
+      categories: ['Health']
     },
   ]);
 
-  const filteredEvents = events.filter(event => 
-    selectedMembers.includes(event.memberId)
-  );
+  const [tasks, setTasks] = useState(['Call plumber', 'Order cake', 'Family walk']);
 
-  const handleAddEvent = () => {
-    setSelectedEvent(undefined);
-    setEventModalOpen(true);
-  };
-
-  const handleEventClick = (event: Event) => {
-    setSelectedEvent(event);
+  const handleEventClick = (event: TodayEvent) => {
+    setSelectedEventId(event.id);
     setEventModalOpen(true);
   };
 
@@ -131,86 +112,62 @@ export default function Home() {
     setEvents(prev => prev.filter(e => e.id !== eventId));
   };
 
-  const handleAddMember = (memberData: { name: string; color: string }) => {
-    const newMember: FamilyMember = {
-      id: Date.now().toString(),
-      name: memberData.name,
-      color: memberData.color,
-    };
-    setMembers(prev => [...prev, newMember]);
-    setSelectedMembers(prev => [...prev, newMember.id]);
-  };
+  // Convert events to today view format
+  const todayEvents: TodayEvent[] = events
+    .filter(e => isToday(e.startTime))
+    .map(e => {
+      const eventMembers = members
+        .filter(m => m.id === e.memberId || e.id === '1')
+        .map(m => ({
+          ...m,
+          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+        }));
+      
+      return {
+        id: e.id,
+        title: e.title,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        members: eventMembers,
+        categories: e.categories,
+        isFocus: e.isFocus
+      };
+    });
 
-  const handleToggleMember = (memberId: string) => {
-    setSelectedMembers(prev => 
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
-  };
+  const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <FamilySidebar
-        members={members}
-        selectedMembers={selectedMembers}
-        onToggleMember={handleToggleMember}
-        onAddMember={() => setMemberModalOpen(true)}
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-purple-500 to-blue-500">
+      <TodayView
+        date={currentDate}
+        events={todayEvents}
+        tasks={tasks}
+        onEventClick={handleEventClick}
       />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-3 backdrop-blur-xl bg-card/30 border-b border-card-border">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <span className="text-2xl">📅</span>
-            </div>
-            <h1 className="text-xl font-bold">Family Calendar</h1>
-          </div>
-          <ThemeToggle />
-        </div>
-
-        <CalendarHeader
-          currentDate={currentDate}
-          onPreviousMonth={() => setCurrentDate(prev => subMonths(prev, 1))}
-          onNextMonth={() => setCurrentDate(prev => addMonths(prev, 1))}
-          onToday={() => setCurrentDate(new Date())}
-          onAddEvent={handleAddEvent}
-          view={view}
-          onViewChange={setView}
-        />
-
-        <div className="flex-1 overflow-y-auto">
-          <CalendarGrid
-            currentDate={currentDate}
-            events={filteredEvents}
-            onDayClick={(date) => {
-              setSelectedDate(date);
-              setSelectedEvent(undefined);
-              setEventModalOpen(true);
-            }}
-            onEventClick={handleEventClick}
-            selectedDate={selectedDate}
-          />
-        </div>
-      </div>
 
       <EventModal
         isOpen={eventModalOpen}
         onClose={() => {
           setEventModalOpen(false);
-          setSelectedEvent(undefined);
+          setSelectedEventId(undefined);
         }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
         event={selectedEvent}
         members={members}
-        selectedDate={selectedDate}
       />
 
       <MemberModal
         isOpen={memberModalOpen}
         onClose={() => setMemberModalOpen(false)}
-        onSave={handleAddMember}
+        onSave={(memberData) => {
+          const newMember: FamilyMember = {
+            id: Date.now().toString(),
+            name: memberData.name,
+            color: memberData.color,
+          };
+          setMembers(prev => [...prev, newMember]);
+        }}
       />
     </div>
   );
