@@ -22,7 +22,7 @@ interface MonthViewProps {
   events: Event[];
   members: FamilyMember[];
   onEventClick: (event: Event) => void;
-  onViewChange?: (view: 'day' | 'week' | 'month') => void;
+  onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: () => void;
 }
 
@@ -184,6 +184,13 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
               className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98]"
             >
               Month
+            </button>
+            <button
+              onClick={() => onViewChange('timeline')}
+              data-testid="button-view-timeline"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Timeline
             </button>
           </div>
         )}

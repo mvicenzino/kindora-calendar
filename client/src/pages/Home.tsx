@@ -2,6 +2,7 @@ import { useState } from "react";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
+import TimelineView from "@/components/TimelineView";
 import EventModal from "@/components/EventModal";
 import EventDetailView from "@/components/EventDetailView";
 import MemberModal from "@/components/MemberModal";
@@ -23,7 +24,7 @@ interface TodayEvent {
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
+  const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
@@ -243,6 +244,37 @@ export default function Home() {
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
+  // Convert events to timeline view format (all events, no date filtering)
+  const timelineEvents = events
+    .map(e => {
+      const eventMembers = members
+        .filter(m => m.id === e.memberId)
+        .map(m => ({
+          ...m,
+          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+        }));
+      
+      let categories: string[] | undefined;
+      if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
+        categories = ['Family'];
+      } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client') || e.title.toLowerCase().includes('project')) {
+        categories = ['Work'];
+      } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga') || e.title.toLowerCase().includes('workout')) {
+        categories = ['Health'];
+      }
+      
+      return {
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        startTime: new Date(e.startTime),
+        endTime: new Date(e.endTime),
+        members: eventMembers,
+        categories
+      };
+    })
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
   const selectedEventMember = selectedEvent ? members.find(m => m.id === selectedEvent.memberId) : undefined;
 
@@ -283,6 +315,15 @@ export default function Home() {
             ...m,
             initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
           }))}
+          onEventClick={handleEventClick}
+          onViewChange={setView}
+          onAddEvent={handleAddEvent}
+        />
+      )}
+
+      {view === 'timeline' && (
+        <TimelineView
+          events={timelineEvents}
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}

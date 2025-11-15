@@ -26,7 +26,7 @@ interface TodayViewProps {
   events: Event[];
   tasks: string[];
   onEventClick: (event: Event) => void;
-  onViewChange?: (view: 'day' | 'week' | 'month') => void;
+  onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: () => void;
 }
 
@@ -182,7 +182,7 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
 
         {/* View Toggle */}
         {onViewChange && (
-          <div className="flex gap-3 pt-4 rounded-3xl bg-white/10 backdrop-blur-md p-2">
+          <div className="flex gap-2 pt-4 rounded-3xl bg-white/10 backdrop-blur-md p-2">
             <button
               onClick={() => onViewChange('day')}
               data-testid="button-view-day"
@@ -203,6 +203,13 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
               className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
             >
               Month
+            </button>
+            <button
+              onClick={() => onViewChange('timeline')}
+              data-testid="button-view-timeline"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Timeline
             </button>
           </div>
         )}
