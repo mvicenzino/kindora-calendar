@@ -3,6 +3,7 @@ import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
 import EventModal from "@/components/EventModal";
+import EventDetailView from "@/components/EventDetailView";
 import MemberModal from "@/components/MemberModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
 
@@ -84,6 +86,11 @@ export default function Home() {
 
   const handleEventClick = (event: TodayEvent) => {
     setSelectedEventId(event.id);
+    setEventDetailOpen(true);
+  };
+
+  const handleOpenEditFromDetail = () => {
+    setEventDetailOpen(false);
     setEventModalOpen(true);
   };
 
@@ -237,6 +244,7 @@ export default function Home() {
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
+  const selectedEventMember = selectedEvent ? members.find(m => m.id === selectedEvent.memberId) : undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
@@ -280,6 +288,21 @@ export default function Home() {
           onAddEvent={handleAddEvent}
         />
       )}
+
+      <EventDetailView
+        isOpen={eventDetailOpen}
+        onClose={() => {
+          setEventDetailOpen(false);
+          setSelectedEventId(undefined);
+        }}
+        onEdit={handleOpenEditFromDetail}
+        event={selectedEvent ? {
+          ...selectedEvent,
+          startTime: new Date(selectedEvent.startTime),
+          endTime: new Date(selectedEvent.endTime)
+        } : undefined}
+        member={selectedEventMember}
+      />
 
       <EventModal
         isOpen={eventModalOpen}
