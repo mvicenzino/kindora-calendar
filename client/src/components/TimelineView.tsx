@@ -48,19 +48,21 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
   };
 
   return (
-    <div className="min-h-screen flex flex-col p-4">
+    <div className="min-h-full flex flex-col p-3 sm:p-4 md:p-6">
       {/* Header */}
-      <div className="w-full max-w-3xl mx-auto px-2 mb-8">
-        <div className="flex items-start justify-between gap-6">
+      <div className="w-full max-w-3xl mx-auto px-1 sm:px-2 mb-6 sm:mb-8">
+        <div className="flex items-start justify-between gap-3 sm:gap-6">
           <div>
-            <h1 className="text-5xl font-bold text-white">Timeline</h1>
-            <p className="text-lg text-white/70 mt-1">Your events in time</p>
+            <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
+            <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">Your events in time</p>
           </div>
           {onAddEvent && (
             <button
+              type="button"
               onClick={onAddEvent}
               data-testid="button-add-event"
-              className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
+              className="w-11 h-11 sm:w-10 sm:h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-1 sm:mt-2 touch-manipulation"
+              aria-label="Add event"
             >
               <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
             </button>
@@ -174,13 +176,13 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
 
       {/* View Toggle */}
       {onViewChange && (
-        <div className="w-full max-w-3xl mx-auto mt-8">
-          <div className="flex gap-3 rounded-3xl bg-white/10 backdrop-blur-md p-2">
+        <div className="w-full max-w-3xl mx-auto mt-6 sm:mt-8 pb-safe">
+          <div className="flex gap-1.5 sm:gap-3 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
             <button
               type="button"
               onClick={() => onViewChange('day')}
               data-testid="button-view-day"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Day
             </button>
@@ -188,7 +190,7 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
               type="button"
               onClick={() => onViewChange('week')}
               data-testid="button-view-week"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Week
             </button>
@@ -196,7 +198,7 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
               type="button"
               onClick={() => onViewChange('month')}
               data-testid="button-view-month"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Month
             </button>
@@ -204,7 +206,7 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
               type="button"
               onClick={() => onViewChange('timeline')}
               data-testid="button-view-timeline"
-              className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Timeline
             </button>

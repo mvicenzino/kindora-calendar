@@ -59,22 +59,24 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-full flex items-center justify-center p-3 sm:p-4 md:p-6">
+      <div className="w-full max-w-md space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="px-2">
-          <div className="flex items-start gap-6">
+        <div className="px-1 sm:px-2">
+          <div className="flex items-start gap-3 sm:gap-6">
             <div>
-              <h1 className="text-5xl font-bold text-white">{dayTitle}</h1>
+              <h1 className="text-4xl sm:text-5xl font-bold text-white">{dayTitle}</h1>
               {daySubtitle && (
-                <p className="text-lg text-white/70 mt-1">{daySubtitle}</p>
+                <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">{daySubtitle}</p>
               )}
             </div>
             {onAddEvent && (
               <button
+                type="button"
                 onClick={onAddEvent}
                 data-testid="button-add-event"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
+                className="w-11 h-11 sm:w-10 sm:h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-1 sm:mt-2 touch-manipulation"
+                aria-label="Add event"
               >
                 <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
@@ -84,7 +86,7 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
 
         {/* Timed Events */}
         {timedEvents.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {timedEvents.map((event, idx) => {
               const eventColors = [
                 '#7A8A7D', // brownish-green for Brunch
@@ -94,14 +96,15 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
               ];
               return (
                 <button
+                  type="button"
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   data-testid={`event-${event.id}`}
-                  className="w-full rounded-3xl p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
+                  className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation"
                   style={{ backgroundColor: eventColors[idx % eventColors.length] }}
                 >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-xl font-semibold text-white flex-1">
+                  <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+                    <h3 className="text-lg sm:text-xl font-semibold text-white flex-1">
                       {event.title}
                     </h3>
                     <div className="flex items-center gap-2 ml-3">
@@ -182,12 +185,12 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
 
         {/* View Toggle */}
         {onViewChange && (
-          <div className="flex gap-2 pt-4 rounded-3xl bg-white/10 backdrop-blur-md p-2">
+          <div className="flex gap-1.5 sm:gap-2 pt-3 sm:pt-4 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
             <button
               type="button"
               onClick={() => onViewChange('day')}
               data-testid="button-view-day"
-              className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Day
             </button>
@@ -195,7 +198,7 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
               type="button"
               onClick={() => onViewChange('week')}
               data-testid="button-view-week"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Week
             </button>
@@ -203,7 +206,7 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
               type="button"
               onClick={() => onViewChange('month')}
               data-testid="button-view-month"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Month
             </button>
@@ -211,7 +214,7 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
               type="button"
               onClick={() => onViewChange('timeline')}
               data-testid="button-view-timeline"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
             >
               Timeline
             </button>

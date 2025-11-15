@@ -304,13 +304,13 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex flex-col">
+    <div className="min-h-screen h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex flex-col overflow-hidden">
       <Header 
         onMessagesClick={handleMessagesClick}
         onProfileClick={handleProfileClick}
       />
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {view === 'day' && (
         <TodayView
           date={currentDate}
