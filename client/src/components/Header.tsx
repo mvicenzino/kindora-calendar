@@ -11,36 +11,46 @@ export default function Header({ onMessagesClick, onProfileClick }: HeaderProps)
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Left: App branding */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-10 h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-amber-300/50 flex items-center justify-center shadow-lg shadow-orange-500/20">
+          <div className="w-10 h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 border-2 border-blue-300/50 flex items-center justify-center shadow-lg shadow-blue-500/20">
             <svg
               viewBox="0 0 100 100"
               className="w-7 h-7"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* Sun rays */}
-              <g fill="#FFF" className="animate-pulse">
-                <circle cx="50" cy="10" r="3"/>
-                <circle cx="75" cy="18" r="3"/>
-                <circle cx="90" cy="50" r="3"/>
-                <circle cx="75" cy="82" r="3"/>
-                <circle cx="50" cy="90" r="3"/>
-                <circle cx="25" cy="82" r="3"/>
-                <circle cx="10" cy="50" r="3"/>
-                <circle cx="25" cy="18" r="3"/>
+              {/* Calendar base */}
+              <rect x="20" y="25" width="60" height="60" rx="4" fill="#FFF"/>
+              
+              {/* Calendar header bar */}
+              <rect x="20" y="25" width="60" height="15" rx="4" fill="#FFF" fillOpacity="0.9"/>
+              <rect x="20" y="25" width="60" height="10" fill="#E0E7FF"/>
+              
+              {/* Binding rings */}
+              <circle cx="35" cy="22" r="3" fill="#FFF"/>
+              <circle cx="50" cy="22" r="3" fill="#FFF"/>
+              <circle cx="65" cy="22" r="3" fill="#FFF"/>
+              
+              {/* Calendar grid dots (representing days) */}
+              <g fill="#94A3B8">
+                <circle cx="30" cy="50" r="2"/>
+                <circle cx="40" cy="50" r="2"/>
+                <circle cx="50" cy="50" r="2"/>
+                <circle cx="60" cy="50" r="2"/>
+                <circle cx="70" cy="50" r="2"/>
+                
+                <circle cx="30" cy="60" r="2"/>
+                <circle cx="40" cy="60" r="2"/>
+                <circle cx="60" cy="60" r="2"/>
+                <circle cx="70" cy="60" r="2"/>
+                
+                <circle cx="30" cy="70" r="2"/>
+                <circle cx="40" cy="70" r="2"/>
+                <circle cx="50" cy="70" r="2"/>
+                <circle cx="60" cy="70" r="2"/>
+                <circle cx="70" cy="70" r="2"/>
               </g>
-              {/* Sun face */}
-              <circle cx="50" cy="50" r="25" fill="#FFF"/>
-              {/* Eyes */}
-              <circle cx="42" cy="45" r="3" fill="#F59E0B"/>
-              <circle cx="58" cy="45" r="3" fill="#F59E0B"/>
-              {/* Happy smile */}
-              <path
-                d="M 38 55 Q 50 63 62 55"
-                stroke="#F59E0B"
-                strokeWidth="3"
-                fill="none"
-                strokeLinecap="round"
-              />
+              
+              {/* Highlighted day (today) with pulse animation */}
+              <circle cx="50" cy="60" r="5" fill="#8B5CF6" className="animate-pulse"/>
             </svg>
           </div>
           <div>
