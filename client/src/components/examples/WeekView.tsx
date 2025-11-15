@@ -45,6 +45,7 @@ export default function WeekViewExample() {
       date={new Date()}
       events={mockEvents}
       members={mockMembers}
+      messages={[]}
       onEventClick={(event) => console.log('Event clicked:', event.title)}
     />
   );
