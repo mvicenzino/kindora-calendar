@@ -54,6 +54,7 @@ Preferred communication style: Simple, everyday language.
 - Routes organized in `/api` namespace:
   - `/api/family-members` - CRUD operations for family members
   - `/api/events` - CRUD operations for calendar events
+  - `/api/messages` - Create and retrieve event-related messages
 - Standardized error responses with appropriate HTTP status codes
 - Request/response logging with duration tracking
 
@@ -75,7 +76,7 @@ Preferred communication style: Simple, everyday language.
 ### Data Storage Solutions
 
 **Database Schema Design**
-Two primary entities with clean separation of concerns:
+Three primary entities with clean separation of concerns:
 
 1. **Family Members Table**
    - Unique identifier (UUID primary key)
@@ -89,6 +90,14 @@ Two primary entities with clean separation of concerns:
    - Start/end timestamps for scheduling
    - Member association via foreign key
    - Color inheritance from member (denormalized for performance)
+
+3. **Messages Table** *(New - November 2025)*
+   - Unique identifier (UUID primary key)
+   - Event association via foreign key
+   - Sender name for message attribution
+   - Message content text
+   - Timestamp (auto-generated on creation)
+   - Automatic cleanup when parent event is deleted
 
 **Migration Strategy**
 - Drizzle Kit configured for PostgreSQL migrations
@@ -184,7 +193,7 @@ Two primary entities with clean separation of concerns:
 **Event Detail View**
 - Click any event to view full details before editing
 - Displays: title, description, date, time, member information
-- Messaging section for event-related communication
+- Messaging section for event-related communication (functional with backend)
 - Notes section for additional event context
 - Edit button opens edit modal
 - Proper state management (resets between events)
@@ -193,6 +202,25 @@ Two primary entities with clean separation of concerns:
 - Delete events from edit modal
 - Confirmation before deletion
 - Automatic cache invalidation and UI update
+
+### Messages Feature *(New - November 2025)*
+
+**In-App Messaging**
+- Send messages related to specific events
+- Messages accessible via header icon
+- Messages modal displays all messages grouped by event
+- Each message shows sender name, timestamp, and content
+- Messages automatically deleted when parent event is deleted
+- Real-time toast notifications on send success/failure
+- Loading states during message sending
+
+**Messages Modal**
+- Opens via messages icon in header
+- Shows empty state when no messages exist
+- Messages organized by event with event title and date
+- Liquid glass design consistent with app aesthetic
+- Scrollable list for multiple messages
+- Close via button or backdrop click
 
 ### Family Member Management
 
@@ -233,6 +261,16 @@ Two primary entities with clean separation of concerns:
 - Consistent button styling across views
 
 ## Recent Development History
+
+### November 15, 2025 - Messages Feature Implementation
+- Added messages table to database schema with eventId, senderName, content, createdAt
+- Created API endpoints: GET /api/messages and POST /api/messages with validation
+- Built MessagesModal component to display messages grouped by event
+- Updated EventDetailView to save messages to backend with toast notifications
+- Integrated messages icon in header to open MessagesModal
+- Proper date handling and Dialog state management
+- End-to-end testing completed successfully
+- All functionality verified and working
 
 ### November 15, 2025 - Timeline View Implementation
 - Created TimelineView component with vertical scrolling layout
