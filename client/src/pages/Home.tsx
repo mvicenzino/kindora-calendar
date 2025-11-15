@@ -7,6 +7,7 @@ import TimelineView from "@/components/TimelineView";
 import EventModal from "@/components/EventModal";
 import EventDetailView from "@/components/EventDetailView";
 import MemberModal from "@/components/MemberModal";
+import ProfileModal from "@/components/ProfileModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -29,7 +30,9 @@ export default function Home() {
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
+  const [selectedMemberId, setSelectedMemberId] = useState<string>();
 
   // Fetch family members
   const { data: members = [] } = useQuery<FamilyMember[]>({
@@ -285,8 +288,19 @@ export default function Home() {
   };
 
   const handleProfileClick = () => {
-    // TODO: Open profile view
-    console.log('Profile clicked');
+    setProfileModalOpen(true);
+  };
+
+  const handleEditMember = (member: FamilyMember) => {
+    setSelectedMemberId(member.id);
+    setProfileModalOpen(false);
+    setMemberModalOpen(true);
+  };
+
+  const handleAddMemberFromProfile = () => {
+    setSelectedMemberId(undefined);
+    setProfileModalOpen(false);
+    setMemberModalOpen(true);
   };
 
   return (
@@ -383,10 +397,26 @@ export default function Home() {
 
       <MemberModal
         isOpen={memberModalOpen}
-        onClose={() => setMemberModalOpen(false)}
+        onClose={() => {
+          setMemberModalOpen(false);
+          setSelectedMemberId(undefined);
+        }}
         onSave={async (memberData) => {
           await createMemberMutation.mutateAsync(memberData);
+          setMemberModalOpen(false);
+          setProfileModalOpen(true);
         }}
+      />
+
+      <ProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        members={members.map(m => ({
+          ...m,
+          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+        }))}
+        onEditMember={handleEditMember}
+        onAddMember={handleAddMemberFromProfile}
       />
     </div>
   );
