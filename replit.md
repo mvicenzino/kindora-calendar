@@ -95,7 +95,9 @@ Three primary entities with clean separation of concerns:
    - Unique identifier (UUID primary key)
    - Event association via foreign key
    - Sender name for message attribution
+   - Recipient ID for targeted love notes
    - Message content text
+   - Optional formatting fields (emoji, fontWeight, fontStyle)
    - Timestamp (auto-generated on creation)
    - Automatic cleanup when parent event is deleted
 
@@ -209,6 +211,11 @@ Three primary entities with clean separation of concerns:
 - Send personalized messages related to specific events
 - Messages accessible via header icon
 - **Love Note Features**:
+  - **Recipient Selection**: Choose which family member receives the love note
+    - Event owner automatically filtered out (cannot send to yourself)
+    - First available recipient auto-selected
+    - Visual recipient selector with avatars and names
+    - Success toast shows recipient's name
   - Choose from 10 love emojis (❤️, 💕, 💖, 💝, 🌹, 💐, 🥰, 😍, 💗, 💓)
   - Bold and italic text formatting
   - Live preview while typing with formatting applied
@@ -267,6 +274,19 @@ Three primary entities with clean separation of concerns:
 - Consistent button styling across views
 
 ## Recent Development History
+
+### November 15, 2025 - Love Notes Recipient Selection Feature
+- Added recipientId field to messages schema for targeted love notes
+- Updated EventDetailView with recipient selector interface:
+  - Visual selector with avatar buttons for each family member
+  - Automatic filtering of event owner (cannot send to yourself)
+  - First available recipient auto-selected when modal opens
+  - Dynamic placeholder text showing selected recipient's name
+- Updated storage layer and API routes to handle recipientId
+- Enhanced form reset to clear recipient selection along with emoji and formatting
+- Success toast now displays the recipient's name
+- End-to-end testing passed successfully with all features working
+- Architect review passed with no blocking issues
 
 ### November 15, 2025 - Love Note Formatting Feature
 - Enhanced messages with personalization options
