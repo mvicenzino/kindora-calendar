@@ -1,8 +1,9 @@
 import { useState } from "react";
 import TodayView from "@/components/TodayView";
+import WeekView from "@/components/WeekView";
 import EventModal from "@/components/EventModal";
 import MemberModal from "@/components/MemberModal";
-import { isToday } from "date-fns";
+import { isToday, isThisWeek, startOfWeek, endOfWeek } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
@@ -20,6 +21,7 @@ interface TodayEvent {
 
 export default function Home() {
   const [currentDate] = useState(new Date());
+  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
@@ -172,16 +174,63 @@ export default function Home() {
       return a.startTime.getTime() - b.startTime.getTime();
     });
 
+  // Convert events to week view format
+  const weekEvents = events
+    .filter(e => isThisWeek(new Date(e.startTime), { weekStartsOn: 0 }))
+    .map(e => {
+      const eventMembers = members
+        .filter(m => m.id === e.memberId)
+        .map(m => ({
+          ...m,
+          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+        }));
+      
+      let categories: string[] | undefined;
+      if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
+        categories = ['Family'];
+      } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client') || e.title.toLowerCase().includes('project')) {
+        categories = ['Work'];
+      } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga') || e.title.toLowerCase().includes('workout')) {
+        categories = ['Health'];
+      }
+      
+      return {
+        id: e.id,
+        title: e.title,
+        startTime: new Date(e.startTime),
+        endTime: new Date(e.endTime),
+        members: eventMembers,
+        categories
+      };
+    })
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
-      <TodayView
-        date={currentDate}
-        events={todayEvents}
-        tasks={tasks}
-        onEventClick={handleEventClick}
-      />
+      {view === 'day' && (
+        <TodayView
+          date={currentDate}
+          events={todayEvents}
+          tasks={tasks}
+          onEventClick={handleEventClick}
+          onViewChange={setView}
+        />
+      )}
+      
+      {view === 'week' && (
+        <WeekView
+          date={currentDate}
+          events={weekEvents}
+          members={members.map(m => ({
+            ...m,
+            initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+          }))}
+          onEventClick={handleEventClick}
+          onViewChange={setView}
+        />
+      )}
 
       <EventModal
         isOpen={eventModalOpen}

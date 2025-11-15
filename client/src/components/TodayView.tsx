@@ -26,9 +26,10 @@ interface TodayViewProps {
   events: Event[];
   tasks: string[];
   onEventClick: (event: Event) => void;
+  onViewChange?: (view: 'day' | 'week' | 'month') => void;
 }
 
-export default function TodayView({ date, events, tasks, onEventClick }: TodayViewProps) {
+export default function TodayView({ date, events, tasks, onEventClick, onViewChange }: TodayViewProps) {
   const focusEvents = events.filter(e => e.isFocus);
   const regularEvents = events.filter(e => !e.isFocus);
 
@@ -141,6 +142,33 @@ export default function TodayView({ date, events, tasks, onEventClick }: TodayVi
             Sometime Today
           </p>
         </div>
+
+        {/* View Toggle */}
+        {onViewChange && (
+          <div className="flex gap-3 pt-4 rounded-3xl bg-white/10 backdrop-blur-md p-2">
+            <button
+              onClick={() => onViewChange('day')}
+              data-testid="button-view-day"
+              className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98]"
+            >
+              Day
+            </button>
+            <button
+              onClick={() => onViewChange('week')}
+              data-testid="button-view-week"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Week
+            </button>
+            <button
+              onClick={() => onViewChange('month')}
+              data-testid="button-view-month"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Month
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

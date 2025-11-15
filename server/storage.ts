@@ -41,9 +41,10 @@ export class MemStorage implements IStorage {
     this.familyMembers.set(member1.id, member1);
     this.familyMembers.set(member2.id, member2);
 
-    // Initialize with sample events for today
+    // Initialize with sample events for the week
     const today = new Date();
     const sampleEvents: Event[] = [
+      // Today's events
       {
         id: randomUUID(),
         title: 'Date Night at Jockey Hollow',
@@ -59,6 +60,89 @@ export class MemStorage implements IStorage {
         description: 'Family time',
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 11, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 30),
+        memberId: member2.id,
+        color: member2.color,
+      },
+      // Earlier this week
+      {
+        id: randomUUID(),
+        title: 'Dinner with Emma',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 17, 30),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 19, 0),
+        memberId: member1.id,
+        color: member1.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Grocery Shopping',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 11, 0),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 12, 0),
+        memberId: member1.id,
+        color: member1.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Sebby\'s Birthday',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 9, 0),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 11, 0),
+        memberId: member2.id,
+        color: member2.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Pack for trip',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 9, 0),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 10, 0),
+        memberId: member1.id,
+        color: member1.color,
+      },
+      // Later this week
+      {
+        id: randomUUID(),
+        title: 'Project Meeting',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 13, 0),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 14, 0),
+        memberId: member2.id,
+        color: member2.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Workout',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 9, 0),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 10, 0),
+        memberId: member1.id,
+        color: member1.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Pick up rental car',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 12, 0),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 13, 0),
+        memberId: member2.id,
+        color: member2.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Dr. Schwartz',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 8, 30),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 9, 30),
+        memberId: member1.id,
+        color: member1.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Zoo visit',
+        description: null,
+        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 14, 0),
+        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 16, 0),
         memberId: member2.id,
         color: member2.color,
       },
@@ -119,10 +203,14 @@ export class MemStorage implements IStorage {
       throw new Error(`Event with id ${id} not found`);
     }
     
+    // Ensure dates are Date objects after merge
     const updatedEvent: Event = {
       ...existingEvent,
       ...updateData,
       id,
+      startTime: updateData.startTime ? new Date(updateData.startTime) : existingEvent.startTime,
+      endTime: updateData.endTime ? new Date(updateData.endTime) : existingEvent.endTime,
+      description: updateData.description !== undefined ? updateData.description : existingEvent.description,
     };
     this.events.set(id, updatedEvent);
     return updatedEvent;
