@@ -50,10 +50,10 @@ export default function Home() {
   const [events, setEvents] = useState<Event[]>([
     {
       id: '1',
-      title: 'Date Night',
+      title: 'Date Night at Jockey Hollow',
       description: 'Evening out',
       startTime: new Date(2025, 10, 15, 19, 30),
-      endTime: new Date(2025, 10, 16, 0, 30),
+      endTime: new Date(2025, 10, 15, 23, 0),
       color: '#8B5CF6',
       memberId: '1',
       isFocus: true
@@ -62,17 +62,35 @@ export default function Home() {
       id: '2',
       title: 'Brunch with Mom',
       description: 'Family time',
-      startTime: new Date(2025, 10, 15, 15, 0),
-      endTime: new Date(2025, 10, 15, 16, 0),
+      startTime: new Date(2025, 10, 15, 11, 0),
+      endTime: new Date(2025, 10, 15, 12, 30),
       color: '#EC4899',
       memberId: '2',
-      categories: ['Family', 'Work']
+      categories: ['Family']
     },
     {
       id: '3',
-      title: 'Yoga',
-      startTime: new Date(2025, 10, 15, 17, 30),
-      endTime: new Date(2025, 10, 15, 18, 30),
+      title: 'Meeting with Client',
+      startTime: new Date(2025, 10, 15, 13, 30),
+      endTime: new Date(2025, 10, 15, 14, 30),
+      color: '#8B5CF6',
+      memberId: '1',
+      categories: ['Work']
+    },
+    {
+      id: '4',
+      title: "Sebby's Birthday Party",
+      startTime: new Date(2025, 10, 15, 14, 0),
+      endTime: new Date(2025, 10, 15, 17, 0),
+      color: '#EC4899',
+      memberId: '2',
+      categories: ['Family']
+    },
+    {
+      id: '5',
+      title: 'Gym',
+      startTime: new Date(2025, 10, 15, 18, 0),
+      endTime: new Date(2025, 10, 15, 19, 0),
       color: '#8B5CF6',
       memberId: '1',
       categories: ['Health']
@@ -137,7 +155,7 @@ export default function Home() {
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#6B7A9E] via-[#7B8AAE] to-[#8B9ABE]">
+    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
       <TodayView
         date={currentDate}
         events={todayEvents}
