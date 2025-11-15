@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Header from "@/components/Header";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
@@ -266,7 +267,7 @@ export default function Home() {
       return {
         id: e.id,
         title: e.title,
-        description: e.description,
+        description: e.description || undefined,
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
@@ -278,9 +279,25 @@ export default function Home() {
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
   const selectedEventMember = selectedEvent ? members.find(m => m.id === selectedEvent.memberId) : undefined;
 
+  const handleMessagesClick = () => {
+    // TODO: Open messages view
+    console.log('Messages clicked');
+  };
+
+  const handleProfileClick = () => {
+    // TODO: Open profile view
+    console.log('Profile clicked');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
-      {view === 'day' && (
+    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex flex-col">
+      <Header 
+        onMessagesClick={handleMessagesClick}
+        onProfileClick={handleProfileClick}
+      />
+      
+      <div className="flex-1 overflow-auto">
+        {view === 'day' && (
         <TodayView
           date={currentDate}
           events={todayEvents}
@@ -329,6 +346,7 @@ export default function Home() {
           onAddEvent={handleAddEvent}
         />
       )}
+      </div>
 
       <EventDetailView
         isOpen={eventDetailOpen}
@@ -339,6 +357,7 @@ export default function Home() {
         onEdit={handleOpenEditFromDetail}
         event={selectedEvent ? {
           ...selectedEvent,
+          description: selectedEvent.description || undefined,
           startTime: new Date(selectedEvent.startTime),
           endTime: new Date(selectedEvent.endTime)
         } : undefined}
