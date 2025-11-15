@@ -1,8 +1,8 @@
-# Family Calendar Application
+# Calendora - Family Calendar Application
 
 ## Overview
 
-A modern family calendar web application featuring a distinctive "liquid glass" UI design aesthetic. The application allows families to create, manage, and share events across four distinct views: Day, Week, Month, and Timeline. The interface is inspired by modern OS design languages (macOS, iOS, Windows 11 Fluent Design), providing an elegant, tactile experience for managing family events.
+Calendora is a modern family calendar web application featuring a distinctive "liquid glass" UI design aesthetic. The application allows families to create, manage, and share events across four distinct views: Day, Week, Month, and Timeline. The interface is inspired by modern OS design languages (macOS, iOS, Windows 11 Fluent Design), providing an elegant, tactile experience for managing family events.
 
 The application uses a full-stack TypeScript architecture with React on the frontend and Express on the backend, featuring multiple calendar views, event management, and family member coordination.
 

@@ -44,7 +44,7 @@ export default function Header({ onMessagesClick, onProfileClick }: HeaderProps)
             </svg>
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-white leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}>DayMan</h1>
+            <h1 className="text-lg sm:text-xl font-bold text-white leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}>Calendora</h1>
             <p className="text-[10px] sm:text-xs text-white/70 hidden sm:block">Stay connected</p>
           </div>
         </div>

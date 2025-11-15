@@ -1,4 +1,4 @@
-# Family Calendar - Liquid Glass UI Design Guidelines
+# Calendora - Liquid Glass UI Design Guidelines
 
 ## Design Approach
 
