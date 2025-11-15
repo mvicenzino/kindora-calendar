@@ -31,11 +31,19 @@ interface TodayViewProps {
 }
 
 export default function TodayView({ date, events, tasks, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
-  // All events are treated the same now, sorted by time
-  const allEvents = events;
   const isViewingToday = isToday(date);
   const dayTitle = isViewingToday ? "Today" : format(date, 'EEEE');
   const daySubtitle = isViewingToday ? undefined : format(date, 'MMM d, yyyy');
+
+  // Separate "Sometime Today" events (23:58-23:59) from timed events
+  const isSometimeTodayEvent = (event: Event) => {
+    const hour = event.startTime.getHours();
+    const minute = event.startTime.getMinutes();
+    return hour === 23 && minute === 58;
+  };
+
+  const timedEvents = events.filter(e => !isSometimeTodayEvent(e));
+  const sometimeTodayEvents = events.filter(e => isSometimeTodayEvent(e));
 
   const formatTimeRange = (start: Date, end: Date) => {
     return `${format(start, 'h:mm')} ${format(start, 'a')} - ${format(end, 'h:mm')} ${format(end, 'a')}`;
@@ -72,10 +80,10 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
           </div>
         </div>
 
-        {/* All Events (sorted by time) */}
-        {allEvents.length > 0 && (
+        {/* Timed Events */}
+        {timedEvents.length > 0 && (
           <div className="space-y-3">
-            {allEvents.map((event, idx) => {
+            {timedEvents.map((event, idx) => {
               const eventColors = [
                 '#7A8A7D', // brownish-green for Brunch
                 '#5D6D7E', // blue-gray for Meeting
@@ -121,11 +129,54 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
         )}
 
         {/* Sometime Today */}
-        <div className="px-2 pt-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-            Sometime Today
-          </p>
-        </div>
+        {sometimeTodayEvents.length > 0 && (
+          <div className="space-y-3 pt-6">
+            <div className="px-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                Sometime Today
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {sometimeTodayEvents.map((event, idx) => {
+                const complementaryColors = [
+                  '#9A7A8D', // muted purple-pink
+                  '#7A8A9D', // soft blue-gray
+                  '#8A9A7D', // sage green
+                  '#9D8A7A', // warm taupe
+                ];
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => onEventClick(event)}
+                    data-testid={`sometime-event-${event.id}`}
+                    className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md"
+                    style={{ backgroundColor: complementaryColors[idx % complementaryColors.length] }}
+                  >
+                    <div className="flex items-start justify-between mb-1">
+                      <h4 className="text-sm font-semibold text-white flex-1 leading-tight">
+                        {event.title}
+                      </h4>
+                      {event.members.map(member => (
+                        <div
+                          key={member.id}
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/30 ml-1"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.initials}
+                        </div>
+                      ))}
+                    </div>
+                    {event.categories && event.categories.length > 0 && (
+                      <span className="text-[10px] text-white/70">
+                        {event.categories[0]}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* View Toggle */}
         {onViewChange && (
