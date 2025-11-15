@@ -37,9 +37,11 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
 
   // Separate "Sometime Today" events (23:58-23:59) from timed events
   const isSometimeTodayEvent = (event: Event) => {
-    const hour = event.startTime.getHours();
-    const minute = event.startTime.getMinutes();
-    return hour === 23 && minute === 58;
+    const startHour = event.startTime.getHours();
+    const startMinute = event.startTime.getMinutes();
+    const endHour = event.endTime.getHours();
+    const endMinute = event.endTime.getMinutes();
+    return startHour === 23 && startMinute === 58 && endHour === 23 && endMinute === 59;
   };
 
   const timedEvents = events.filter(e => !isSometimeTodayEvent(e));
