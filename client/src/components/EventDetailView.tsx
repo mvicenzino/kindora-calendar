@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, Edit, MessageCircle, StickyNote } from "lucide-react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface FamilyMember {
   id: string;
@@ -39,6 +39,14 @@ export default function EventDetailView({
 }: EventDetailViewProps) {
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState("");
+
+  // Reset message and notes when a new event is opened
+  useEffect(() => {
+    if (isOpen && event) {
+      setMessage("");
+      setNotes("");
+    }
+  }, [isOpen, event?.id]);
 
   if (!event || !member) return null;
 
