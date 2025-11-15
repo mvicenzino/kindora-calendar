@@ -1,4 +1,4 @@
-import { MessageCircle, User, Sun } from "lucide-react";
+import { MessageCircle, User } from "lucide-react";
 
 interface HeaderProps {
   onMessagesClick?: () => void;
@@ -12,7 +12,36 @@ export default function Header({ onMessagesClick, onProfileClick }: HeaderProps)
         {/* Left: App branding */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-10 h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 border-2 border-amber-300/50 flex items-center justify-center shadow-lg shadow-orange-500/20">
-            <Sun className="w-6 h-6 text-white" strokeWidth={2.5} />
+            <svg
+              viewBox="0 0 100 100"
+              className="w-7 h-7"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Sun rays */}
+              <g fill="#FFF" className="animate-pulse">
+                <circle cx="50" cy="10" r="3"/>
+                <circle cx="75" cy="18" r="3"/>
+                <circle cx="90" cy="50" r="3"/>
+                <circle cx="75" cy="82" r="3"/>
+                <circle cx="50" cy="90" r="3"/>
+                <circle cx="25" cy="82" r="3"/>
+                <circle cx="10" cy="50" r="3"/>
+                <circle cx="25" cy="18" r="3"/>
+              </g>
+              {/* Sun face */}
+              <circle cx="50" cy="50" r="25" fill="#FFF"/>
+              {/* Eyes */}
+              <circle cx="42" cy="45" r="3" fill="#F59E0B"/>
+              <circle cx="58" cy="45" r="3" fill="#F59E0B"/>
+              {/* Happy smile */}
+              <path
+                d="M 38 55 Q 50 63 62 55"
+                stroke="#F59E0B"
+                strokeWidth="3"
+                fill="none"
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-white leading-none" style={{ fontFamily: 'Poppins, sans-serif' }}>DayMan</h1>
