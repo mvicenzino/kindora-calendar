@@ -255,7 +255,7 @@ export default function Home() {
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  // Convert events to timeline view format (all events, no date filtering)
+  // Convert events to timeline view format (all events, sorted newest first)
   const timelineEvents = events
     .map(e => {
       const eventMembers = members
@@ -284,7 +284,7 @@ export default function Home() {
         categories
       };
     })
-    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    .sort((a, b) => b.startTime.getTime() - a.startTime.getTime()); // Reversed: newest first
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
   const selectedEventMember = selectedEvent ? members.find(m => m.id === selectedEvent.memberId) : undefined;
