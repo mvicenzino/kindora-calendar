@@ -77,9 +77,9 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
               <button
                 onClick={onAddEvent}
                 data-testid="button-add-event"
-                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98]"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
               >
-                <Plus className="w-5 h-5 text-white" />
+                <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
             )}
           </div>
