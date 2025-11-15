@@ -205,11 +205,17 @@ Three primary entities with clean separation of concerns:
 
 ### Messages Feature *(New - November 2025)*
 
-**In-App Messaging**
-- Send messages related to specific events
+**In-App Messaging with Love Note Formatting** *(Enhanced - November 2025)*
+- Send personalized messages related to specific events
 - Messages accessible via header icon
+- **Love Note Features**:
+  - Choose from 10 love emojis (❤️, 💕, 💖, 💝, 🌹, 💐, 🥰, 😍, 💗, 💓)
+  - Bold and italic text formatting
+  - Live preview while typing with formatting applied
 - Messages modal displays all messages grouped by event
-- Each message shows sender name, timestamp, and content
+- Each message shows sender name, timestamp, content with formatting
+- Emojis displayed prominently next to message text
+- Bold and italic styles preserved and displayed
 - Messages automatically deleted when parent event is deleted
 - Real-time toast notifications on send success/failure
 - Loading states during message sending
@@ -261,6 +267,18 @@ Three primary entities with clean separation of concerns:
 - Consistent button styling across views
 
 ## Recent Development History
+
+### November 15, 2025 - Love Note Formatting Feature
+- Enhanced messages with personalization options
+- Added optional formatting fields to message schema: fontWeight, fontStyle, emoji
+- Updated EventDetailView with "Send a Love Note" interface:
+  - 10 love emoji selection buttons (❤️, 💕, 💖, 💝, 🌹, 💐, 🥰, 😍, 💗, 💓)
+  - Bold and italic toggle buttons
+  - Live preview of formatting in textarea
+- Updated MessagesModal to render formatted messages with emoji and styles
+- Storage layer properly handles optional formatting fields
+- End-to-end testing confirmed formatting persists correctly
+- Architect review passed with approval
 
 ### November 15, 2025 - Messages Feature Implementation
 - Added messages table to database schema with eventId, senderName, content, createdAt
