@@ -2,9 +2,9 @@
 
 ## Overview
 
-A modern family calendar web application featuring a distinctive "liquid glass" UI design aesthetic. The application allows families to create, manage, and share events across family members with an elegant, tactile interface inspired by modern OS design languages (macOS, iOS, Windows 11 Fluent Design).
+A modern family calendar web application featuring a distinctive "liquid glass" UI design aesthetic. The application allows families to create, manage, and share events across four distinct views: Day, Week, Month, and Timeline. The interface is inspired by modern OS design languages (macOS, iOS, Windows 11 Fluent Design), providing an elegant, tactile experience for managing family events.
 
-The application uses a full-stack TypeScript architecture with React on the frontend and Express on the backend, featuring real-time calendar views, event management, and family member coordination.
+The application uses a full-stack TypeScript architecture with React on the frontend and Express on the backend, featuring multiple calendar views, event management, and family member coordination.
 
 ## User Preferences
 
@@ -138,3 +138,106 @@ Two primary entities with clean separation of concerns:
 - Database operations abstracted through storage interface
 - Shared types between frontend and backend prevent drift
 - Form validation uses Zod schemas derived from database schema
+
+## Current Features
+
+### Calendar Views
+
+**Day View**
+- Displays all events for a selected day
+- Dynamic title showing "Today" or day name with date
+- Events organized by time
+- Special "Sometime Today" section for events without specific times
+- Mini event cards in 2-column grid for flexible-time events
+
+**Week View**
+- 2-column grid layout showing events across the week
+- Week navigation with previous/next buttons
+- Clickable day headers to jump to specific day in Day view
+- Events grouped by day with timestamps
+
+**Month View**
+- Full calendar grid with day cells
+- Visual indicators for days with events (colored backgrounds)
+- Upcoming events section showing next 2 events
+- Easy navigation through months
+
+**Timeline View** *(Recently Added - November 2025)*
+- Vertical scrolling timeline with center line gradient
+- Events alternate left/right along the timeline for visual balance
+- Date markers displayed on the center line
+- Member avatars floating around event cards
+- Event cards use a complementary 6-color palette that rotates
+- Shows ALL events sorted chronologically (no date filtering)
+- Smooth hover effects and transitions
+- Same event interaction pattern as other views
+
+### Event Management
+
+**Event Creation & Editing**
+- Modal-based event creation with form validation
+- Fields: title, description (optional), start time, end time, family member
+- Color automatically inherited from family member
+- "Sometime Today" toggle for events without specific times (23:58-23:59)
+- Form validation using Zod schemas
+
+**Event Detail View**
+- Click any event to view full details before editing
+- Displays: title, description, date, time, member information
+- Messaging section for event-related communication
+- Notes section for additional event context
+- Edit button opens edit modal
+- Proper state management (resets between events)
+
+**Event Deletion**
+- Delete events from edit modal
+- Confirmation before deletion
+- Automatic cache invalidation and UI update
+
+### Family Member Management
+
+**Member Features**
+- Each member has a unique color for visual identification
+- Member initials displayed on events
+- Color-coded avatars throughout the interface
+- Create new members via dedicated modal
+
+### Navigation & UX
+
+**View Switching**
+- Seamless toggle between Day, Week, Month, and Timeline views
+- View toggle buttons available in all views
+- Active view visually highlighted
+- Date state preserved during view transitions
+
+**Date Navigation**
+- Week-level navigation in Week view
+- Day-level navigation via clickable headers
+- Month context maintained in Month view
+- Smooth transitions between dates
+
+### Design & Styling
+
+**Liquid Glass Aesthetic**
+- Frosted glass effects with backdrop blur
+- Layered depth using custom elevation shadows
+- Gradient backgrounds and borders
+- Sophisticated spacing and typography
+- Inter font for body text, Space Grotesk for accents
+- Responsive design for mobile and desktop
+
+**Interactive Elements**
+- Hover effects with subtle scale transforms
+- Active states with visual feedback
+- Smooth transitions and animations
+- Consistent button styling across views
+
+## Recent Development History
+
+### November 15, 2025 - Timeline View Implementation
+- Created TimelineView component with vertical scrolling layout
+- Implemented alternating left/right card positioning along center timeline
+- Added Timeline button to all view toggles (Day, Week, Month)
+- Updated Home.tsx to support Timeline view with proper data formatting
+- End-to-end testing completed successfully
+- Architect review passed with positive feedback
