@@ -54,8 +54,8 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
       <div className="w-full max-w-md space-y-6 mt-6">
         {/* Header */}
         <div className="flex items-center justify-between px-2">
-          <h1 className="text-5xl font-bold text-white">Today</h1>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-6">
+            <h1 className="text-5xl font-bold text-white">Today</h1>
             {onAddEvent && (
               <button
                 onClick={onAddEvent}
@@ -65,6 +65,8 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
                 <Plus className="w-5 h-5 text-white" />
               </button>
             )}
+          </div>
+          <div className="flex gap-2">
             {focusEvents.slice(0, 2).flatMap(e => e.members).slice(0, 2).map((member, idx) => (
               <div
                 key={idx}

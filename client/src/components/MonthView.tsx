@@ -65,24 +65,24 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
       </div>
       <div className="w-full max-w-md space-y-6 mt-6">
         {/* Header */}
-        <div className="flex items-center justify-between px-2">
-          <div className="flex-1 text-center">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-              MONTH
-            </p>
+        <div className="text-center px-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+            MONTH
+          </p>
+          <div className="flex items-center justify-center gap-6">
             <h1 className="text-4xl font-bold text-white">
               {format(date, 'MMMM yyyy')}
             </h1>
+            {onAddEvent && (
+              <button
+                onClick={onAddEvent}
+                data-testid="button-add-event"
+                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-5 h-5 text-white" />
+              </button>
+            )}
           </div>
-          {onAddEvent && (
-            <button
-              onClick={onAddEvent}
-              data-testid="button-add-event"
-              className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98]"
-            >
-              <Plus className="w-5 h-5 text-white" />
-            </button>
-          )}
         </div>
 
         {/* Calendar Grid */}

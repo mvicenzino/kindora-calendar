@@ -72,22 +72,24 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
       <div className="w-full max-w-md space-y-6 mt-6">
         {/* Header */}
         <div className="flex items-center justify-between px-2">
-          <div>
-            <h1 className="text-5xl font-bold text-white">This Week</h1>
-            <p className="text-lg text-white/70 mt-1">
-              {format(weekStart, 'MMM d')}–{format(weekEnd, 'd')}
-            </p>
-          </div>
-          <div className="flex gap-2">
+          <div className="flex items-start gap-6">
+            <div>
+              <h1 className="text-5xl font-bold text-white">This Week</h1>
+              <p className="text-lg text-white/70 mt-1">
+                {format(weekStart, 'MMM d')}–{format(weekEnd, 'd')}
+              </p>
+            </div>
             {onAddEvent && (
               <button
                 onClick={onAddEvent}
                 data-testid="button-add-event"
-                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98]"
+                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98] mt-2"
               >
                 <Plus className="w-5 h-5 text-white" />
               </button>
             )}
+          </div>
+          <div className="flex gap-2">
             {members.slice(0, 2).map((member) => (
               <div
                 key={member.id}
