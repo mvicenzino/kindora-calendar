@@ -67,7 +67,7 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between px-2">
+        <div className="px-2">
           <div className="flex items-start gap-6">
             <div>
               <h1 className="text-5xl font-bold text-white">This Week</h1>
@@ -84,16 +84,6 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
                 <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
             )}
-          </div>
-          <div className="flex gap-2">
-            {members.slice(0, 2).map((member) => (
-              <div
-                key={member.id}
-                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30"
-              >
-                <span className="text-xs font-semibold text-white">{member.initials}</span>
-              </div>
-            ))}
           </div>
         </div>
 

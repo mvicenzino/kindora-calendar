@@ -49,7 +49,7 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between px-2">
+        <div className="px-2">
           <div className="flex items-center gap-6">
             <h1 className="text-5xl font-bold text-white">Today</h1>
             {onAddEvent && (
@@ -61,16 +61,6 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
                 <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
             )}
-          </div>
-          <div className="flex gap-2">
-            {focusEvents.slice(0, 2).flatMap(e => e.members).slice(0, 2).map((member, idx) => (
-              <div
-                key={idx}
-                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30"
-              >
-                <span className="text-xs font-semibold text-white">{member.initials}</span>
-              </div>
-            ))}
           </div>
         </div>
 

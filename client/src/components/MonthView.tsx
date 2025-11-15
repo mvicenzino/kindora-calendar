@@ -61,19 +61,21 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center px-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-            MONTH
-          </p>
-          <div className="flex items-center justify-center gap-6">
-            <h1 className="text-4xl font-bold text-white">
-              {format(date, 'MMMM yyyy')}
-            </h1>
+        <div className="px-2">
+          <div className="flex items-center gap-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
+                MONTH
+              </p>
+              <h1 className="text-5xl font-bold text-white">
+                {format(date, 'MMMM yyyy')}
+              </h1>
+            </div>
             {onAddEvent && (
               <button
                 onClick={onAddEvent}
                 data-testid="button-add-event"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
               >
                 <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
