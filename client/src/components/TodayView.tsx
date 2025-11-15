@@ -31,8 +31,8 @@ interface TodayViewProps {
 }
 
 export default function TodayView({ date, events, tasks, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
-  const focusEvents = events.filter(e => e.isFocus);
-  const regularEvents = events.filter(e => !e.isFocus);
+  // All events are treated the same now, sorted by time
+  const allEvents = events;
 
   const formatTimeRange = (start: Date, end: Date) => {
     return `${format(start, 'h:mm')} ${format(start, 'a')} - ${format(end, 'h:mm')} ${format(end, 'a')}`;
@@ -64,47 +64,10 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
           </div>
         </div>
 
-        {/* Today's Focus */}
-        {focusEvents.length > 0 && (
+        {/* All Events (sorted by time) */}
+        {allEvents.length > 0 && (
           <div className="space-y-3">
-            {focusEvents.map(event => (
-              <button
-                key={event.id}
-                onClick={() => onEventClick(event)}
-                data-testid={`event-${event.id}`}
-                className="w-full bg-[#B8836D] rounded-3xl p-6 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
-              >
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/70 mb-3">
-                  Today's Focus
-                </p>
-                <h3 className="text-2xl font-semibold text-white mb-3">
-                  {event.title}
-                </h3>
-                <div className="flex items-center justify-between">
-                  <p className="text-base text-white/90">
-                    {format(event.startTime, 'h:mm a')}
-                  </p>
-                  <div className="flex gap-1.5">
-                    {event.members.map(member => (
-                      <div
-                        key={member.id}
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/30"
-                        style={{ backgroundColor: member.color }}
-                      >
-                        {member.initials}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Regular Events */}
-        {regularEvents.length > 0 && (
-          <div className="space-y-3">
-            {regularEvents.map((event, idx) => {
+            {allEvents.map((event, idx) => {
               const eventColors = [
                 '#7A8A7D', // brownish-green for Brunch
                 '#5D6D7E', // blue-gray for Meeting
@@ -123,11 +86,22 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
                     <h3 className="text-xl font-semibold text-white flex-1">
                       {event.title}
                     </h3>
-                    {event.categories && event.categories.length > 0 && (
-                      <span className="text-sm text-white/80 ml-3">
-                        {event.categories[0]}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 ml-3">
+                      {event.categories && event.categories.length > 0 && (
+                        <span className="text-sm text-white/80">
+                          {event.categories[0]}
+                        </span>
+                      )}
+                      {event.members.map(member => (
+                        <div
+                          key={member.id}
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white border border-white/30"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.initials}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   <p className="text-sm text-white/80">
                     {format(event.startTime, 'h:mm a')}–{format(event.endTime, 'h:mm a')}

@@ -137,20 +137,12 @@ export default function Home() {
   const todayEvents: TodayEvent[] = events
     .filter(e => isToday(new Date(e.startTime)))
     .map(e => {
-      // For the focus event (Date Night), include both members
-      const isFocusEvent = e.title.toLowerCase().includes('date night');
-      
-      const eventMembers = isFocusEvent 
-        ? members.slice(0, 2).map(m => ({
-            ...m,
-            initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-          }))
-        : members
-            .filter(m => m.id === e.memberId)
-            .map(m => ({
-              ...m,
-              initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-            }));
+      const eventMembers = members
+        .filter(m => m.id === e.memberId)
+        .map(m => ({
+          ...m,
+          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+        }));
       
       // Determine category based on title
       let categories: string[] | undefined;
@@ -169,16 +161,10 @@ export default function Home() {
         endTime: new Date(e.endTime),
         members: eventMembers,
         categories,
-        isFocus: isFocusEvent
+        isFocus: false // Remove focus event concept
       };
     })
-    .sort((a, b) => {
-      // Focus events first
-      if (a.isFocus && !b.isFocus) return -1;
-      if (!a.isFocus && b.isFocus) return 1;
-      // Then by start time
-      return a.startTime.getTime() - b.startTime.getTime();
-    });
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime()); // Sort purely by time
 
   // Convert events to week view format
   const weekEvents = events
