@@ -46,7 +46,7 @@ export default function TodayView({ date, events, tasks, onEventClick }: TodayVi
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="backdrop-blur-3xl bg-gradient-to-b from-card/60 to-card/40 rounded-[2.5rem] border border-white/20 shadow-2xl p-6 space-y-6">
+        <div className="backdrop-blur-3xl bg-gradient-to-b from-white/15 to-white/10 rounded-[2.5rem] border border-white/20 shadow-2xl p-6 space-y-6">
           {/* Header */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

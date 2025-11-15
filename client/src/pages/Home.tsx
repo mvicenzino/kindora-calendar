@@ -137,7 +137,7 @@ export default function Home() {
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-purple-500 to-blue-500">
+    <div className="min-h-screen bg-gradient-to-br from-[#6B7A9E] via-[#7B8AAE] to-[#8B9ABE]">
       <TodayView
         date={currentDate}
         events={todayEvents}
