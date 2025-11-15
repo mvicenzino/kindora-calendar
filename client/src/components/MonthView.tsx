@@ -1,6 +1,5 @@
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter } from "date-fns";
 import { Plus } from "lucide-react";
-import CalendarBanner from "@/components/CalendarBanner";
 
 interface FamilyMember {
   id: string;
@@ -59,11 +58,8 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start pt-8 p-4">
-      <div className="w-full max-w-md">
-        <CalendarBanner />
-      </div>
-      <div className="w-full max-w-md space-y-6 mt-6">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center px-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">

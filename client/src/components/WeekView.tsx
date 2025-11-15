@@ -1,6 +1,5 @@
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addDays } from "date-fns";
 import { Plus } from "lucide-react";
-import CalendarBanner from "@/components/CalendarBanner";
 
 interface FamilyMember {
   id: string;
@@ -65,11 +64,8 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start pt-8 p-4">
-      <div className="w-full max-w-md">
-        <CalendarBanner />
-      </div>
-      <div className="w-full max-w-md space-y-6 mt-6">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between px-2">
           <div className="flex items-start gap-6">

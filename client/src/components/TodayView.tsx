@@ -2,7 +2,6 @@ import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Plus } from "lucide-react";
-import CalendarBanner from "@/components/CalendarBanner";
 
 interface FamilyMember {
   id: string;
@@ -47,11 +46,8 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start pt-8 p-4">
-      <div className="w-full max-w-md">
-        <CalendarBanner />
-      </div>
-      <div className="w-full max-w-md space-y-6 mt-6">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between px-2">
           <div className="flex items-center gap-6">
