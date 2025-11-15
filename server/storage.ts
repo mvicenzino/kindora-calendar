@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -14,15 +14,22 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event>;
   deleteEvent(id: string): Promise<void>;
+
+  // Messages
+  getMessages(): Promise<Message[]>;
+  getMessagesByEvent(eventId: string): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
 }
 
 export class MemStorage implements IStorage {
   private familyMembers: Map<string, FamilyMember>;
   private events: Map<string, Event>;
+  private messages: Map<string, Message>;
 
   constructor() {
     this.familyMembers = new Map();
     this.events = new Map();
+    this.messages = new Map();
     
     // Initialize with default family members
     const member1: FamilyMember = {
@@ -218,6 +225,35 @@ export class MemStorage implements IStorage {
 
   async deleteEvent(id: string): Promise<void> {
     this.events.delete(id);
+    // Also delete messages associated with this event
+    const messagesToDelete = Array.from(this.messages.entries())
+      .filter(([_, message]) => message.eventId === id)
+      .map(([messageId, _]) => messageId);
+    
+    messagesToDelete.forEach(messageId => this.messages.delete(messageId));
+  }
+
+  // Messages
+  async getMessages(): Promise<Message[]> {
+    return Array.from(this.messages.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Most recent first
+  }
+
+  async getMessagesByEvent(eventId: string): Promise<Message[]> {
+    return Array.from(this.messages.values())
+      .filter(message => message.eventId === eventId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const id = randomUUID();
+    const message: Message = {
+      ...insertMessage,
+      id,
+      createdAt: new Date(),
+    };
+    this.messages.set(id, message);
+    return message;
   }
 }
 
