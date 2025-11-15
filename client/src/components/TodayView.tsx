@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Plus } from "lucide-react";
@@ -33,6 +33,9 @@ interface TodayViewProps {
 export default function TodayView({ date, events, tasks, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
   // All events are treated the same now, sorted by time
   const allEvents = events;
+  const isViewingToday = isToday(date);
+  const dayTitle = isViewingToday ? "Today" : format(date, 'EEEE');
+  const daySubtitle = isViewingToday ? undefined : format(date, 'MMM d, yyyy');
 
   const formatTimeRange = (start: Date, end: Date) => {
     return `${format(start, 'h:mm')} ${format(start, 'a')} - ${format(end, 'h:mm')} ${format(end, 'a')}`;
@@ -50,13 +53,18 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="px-2">
-          <div className="flex items-center gap-6">
-            <h1 className="text-5xl font-bold text-white">Today</h1>
+          <div className="flex items-start gap-6">
+            <div>
+              <h1 className="text-5xl font-bold text-white">{dayTitle}</h1>
+              {daySubtitle && (
+                <p className="text-lg text-white/70 mt-1">{daySubtitle}</p>
+              )}
+            </div>
             {onAddEvent && (
               <button
                 onClick={onAddEvent}
                 data-testid="button-add-event"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
               >
                 <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
