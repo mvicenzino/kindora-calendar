@@ -229,7 +229,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
               type="button"
               onClick={() => onViewChange('day')}
               data-testid="button-view-day"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40 md:hover:text-white"
             >
               Day
             </button>
@@ -237,7 +237,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
               type="button"
               onClick={() => onViewChange('week')}
               data-testid="button-view-week"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/30 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40"
             >
               Week
             </button>
@@ -245,7 +245,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
               type="button"
               onClick={() => onViewChange('month')}
               data-testid="button-view-month"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40 md:hover:text-white"
             >
               Month
             </button>
@@ -253,7 +253,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
               type="button"
               onClick={() => onViewChange('timeline')}
               data-testid="button-view-timeline"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation"
+              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40 md:hover:text-white"
             >
               Timeline
             </button>
