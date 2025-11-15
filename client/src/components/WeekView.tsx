@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import type { Message } from "@shared/schema";
+import LoveNotePopup from "./LoveNotePopup";
 
 interface FamilyMember {
   id: string;
@@ -21,6 +24,7 @@ interface WeekViewProps {
   date: Date;
   events: Event[];
   members: FamilyMember[];
+  messages: Message[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: () => void;
@@ -28,10 +32,24 @@ interface WeekViewProps {
   onWeekChange?: (date: Date) => void;
 }
 
-export default function WeekView({ date, events, members, onEventClick, onViewChange, onAddEvent, onDateChange, onWeekChange }: WeekViewProps) {
+export default function WeekView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent, onDateChange, onWeekChange }: WeekViewProps) {
+  const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  
   const weekStart = startOfWeek(date);
   const weekEnd = endOfWeek(date);
   const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  // Find message with emoji for a given event
+  const getEventMessage = (eventId: string) => {
+    return messages.find(m => m.eventId === eventId && m.emoji);
+  };
+
+  const handleEmojiClick = (e: React.MouseEvent, message: Message) => {
+    e.stopPropagation();
+    setSelectedMessage(message);
+    setLoveNotePopupOpen(true);
+  };
 
   const handlePreviousWeek = () => {
     const newDate = addWeeks(date, -1);
@@ -152,15 +170,29 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
         <div className="grid grid-cols-2 gap-3">
           {events.map((event) => {
             const categoryLabel = getCategoryLabel(event);
+            const eventMessage = getEventMessage(event.id);
             
             return (
               <button
                 key={event.id}
                 onClick={() => onEventClick(event)}
                 data-testid={`event-${event.id}`}
-                className="rounded-3xl p-4 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
+                className="rounded-3xl p-4 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative"
                 style={{ backgroundColor: getEventColor(event) }}
               >
+                {/* Love Note Emoji */}
+                {eventMessage && (
+                  <button
+                    type="button"
+                    onClick={(e) => handleEmojiClick(e, eventMessage)}
+                    data-testid={`emoji-${event.id}`}
+                    className="absolute top-3 right-3 text-xl hover:scale-110 transition-transform active:scale-95 z-10"
+                    aria-label="View love note"
+                  >
+                    {eventMessage.emoji}
+                  </button>
+                )}
+                
                 {categoryLabel && (
                   <div className="text-xs font-semibold text-white/80 mb-1">
                     {categoryLabel}
@@ -215,6 +247,13 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
           </div>
         )}
       </div>
+      
+      {/* Love Note Popup */}
+      <LoveNotePopup
+        isOpen={loveNotePopupOpen}
+        onClose={() => setLoveNotePopupOpen(false)}
+        message={selectedMessage}
+      />
     </div>
   );
 }

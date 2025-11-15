@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { format, isToday } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Plus } from "lucide-react";
+import type { Message } from "@shared/schema";
+import LoveNotePopup from "./LoveNotePopup";
 
 interface FamilyMember {
   id: string;
@@ -25,15 +28,30 @@ interface TodayViewProps {
   date: Date;
   events: Event[];
   tasks: string[];
+  messages: Message[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: () => void;
 }
 
-export default function TodayView({ date, events, tasks, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
+export default function TodayView({ date, events, tasks, messages, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
+  const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  
   const isViewingToday = isToday(date);
   const dayTitle = isViewingToday ? "Today" : format(date, 'EEEE');
   const daySubtitle = isViewingToday ? undefined : format(date, 'MMM d, yyyy');
+
+  // Find message with emoji for a given event
+  const getEventMessage = (eventId: string) => {
+    return messages.find(m => m.eventId === eventId && m.emoji);
+  };
+
+  const handleEmojiClick = (e: React.MouseEvent, message: Message) => {
+    e.stopPropagation();
+    setSelectedMessage(message);
+    setLoveNotePopupOpen(true);
+  };
 
   // Separate "Sometime Today" events (23:58-23:59) from timed events
   const isSometimeTodayEvent = (event: Event) => {
@@ -94,15 +112,30 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
                 '#7A8A7D', // brownish-green for Birthday
                 '#5D7A8E', // blue for Gym
               ];
+              const eventMessage = getEventMessage(event.id);
+              
               return (
                 <button
                   type="button"
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   data-testid={`event-${event.id}`}
-                  className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation"
+                  className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative"
                   style={{ backgroundColor: eventColors[idx % eventColors.length] }}
                 >
+                  {/* Love Note Emoji */}
+                  {eventMessage && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleEmojiClick(e, eventMessage)}
+                      data-testid={`emoji-${event.id}`}
+                      className="absolute top-3 right-3 text-2xl hover:scale-110 transition-transform active:scale-95 z-10"
+                      aria-label="View love note"
+                    >
+                      {eventMessage.emoji}
+                    </button>
+                  )}
+                  
                   <div className="flex items-start justify-between mb-1.5 sm:mb-2">
                     <h3 className="text-lg sm:text-xl font-semibold text-white flex-1">
                       {event.title}
@@ -149,14 +182,29 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
                   '#8A9A7D', // sage green
                   '#9D8A7A', // warm taupe
                 ];
+                const eventMessage = getEventMessage(event.id);
+                
                 return (
                   <button
                     key={event.id}
                     onClick={() => onEventClick(event)}
                     data-testid={`sometime-event-${event.id}`}
-                    className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md"
+                    className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md relative"
                     style={{ backgroundColor: complementaryColors[idx % complementaryColors.length] }}
                   >
+                    {/* Love Note Emoji */}
+                    {eventMessage && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleEmojiClick(e, eventMessage)}
+                        data-testid={`emoji-${event.id}`}
+                        className="absolute top-2 right-2 text-lg hover:scale-110 transition-transform active:scale-95 z-10"
+                        aria-label="View love note"
+                      >
+                        {eventMessage.emoji}
+                      </button>
+                    )}
+                    
                     <div className="flex items-start justify-between mb-1">
                       <h4 className="text-sm font-semibold text-white flex-1 leading-tight">
                         {event.title}
@@ -221,6 +269,13 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
           </div>
         )}
       </div>
+      
+      {/* Love Note Popup */}
+      <LoveNotePopup
+        isOpen={loveNotePopupOpen}
+        onClose={() => setLoveNotePopupOpen(false)}
+        message={selectedMessage}
+      />
     </div>
   );
 }

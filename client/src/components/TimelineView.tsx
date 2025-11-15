@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus } from "lucide-react";
+import type { Message } from "@shared/schema";
+import LoveNotePopup from "./LoveNotePopup";
 
 interface FamilyMember {
   id: string;
@@ -21,12 +24,16 @@ interface Event {
 
 interface TimelineViewProps {
   events: Event[];
+  messages: Message[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: () => void;
 }
 
-export default function TimelineView({ events, onEventClick, onViewChange, onAddEvent }: TimelineViewProps) {
+export default function TimelineView({ events, messages, onEventClick, onViewChange, onAddEvent }: TimelineViewProps) {
+  const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  
   const isSometimeToday = (event: Event) => {
     const startHour = event.startTime.getHours();
     const startMinute = event.startTime.getMinutes();
@@ -45,6 +52,17 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
       '#8B9D7A', // olive green
     ];
     return colors[index % colors.length];
+  };
+
+  // Find message with emoji for a given event
+  const getEventMessage = (eventId: string) => {
+    return messages.find(m => m.eventId === eventId && m.emoji);
+  };
+
+  const handleEmojiClick = (e: React.MouseEvent, message: Message) => {
+    e.stopPropagation();
+    setSelectedMessage(message);
+    setLoveNotePopupOpen(true);
   };
 
   return (
@@ -80,6 +98,7 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
           {events.map((event, index) => {
             const isLeft = index % 2 === 0;
             const color = getEventColor(index);
+            const eventMessage = getEventMessage(event.id);
             
             return (
               <div key={event.id} className="relative">
@@ -131,9 +150,22 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
 
                     {/* Event card */}
                     <div
-                      className="rounded-3xl p-6 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all active:scale-[0.98] text-left shadow-xl"
+                      className="rounded-3xl p-6 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all active:scale-[0.98] text-left shadow-xl relative"
                       style={{ backgroundColor: color }}
                     >
+                      {/* Love Note Emoji */}
+                      {eventMessage && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleEmojiClick(e, eventMessage)}
+                          data-testid={`emoji-${event.id}`}
+                          className="absolute top-4 right-4 text-3xl hover:scale-110 transition-transform active:scale-95 z-10"
+                          aria-label="View love note"
+                        >
+                          {eventMessage.emoji}
+                        </button>
+                      )}
+                      
                       {/* Title */}
                       <h3 className="text-2xl font-bold text-white mb-2 leading-tight">
                         {event.title}
@@ -213,6 +245,13 @@ export default function TimelineView({ events, onEventClick, onViewChange, onAdd
           </div>
         </div>
       )}
+      
+      {/* Love Note Popup */}
+      <LoveNotePopup
+        isOpen={loveNotePopupOpen}
+        onClose={() => setLoveNotePopupOpen(false)}
+        message={selectedMessage}
+      />
     </div>
   );
 }

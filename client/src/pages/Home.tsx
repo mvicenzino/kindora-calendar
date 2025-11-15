@@ -322,6 +322,10 @@ export default function Home() {
           date={currentDate}
           events={todayEvents}
           tasks={tasks}
+          messages={messages.map(m => ({
+            ...m,
+            createdAt: new Date(m.createdAt)
+          }))}
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
@@ -335,6 +339,10 @@ export default function Home() {
           members={members.map(m => ({
             ...m,
             initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+          }))}
+          messages={messages.map(m => ({
+            ...m,
+            createdAt: new Date(m.createdAt)
           }))}
           onEventClick={handleEventClick}
           onViewChange={setView}
@@ -352,6 +360,10 @@ export default function Home() {
             ...m,
             initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
           }))}
+          messages={messages.map(m => ({
+            ...m,
+            createdAt: new Date(m.createdAt)
+          }))}
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
@@ -361,6 +373,10 @@ export default function Home() {
       {view === 'timeline' && (
         <TimelineView
           events={timelineEvents}
+          messages={messages.map(m => ({
+            ...m,
+            createdAt: new Date(m.createdAt)
+          }))}
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}

@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter } from "date-fns";
 import { Plus } from "lucide-react";
+import type { Message } from "@shared/schema";
+import LoveNotePopup from "./LoveNotePopup";
 
 interface FamilyMember {
   id: string;
@@ -21,12 +24,16 @@ interface MonthViewProps {
   date: Date;
   events: Event[];
   members: FamilyMember[];
+  messages: Message[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: () => void;
 }
 
-export default function MonthView({ date, events, members, onEventClick, onViewChange, onAddEvent }: MonthViewProps) {
+export default function MonthView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent }: MonthViewProps) {
+  const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const calendarStart = startOfWeek(monthStart);
@@ -36,6 +43,17 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
   // Get events for a specific day
   const getEventsForDay = (day: Date) => {
     return events.filter(e => isSameDay(new Date(e.startTime), day));
+  };
+
+  // Find message with emoji for a given event
+  const getEventMessage = (eventId: string) => {
+    return messages.find(m => m.eventId === eventId && m.emoji);
+  };
+
+  const handleEmojiClick = (e: React.MouseEvent, message: Message) => {
+    e.stopPropagation();
+    setSelectedMessage(message);
+    setLoveNotePopupOpen(true);
   };
 
   // Get upcoming events (sorted by time, only future events)
@@ -134,29 +152,46 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
               UPCOMING
             </p>
             <div className="space-y-2">
-              {upcomingEvents.map((event) => (
-                <button
-                  key={event.id}
-                  onClick={() => onEventClick(event)}
-                  data-testid={`upcoming-event-${event.id}`}
-                  className="w-full rounded-2xl p-4 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg"
-                        style={{ backgroundColor: event.members[0]?.color || '#6D7A8E' }}
-                      />
-                      <span className="text-base font-medium text-white">
-                        {event.title}
+              {upcomingEvents.map((event) => {
+                const eventMessage = getEventMessage(event.id);
+                
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => onEventClick(event)}
+                    data-testid={`upcoming-event-${event.id}`}
+                    className="w-full rounded-2xl p-4 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left relative"
+                  >
+                    {/* Love Note Emoji */}
+                    {eventMessage && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleEmojiClick(e, eventMessage)}
+                        data-testid={`emoji-${event.id}`}
+                        className="absolute top-3 right-3 text-xl hover:scale-110 transition-transform active:scale-95 z-10"
+                        aria-label="View love note"
+                      >
+                        {eventMessage.emoji}
+                      </button>
+                    )}
+                    
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-lg"
+                          style={{ backgroundColor: event.members[0]?.color || '#6D7A8E' }}
+                        />
+                        <span className="text-base font-medium text-white">
+                          {event.title}
+                        </span>
+                      </div>
+                      <span className="text-sm text-white/80">
+                        {format(event.startTime, 'h:mm a')}
                       </span>
                     </div>
-                    <span className="text-sm text-white/80">
-                      {format(event.startTime, 'h:mm a')}
-                    </span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -199,6 +234,13 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
           </div>
         )}
       </div>
+      
+      {/* Love Note Popup */}
+      <LoveNotePopup
+        isOpen={loveNotePopupOpen}
+        onClose={() => setLoveNotePopupOpen(false)}
+        message={selectedMessage}
+      />
     </div>
   );
 }
