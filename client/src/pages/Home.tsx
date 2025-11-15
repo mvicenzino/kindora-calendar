@@ -1,9 +1,10 @@
 import { useState } from "react";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
+import MonthView from "@/components/MonthView";
 import EventModal from "@/components/EventModal";
 import MemberModal from "@/components/MemberModal";
-import { isToday, isThisWeek, startOfWeek, endOfWeek } from "date-fns";
+import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
@@ -205,6 +206,37 @@ export default function Home() {
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
+  // Convert events to month view format
+  const monthEvents = events
+    .filter(e => isThisMonth(new Date(e.startTime)))
+    .map(e => {
+      const eventMembers = members
+        .filter(m => m.id === e.memberId)
+        .map(m => ({
+          ...m,
+          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+        }));
+      
+      let categories: string[] | undefined;
+      if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
+        categories = ['Family'];
+      } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client') || e.title.toLowerCase().includes('project')) {
+        categories = ['Work'];
+      } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga') || e.title.toLowerCase().includes('workout')) {
+        categories = ['Health'];
+      }
+      
+      return {
+        id: e.id,
+        title: e.title,
+        startTime: new Date(e.startTime),
+        endTime: new Date(e.endTime),
+        members: eventMembers,
+        categories
+      };
+    })
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
 
   return (
@@ -223,6 +255,19 @@ export default function Home() {
         <WeekView
           date={currentDate}
           events={weekEvents}
+          members={members.map(m => ({
+            ...m,
+            initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+          }))}
+          onEventClick={handleEventClick}
+          onViewChange={setView}
+        />
+      )}
+
+      {view === 'month' && (
+        <MonthView
+          date={currentDate}
+          events={monthEvents}
           members={members.map(m => ({
             ...m,
             initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
