@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, ChevronLeft } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 
@@ -66,24 +66,13 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
   };
 
   return (
-    <div className="min-h-full flex flex-col p-3 sm:p-4 md:p-6">
+    <div className="min-h-full px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto">
       {/* Header */}
-      <div className="w-full max-w-3xl mx-auto px-1 sm:px-2 mb-6 sm:mb-8">
+      <div className="w-full px-1 sm:px-2 mb-4 sm:mb-6">
         <div className="flex items-start justify-between gap-3 sm:gap-6">
-          <div className="flex items-start gap-3">
-            <button
-              type="button"
-              onClick={() => window.history.back()}
-              data-testid="button-back"
-              className="w-9 h-9 sm:w-8 sm:h-8 rounded-full backdrop-blur-xl bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.95] mt-2 sm:mt-3 touch-manipulation opacity-60 hover:opacity-100"
-              aria-label="Go back"
-            >
-              <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2} />
-            </button>
-            <div>
-              <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
-              <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">Your events in time</p>
-            </div>
+          <div className="flex-1">
+            <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
+            <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">Your events in time</p>
           </div>
           {onAddEvent && (
             <button
@@ -100,7 +89,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
       </div>
 
       {/* Timeline */}
-      <div className="flex-1 w-full max-w-3xl mx-auto relative">
+      <div className="flex-1 w-full relative">
         {/* Center line */}
         <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/40 via-white/20 to-white/40 -translate-x-1/2" />
 

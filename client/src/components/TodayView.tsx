@@ -77,8 +77,8 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
   };
 
   return (
-    <div className="min-h-full flex items-center justify-center p-3 sm:p-4 md:p-6">
-      <div className="w-full max-w-md space-y-4 sm:space-y-6">
+    <div className="min-h-full px-4 sm:px-6 py-4 sm:py-6 max-w-2xl mx-auto">
+      <div className="w-full space-y-4 sm:space-y-5">
         {/* Header */}
         <div className="px-1 sm:px-2">
           <div className="flex items-start gap-3 sm:gap-6">
