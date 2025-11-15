@@ -3,25 +3,9 @@ import TodayView from "@/components/TodayView";
 import EventModal from "@/components/EventModal";
 import MemberModal from "@/components/MemberModal";
 import { isToday } from "date-fns";
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  color: string;
-  avatar?: string;
-}
-
-interface Event {
-  id: string;
-  title: string;
-  description?: string;
-  startTime: Date;
-  endTime: Date;
-  memberId: string;
-  color: string;
-  categories?: string[];
-  isFocus?: boolean;
-}
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
 
 interface TodayEvent {
   id: string;
@@ -40,116 +24,153 @@ export default function Home() {
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
 
-  // todo: remove mock functionality - Mock data for demonstration
-  const [members, setMembers] = useState<FamilyMember[]>([
-    { id: '1', name: 'Mike V', color: '#8B5CF6' },
-    { id: '2', name: 'Claire V', color: '#EC4899' },
-  ]);
+  // Fetch family members
+  const { data: members = [] } = useQuery<FamilyMember[]>({
+    queryKey: ['/api/family-members'],
+  });
 
-  // todo: remove mock functionality - Mock events
-  const [events, setEvents] = useState<Event[]>([
-    {
-      id: '1',
-      title: 'Date Night at Jockey Hollow',
-      description: 'Evening out',
-      startTime: new Date(2025, 10, 15, 19, 30),
-      endTime: new Date(2025, 10, 15, 23, 0),
-      color: '#8B5CF6',
-      memberId: '1',
-      isFocus: true
-    },
-    {
-      id: '2',
-      title: 'Brunch with Mom',
-      description: 'Family time',
-      startTime: new Date(2025, 10, 15, 11, 0),
-      endTime: new Date(2025, 10, 15, 12, 30),
-      color: '#EC4899',
-      memberId: '2',
-      categories: ['Family']
-    },
-    {
-      id: '3',
-      title: 'Meeting with Client',
-      startTime: new Date(2025, 10, 15, 13, 30),
-      endTime: new Date(2025, 10, 15, 14, 30),
-      color: '#8B5CF6',
-      memberId: '1',
-      categories: ['Work']
-    },
-    {
-      id: '4',
-      title: "Sebby's Birthday Party",
-      startTime: new Date(2025, 10, 15, 14, 0),
-      endTime: new Date(2025, 10, 15, 17, 0),
-      color: '#EC4899',
-      memberId: '2',
-      categories: ['Family']
-    },
-    {
-      id: '5',
-      title: 'Gym',
-      startTime: new Date(2025, 10, 15, 18, 0),
-      endTime: new Date(2025, 10, 15, 19, 0),
-      color: '#8B5CF6',
-      memberId: '1',
-      categories: ['Health']
-    },
-  ]);
+  // Fetch events
+  const { data: events = [] } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+  });
 
-  const [tasks, setTasks] = useState(['Call plumber', 'Order cake', 'Family walk']);
+  // Create event mutation
+  const createEventMutation = useMutation({
+    mutationFn: async (event: InsertEvent) => {
+      return await apiRequest('/api/events', {
+        method: 'POST',
+        body: JSON.stringify(event),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    },
+  });
+
+  // Update event mutation
+  const updateEventMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEvent> }) => {
+      return await apiRequest(`/api/events/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    },
+  });
+
+  // Delete event mutation
+  const deleteEventMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest(`/api/events/${id}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    },
+  });
+
+  // Create member mutation
+  const createMemberMutation = useMutation({
+    mutationFn: async (member: { name: string; color: string }) => {
+      return await apiRequest('/api/family-members', {
+        method: 'POST',
+        body: JSON.stringify(member),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+    },
+  });
+
+  const [tasks] = useState(['Call plumber', 'Order cake', 'Family walk']);
 
   const handleEventClick = (event: TodayEvent) => {
     setSelectedEventId(event.id);
     setEventModalOpen(true);
   };
 
-  const handleSaveEvent = (eventData: Omit<Event, 'id' | 'color'> & { id?: string }) => {
+  const handleSaveEvent = async (eventData: Omit<Event, 'id' | 'color'> & { id?: string }) => {
     const member = members.find(m => m.id === eventData.memberId);
     if (!member) return;
 
     if (eventData.id) {
       // Update existing event
-      setEvents(prev => prev.map(e => 
-        e.id === eventData.id 
-          ? { ...eventData, id: e.id, color: member.color }
-          : e
-      ));
+      await updateEventMutation.mutateAsync({
+        id: eventData.id,
+        data: {
+          title: eventData.title,
+          description: eventData.description,
+          startTime: eventData.startTime,
+          endTime: eventData.endTime,
+          memberId: eventData.memberId,
+          color: member.color,
+        },
+      });
     } else {
       // Create new event
-      const newEvent: Event = {
-        ...eventData,
-        id: Date.now().toString(),
+      await createEventMutation.mutateAsync({
+        title: eventData.title,
+        description: eventData.description,
+        startTime: eventData.startTime,
+        endTime: eventData.endTime,
+        memberId: eventData.memberId,
         color: member.color,
-      };
-      setEvents(prev => [...prev, newEvent]);
+      });
     }
   };
 
-  const handleDeleteEvent = (eventId: string) => {
-    setEvents(prev => prev.filter(e => e.id !== eventId));
+  const handleDeleteEvent = async (eventId: string) => {
+    await deleteEventMutation.mutateAsync(eventId);
   };
 
   // Convert events to today view format
   const todayEvents: TodayEvent[] = events
-    .filter(e => isToday(e.startTime))
+    .filter(e => isToday(new Date(e.startTime)))
     .map(e => {
-      const eventMembers = members
-        .filter(m => m.id === e.memberId || e.id === '1')
-        .map(m => ({
-          ...m,
-          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-        }));
+      // For the focus event (Date Night), include both members
+      const isFocusEvent = e.title.toLowerCase().includes('date night');
+      
+      const eventMembers = isFocusEvent 
+        ? members.slice(0, 2).map(m => ({
+            ...m,
+            initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+          }))
+        : members
+            .filter(m => m.id === e.memberId)
+            .map(m => ({
+              ...m,
+              initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+            }));
+      
+      // Determine category based on title
+      let categories: string[] | undefined;
+      if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
+        categories = ['Family'];
+      } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client')) {
+        categories = ['Work'];
+      } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga')) {
+        categories = ['Health'];
+      }
       
       return {
         id: e.id,
         title: e.title,
-        startTime: e.startTime,
-        endTime: e.endTime,
+        startTime: new Date(e.startTime),
+        endTime: new Date(e.endTime),
         members: eventMembers,
-        categories: e.categories,
-        isFocus: e.isFocus
+        categories,
+        isFocus: isFocusEvent
       };
+    })
+    .sort((a, b) => {
+      // Focus events first
+      if (a.isFocus && !b.isFocus) return -1;
+      if (!a.isFocus && b.isFocus) return 1;
+      // Then by start time
+      return a.startTime.getTime() - b.startTime.getTime();
     });
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
@@ -171,20 +192,19 @@ export default function Home() {
         }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
-        event={selectedEvent}
+        event={selectedEvent ? {
+          ...selectedEvent,
+          startTime: new Date(selectedEvent.startTime),
+          endTime: new Date(selectedEvent.endTime)
+        } : undefined}
         members={members}
       />
 
       <MemberModal
         isOpen={memberModalOpen}
         onClose={() => setMemberModalOpen(false)}
-        onSave={(memberData) => {
-          const newMember: FamilyMember = {
-            id: Date.now().toString(),
-            name: memberData.name,
-            color: memberData.color,
-          };
-          setMembers(prev => [...prev, newMember]);
+        onSave={async (memberData) => {
+          await createMemberMutation.mutateAsync(memberData);
         }}
       />
     </div>
