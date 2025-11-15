@@ -94,7 +94,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
         <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/40 via-white/20 to-white/40 -translate-x-1/2" />
 
         {/* Events */}
-        <div className="space-y-12 pb-20">
+        <div className="space-y-6 pb-20">
           {events.map((event, index) => {
             const isLeft = index % 2 === 0;
             const color = getEventColor(index);
@@ -103,8 +103,8 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
             return (
               <div key={event.id} className="relative">
                 {/* Date marker on timeline */}
-                <div className="absolute left-1/2 top-8 -translate-x-1/2 z-10">
-                  <div className="bg-gradient-to-br from-white/50 to-white/30 backdrop-blur-xl rounded-full px-4 py-2 border-2 border-white/60 shadow-lg">
+                <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10">
+                  <div className="bg-gradient-to-br from-white/50 to-white/30 backdrop-blur-xl rounded-full px-3 py-1.5 border-2 border-white/60 shadow-lg">
                     <p className="text-xs font-semibold text-white whitespace-nowrap">
                       {format(event.startTime, 'MMM d')}
                     </p>
@@ -120,46 +120,45 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                   >
                     {/* Connecting line to center */}
                     <div 
-                      className={`absolute top-10 w-8 h-0.5 bg-gradient-to-r ${
+                      className={`absolute top-6 w-6 h-0.5 bg-gradient-to-r ${
                         isLeft 
                           ? 'right-0 translate-x-full from-white/40 to-transparent' 
                           : 'left-0 -translate-x-full from-transparent to-white/40'
                       }`}
                     />
 
-                    {/* Member avatars floating around card */}
-                    <div className={`absolute ${isLeft ? '-right-6' : '-left-6'} top-12 flex flex-col gap-2`}>
-                      {event.members.slice(0, 3).map((member, idx) => (
-                        <Avatar 
-                          key={member.id} 
-                          className="h-12 w-12 ring-2 ring-white/40 shadow-lg"
-                          style={{ 
-                            '--tw-ring-color': `${member.color}60`,
-                            transform: `translateY(${idx * -8}px)`
-                          } as React.CSSProperties}
-                        >
-                          <AvatarFallback 
-                            className="text-white font-semibold text-sm"
-                            style={{ backgroundColor: member.color }}
-                          >
-                            {member.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-
                     {/* Event card */}
                     <div
-                      className="rounded-3xl p-6 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all active:scale-[0.98] text-left shadow-xl relative"
+                      className="rounded-2xl p-4 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all active:scale-[0.98] text-left shadow-xl relative overflow-visible"
                       style={{ backgroundColor: color }}
                     >
+                      {/* Member avatars overlayed on card */}
+                      <div className="absolute -bottom-3 left-4 flex gap-1">
+                        {event.members.slice(0, 3).map((member, idx) => (
+                          <Avatar 
+                            key={member.id} 
+                            className="h-10 w-10 ring-2 ring-white/60 shadow-lg"
+                            style={{ 
+                              '--tw-ring-color': `${member.color}80`
+                            } as React.CSSProperties}
+                          >
+                            <AvatarFallback 
+                              className="text-white font-semibold text-xs"
+                              style={{ backgroundColor: member.color }}
+                            >
+                              {member.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                      </div>
+
                       {/* Love Note Emoji */}
                       {eventMessage && (
                         <button
                           type="button"
                           onClick={(e) => handleEmojiClick(e, eventMessage)}
                           data-testid={`emoji-${event.id}`}
-                          className="absolute top-4 right-4 text-3xl hover:scale-110 transition-transform active:scale-95 z-10"
+                          className="absolute top-3 right-3 text-2xl hover:scale-110 transition-transform active:scale-95 z-10"
                           aria-label="View love note"
                         >
                           {eventMessage.emoji}
@@ -167,20 +166,20 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                       )}
                       
                       {/* Title */}
-                      <h3 className="text-2xl font-bold text-white mb-2 leading-tight">
+                      <h3 className="text-xl font-bold text-white mb-1.5 leading-tight pr-8">
                         {event.title}
                       </h3>
 
                       {/* Description */}
                       {event.description && (
-                        <p className="text-sm text-white/80 mb-3 line-clamp-2">
+                        <p className="text-sm text-white/80 mb-2 line-clamp-2">
                           {event.description}
                         </p>
                       )}
 
                       {/* Time */}
-                      <div className="flex items-center gap-2 text-sm text-white/90">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+                      <div className="flex items-center gap-2 text-xs text-white/90 mb-3">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1">
                           {isSometimeToday(event) ? (
                             "Sometime today"
                           ) : (
@@ -191,8 +190,8 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
                       {/* Category badge if exists */}
                       {event.categories && event.categories.length > 0 && (
-                        <div className="mt-3">
-                          <span className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-3 py-1 text-xs font-medium text-white">
+                        <div>
+                          <span className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium text-white">
                             {event.categories[0]}
                           </span>
                         </div>
