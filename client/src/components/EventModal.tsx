@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Calendar, Clock, User, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import { useState, useEffect } from 'react';
 
 interface FamilyMember {
   id: string;
@@ -43,18 +44,32 @@ export default function EventModal({
   selectedDate,
 }: EventModalProps) {
   const defaultDate = selectedDate || new Date();
-  const [title, setTitle] = useState(event?.title || "");
-  const [description, setDescription] = useState(event?.description || "");
-  const [memberId, setMemberId] = useState(event?.memberId || members[0]?.id || "");
-  const [startDate, setStartDate] = useState(
-    event?.startTime ? format(event.startTime, 'yyyy-MM-dd') : format(defaultDate, 'yyyy-MM-dd')
-  );
-  const [startTime, setStartTime] = useState(
-    event?.startTime ? format(event.startTime, 'HH:mm') : '09:00'
-  );
-  const [endTime, setEndTime] = useState(
-    event?.endTime ? format(event.endTime, 'HH:mm') : '10:00'
-  );
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [memberId, setMemberId] = useState("");
+  const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
+
+  // Update form state when event prop changes
+  useEffect(() => {
+    if (event) {
+      setTitle(event.title || "");
+      setDescription(event.description || "");
+      setMemberId(event.memberId || members[0]?.id || "");
+      setStartDate(format(event.startTime, 'yyyy-MM-dd'));
+      setStartTime(format(event.startTime, 'HH:mm'));
+      setEndTime(format(event.endTime, 'HH:mm'));
+    } else {
+      // Reset form for new event
+      setTitle("");
+      setDescription("");
+      setMemberId(members[0]?.id || "");
+      setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+      setStartTime('09:00');
+      setEndTime('10:00');
+    }
+  }, [event, members, selectedDate]);
 
   const handleSave = () => {
     const startDateTime = new Date(`${startDate}T${startTime}`);
@@ -251,4 +266,3 @@ export default function EventModal({
   );
 }
 
-import { useState } from 'react';

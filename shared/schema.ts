@@ -26,6 +26,9 @@ export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
 
 export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
+}).extend({
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
 });
 
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;

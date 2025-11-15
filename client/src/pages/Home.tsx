@@ -37,10 +37,8 @@ export default function Home() {
   // Create event mutation
   const createEventMutation = useMutation({
     mutationFn: async (event: InsertEvent) => {
-      return await apiRequest('/api/events', {
-        method: 'POST',
-        body: JSON.stringify(event),
-      });
+      const res = await apiRequest('POST', '/api/events', event);
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
@@ -50,10 +48,8 @@ export default function Home() {
   // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEvent> }) => {
-      return await apiRequest(`/api/events/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      });
+      const res = await apiRequest('PUT', `/api/events/${id}`, data);
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
@@ -63,9 +59,7 @@ export default function Home() {
   // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/events/${id}`, {
-        method: 'DELETE',
-      });
+      await apiRequest('DELETE', `/api/events/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
@@ -75,10 +69,8 @@ export default function Home() {
   // Create member mutation
   const createMemberMutation = useMutation({
     mutationFn: async (member: { name: string; color: string }) => {
-      return await apiRequest('/api/family-members', {
-        method: 'POST',
-        body: JSON.stringify(member),
-      });
+      const res = await apiRequest('POST', '/api/family-members', member);
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
@@ -92,7 +84,14 @@ export default function Home() {
     setEventModalOpen(true);
   };
 
-  const handleSaveEvent = async (eventData: Omit<Event, 'id' | 'color'> & { id?: string }) => {
+  const handleSaveEvent = async (eventData: {
+    id?: string;
+    title: string;
+    description?: string;
+    startTime: Date;
+    endTime: Date;
+    memberId: string;
+  }) => {
     const member = members.find(m => m.id === eventData.memberId);
     if (!member) return;
 
@@ -102,7 +101,7 @@ export default function Home() {
         id: eventData.id,
         data: {
           title: eventData.title,
-          description: eventData.description,
+          description: eventData.description || undefined,
           startTime: eventData.startTime,
           endTime: eventData.endTime,
           memberId: eventData.memberId,
@@ -113,7 +112,7 @@ export default function Home() {
       // Create new event
       await createEventMutation.mutateAsync({
         title: eventData.title,
-        description: eventData.description,
+        description: eventData.description || undefined,
         startTime: eventData.startTime,
         endTime: eventData.endTime,
         memberId: eventData.memberId,
@@ -194,6 +193,7 @@ export default function Home() {
         onDelete={handleDeleteEvent}
         event={selectedEvent ? {
           ...selectedEvent,
+          description: selectedEvent.description || undefined,
           startTime: new Date(selectedEvent.startTime),
           endTime: new Date(selectedEvent.endTime)
         } : undefined}

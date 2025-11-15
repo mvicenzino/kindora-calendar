@@ -63,7 +63,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/events/:id", async (req, res) => {
     try {
-      const event = await storage.updateEvent(req.params.id, req.body);
+      const result = insertEventSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+      
+      const event = await storage.updateEvent(req.params.id, result.data);
       res.json(event);
     } catch (error) {
       res.status(500).json({ error: "Failed to update event" });
