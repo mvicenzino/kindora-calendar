@@ -104,11 +104,22 @@ export default function WeekView({ date, events, members, messages, onEventClick
         {/* Header */}
         <div className="px-2">
           <div className="flex items-start justify-between gap-6">
-            <div>
-              <h1 className="text-5xl font-bold text-white">This Week</h1>
-              <p className="text-lg text-white/70 mt-1">
-                {format(weekStart, 'MMM d')}–{format(weekEnd, 'd')}
-              </p>
+            <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => window.history.back()}
+                data-testid="button-back"
+                className="w-8 h-8 rounded-full backdrop-blur-xl bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.95] mt-3 touch-manipulation opacity-60 hover:opacity-100"
+                aria-label="Go back"
+              >
+                <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2} />
+              </button>
+              <div>
+                <h1 className="text-5xl font-bold text-white">This Week</h1>
+                <p className="text-lg text-white/70 mt-1">
+                  {format(weekStart, 'MMM d')}–{format(weekEnd, 'd')}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-3 mt-2">
               <button

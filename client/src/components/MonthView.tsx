@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 
@@ -81,7 +81,16 @@ export default function MonthView({ date, events, members, messages, onEventClic
         {/* Header */}
         <div className="px-2">
           <div className="flex items-center gap-6">
-            <div>
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              data-testid="button-back"
+              className="w-8 h-8 rounded-full backdrop-blur-xl bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.95] mt-2 touch-manipulation opacity-60 hover:opacity-100"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2} />
+            </button>
+            <div className="flex-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
                 MONTH
               </p>

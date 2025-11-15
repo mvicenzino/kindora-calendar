@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus } from "lucide-react";
+import { Plus, ChevronLeft } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 
@@ -70,9 +70,20 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
       {/* Header */}
       <div className="w-full max-w-3xl mx-auto px-1 sm:px-2 mb-6 sm:mb-8">
         <div className="flex items-start justify-between gap-3 sm:gap-6">
-          <div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
-            <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">Your events in time</p>
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => window.history.back()}
+              data-testid="button-back"
+              className="w-9 h-9 sm:w-8 sm:h-8 rounded-full backdrop-blur-xl bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.95] mt-2 sm:mt-3 touch-manipulation opacity-60 hover:opacity-100"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2} />
+            </button>
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
+              <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">Your events in time</p>
+            </div>
           </div>
           {onAddEvent && (
             <button
