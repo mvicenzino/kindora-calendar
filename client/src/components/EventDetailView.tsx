@@ -32,6 +32,7 @@ interface EventDetailViewProps {
   onEdit: () => void;
   event?: Event;
   member?: FamilyMember;
+  allMembers?: FamilyMember[];
 }
 
 export default function EventDetailView({
@@ -40,12 +41,14 @@ export default function EventDetailView({
   onEdit,
   event,
   member,
+  allMembers = [],
 }: EventDetailViewProps) {
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState<string>("");
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
+  const [selectedRecipientId, setSelectedRecipientId] = useState<string>("");
   const { toast } = useToast();
 
   // Create message mutation
@@ -56,9 +59,10 @@ export default function EventDetailView({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      const recipient = allMembers.find(m => m.id === selectedRecipientId);
       toast({
-        title: "Message sent",
-        description: `Your message was sent to ${member?.name}`,
+        title: "Love note sent",
+        description: `Your love note was sent to ${recipient?.name || 'family member'}`,
       });
       setMessage("");
       setSelectedEmoji("");
@@ -82,8 +86,11 @@ export default function EventDetailView({
       setSelectedEmoji("");
       setIsBold(false);
       setIsItalic(false);
+      // Auto-select first available recipient (not event owner)
+      const otherMembers = allMembers.filter(m => m.id !== event.memberId);
+      setSelectedRecipientId(otherMembers.length > 0 ? otherMembers[0].id : "");
     }
-  }, [isOpen, event?.id]);
+  }, [isOpen, event?.id, event?.memberId, allMembers]);
 
   const loveEmojis = ["❤️", "💕", "💖", "💝", "🌹", "💐", "🥰", "😍", "💗", "💓"];
 
@@ -95,11 +102,15 @@ export default function EventDetailView({
                           event.endTime.getMinutes() === 59;
 
   const handleSendMessage = async () => {
-    if (!event || !member || !message.trim()) return;
+    if (!event || !member || !message.trim() || !selectedRecipientId) return;
+    
+    const recipient = allMembers.find(m => m.id === selectedRecipientId);
+    if (!recipient) return;
     
     await createMessageMutation.mutateAsync({
       eventId: event.id,
       senderName: "You",
+      recipientId: selectedRecipientId,
       content: message.trim(),
       fontWeight: isBold ? "bold" : undefined,
       fontStyle: isItalic ? "italic" : undefined,
@@ -193,6 +204,39 @@ export default function EventDetailView({
               <h4 className="text-lg font-semibold">Send a Love Note</h4>
             </div>
             
+            {/* Recipient Selector */}
+            <div className="p-3 rounded-xl backdrop-blur-md bg-background/50 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Send to</p>
+              <div className="flex flex-wrap gap-2">
+                {allMembers
+                  .filter(m => m.id !== event.memberId)
+                  .map((recipient) => (
+                    <Button
+                      key={recipient.id}
+                      type="button"
+                      size="sm"
+                      variant={selectedRecipientId === recipient.id ? "default" : "outline"}
+                      onClick={() => setSelectedRecipientId(recipient.id)}
+                      className="hover-elevate active-elevate-2"
+                      data-testid={`button-recipient-${recipient.id}`}
+                    >
+                      <Avatar className="h-5 w-5 mr-2 ring-1" style={{ '--tw-ring-color': recipient.color } as React.CSSProperties}>
+                        <AvatarFallback 
+                          className="text-white text-xs font-semibold"
+                          style={{ backgroundColor: recipient.color }}
+                        >
+                          {recipient.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      {recipient.name}
+                    </Button>
+                  ))}
+                {allMembers.filter(m => m.id !== event.memberId).length === 0 && (
+                  <p className="text-sm text-muted-foreground">No other family members to send to</p>
+                )}
+              </div>
+            </div>
+            
             {/* Formatting Controls */}
             <div className="p-3 rounded-xl backdrop-blur-md bg-background/50 space-y-3">
               <div className="space-y-2">
@@ -245,7 +289,7 @@ export default function EventDetailView({
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={`Write your love note to ${member.name}...`}
+                placeholder={`Write your love note to ${allMembers.find(m => m.id === selectedRecipientId)?.name || 'family member'}...`}
                 data-testid="textarea-event-message"
                 className="backdrop-blur-md bg-background/50 rounded-xl resize-none min-h-[100px]"
                 style={{
@@ -256,13 +300,13 @@ export default function EventDetailView({
               <div className="flex justify-end">
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!message.trim() || createMessageMutation.isPending}
+                  disabled={!message.trim() || !selectedRecipientId || createMessageMutation.isPending}
                   data-testid="button-send-message"
                   size="sm"
                   className="hover-elevate active-elevate-2"
                 >
                   <MessageCircle className="h-4 w-4 mr-2" />
-                  {createMessageMutation.isPending ? "Sending..." : "Send Message"}
+                  {createMessageMutation.isPending ? "Sending..." : "Send Love Note"}
                 </Button>
               </div>
             </div>

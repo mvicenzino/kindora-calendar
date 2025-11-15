@@ -24,6 +24,7 @@ export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   eventId: varchar("event_id").notNull(),
   senderName: text("sender_name").notNull(),
+  recipientId: varchar("recipient_id").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
   fontWeight: text("font_weight"),

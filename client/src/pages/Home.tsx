@@ -398,6 +398,7 @@ export default function Home() {
           endTime: new Date(selectedEvent.endTime)
         } : undefined}
         member={selectedEventMember}
+        allMembers={members}
       />
 
       <EventModal
