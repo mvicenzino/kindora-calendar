@@ -111,12 +111,23 @@ export default function MessagesModal({
                                 {format(new Date(message.createdAt), 'MMM d, h:mm a')}
                               </p>
                             </div>
-                            <p 
-                              className="text-sm break-words"
-                              data-testid={`text-content-${message.id}`}
-                            >
-                              {message.content}
-                            </p>
+                            <div className="flex items-start gap-2">
+                              {message.emoji && (
+                                <span className="text-2xl" data-testid={`emoji-${message.id}`}>
+                                  {message.emoji}
+                                </span>
+                              )}
+                              <p 
+                                className="text-sm break-words flex-1"
+                                data-testid={`text-content-${message.id}`}
+                                style={{
+                                  fontWeight: message.fontWeight || 'normal',
+                                  fontStyle: message.fontStyle || 'normal',
+                                }}
+                              >
+                                {message.content}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}

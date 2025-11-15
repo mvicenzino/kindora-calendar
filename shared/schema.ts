@@ -26,6 +26,9 @@ export const messages = pgTable("messages", {
   senderName: text("sender_name").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  fontWeight: text("font_weight"),
+  fontStyle: text("font_style"),
+  emoji: text("emoji"),
 });
 
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({

@@ -251,6 +251,9 @@ export class MemStorage implements IStorage {
       ...insertMessage,
       id,
       createdAt: new Date(),
+      fontWeight: insertMessage.fontWeight || null,
+      fontStyle: insertMessage.fontStyle || null,
+      emoji: insertMessage.emoji || null,
     };
     this.messages.set(id, message);
     return message;

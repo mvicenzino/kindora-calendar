@@ -43,6 +43,9 @@ export default function EventDetailView({
 }: EventDetailViewProps) {
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState<string>("");
+  const [isBold, setIsBold] = useState(false);
+  const [isItalic, setIsItalic] = useState(false);
   const { toast } = useToast();
 
   // Create message mutation
@@ -58,6 +61,9 @@ export default function EventDetailView({
         description: `Your message was sent to ${member?.name}`,
       });
       setMessage("");
+      setSelectedEmoji("");
+      setIsBold(false);
+      setIsItalic(false);
     },
     onError: () => {
       toast({
@@ -73,8 +79,13 @@ export default function EventDetailView({
     if (isOpen && event) {
       setMessage("");
       setNotes("");
+      setSelectedEmoji("");
+      setIsBold(false);
+      setIsItalic(false);
     }
   }, [isOpen, event?.id]);
+
+  const loveEmojis = ["❤️", "💕", "💖", "💝", "🌹", "💐", "🥰", "😍", "💗", "💓"];
 
   if (!event || !member) return null;
 
@@ -90,6 +101,9 @@ export default function EventDetailView({
       eventId: event.id,
       senderName: "You",
       content: message.trim(),
+      fontWeight: isBold ? "bold" : undefined,
+      fontStyle: isItalic ? "italic" : undefined,
+      emoji: selectedEmoji || undefined,
     });
   };
 
@@ -177,15 +191,68 @@ export default function EventDetailView({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <MessageCircle className="h-5 w-5 text-muted-foreground" />
-              <h4 className="text-lg font-semibold">Message {member.name}</h4>
+              <h4 className="text-lg font-semibold">Send a Love Note</h4>
             </div>
+            
+            {/* Formatting Controls */}
+            <div className="p-3 rounded-xl backdrop-blur-md bg-background/50 space-y-3">
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Add an emoji</p>
+                <div className="flex flex-wrap gap-2">
+                  {loveEmojis.map((emoji) => (
+                    <Button
+                      key={emoji}
+                      type="button"
+                      size="sm"
+                      variant={selectedEmoji === emoji ? "default" : "outline"}
+                      onClick={() => setSelectedEmoji(selectedEmoji === emoji ? "" : emoji)}
+                      className="text-lg h-10 w-10 p-0 hover-elevate active-elevate-2"
+                      data-testid={`button-emoji-${emoji}`}
+                    >
+                      {emoji}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Text style</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isBold ? "default" : "outline"}
+                    onClick={() => setIsBold(!isBold)}
+                    className="font-bold hover-elevate active-elevate-2"
+                    data-testid="button-bold"
+                  >
+                    Bold
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isItalic ? "default" : "outline"}
+                    onClick={() => setIsItalic(!isItalic)}
+                    className="italic hover-elevate active-elevate-2"
+                    data-testid="button-italic"
+                  >
+                    Italic
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
             <div className="space-y-2">
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder={`Send a message to ${member.name} about this event...`}
+                placeholder={`Write your love note to ${member.name}...`}
                 data-testid="textarea-event-message"
                 className="backdrop-blur-md bg-background/50 rounded-xl resize-none min-h-[100px]"
+                style={{
+                  fontWeight: isBold ? 'bold' : 'normal',
+                  fontStyle: isItalic ? 'italic' : 'normal',
+                }}
               />
               <div className="flex justify-end">
                 <Button
