@@ -114,24 +114,23 @@ export default function EventDetailView({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-card/95 border-2 rounded-3xl shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold flex items-center justify-between">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col backdrop-blur-3xl bg-card/95 border-2 rounded-3xl shadow-2xl">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="text-2xl font-bold flex items-center justify-between pr-8">
             Event Details
             <Button
               onClick={onEdit}
               data-testid="button-edit-event"
-              variant="outline"
-              size="sm"
-              className="backdrop-blur-md hover-elevate active-elevate-2"
+              size="icon"
+              variant="ghost"
+              className="hover-elevate active-elevate-2"
             >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
+              <Edit className="h-5 w-5" />
             </Button>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-4 overflow-y-auto flex-1">
           {/* Event Title & Member */}
           <div className="p-4 rounded-2xl backdrop-blur-md" style={{ 
             backgroundColor: `${member.color}10`,
@@ -302,7 +301,7 @@ export default function EventDetailView({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-end gap-3 pt-4 border-t flex-shrink-0">
           <Button
             variant="outline"
             onClick={onClose}
