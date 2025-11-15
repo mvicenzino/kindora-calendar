@@ -8,10 +8,11 @@ import EventModal from "@/components/EventModal";
 import EventDetailView from "@/components/EventDetailView";
 import MemberModal from "@/components/MemberModal";
 import ProfileModal from "@/components/ProfileModal";
+import MessagesModal from "@/components/MessagesModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
+import type { FamilyMember, Event, InsertEvent, Message } from "@shared/schema";
 
 interface TodayEvent {
   id: string;
@@ -31,6 +32,7 @@ export default function Home() {
   const [eventDetailOpen, setEventDetailOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [messagesModalOpen, setMessagesModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [selectedMemberId, setSelectedMemberId] = useState<string>();
 
@@ -42,6 +44,11 @@ export default function Home() {
   // Fetch events
   const { data: events = [] } = useQuery<Event[]>({
     queryKey: ['/api/events'],
+  });
+
+  // Fetch messages
+  const { data: messages = [] } = useQuery<Message[]>({
+    queryKey: ['/api/messages'],
   });
 
   // Create event mutation
@@ -283,8 +290,7 @@ export default function Home() {
   const selectedEventMember = selectedEvent ? members.find(m => m.id === selectedEvent.memberId) : undefined;
 
   const handleMessagesClick = () => {
-    // TODO: Open messages view
-    console.log('Messages clicked');
+    setMessagesModalOpen(true);
   };
 
   const handleProfileClick = () => {
@@ -417,6 +423,20 @@ export default function Home() {
         }))}
         onEditMember={handleEditMember}
         onAddMember={handleAddMemberFromProfile}
+      />
+
+      <MessagesModal
+        isOpen={messagesModalOpen}
+        onOpenChange={setMessagesModalOpen}
+        messages={messages.map(m => ({
+          ...m,
+          createdAt: new Date(m.createdAt)
+        }))}
+        events={events.map(e => ({
+          ...e,
+          startTime: new Date(e.startTime),
+          endTime: new Date(e.endTime)
+        }))}
       />
     </div>
   );

@@ -6,6 +6,10 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar, Clock, Edit, MessageCircle, StickyNote } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { InsertMessage } from "@shared/schema";
 
 interface FamilyMember {
   id: string;
@@ -39,6 +43,30 @@ export default function EventDetailView({
 }: EventDetailViewProps) {
   const [message, setMessage] = useState("");
   const [notes, setNotes] = useState("");
+  const { toast } = useToast();
+
+  // Create message mutation
+  const createMessageMutation = useMutation({
+    mutationFn: async (messageData: InsertMessage) => {
+      const res = await apiRequest('POST', '/api/messages', messageData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      toast({
+        title: "Message sent",
+        description: `Your message was sent to ${member?.name}`,
+      });
+      setMessage("");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Reset message and notes when a new event is opened
   useEffect(() => {
@@ -55,10 +83,14 @@ export default function EventDetailView({
                           event.endTime.getHours() === 23 && 
                           event.endTime.getMinutes() === 59;
 
-  const handleSendMessage = () => {
-    // Placeholder for message sending functionality
-    console.log("Sending message:", message, "to", member.name);
-    setMessage("");
+  const handleSendMessage = async () => {
+    if (!event || !member || !message.trim()) return;
+    
+    await createMessageMutation.mutateAsync({
+      eventId: event.id,
+      senderName: "You",
+      content: message.trim(),
+    });
   };
 
   const handleSaveNotes = () => {
@@ -158,13 +190,13 @@ export default function EventDetailView({
               <div className="flex justify-end">
                 <Button
                   onClick={handleSendMessage}
-                  disabled={!message.trim()}
+                  disabled={!message.trim() || createMessageMutation.isPending}
                   data-testid="button-send-message"
                   size="sm"
                   className="hover-elevate active-elevate-2"
                 >
                   <MessageCircle className="h-4 w-4 mr-2" />
-                  Send Message
+                  {createMessageMutation.isPending ? "Sending..." : "Send Message"}
                 </Button>
               </div>
             </div>
