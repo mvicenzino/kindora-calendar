@@ -182,7 +182,6 @@ export default function WeekView({ date, events, members, messages, onEventClick
         {/* Events Grid */}
         <div className="grid grid-cols-2 gap-3">
           {events.map((event) => {
-            const categoryLabel = getCategoryLabel(event);
             const eventMessage = getEventMessage(event.id);
             
             return (
@@ -206,11 +205,6 @@ export default function WeekView({ date, events, members, messages, onEventClick
                   </button>
                 )}
                 
-                {categoryLabel && (
-                  <div className="text-xs font-semibold text-white/80 mb-1">
-                    {categoryLabel}
-                  </div>
-                )}
                 <h3 className="text-base font-semibold text-white mb-1 leading-tight">
                   {event.title}
                 </h3>

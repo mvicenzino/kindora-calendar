@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format, isToday } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Plus, ChevronLeft } from "lucide-react";
+import { Clock, Plus } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 
@@ -82,15 +82,6 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
         {/* Header */}
         <div className="px-1 sm:px-2">
           <div className="flex items-start gap-3 sm:gap-6">
-            <button
-              type="button"
-              onClick={() => window.history.back()}
-              data-testid="button-back"
-              className="w-9 h-9 sm:w-8 sm:h-8 rounded-full backdrop-blur-xl bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.95] mt-2 sm:mt-3 touch-manipulation opacity-60 hover:opacity-100"
-              aria-label="Go back"
-            >
-              <ChevronLeft className="w-5 h-5 text-white" strokeWidth={2} />
-            </button>
             <div className="flex-1">
               <h1 className="text-4xl sm:text-5xl font-bold text-white">{dayTitle}</h1>
               {daySubtitle && (
