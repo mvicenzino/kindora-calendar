@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, Edit, MessageCircle, StickyNote } from "lucide-react";
+import { Calendar, Clock, Edit, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -44,7 +44,6 @@ export default function EventDetailView({
   allMembers = [],
 }: EventDetailViewProps) {
   const [message, setMessage] = useState("");
-  const [notes, setNotes] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState<string>("");
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
@@ -82,11 +81,10 @@ export default function EventDetailView({
     },
   });
 
-  // Reset message and notes when a new event is opened
+  // Reset message when a new event is opened
   useEffect(() => {
     if (isOpen && event) {
       setMessage("");
-      setNotes("");
       setSelectedEmoji("");
       setIsBold(false);
       setIsItalic(false);
@@ -120,11 +118,6 @@ export default function EventDetailView({
       fontStyle: isItalic ? "italic" : undefined,
       emoji: selectedEmoji || undefined,
     });
-  };
-
-  const handleSaveNotes = () => {
-    // Placeholder for notes saving functionality
-    console.log("Saving notes:", notes);
   };
 
   return (
@@ -311,38 +304,6 @@ export default function EventDetailView({
                 >
                   <MessageCircle className="h-4 w-4 mr-2" />
                   {createMessageMutation.isPending ? "Sending..." : "Send Love Note"}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Notes Section */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <StickyNote className="h-5 w-5 text-muted-foreground" />
-              <h4 className="text-lg font-semibold">Notes</h4>
-            </div>
-            <div className="space-y-2">
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add notes about this event..."
-                data-testid="textarea-event-notes"
-                className="backdrop-blur-md bg-background/50 rounded-xl resize-none min-h-[100px]"
-              />
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSaveNotes}
-                  disabled={!notes.trim()}
-                  data-testid="button-save-notes"
-                  size="sm"
-                  variant="outline"
-                  className="backdrop-blur-md hover-elevate active-elevate-2"
-                >
-                  <StickyNote className="h-4 w-4 mr-2" />
-                  Save Notes
                 </Button>
               </div>
             </div>
