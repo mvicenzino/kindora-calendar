@@ -201,7 +201,7 @@ export default function EventModal({
             </div>
           </div>
 
-          {selectedMember && (
+          {selectedMember && startDate && startTime && (
             <div className="p-4 rounded-2xl backdrop-blur-md" style={{ 
               backgroundColor: `${selectedMember.color}10`,
               borderColor: `${selectedMember.color}30`
@@ -218,7 +218,10 @@ export default function EventModal({
                 <div>
                   <div className="text-sm font-medium">Assigned to {selectedMember.name}</div>
                   <div className="text-xs text-muted-foreground">
-                    {format(new Date(`${startDate}T${startTime}`), 'PPP')} at {startTime}
+                    {(() => {
+                      const eventDate = new Date(`${startDate}T${startTime}`);
+                      return !isNaN(eventDate.getTime()) ? `${format(eventDate, 'PPP')} at ${startTime}` : 'Select date and time';
+                    })()}
                   </div>
                 </div>
               </div>

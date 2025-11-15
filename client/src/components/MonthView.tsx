@@ -1,4 +1,5 @@
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter } from "date-fns";
+import { Plus } from "lucide-react";
 
 interface FamilyMember {
   id: string;
@@ -22,9 +23,10 @@ interface MonthViewProps {
   members: FamilyMember[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
+  onAddEvent?: () => void;
 }
 
-export default function MonthView({ date, events, members, onEventClick, onViewChange }: MonthViewProps) {
+export default function MonthView({ date, events, members, onEventClick, onViewChange, onAddEvent }: MonthViewProps) {
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const calendarStart = startOfWeek(monthStart);
@@ -59,13 +61,24 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-            MONTH
-          </p>
-          <h1 className="text-4xl font-bold text-white">
-            {format(date, 'MMMM yyyy')}
-          </h1>
+        <div className="flex items-center justify-between px-2">
+          <div className="flex-1 text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+              MONTH
+            </p>
+            <h1 className="text-4xl font-bold text-white">
+              {format(date, 'MMMM yyyy')}
+            </h1>
+          </div>
+          {onAddEvent && (
+            <button
+              onClick={onAddEvent}
+              data-testid="button-add-event"
+              className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98]"
+            >
+              <Plus className="w-5 h-5 text-white" />
+            </button>
+          )}
         </div>
 
         {/* Calendar Grid */}

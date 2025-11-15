@@ -128,6 +128,11 @@ export default function Home() {
     await deleteEventMutation.mutateAsync(eventId);
   };
 
+  const handleAddEvent = () => {
+    setSelectedEventId(undefined);
+    setEventModalOpen(true);
+  };
+
   // Convert events to today view format
   const todayEvents: TodayEvent[] = events
     .filter(e => isToday(new Date(e.startTime)))
@@ -248,6 +253,7 @@ export default function Home() {
           tasks={tasks}
           onEventClick={handleEventClick}
           onViewChange={setView}
+          onAddEvent={handleAddEvent}
         />
       )}
       
@@ -261,6 +267,7 @@ export default function Home() {
           }))}
           onEventClick={handleEventClick}
           onViewChange={setView}
+          onAddEvent={handleAddEvent}
         />
       )}
 
@@ -274,6 +281,7 @@ export default function Home() {
           }))}
           onEventClick={handleEventClick}
           onViewChange={setView}
+          onAddEvent={handleAddEvent}
         />
       )}
 

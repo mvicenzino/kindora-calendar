@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Clock, Plus } from "lucide-react";
 
 interface FamilyMember {
   id: string;
@@ -27,9 +27,10 @@ interface TodayViewProps {
   tasks: string[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
+  onAddEvent?: () => void;
 }
 
-export default function TodayView({ date, events, tasks, onEventClick, onViewChange }: TodayViewProps) {
+export default function TodayView({ date, events, tasks, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
   const focusEvents = events.filter(e => e.isFocus);
   const regularEvents = events.filter(e => !e.isFocus);
 
@@ -51,6 +52,15 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
         <div className="flex items-center justify-between px-2">
           <h1 className="text-5xl font-bold text-white">Today</h1>
           <div className="flex gap-2">
+            {onAddEvent && (
+              <button
+                onClick={onAddEvent}
+                data-testid="button-add-event"
+                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-5 h-5 text-white" />
+              </button>
+            )}
             {focusEvents.slice(0, 2).flatMap(e => e.members).slice(0, 2).map((member, idx) => (
               <div
                 key={idx}

@@ -1,4 +1,5 @@
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addDays } from "date-fns";
+import { Plus } from "lucide-react";
 
 interface FamilyMember {
   id: string;
@@ -22,9 +23,10 @@ interface WeekViewProps {
   members: FamilyMember[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
+  onAddEvent?: () => void;
 }
 
-export default function WeekView({ date, events, members, onEventClick, onViewChange }: WeekViewProps) {
+export default function WeekView({ date, events, members, onEventClick, onViewChange, onAddEvent }: WeekViewProps) {
   const weekStart = startOfWeek(date);
   const weekEnd = endOfWeek(date);
   const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -73,6 +75,15 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
             </p>
           </div>
           <div className="flex gap-2">
+            {onAddEvent && (
+              <button
+                onClick={onAddEvent}
+                data-testid="button-add-event"
+                className="w-10 h-10 rounded-full backdrop-blur-md bg-white/20 flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all active:scale-[0.98]"
+              >
+                <Plus className="w-5 h-5 text-white" />
+              </button>
+            )}
             {members.slice(0, 2).map((member) => (
               <div
                 key={member.id}
