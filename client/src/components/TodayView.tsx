@@ -69,7 +69,7 @@ export default function TodayView({ date, events, tasks, onEventClick }: TodayVi
                 key={event.id}
                 onClick={() => onEventClick(event)}
                 data-testid={`event-${event.id}`}
-                className="w-full bg-[#B8836D] rounded-3xl p-6 hover:opacity-90 transition-all active:scale-[0.98] text-left"
+                className="w-full bg-[#B8836D] rounded-3xl p-6 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
               >
                 <p className="text-xs font-semibold uppercase tracking-wider text-white/70 mb-3">
                   Today's Focus
@@ -113,7 +113,7 @@ export default function TodayView({ date, events, tasks, onEventClick }: TodayVi
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   data-testid={`event-${event.id}`}
-                  className="w-full rounded-3xl p-5 hover:opacity-90 transition-all active:scale-[0.98] text-left"
+                  className="w-full rounded-3xl p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
                   style={{ backgroundColor: eventColors[idx % eventColors.length] }}
                 >
                   <div className="flex items-start justify-between mb-2">
