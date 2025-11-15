@@ -57,17 +57,21 @@ export default function EventDetailView({
       const res = await apiRequest('POST', '/api/messages', messageData);
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
-      const recipient = allMembers.find(m => m.id === selectedRecipientId);
-      toast({
-        title: "Love note sent",
-        description: `Your love note was sent to ${recipient?.name || 'family member'}`,
-      });
+      const recipient = allMembers.find(m => m.id === variables.recipientId);
+      
+      // Clear all form states
       setMessage("");
       setSelectedEmoji("");
       setIsBold(false);
       setIsItalic(false);
+      
+      // Show success toast
+      toast({
+        title: "Love note sent",
+        description: `Your love note was sent to ${recipient?.name || 'family member'}`,
+      });
     },
     onError: () => {
       toast({
