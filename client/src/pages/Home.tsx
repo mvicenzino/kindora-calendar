@@ -4,7 +4,7 @@ import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
 import EventModal from "@/components/EventModal";
 import MemberModal from "@/components/MemberModal";
-import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek } from "date-fns";
+import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
@@ -21,7 +21,7 @@ interface TodayEvent {
 }
 
 export default function Home() {
-  const [currentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
@@ -133,9 +133,17 @@ export default function Home() {
     setEventModalOpen(true);
   };
 
+  const handleDateChange = (date: Date) => {
+    setCurrentDate(date);
+  };
+
+  const handleWeekChange = (date: Date) => {
+    setCurrentDate(date);
+  };
+
   // Convert events to today view format
   const todayEvents: TodayEvent[] = events
-    .filter(e => isToday(new Date(e.startTime)))
+    .filter(e => isSameDay(new Date(e.startTime), currentDate))
     .map(e => {
       const eventMembers = members
         .filter(m => m.id === e.memberId)
@@ -168,7 +176,7 @@ export default function Home() {
 
   // Convert events to week view format
   const weekEvents = events
-    .filter(e => isThisWeek(new Date(e.startTime), { weekStartsOn: 0 }))
+    .filter(e => isSameWeek(new Date(e.startTime), currentDate, { weekStartsOn: 0 }))
     .map(e => {
       const eventMembers = members
         .filter(m => m.id === e.memberId)
@@ -199,7 +207,7 @@ export default function Home() {
 
   // Convert events to month view format
   const monthEvents = events
-    .filter(e => isThisMonth(new Date(e.startTime)))
+    .filter(e => isSameMonth(new Date(e.startTime), currentDate))
     .map(e => {
       const eventMembers = members
         .filter(m => m.id === e.memberId)
@@ -254,6 +262,8 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
+          onDateChange={handleDateChange}
+          onWeekChange={handleWeekChange}
         />
       )}
 
