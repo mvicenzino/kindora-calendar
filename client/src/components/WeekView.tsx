@@ -181,30 +181,34 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
         {onViewChange && (
           <div className="flex gap-2 pt-4 rounded-3xl bg-white/10 backdrop-blur-md p-2">
             <button
+              type="button"
               onClick={() => onViewChange('day')}
               data-testid="button-view-day"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
             >
               Day
             </button>
             <button
+              type="button"
               onClick={() => onViewChange('week')}
               data-testid="button-view-week"
-              className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98]"
+              className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer"
             >
               Week
             </button>
             <button
+              type="button"
               onClick={() => onViewChange('month')}
               data-testid="button-view-month"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
             >
               Month
             </button>
             <button
+              type="button"
               onClick={() => onViewChange('timeline')}
               data-testid="button-view-timeline"
-              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer"
             >
               Timeline
             </button>
