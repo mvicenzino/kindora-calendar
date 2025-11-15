@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import { Calendar, Clock, User, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from 'react';
@@ -50,6 +51,7 @@ export default function EventModal({
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
+  const [isSometimeToday, setIsSometimeToday] = useState(false);
 
   // Update form state when event prop changes
   useEffect(() => {
@@ -60,6 +62,7 @@ export default function EventModal({
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
+      setIsSometimeToday(false);
     } else {
       // Reset form for new event
       setTitle("");
@@ -68,12 +71,17 @@ export default function EventModal({
       setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
       setStartTime('09:00');
       setEndTime('10:00');
+      setIsSometimeToday(false);
     }
   }, [event, members, selectedDate]);
 
   const handleSave = () => {
-    const startDateTime = new Date(`${startDate}T${startTime}`);
-    const endDateTime = new Date(`${startDate}T${endTime}`);
+    // If "Sometime Today", use end of day times
+    const actualStartTime = isSometimeToday ? '23:58' : startTime;
+    const actualEndTime = isSometimeToday ? '23:59' : endTime;
+    
+    const startDateTime = new Date(`${startDate}T${actualStartTime}`);
+    const endDateTime = new Date(`${startDate}T${actualEndTime}`);
 
     onSave({
       ...(event?.id && { id: event.id }),
@@ -171,37 +179,54 @@ export default function EventModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Start Time
+          <div className="flex items-center justify-between p-4 rounded-xl backdrop-blur-md bg-background/50">
+            <div className="space-y-0.5">
+              <Label htmlFor="sometime-today" className="text-sm font-medium cursor-pointer">
+                Sometime Today
               </Label>
-              <Input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                data-testid="input-start-time"
-                className="backdrop-blur-md bg-background/50 rounded-xl"
-              />
+              <p className="text-xs text-muted-foreground">No specific time needed</p>
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                End Time
-              </Label>
-              <Input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                data-testid="input-end-time"
-                className="backdrop-blur-md bg-background/50 rounded-xl"
-              />
-            </div>
+            <Switch
+              id="sometime-today"
+              checked={isSometimeToday}
+              onCheckedChange={setIsSometimeToday}
+              data-testid="switch-sometime-today"
+            />
           </div>
 
-          {selectedMember && startDate && startTime && (
+          {!isSometimeToday && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Start Time
+                </Label>
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  data-testid="input-start-time"
+                  className="backdrop-blur-md bg-background/50 rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  End Time
+                </Label>
+                <Input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  data-testid="input-end-time"
+                  className="backdrop-blur-md bg-background/50 rounded-xl"
+                />
+              </div>
+            </div>
+          )}
+
+          {selectedMember && startDate && (
             <div className="p-4 rounded-2xl backdrop-blur-md" style={{ 
               backgroundColor: `${selectedMember.color}10`,
               borderColor: `${selectedMember.color}30`
@@ -219,8 +244,15 @@ export default function EventModal({
                   <div className="text-sm font-medium">Assigned to {selectedMember.name}</div>
                   <div className="text-xs text-muted-foreground">
                     {(() => {
-                      const eventDate = new Date(`${startDate}T${startTime}`);
-                      return !isNaN(eventDate.getTime()) ? `${format(eventDate, 'PPP')} at ${startTime}` : 'Select date and time';
+                      if (isSometimeToday) {
+                        const eventDate = new Date(`${startDate}T09:00`);
+                        return `${format(eventDate, 'PPP')} - Sometime today`;
+                      }
+                      if (startTime) {
+                        const eventDate = new Date(`${startDate}T${startTime}`);
+                        return !isNaN(eventDate.getTime()) ? `${format(eventDate, 'PPP')} at ${startTime}` : 'Select date and time';
+                      }
+                      return 'Select date and time';
                     })()}
                   </div>
                 </div>

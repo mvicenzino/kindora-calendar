@@ -33,7 +33,7 @@ export class MemStorage implements IStorage {
     };
     const member2: FamilyMember = {
       id: randomUUID(),
-      name: 'Claire V',
+      name: 'Carolyn V',
       color: '#EC4899',
       avatar: null,
     };
