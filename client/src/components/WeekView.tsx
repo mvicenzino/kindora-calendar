@@ -66,9 +66,21 @@ export default function WeekView({ date, events, members, messages, onEventClick
     onViewChange?.('day');
   };
 
+  // Group events by day
+  const eventsByDay = daysInWeek.map(day => {
+    const dayEvents = events
+      .filter(e => isSameDay(new Date(e.startTime), day))
+      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    
+    return {
+      day,
+      events: dayEvents
+    };
+  }).filter(group => group.events.length > 0);
+
   // Event colors based on categories or members
   const getEventColor = (event: Event) => {
-    if (event.title.toLowerCase().includes('dinner') || event.title.toLowerCase().includes('emma')) {
+    if (event.title.toLowerCase().includes('dinner') || event.title.toLowerCase().includes('carolyn')) {
       return '#B8836D'; // coral/brownish
     } else if (event.categories?.includes('Family') || event.title.toLowerCase().includes('sebby') || event.title.toLowerCase().includes('zoo')) {
       return '#8B7A6D'; // brownish
@@ -86,16 +98,6 @@ export default function WeekView({ date, events, members, messages, onEventClick
       return '#9B8A7D'; // tan
     }
     return '#6D7A8E'; // default blue-gray
-  };
-
-  const getCategoryLabel = (event: Event) => {
-    if (event.title.toLowerCase().includes('grocery')) return 'PERSONAL';
-    if (event.title.toLowerCase().includes('sebby')) return 'W';
-    if (event.title.toLowerCase().includes('pack')) return 'Pavnity';
-    if (event.title.toLowerCase().includes('rental')) return 'FAMILY';
-    if (event.title.toLowerCase().includes('dr.')) return 'M';
-    if (event.title.toLowerCase().includes('zoo')) return 'Family';
-    return event.categories?.[0];
   };
 
   return (

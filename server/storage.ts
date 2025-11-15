@@ -73,7 +73,7 @@ export class MemStorage implements IStorage {
       // Earlier this week
       {
         id: randomUUID(),
-        title: 'Dinner with Emma',
+        title: 'Dinner with Carolyn',
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 17, 30),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 19, 0),
