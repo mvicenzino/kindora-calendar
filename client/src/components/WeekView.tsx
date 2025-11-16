@@ -69,16 +69,18 @@ export default function WeekView({ date, events, members, messages, onEventClick
   };
 
   // Group events by day and sort - show all days even if empty (latest first)
-  const eventsByDay = daysInWeek.map(day => {
-    const dayEvents = events
-      .filter(e => isSameDay(new Date(e.startTime), day))
-      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
-    
-    return {
-      day,
-      events: dayEvents
-    };
-  });
+  const eventsByDay = daysInWeek
+    .map(day => {
+      const dayEvents = events
+        .filter(e => isSameDay(new Date(e.startTime), day))
+        .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+      
+      return {
+        day,
+        events: dayEvents
+      };
+    })
+    .reverse(); // Reverse days so latest day (Sunday) appears first
 
   // Get event color from member
   const getEventColor = (event: Event) => {
