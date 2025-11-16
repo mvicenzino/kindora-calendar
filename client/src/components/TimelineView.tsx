@@ -129,29 +129,9 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
                     {/* Event card */}
                     <div
-                      className="rounded-2xl p-4 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all active:scale-[0.98] text-left shadow-xl relative overflow-visible"
+                      className="rounded-2xl p-4 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all active:scale-[0.98] text-left shadow-xl relative"
                       style={{ backgroundColor: color }}
                     >
-                      {/* Member avatars overlayed on card */}
-                      <div className="absolute -bottom-3 left-4 flex gap-1">
-                        {event.members.slice(0, 3).map((member, idx) => (
-                          <Avatar 
-                            key={member.id} 
-                            className="h-10 w-10 ring-2 ring-white/60 shadow-lg"
-                            style={{ 
-                              '--tw-ring-color': `${member.color}80`
-                            } as React.CSSProperties}
-                          >
-                            <AvatarFallback 
-                              className="text-white font-semibold text-xs"
-                              style={{ backgroundColor: member.color }}
-                            >
-                              {member.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-
                       {/* Love Note Emoji */}
                       {eventMessage && (
                         <button
@@ -188,14 +168,39 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                         </div>
                       </div>
 
-                      {/* Category badge if exists */}
-                      {event.categories && event.categories.length > 0 && (
-                        <div>
-                          <span className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium text-white">
-                            {event.categories[0]}
-                          </span>
+                      {/* Bottom row: Category badge and Member avatars */}
+                      <div className="flex items-center justify-between gap-2">
+                        {/* Category badge */}
+                        {event.categories && event.categories.length > 0 ? (
+                          <div>
+                            <span className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium text-white">
+                              {event.categories[0]}
+                            </span>
+                          </div>
+                        ) : (
+                          <div />
+                        )}
+
+                        {/* Member avatars */}
+                        <div className="flex gap-1">
+                          {event.members.slice(0, 3).map((member, idx) => (
+                            <Avatar 
+                              key={member.id} 
+                              className="h-7 w-7 ring-2 ring-white/60 shadow-lg"
+                              style={{ 
+                                '--tw-ring-color': `${member.color}80`
+                              } as React.CSSProperties}
+                            >
+                              <AvatarFallback 
+                                className="text-white font-semibold text-[10px]"
+                                style={{ backgroundColor: member.color }}
+                              >
+                                {member.initials}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </button>
                 </div>
