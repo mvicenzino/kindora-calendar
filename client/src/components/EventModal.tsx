@@ -127,8 +127,8 @@ export default function EventModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl">
-        <DialogHeader className="pb-4 border-b border-white/10">
-          <DialogTitle className="text-2xl font-bold text-white">
+        <DialogHeader className="pb-4 border-b border-white/10 relative">
+          <DialogTitle className="text-2xl font-bold text-white pr-10">
             {event?.id ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
         </DialogHeader>
