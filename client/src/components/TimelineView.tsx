@@ -101,9 +101,52 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
   };
 
   return (
-    <div ref={containerRef} className="min-h-full px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="w-full px-1 sm:px-2 mb-4 sm:mb-6">
+    <div ref={containerRef} className="min-h-full">
+      {/* Fixed View Toggle at Top */}
+      {onViewChange && (
+        <div className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 pt-4 pb-3 backdrop-blur-xl bg-gradient-to-b from-black/40 via-black/30 to-transparent">
+          <div className="max-w-3xl mx-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2 shadow-lg shadow-black/20">
+              <button
+                type="button"
+                onClick={() => onViewChange('day')}
+                data-testid="button-view-day"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
+              >
+                Day
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange('week')}
+                data-testid="button-view-week"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
+              >
+                Week
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange('month')}
+                data-testid="button-view-month"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
+              >
+                Month
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange('timeline')}
+                data-testid="button-view-timeline"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
+              >
+                Timeline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto" style={{ paddingTop: onViewChange ? '5.5rem' : undefined }}>
+        {/* Header */}
+        <div className="w-full px-1 sm:px-2 mb-4 sm:mb-6">
         <div className="flex items-start justify-between gap-3 sm:gap-6">
           <div className="flex-1">
             <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
@@ -141,37 +184,44 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                 </div>
 
                 {/* Event card */}
-                <button
-                  onClick={() => onEventClick(event)}
-                  data-testid={`timeline-event-${event.id}`}
-                  className="w-full"
+                <div
+                  ref={(el) => {
+                    if (el) cardRefs.current[event.id] = el;
+                  }}
+                  className="relative w-full"
+                  style={{ 
+                    transform: `scale(${cardScales[event.id] || 0.92})`,
+                  }}
                 >
-                  <div
-                    ref={(el) => {
-                      if (el) cardRefs.current[event.id] = el;
-                    }}
-                    className="rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl relative"
+                  {/* Love Note Bubble */}
+                  {eventMessage && (
+                    <div className="absolute top-7 right-7 z-10">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEmojiClick(e, eventMessage);
+                        }}
+                        data-testid={`love-note-bubble-${event.id}`}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 max-w-[180px]"
+                        aria-label="View love note"
+                      >
+                        <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
+                        <span className="text-xs text-white/90 truncate font-medium">
+                          {eventMessage.content}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => onEventClick(event)}
+                    data-testid={`timeline-event-${event.id}`}
+                    className="w-full rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl"
                     style={{ 
                       backgroundColor: color,
-                      transform: `scale(${cardScales[event.id] || 0.92})`,
                     }}
                   >
-                      {/* Love Note Bubble */}
-                      {eventMessage && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleEmojiClick(e, eventMessage)}
-                          data-testid={`love-note-bubble-${event.id}`}
-                          className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[180px]"
-                          aria-label="View love note"
-                        >
-                          <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
-                          <span className="text-xs text-white/90 truncate font-medium">
-                            {eventMessage.content}
-                          </span>
-                        </button>
-                      )}
-                      
                       {/* Title */}
                       <h3 className="text-xl font-bold text-white mb-1.5 leading-tight pr-48">
                         {event.title}
@@ -228,53 +278,13 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                           ))}
                         </div>
                       </div>
-                    </div>
                   </button>
                 </div>
             );
           })}
         </div>
       </div>
-
-      {/* View Toggle */}
-      {onViewChange && (
-        <div className="w-full max-w-3xl mx-auto mt-6 sm:mt-8 pb-safe">
-          <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
-            <button
-              type="button"
-              onClick={() => onViewChange('day')}
-              data-testid="button-view-day"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-            >
-              Day
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewChange('week')}
-              data-testid="button-view-week"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-            >
-              Week
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewChange('month')}
-              data-testid="button-view-month"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-            >
-              Month
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewChange('timeline')}
-              data-testid="button-view-timeline"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
-            >
-              Timeline
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
       
       {/* Love Note Popup */}
       <LoveNotePopup

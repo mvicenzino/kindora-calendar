@@ -76,10 +76,53 @@ export default function MonthView({ date, events, members, messages, onEventClic
   };
 
   return (
-    <div className="min-h-full px-4 sm:px-6 py-4 sm:py-6 max-w-2xl mx-auto">
-      <div className="w-full space-y-4 sm:space-y-5">
-        {/* Header */}
-        <div className="px-1 sm:px-2">
+    <div className="min-h-full">
+      {/* Fixed View Toggle at Top */}
+      {onViewChange && (
+        <div className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 pt-4 pb-3 backdrop-blur-xl bg-gradient-to-b from-black/40 via-black/30 to-transparent">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2 shadow-lg shadow-black/20">
+              <button
+                type="button"
+                onClick={() => onViewChange('day')}
+                data-testid="button-view-day"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
+              >
+                Day
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange('week')}
+                data-testid="button-view-week"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
+              >
+                Week
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange('month')}
+                data-testid="button-view-month"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
+              >
+                Month
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange('timeline')}
+                data-testid="button-view-timeline"
+                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
+              >
+                Timeline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-2xl mx-auto" style={{ paddingTop: onViewChange ? '5.5rem' : undefined }}>
+        <div className="w-full space-y-4 sm:space-y-5">
+          {/* Header */}
+          <div className="px-1 sm:px-2">
           <div className="flex items-center gap-3 sm:gap-6">
             <div className="flex-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
@@ -205,44 +248,7 @@ export default function MonthView({ date, events, members, messages, onEventClic
             </div>
           </div>
         )}
-
-        {/* View Toggle */}
-        {onViewChange && (
-          <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
-            <button
-              type="button"
-              onClick={() => onViewChange('day')}
-              data-testid="button-view-day"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-            >
-              Day
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewChange('week')}
-              data-testid="button-view-week"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-            >
-              Week
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewChange('month')}
-              data-testid="button-view-month"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
-            >
-              Month
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewChange('timeline')}
-              data-testid="button-view-timeline"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-            >
-              Timeline
-            </button>
-          </div>
-        )}
+        </div>
       </div>
       
       {/* Love Note Popup */}
