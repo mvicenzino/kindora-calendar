@@ -21,7 +21,7 @@ Preferred communication style: Simple, everyday language.
 - **Architecture:** Storage abstraction, shared schemas between client and server via `@shared`, separation of concerns (routes, storage), and Zod validation at the API boundary.
 
 ### Data Storage Solutions
-- **Database Schema:** Designed around three entities: Family Members (UUID, name, color, avatar), Events (UUID, title, description, timestamps, member association, color inheritance), and Messages (UUID, event association, sender, recipient, content, formatting, timestamp).
+- **Database Schema:** Designed around three entities: Family Members (UUID, name, color, avatar), Events (UUID, title, description, timestamps, memberIds array for multi-member assignment, color inheritance), and Messages (UUID, event association, sender, recipient, content, formatting, timestamp).
 - **Migration:** Drizzle Kit for PostgreSQL migrations, with schema source in `/shared/schema.ts`.
 - **Current Implementation:** PostgreSQL database (Neon) with Drizzle ORM using the HTTP driver (`drizzle-orm/neon-http`). Storage abstraction layer allows fallback to in-memory storage when `DATABASE_URL` is not available. The `PgStorage` class implements the `IStorage` interface with full CRUD operations for family members, events, and messages. Database includes manual cascade deletes to maintain referential integrity.
 
@@ -32,10 +32,11 @@ Preferred communication style: Simple, everyday language.
     - **Month View:** Grid with event indicators, upcoming events section, month navigation.
     - **Timeline View:** Alternating left-right layout with central vertical timeline, date badges along the center line, connector dots for each event, member avatars positioned on outer edges of cards, liquid glass event cards with member colors, chronological display of all events.
 - **Event Management:**
-    - **Creation & Editing:** Modal-based, form validation (Zod), title, description, time, member, "Sometime Today" toggle. Start time defaults to current system time (rounded to nearest 15 minutes).
-    - **Detail View:** Displays full event details, includes "Love Note" section for messaging, edit/delete options.
+    - **Creation & Editing:** Modal-based, form validation (Zod), title, description, time, multiple member selection via checkboxes, "Sometime Today" toggle. Start time defaults to current system time (rounded to nearest 15 minutes). Events can be assigned to multiple family members simultaneously, with a preview showing overlapping avatars for all selected members.
+    - **Multi-Member Events:** Events support multiple family member assignments using memberIds array. All calendar views (Day, Week, Month, Timeline) display overlapping member avatars with -space-x-2 spacing. Event detail view shows all assigned members with "Assigned to {names}" text.
+    - **Detail View:** Displays full event details with all assigned member avatars, includes "Love Note" section for messaging, edit/delete options.
     - **Deletion:** Confirmation and automatic cache invalidation.
-    - **Event Notifications:** Animated notification dialog appears when events are within 10 minutes of starting. Features calming notification sound (Web Audio API), blue-purple gradient design with animated bell icon, dismissible with "Got it" button. Monitors all events every 30 seconds, tracks notified events to prevent duplicates.
+    - **Event Notifications:** Animated notification dialog appears when events are within 10 minutes of starting. Features calming notification sound (Web Audio API), blue-purple gradient design with animated bell icon, dismissible with "Got it" button. Monitors all events every 30 seconds, tracks notified events to prevent duplicates. Shows all assigned members for multi-member events.
 - **Messages Feature (Love Notes):**
     - **In-App Messaging:** Personalized messages related to events.
     - **Recipient Selection:** Choose family member (excluding self), visual selector, auto-selection, success toasts.
