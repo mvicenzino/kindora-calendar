@@ -2,10 +2,11 @@ import { useState } from "react";
 import { format, isToday } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Plus } from "lucide-react";
+import { Clock, Plus, Trash2 } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 import EventThumbnail from "./EventThumbnail";
+import DeleteEventDialog from "./DeleteEventDialog";
 
 interface FamilyMember {
   id: string;
@@ -34,11 +35,14 @@ interface TodayViewProps {
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: () => void;
+  onDeleteEvent?: (eventId: string) => void;
 }
 
-export default function TodayView({ date, events, tasks, messages, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
+export default function TodayView({ date, events, tasks, messages, onEventClick, onViewChange, onAddEvent, onDeleteEvent }: TodayViewProps) {
   const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | undefined>();
   
   const isViewingToday = isToday(date);
   const dayTitle = isViewingToday ? "Today" : format(date, 'EEEE');
@@ -53,6 +57,20 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
     e.stopPropagation();
     setSelectedMessage(message);
     setLoveNotePopupOpen(true);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    setEventToDelete(event);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (eventToDelete && onDeleteEvent) {
+      onDeleteEvent(eventToDelete.id);
+    }
+    setDeleteDialogOpen(false);
+    setEventToDelete(undefined);
   };
 
   // Check if event is "Sometime Today" (23:58-23:59)
@@ -148,6 +166,26 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                   className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative min-h-[100px]"
                   style={{ backgroundColor: eventColor }}
                 >
+                  {/* Delete Icon - top right */}
+                  {onDeleteEvent && (
+                    <div
+                      onClick={(e) => handleDeleteClick(e, event)}
+                      data-testid={`delete-event-${event.id}`}
+                      className="absolute top-3 right-3 w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-red-500/30 hover:border-red-400/50 transition-all active:scale-90 z-20 cursor-pointer"
+                      role="button"
+                      aria-label="Delete event"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleDeleteClick(e as any, event);
+                        }
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 text-white/70 hover:text-red-300" strokeWidth={2} />
+                    </div>
+                  )}
+
                   {/* Love Note Bubble - moved to bottom-left */}
                   {eventMessage && (
                     <div
@@ -208,6 +246,17 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
         isOpen={loveNotePopupOpen}
         onClose={() => setLoveNotePopupOpen(false)}
         message={selectedMessage}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteEventDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setEventToDelete(undefined);
+        }}
+        onConfirm={handleConfirmDelete}
+        eventTitle={eventToDelete?.title || ""}
       />
     </div>
   );

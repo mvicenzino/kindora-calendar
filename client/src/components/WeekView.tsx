@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks } from "date-fns";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import EventThumbnail from "./EventThumbnail";
+import DeleteEventDialog from "./DeleteEventDialog";
 
 interface FamilyMember {
   id: string;
@@ -33,11 +34,14 @@ interface WeekViewProps {
   onAddEvent?: () => void;
   onDateChange?: (date: Date) => void;
   onWeekChange?: (date: Date) => void;
+  onDeleteEvent?: (eventId: string) => void;
 }
 
-export default function WeekView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent, onDateChange, onWeekChange }: WeekViewProps) {
+export default function WeekView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent, onDateChange, onWeekChange, onDeleteEvent }: WeekViewProps) {
   const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | undefined>();
   const isDesktop = useMediaQuery('(min-width: 640px)');
   
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -53,6 +57,20 @@ export default function WeekView({ date, events, members, messages, onEventClick
     e.stopPropagation();
     setSelectedMessage(message);
     setLoveNotePopupOpen(true);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    setEventToDelete(event);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (eventToDelete && onDeleteEvent) {
+      onDeleteEvent(eventToDelete.id);
+    }
+    setDeleteDialogOpen(false);
+    setEventToDelete(undefined);
   };
 
   const handlePreviousWeek = () => {
@@ -238,6 +256,26 @@ export default function WeekView({ date, events, members, messages, onEventClick
                       className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative min-h-[110px]"
                       style={{ backgroundColor: getEventColor(event) }}
                     >
+                      {/* Delete Icon - top right */}
+                      {onDeleteEvent && (
+                        <div
+                          onClick={(e) => handleDeleteClick(e, event)}
+                          data-testid={`delete-event-${event.id}`}
+                          className="absolute top-3 right-3 w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-red-500/30 hover:border-red-400/50 transition-all active:scale-90 z-20 cursor-pointer"
+                          role="button"
+                          aria-label="Delete event"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleDeleteClick(e as any, event);
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 text-white/70 hover:text-red-300" strokeWidth={2} />
+                        </div>
+                      )}
+
                       {/* Love Note Bubble - moved to bottom-left */}
                       {eventMessage && (
                         isDesktop ? (
@@ -324,6 +362,17 @@ export default function WeekView({ date, events, members, messages, onEventClick
         isOpen={loveNotePopupOpen}
         onClose={() => setLoveNotePopupOpen(false)}
         message={selectedMessage}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteEventDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setEventToDelete(undefined);
+        }}
+        onConfirm={handleConfirmDelete}
+        eventTitle={eventToDelete?.title || ""}
       />
     </div>
   );

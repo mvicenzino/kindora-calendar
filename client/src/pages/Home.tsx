@@ -399,6 +399,7 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
+          onDeleteEvent={handleDeleteEvent}
         />
       )}
       
@@ -419,6 +420,7 @@ export default function Home() {
           onAddEvent={handleAddEvent}
           onDateChange={handleDateChange}
           onWeekChange={handleWeekChange}
+          onDeleteEvent={handleDeleteEvent}
         />
       )}
 
@@ -451,6 +453,7 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
+          onDeleteEvent={handleDeleteEvent}
         />
       )}
       </div>
@@ -551,6 +554,7 @@ export default function Home() {
         }))}
         onEventClick={handleEventClick}
         onAddEvent={handleAddEventForTimeline}
+        onDeleteEvent={handleDeleteEvent}
       />
     </div>
   );
