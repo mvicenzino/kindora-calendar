@@ -16,7 +16,7 @@ export const events = pgTable("events", {
   description: text("description"),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
-  memberId: varchar("member_id").notNull(),
+  memberIds: varchar("member_ids").array().notNull(),
   color: text("color").notNull(),
 });
 

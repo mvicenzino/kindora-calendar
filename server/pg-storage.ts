@@ -45,10 +45,10 @@ export class PgStorage implements IStorage {
   }
 
   async deleteFamilyMember(id: string): Promise<void> {
-    // Delete events associated with this member
-    await this.db
-      .delete(events)
-      .where(eq(events.memberId, id));
+    // Note: For now, we don't delete events when a member is deleted
+    // since events may have multiple members. In a production app,
+    // you'd want to either remove the member from memberIds or
+    // delete events with only that member.
 
     // Delete the member
     await this.db

@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, User, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar, Clock, Users, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from 'react';
 
@@ -22,7 +22,7 @@ interface Event {
   description?: string;
   startTime: Date;
   endTime: Date;
-  memberId: string;
+  memberIds: string[];
 }
 
 interface EventModalProps {
@@ -66,7 +66,7 @@ export default function EventModal({
   const defaultDate = selectedDate || new Date();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [memberId, setMemberId] = useState("");
+  const [memberIds, setMemberIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
   const [startTime, setStartTime] = useState(() => getCurrentTimeRounded());
   const [endTime, setEndTime] = useState(() => addHoursToTime(getCurrentTimeRounded(), 1));
@@ -77,7 +77,7 @@ export default function EventModal({
     if (event) {
       setTitle(event.title || "");
       setDescription(event.description || "");
-      setMemberId(event.memberId || members[0]?.id || "");
+      setMemberIds(event.memberIds || (members[0] ? [members[0].id] : []));
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
@@ -86,7 +86,7 @@ export default function EventModal({
       // Reset form for new event
       setTitle("");
       setDescription("");
-      setMemberId(members[0]?.id || "");
+      setMemberIds(members[0] ? [members[0].id] : []);
       setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
       const currentTime = getCurrentTimeRounded();
       setStartTime(currentTime);
@@ -94,6 +94,14 @@ export default function EventModal({
       setIsSometimeToday(false);
     }
   }, [event, members, selectedDate]);
+
+  const handleMemberToggle = (memberId: string) => {
+    setMemberIds(prev => 
+      prev.includes(memberId)
+        ? prev.filter(id => id !== memberId)
+        : [...prev, memberId]
+    );
+  };
 
   const handleSave = () => {
     // If "Sometime Today", use end of day times
@@ -109,12 +117,12 @@ export default function EventModal({
       description,
       startTime: startDateTime,
       endTime: endDateTime,
-      memberId,
+      memberIds,
     });
     onClose();
   };
 
-  const selectedMember = members.find(m => m.id === memberId);
+  const selectedMembers = members.filter(m => memberIds.includes(m.id));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -151,51 +159,49 @@ export default function EventModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-                <Calendar className="h-4 w-4" />
-                Date
-              </Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                data-testid="input-event-date"
-                className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
-              />
-            </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
+              <Calendar className="h-4 w-4" />
+              Date
+            </Label>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              data-testid="input-event-date"
+              className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-                <User className="h-4 w-4" />
-                Family Member
-              </Label>
-              <Select value={memberId} onValueChange={setMemberId}>
-                <SelectTrigger 
-                  data-testid="select-family-member"
-                  className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
+              <Users className="h-4 w-4" />
+              Family Members
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              {members.map(member => (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-3 p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 hover-elevate cursor-pointer"
+                  onClick={() => handleMemberToggle(member.id)}
+                  data-testid={`checkbox-member-${member.id}`}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl bg-slate-800/95 border-white/20">
-                  {members.map(member => (
-                    <SelectItem key={member.id} value={member.id} className="text-white">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6 ring-1 ring-white/30">
-                          <AvatarFallback 
-                            className="text-xs text-white"
-                            style={{ backgroundColor: member.color }}
-                          >
-                            {member.name.split(' ').map(n => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        {member.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <Checkbox
+                    checked={memberIds.includes(member.id)}
+                    onCheckedChange={() => handleMemberToggle(member.id)}
+                    className="border-white/30"
+                  />
+                  <Avatar className="h-7 w-7 ring-1 ring-white/30">
+                    <AvatarFallback 
+                      className="text-xs text-white font-medium"
+                      style={{ backgroundColor: member.color }}
+                    >
+                      {member.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-white font-medium">{member.name}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -246,19 +252,25 @@ export default function EventModal({
             </div>
           )}
 
-          {selectedMember && startDate && (
+          {selectedMembers.length > 0 && startDate && (
             <div className="p-4 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20">
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 ring-2 ring-white/30">
-                  <AvatarFallback 
-                    className="text-white font-semibold"
-                    style={{ backgroundColor: selectedMember.color }}
-                  >
-                    {selectedMember.name.split(' ').map(n => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="flex -space-x-2">
+                  {selectedMembers.map(member => (
+                    <Avatar key={member.id} className="h-10 w-10 ring-2 ring-white/30">
+                      <AvatarFallback 
+                        className="text-white font-semibold"
+                        style={{ backgroundColor: member.color }}
+                      >
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                </div>
                 <div>
-                  <div className="text-sm font-medium text-white">Assigned to {selectedMember.name}</div>
+                  <div className="text-sm font-medium text-white">
+                    Assigned to {selectedMembers.map(m => m.name).join(', ')}
+                  </div>
                   <div className="text-xs text-white/60">
                     {(() => {
                       if (isSometimeToday) {
@@ -305,7 +317,7 @@ export default function EventModal({
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!title || !memberId}
+              disabled={!title || memberIds.length === 0}
               data-testid="button-save-event"
               className="hover-elevate active-elevate-2"
             >
