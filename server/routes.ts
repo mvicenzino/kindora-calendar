@@ -59,7 +59,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const event = await storage.createEvent(result.data);
+      let eventData = result.data;
+      if (eventData.photoUrl) {
+        const objectStorageService = new ObjectStorageService();
+        eventData = {
+          ...eventData,
+          photoUrl: objectStorageService.normalizeObjectEntityPath(eventData.photoUrl),
+        };
+      }
+      
+      const event = await storage.createEvent(eventData);
       res.status(201).json(event);
     } catch (error) {
       console.error("Error creating event:", error);
@@ -74,7 +83,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const event = await storage.updateEvent(req.params.id, result.data);
+      let eventData = result.data;
+      if (eventData.photoUrl) {
+        const objectStorageService = new ObjectStorageService();
+        eventData = {
+          ...eventData,
+          photoUrl: objectStorageService.normalizeObjectEntityPath(eventData.photoUrl),
+        };
+      }
+      
+      const event = await storage.updateEvent(req.params.id, eventData);
       res.json(event);
     } catch (error) {
       console.error("Error updating event:", error);
@@ -138,8 +156,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/objects/upload", async (req, res) => {
     const objectStorageService = new ObjectStorageService();
     try {
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      res.json({ uploadURL });
+      const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL, objectPath });
     } catch (error) {
       console.error("Error getting upload URL:", error);
       res.status(500).json({ error: "Failed to get upload URL" });
@@ -147,15 +165,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.put("/api/event-photos", async (req, res) => {
-    if (!req.body.photoUrl || !req.body.eventId) {
-      return res.status(400).json({ error: "photoUrl and eventId are required" });
+    if (!req.body.eventId) {
+      return res.status(400).json({ error: "eventId is required" });
     }
 
     try {
-      const objectStorageService = new ObjectStorageService();
-      const objectPath = objectStorageService.normalizeObjectEntityPath(
-        req.body.photoUrl,
-      );
+      let objectPath = null;
+      
+      if (req.body.photoUrl) {
+        const objectStorageService = new ObjectStorageService();
+        objectPath = objectStorageService.normalizeObjectEntityPath(
+          req.body.photoUrl,
+        );
+      }
 
       const event = await storage.updateEvent(req.body.eventId, { photoUrl: objectPath });
       res.status(200).json(event);

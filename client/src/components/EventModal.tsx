@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, Clock, Users, Trash2, UserPlus, Image as ImageIcon, X } from "lucide-react";
 import { format } from "date-fns";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ObjectUploader } from "./ObjectUploader";
 import type { UploadResult } from "@uppy/core";
 import { useMutation } from "@tanstack/react-query";
@@ -81,6 +81,7 @@ export default function EventModal({
   const [isSometimeToday, setIsSometimeToday] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [uploadedEventId, setUploadedEventId] = useState<string>("");
+  const pendingObjectPath = useRef<string>("");
   const { toast } = useToast();
 
   const attachPhotoMutation = useMutation({
@@ -128,6 +129,13 @@ export default function EventModal({
       setUploadedEventId("");
     }
   }, [event, members, selectedDate]);
+  
+  // Reset pending object path when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      pendingObjectPath.current = "";
+    }
+  }, [isOpen]);
 
   const handleMemberToggle = (memberId: string) => {
     setMemberIds(prev => 
@@ -160,27 +168,51 @@ export default function EventModal({
   const handleGetUploadParameters = async () => {
     const res = await apiRequest('POST', '/api/objects/upload', {});
     const data = await res.json();
+    pendingObjectPath.current = data.objectPath;
     return {
       method: 'PUT' as const,
       url: data.uploadURL,
     };
   };
 
-  const handleUploadComplete = (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
     if (result.successful && result.successful.length > 0) {
-      const uploadURL = result.successful[0].uploadURL;
-      if (uploadURL) {
-        setPhotoUrl(uploadURL);
-        
-        if (uploadedEventId) {
-          attachPhotoMutation.mutate({ eventId: uploadedEventId, photoUrl: uploadURL });
-        }
+      const objectPath = pendingObjectPath.current;
+      if (uploadedEventId && objectPath) {
+        attachPhotoMutation.mutate(
+          { eventId: uploadedEventId, photoUrl: objectPath },
+          {
+            onSuccess: (data) => {
+              setPhotoUrl(data.photoUrl);
+              pendingObjectPath.current = "";
+            },
+          }
+        );
+      } else if (objectPath) {
+        setPhotoUrl(objectPath);
+        pendingObjectPath.current = "";
       }
     }
   };
 
-  const handleRemovePhoto = () => {
-    setPhotoUrl("");
+  const handleRemovePhoto = async () => {
+    if (uploadedEventId) {
+      try {
+        await apiRequest('PUT', '/api/event-photos', { eventId: uploadedEventId, photoUrl: null });
+        setPhotoUrl("");
+        toast({
+          description: "Photo removed from event",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to remove photo. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      setPhotoUrl("");
+    }
   };
 
   const selectedMembers = members.filter(m => memberIds.includes(m.id));

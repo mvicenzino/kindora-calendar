@@ -24,6 +24,7 @@ interface Event {
   startTime: Date;
   endTime: Date;
   memberIds: string[];
+  photoUrl?: string;
 }
 
 interface EventDetailViewProps {
@@ -180,6 +181,18 @@ export default function EventDetailView({
               </div>
             </div>
           </div>
+
+          {/* Event Photo */}
+          {event.photoUrl && (
+            <div className="rounded-2xl overflow-hidden backdrop-blur-md bg-white/10 border border-white/20">
+              <img 
+                src={event.photoUrl} 
+                alt={event.title}
+                className="w-full h-64 object-cover"
+                data-testid="img-event-photo"
+              />
+            </div>
+          )}
 
           {/* Date & Time */}
           <div className="grid grid-cols-2 gap-3">
