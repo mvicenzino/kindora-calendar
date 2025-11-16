@@ -206,7 +206,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
                 key={event.id}
                 onClick={() => onEventClick(event)}
                 data-testid={`event-${event.id}`}
-                className="rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative min-h-[120px] sm:min-h-[130px]"
+                className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative"
                 style={{ backgroundColor: getEventColor(event) }}
               >
                 {/* Love Note Bubble */}
@@ -251,12 +251,12 @@ export default function WeekView({ date, events, members, messages, onEventClick
                   )
                 )}
                 
-                {/* Member avatars - positioned at far right */}
-                <div className="absolute right-3 bottom-3 flex flex-col gap-2">
+                {/* Member avatars - horizontal layout */}
+                <div className="absolute right-3 bottom-3 flex flex-row-reverse -space-x-2 space-x-reverse">
                   {event.members.map((member) => (
                     <div
                       key={member.id}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white/40 ring-1 ring-white/20"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white/40"
                       style={{ backgroundColor: member.color }}
                     >
                       {member.initials}
@@ -264,12 +264,14 @@ export default function WeekView({ date, events, members, messages, onEventClick
                   ))}
                 </div>
                 
-                <h3 className="text-base font-semibold text-white mb-2 leading-tight pr-12 sm:pr-14">
-                  {event.title}
-                </h3>
-                <p className="text-sm text-white/90 mt-1">
-                  {format(event.startTime, 'h:mm a')}
-                </p>
+                <div className="pr-14 sm:pr-16">
+                  <h3 className="text-base font-semibold text-white mb-1.5 leading-tight">
+                    {event.title}
+                  </h3>
+                  <p className="text-sm text-white/90">
+                    {format(event.startTime, 'h:mm a')}
+                  </p>
+                </div>
               </button>
             );
           })}
