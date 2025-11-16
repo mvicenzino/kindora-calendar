@@ -19,6 +19,7 @@ export const events = pgTable("events", {
   endTime: timestamp("end_time").notNull(),
   memberIds: varchar("member_ids").array().notNull(),
   color: text("color").notNull(),
+  photoUrl: text("photo_url"),
 });
 
 export const messages = pgTable("messages", {
