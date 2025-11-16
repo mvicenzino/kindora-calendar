@@ -218,7 +218,7 @@ export default function MonthView({ date, events, members, messages, onEventClic
                         type="button"
                         onClick={(e) => handleEmojiClick(e, eventMessage)}
                         data-testid={`love-note-bubble-${event.id}`}
-                        className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[150px]"
+                        className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[150px]"
                         aria-label="View love note"
                       >
                         <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
@@ -228,17 +228,26 @@ export default function MonthView({ date, events, members, messages, onEventClic
                       </button>
                     )}
                     
-                    <div className="flex items-center justify-between pr-40">
-                      <div className="flex items-center gap-3">
+                    {/* Member avatars - positioned at far right */}
+                    <div className="absolute right-3 bottom-3 flex flex-col gap-2">
+                      {event.members.map((member) => (
                         <div
-                          className="w-10 h-10 rounded-lg"
-                          style={{ backgroundColor: event.members[0]?.color || '#6D7A8E' }}
-                        />
+                          key={member.id}
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40 ring-2 ring-white/20"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.initials}
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="pr-14">
+                      <div className="flex items-center gap-3">
                         <span className="text-base font-medium text-white">
                           {event.title}
                         </span>
                       </div>
-                      <span className="text-sm text-white/80">
+                      <span className="text-sm text-white/80 mt-1 block">
                         {format(event.startTime, 'h:mm a')}
                       </span>
                     </div>

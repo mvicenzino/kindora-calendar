@@ -216,7 +216,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
                       type="button"
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[140px]"
+                      className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[140px]"
                       aria-label="View love note"
                     >
                       <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
@@ -229,7 +229,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
                       type="button"
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10"
+                      className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20"
                       aria-label="View love note"
                     >
                       <span className="text-sm">{eventMessage.emoji}</span>
@@ -237,7 +237,20 @@ export default function WeekView({ date, events, members, messages, onEventClick
                   )
                 )}
                 
-                <h3 className="text-base font-semibold text-white mb-1 leading-tight pr-12 sm:pr-36">
+                {/* Member avatars - positioned at far right */}
+                <div className="absolute right-2 bottom-2 flex flex-col gap-1.5">
+                  {event.members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white/40 ring-1 ring-white/20"
+                      style={{ backgroundColor: member.color }}
+                    >
+                      {member.initials}
+                    </div>
+                  ))}
+                </div>
+                
+                <h3 className="text-base font-semibold text-white mb-1 leading-tight pr-12">
                   {event.title}
                 </h3>
                 <p className="text-sm text-white/90">

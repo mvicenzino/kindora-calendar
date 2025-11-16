@@ -152,7 +152,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                       type="button"
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[200px]"
+                      className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[200px]"
                       aria-label="View love note"
                     >
                       <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
@@ -162,30 +162,27 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     </button>
                   )}
                   
-                  <div className="flex items-start justify-between mb-1.5 sm:mb-2 pr-56">
-                    <h3 className="text-lg sm:text-xl font-semibold text-white flex-1">
+                  {/* Member avatars - positioned at far right */}
+                  <div className="absolute right-3 bottom-3 flex flex-col gap-2">
+                    {event.members.map((member: FamilyMember) => (
+                      <div
+                        key={member.id}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40 ring-2 ring-white/20"
+                        style={{ backgroundColor: member.color }}
+                      >
+                        {member.initials}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="pr-14">
+                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-1.5 sm:mb-2">
                       {event.title}
                     </h3>
-                    <div className="flex items-center gap-2 ml-3">
-                      {event.categories && event.categories.length > 0 && (
-                        <span className="text-sm text-white/80">
-                          {event.categories[0]}
-                        </span>
-                      )}
-                      {event.members.map((member: FamilyMember) => (
-                        <div
-                          key={member.id}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white border border-white/30"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.initials}
-                        </div>
-                      ))}
-                    </div>
+                    <p className="text-sm text-white/80">
+                      {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
+                    </p>
                   </div>
-                  <p className="text-sm text-white/80">
-                    {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
-                  </p>
                 </button>
               );
             })}

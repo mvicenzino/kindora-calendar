@@ -184,7 +184,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                           type="button"
                           onClick={(e) => handleEmojiClick(e, eventMessage)}
                           data-testid={`love-note-bubble-${event.id}`}
-                          className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[180px]"
+                          className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[180px]"
                           aria-label="View love note"
                         >
                           <span className="text-base sm:text-lg flex-shrink-0">{eventMessage.emoji}</span>
@@ -194,8 +194,8 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                         </button>
                       )}
 
-                      {/* Member avatars - positioned on the right side of event tile */}
-                      <div className="absolute right-3 top-3 flex gap-2 flex-col">
+                      {/* Member avatars - positioned at far right bottom */}
+                      <div className="absolute right-3 bottom-3 flex gap-2 flex-col">
                         {event.members.slice(0, 3).map((member) => (
                           <Avatar
                             key={member.id}
