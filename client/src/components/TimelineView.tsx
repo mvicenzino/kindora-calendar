@@ -192,15 +192,12 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                         </div>
                       )}
 
-                      {/* Member avatars - positioned at far right bottom */}
-                      <div className="absolute right-3 bottom-3 flex gap-2 flex-col">
+                      {/* Member avatars - horizontal layout */}
+                      <div className="absolute right-3 bottom-3 flex flex-row-reverse -space-x-2 space-x-reverse">
                         {event.members.slice(0, 3).map((member) => (
                           <Avatar
                             key={member.id}
-                            className="h-8 w-8 ring-2 ring-white/60 shadow-lg"
-                            style={{
-                              '--tw-ring-color': `${member.color}80`
-                            } as React.CSSProperties}
+                            className="h-8 w-8 ring-2 ring-white/40 shadow-lg"
                           >
                             <AvatarFallback
                               className="text-white font-semibold text-[10px]"
@@ -211,7 +208,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                           </Avatar>
                         ))}
                         {event.members.length > 3 && (
-                          <div className="h-8 w-8 rounded-full bg-white/20 backdrop-blur-md border-2 border-white/60 flex items-center justify-center">
+                          <div className="h-8 w-8 rounded-full bg-white/20 backdrop-blur-md border-2 border-white/40 flex items-center justify-center">
                             <span className="text-[10px] font-semibold text-white">
                               +{event.members.length - 3}
                             </span>
@@ -220,7 +217,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                       </div>
 
                       {/* Event content */}
-                      <div className={eventMessage ? 'pr-12 sm:pr-48' : 'pr-14'}>
+                      <div className="pr-14 sm:pr-16">
                         <h3 className="text-lg sm:text-xl font-bold text-white mb-1.5 leading-tight">
                           {event.title}
                         </h3>
