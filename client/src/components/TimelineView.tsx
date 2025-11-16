@@ -85,16 +85,8 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
     return startHour === 23 && startMinute === 58 && endHour === 23 && endMinute === 59;
   };
 
-  const getEventColor = (index: number) => {
-    const colors = [
-      '#8B7A9D', // soft purple
-      '#7A9D8B', // sage green
-      '#9D8B7A', // warm taupe
-      '#7A8B9D', // soft blue
-      '#9D7A8B', // dusty rose
-      '#8B9D7A', // olive green
-    ];
-    return colors[index % colors.length];
+  const getEventColor = (event: Event) => {
+    return event.members[0]?.color || '#6D7A8E';
   };
 
   // Find message with emoji for a given event
@@ -140,7 +132,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
         <div className="space-y-6 pb-20">
           {events.map((event, index) => {
             const isLeft = index % 2 === 0;
-            const color = getEventColor(index);
+            const color = getEventColor(event);
             const eventMessage = getEventMessage(event.id);
             
             return (
@@ -294,7 +286,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
               type="button"
               onClick={() => onViewChange('timeline')}
               data-testid="button-view-timeline"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/30 text-sm font-medium text-white shadow-md shadow-blue-500/10 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:from-blue-500/25 md:hover:to-purple-600/25 md:hover:shadow-lg md:hover:shadow-blue-500/20"
+              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
             >
               Timeline
             </button>

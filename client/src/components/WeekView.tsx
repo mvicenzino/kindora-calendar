@@ -78,26 +78,9 @@ export default function WeekView({ date, events, members, messages, onEventClick
     };
   }).filter(group => group.events.length > 0);
 
-  // Event colors based on categories or members
+  // Get event color from member
   const getEventColor = (event: Event) => {
-    if (event.title.toLowerCase().includes('dinner') || event.title.toLowerCase().includes('carolyn')) {
-      return '#B8836D'; // coral/brownish
-    } else if (event.categories?.includes('Family') || event.title.toLowerCase().includes('sebby') || event.title.toLowerCase().includes('zoo')) {
-      return '#8B7A6D'; // brownish
-    } else if (event.categories?.includes('Work') || event.title.toLowerCase().includes('meeting')) {
-      return '#5D7A8E'; // blue
-    } else if (event.categories?.includes('Health') || event.title.toLowerCase().includes('workout')) {
-      return '#6D8A7D'; // greenish-blue
-    } else if (event.title.toLowerCase().includes('grocery')) {
-      return '#9B8A7D'; // tan
-    } else if (event.title.toLowerCase().includes('pack') || event.title.toLowerCase().includes('pavnity')) {
-      return '#8B7A6D'; // brownish
-    } else if (event.title.toLowerCase().includes('dr.') || event.title.toLowerCase().includes('doctor')) {
-      return '#B8836D'; // coral
-    } else if (event.title.toLowerCase().includes('rental') || event.title.toLowerCase().includes('car')) {
-      return '#9B8A7D'; // tan
-    }
-    return '#6D7A8E'; // default blue-gray
+    return event.members[0]?.color || '#6D7A8E';
   };
 
   return (
@@ -223,7 +206,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
               type="button"
               onClick={() => onViewChange('week')}
               data-testid="button-view-week"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/30 text-sm font-medium text-white shadow-md shadow-blue-500/10 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:from-blue-500/25 md:hover:to-purple-600/25 md:hover:shadow-lg md:hover:shadow-blue-500/20"
+              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
             >
               Week
             </button>

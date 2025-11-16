@@ -104,13 +104,8 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
         {timedEvents.length > 0 && (
           <div className="space-y-2 sm:space-y-3">
             {timedEvents.map((event, idx) => {
-              const eventColors = [
-                '#7A8A7D', // brownish-green for Brunch
-                '#5D6D7E', // blue-gray for Meeting
-                '#7A8A7D', // brownish-green for Birthday
-                '#5D7A8E', // blue for Gym
-              ];
               const eventMessage = getEventMessage(event.id);
+              const eventColor = event.members[0]?.color || '#6D7A8E';
               
               return (
                 <button
@@ -119,7 +114,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                   onClick={() => onEventClick(event)}
                   data-testid={`event-${event.id}`}
                   className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative"
-                  style={{ backgroundColor: eventColors[idx % eventColors.length] }}
+                  style={{ backgroundColor: eventColor }}
                 >
                   {/* Love Note Bubble */}
                   {eventMessage && (
@@ -177,13 +172,8 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
             </div>
             <div className="grid grid-cols-2 gap-3">
               {sometimeTodayEvents.map((event, idx) => {
-                const complementaryColors = [
-                  '#9A7A8D', // muted purple-pink
-                  '#7A8A9D', // soft blue-gray
-                  '#8A9A7D', // sage green
-                  '#9D8A7A', // warm taupe
-                ];
                 const eventMessage = getEventMessage(event.id);
+                const eventColor = event.members[0]?.color || '#6D7A8E';
                 
                 return (
                   <button
@@ -191,7 +181,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     onClick={() => onEventClick(event)}
                     data-testid={`sometime-event-${event.id}`}
                     className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md relative"
-                    style={{ backgroundColor: complementaryColors[idx % complementaryColors.length] }}
+                    style={{ backgroundColor: eventColor }}
                   >
                     {/* Love Note Bubble */}
                     {eventMessage && (
@@ -242,7 +232,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
               type="button"
               onClick={() => onViewChange('day')}
               data-testid="button-view-day"
-              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/30 text-sm font-medium text-white shadow-md shadow-blue-500/10 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:from-blue-500/25 md:hover:to-purple-600/25 md:hover:shadow-lg md:hover:shadow-blue-500/20"
+              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
             >
               Day
             </button>

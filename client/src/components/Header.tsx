@@ -49,8 +49,8 @@ export default function Header({ onMessagesClick, onProfileClick }: HeaderProps)
                 <circle cx="70" cy="70" r="2"/>
               </g>
               
-              {/* Highlighted day (today) with pulse animation */}
-              <circle cx="50" cy="60" r="5" fill="#8B5CF6" className="animate-pulse"/>
+              {/* Highlighted day (today) */}
+              <circle cx="50" cy="60" r="5" fill="#8B5CF6"/>
             </svg>
           </div>
           <div>
