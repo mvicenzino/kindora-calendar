@@ -44,8 +44,8 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 h-8 w-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-0 disabled:pointer-events-none">
-        <X className="h-4 w-4" />
+      <DialogPrimitive.Close className="absolute right-4 top-4 h-8 w-8 rounded-full backdrop-blur-xl bg-white/20 border border-white/40 flex items-center justify-center text-white shadow-lg shadow-black/20 hover:bg-white/30 hover:border-white/50 active:scale-95 transition-all focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-0 disabled:pointer-events-none" data-testid="button-close-popup">
+        <X className="h-4 w-4" strokeWidth={2.5} />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
