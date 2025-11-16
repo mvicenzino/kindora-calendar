@@ -6,7 +6,7 @@ interface Event {
   description?: string;
   startTime: Date;
   endTime: Date;
-  memberId: string;
+  memberIds: string[];
 }
 
 interface NotificationState {

@@ -23,7 +23,7 @@ interface Event {
   description?: string;
   startTime: Date;
   endTime: Date;
-  memberId: string;
+  memberIds: string[];
 }
 
 interface EventDetailViewProps {
@@ -90,11 +90,11 @@ export default function EventDetailView({
       setIsBold(false);
       setIsItalic(false);
       setIsLoveNoteExpanded(false);
-      // Auto-select first available recipient (not event owner)
-      const otherMembers = allMembers.filter(m => m.id !== event.memberId);
+      // Auto-select first available recipient (not assigned to event)
+      const otherMembers = allMembers.filter(m => !event.memberIds.includes(m.id));
       setSelectedRecipientId(otherMembers.length > 0 ? otherMembers[0].id : "");
     }
-  }, [isOpen, event?.id, event?.memberId, allMembers]);
+  }, [isOpen, event?.id, allMembers]);
 
   const loveEmojis = ["❤️", "💕", "💖", "💝", "🌹", "💐", "🥰", "😍", "💗", "💓"];
 
@@ -221,7 +221,7 @@ export default function EventDetailView({
                   <p className="text-xs font-medium text-white/60">Send to</p>
                   <div className="flex flex-wrap gap-2">
                     {allMembers
-                      .filter(m => m.id !== event.memberId)
+                      .filter(m => !event.memberIds.includes(m.id))
                       .map((recipient) => (
                         <button
                           key={recipient.id}
@@ -247,7 +247,7 @@ export default function EventDetailView({
                           </Avatar>
                         </button>
                       ))}
-                    {allMembers.filter(m => m.id !== event.memberId).length === 0 && (
+                    {allMembers.filter(m => !event.memberIds.includes(m.id)).length === 0 && (
                       <p className="text-sm text-white/60">No other family members to send to</p>
                     )}
                   </div>

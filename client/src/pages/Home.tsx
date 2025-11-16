@@ -124,10 +124,11 @@ export default function Home() {
     description?: string;
     startTime: Date;
     endTime: Date;
-    memberId: string;
+    memberIds: string[];
   }) => {
-    const member = members.find(m => m.id === eventData.memberId);
-    if (!member) return;
+    // Use first member's color for event background
+    const firstMember = members.find(m => m.id === eventData.memberIds[0]);
+    if (!firstMember || eventData.memberIds.length === 0) return;
 
     if (eventData.id) {
       // Update existing event
@@ -138,8 +139,8 @@ export default function Home() {
           description: eventData.description || undefined,
           startTime: eventData.startTime,
           endTime: eventData.endTime,
-          memberId: eventData.memberId,
-          color: member.color,
+          memberIds: eventData.memberIds,
+          color: firstMember.color,
         },
       });
     } else {
@@ -149,8 +150,8 @@ export default function Home() {
         description: eventData.description || undefined,
         startTime: eventData.startTime,
         endTime: eventData.endTime,
-        memberId: eventData.memberId,
-        color: member.color,
+        memberIds: eventData.memberIds,
+        color: firstMember.color,
       });
     }
   };
@@ -177,7 +178,7 @@ export default function Home() {
     .filter(e => isSameDay(new Date(e.startTime), currentDate))
     .map(e => {
       const eventMembers = members
-        .filter(m => m.id === e.memberId)
+        .filter(m => e.memberIds.includes(m.id))
         .map(m => ({
           ...m,
           initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
@@ -210,7 +211,7 @@ export default function Home() {
     .filter(e => isSameWeek(new Date(e.startTime), currentDate, { weekStartsOn: 0 }))
     .map(e => {
       const eventMembers = members
-        .filter(m => m.id === e.memberId)
+        .filter(m => e.memberIds.includes(m.id))
         .map(m => ({
           ...m,
           initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
@@ -241,7 +242,7 @@ export default function Home() {
     .filter(e => isSameMonth(new Date(e.startTime), currentDate))
     .map(e => {
       const eventMembers = members
-        .filter(m => m.id === e.memberId)
+        .filter(m => e.memberIds.includes(m.id))
         .map(m => ({
           ...m,
           initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
@@ -271,7 +272,7 @@ export default function Home() {
   const timelineEvents = events
     .map(e => {
       const eventMembers = members
-        .filter(m => m.id === e.memberId)
+        .filter(m => e.memberIds.includes(m.id))
         .map(m => ({
           ...m,
           initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
@@ -299,7 +300,7 @@ export default function Home() {
     .sort((a, b) => b.startTime.getTime() - a.startTime.getTime()); // Reversed: newest first
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
-  const selectedEventMember = selectedEvent ? members.find(m => m.id === selectedEvent.memberId) : undefined;
+  const selectedEventMembers = selectedEvent ? members.filter(m => selectedEvent.memberIds.includes(m.id)) : [];
 
   const handleMessagesClick = () => {
     setMessagesModalOpen(true);
@@ -409,7 +410,7 @@ export default function Home() {
           startTime: new Date(selectedEvent.startTime),
           endTime: new Date(selectedEvent.endTime)
         } : undefined}
-        member={selectedEventMember}
+        member={selectedEventMembers[0]}
         allMembers={members}
       />
 
@@ -472,7 +473,7 @@ export default function Home() {
         isOpen={isNotificationOpen}
         onClose={closeNotification}
         event={notificationEvent || undefined}
-        member={notificationEvent ? members.find(m => m.id === notificationEvent.memberId) : undefined}
+        member={notificationEvent ? members.find(m => notificationEvent.memberIds.includes(m.id)) : undefined}
       />
     </div>
   );
