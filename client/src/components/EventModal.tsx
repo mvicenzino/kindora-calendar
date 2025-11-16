@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Clock, Users, Trash2 } from "lucide-react";
+import { Calendar, Clock, Users, Trash2, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from 'react';
 
@@ -33,6 +33,7 @@ interface EventModalProps {
   event?: Event;
   members: FamilyMember[];
   selectedDate?: Date;
+  onAddMember?: () => void;
 }
 
 // Helper function to get current time rounded to nearest 15 minutes
@@ -62,6 +63,7 @@ export default function EventModal({
   event,
   members,
   selectedDate,
+  onAddMember,
 }: EventModalProps) {
   const defaultDate = selectedDate || new Date();
   const [title, setTitle] = useState("");
@@ -178,31 +180,59 @@ export default function EventModal({
               <Users className="h-4 w-4" />
               Family Members
             </Label>
-            <div className="grid grid-cols-2 gap-2">
-              {members.map(member => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 hover-elevate cursor-pointer"
-                  onClick={() => handleMemberToggle(member.id)}
-                  data-testid={`checkbox-member-${member.id}`}
-                >
-                  <Checkbox
-                    checked={memberIds.includes(member.id)}
-                    onCheckedChange={() => handleMemberToggle(member.id)}
-                    className="border-white/30"
-                  />
-                  <Avatar className="h-7 w-7 ring-1 ring-white/30">
-                    <AvatarFallback 
-                      className="text-xs text-white font-medium"
-                      style={{ backgroundColor: member.color }}
-                    >
-                      {member.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-white font-medium">{member.name}</span>
+            {members.length === 0 ? (
+              <div className="p-6 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 text-center space-y-3">
+                <div className="flex justify-center">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                    <UserPlus className="w-6 h-6 text-white/70" />
+                  </div>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-white">No family members yet</p>
+                  <p className="text-xs text-white/60">Add family members to assign events</p>
+                </div>
+                {onAddMember && (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onAddMember();
+                    }}
+                    data-testid="button-add-member-from-event"
+                    className="w-full hover-elevate active-elevate-2"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add Family Member
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                {members.map(member => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 hover-elevate cursor-pointer"
+                    onClick={() => handleMemberToggle(member.id)}
+                    data-testid={`checkbox-member-${member.id}`}
+                  >
+                    <Checkbox
+                      checked={memberIds.includes(member.id)}
+                      onCheckedChange={() => handleMemberToggle(member.id)}
+                      className="border-white/30"
+                    />
+                    <Avatar className="h-7 w-7 ring-1 ring-white/30">
+                      <AvatarFallback 
+                        className="text-xs text-white font-medium"
+                        style={{ backgroundColor: member.color }}
+                      >
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-white font-medium">{member.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20">

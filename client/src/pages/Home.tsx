@@ -429,6 +429,7 @@ export default function Home() {
           endTime: new Date(selectedEvent.endTime)
         } : undefined}
         members={members}
+        onAddMember={() => setMemberModalOpen(true)}
       />
 
       <MemberModal
