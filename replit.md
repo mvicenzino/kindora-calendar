@@ -30,7 +30,7 @@ Preferred communication style: Simple, everyday language.
     - **Day View:** Events by time, "Sometime Today" section, mini event cards.
     - **Week View:** 2-column grid, week navigation, clickable day headers.
     - **Month View:** Grid with event indicators, upcoming events section, month navigation.
-    - **Timeline View:** Vertical scrolling, alternating event cards, date markers, member avatars, chronological display of all events.
+    - **Timeline View:** Alternating left-right layout with central vertical timeline, date badges along the center line, connector dots for each event, member avatars positioned on outer edges of cards, liquid glass event cards with member colors, chronological display of all events.
 - **Event Management:**
     - **Creation & Editing:** Modal-based, form validation (Zod), title, description, time, member, "Sometime Today" toggle. Start time defaults to current system time (rounded to nearest 15 minutes).
     - **Detail View:** Displays full event details, includes "Love Note" section for messaging, edit/delete options.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus } from "lucide-react";
@@ -33,50 +33,7 @@ interface TimelineViewProps {
 export default function TimelineView({ events, messages, onEventClick, onViewChange, onAddEvent }: TimelineViewProps) {
   const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
-  const [cardScales, setCardScales] = useState<Record<string, number>>({});
-  const containerRef = useRef<HTMLDivElement>(null);
-  const cardRefs = useRef<Record<string, HTMLDivElement>>({});
 
-  // Calculate scale based on distance from viewport center
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!containerRef.current) return;
-      
-      const viewportCenter = window.innerHeight / 2;
-      const newScales: Record<string, number> = {};
-      
-      Object.entries(cardRefs.current).forEach(([eventId, cardElement]) => {
-        if (!cardElement) return;
-        
-        const rect = cardElement.getBoundingClientRect();
-        const cardCenter = rect.top + rect.height / 2;
-        const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
-        
-        // Calculate scale: cards near center get scale 1.0, far cards get 0.92
-        // Use a smooth curve for the transition
-        const maxDistance = window.innerHeight;
-        const normalizedDistance = Math.min(distanceFromCenter / maxDistance, 1);
-        const scale = 1 - (normalizedDistance * 0.08); // Scale from 1.0 to 0.92
-        
-        newScales[eventId] = Math.max(0.92, Math.min(1.0, scale));
-      });
-      
-      setCardScales(newScales);
-    };
-    
-    // Initial calculation
-    handleScroll();
-    
-    // Add scroll listener
-    window.addEventListener('scroll', handleScroll);
-    window.addEventListener('resize', handleScroll);
-    
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-    };
-  }, [events]);
-  
   const isSometimeToday = (event: Event) => {
     const startHour = event.startTime.getHours();
     const startMinute = event.startTime.getMinutes();
@@ -100,12 +57,27 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
     setLoveNotePopupOpen(true);
   };
 
+  // Create a flat list with date markers
+  const timelineItems: Array<{type: 'date'; date: string} | {type: 'event'; event: Event; index: number}> = [];
+  let currentDate = '';
+  let eventIndex = 0;
+  
+  events.forEach((event) => {
+    const dateKey = format(event.startTime, 'MMM d');
+    if (dateKey !== currentDate) {
+      timelineItems.push({ type: 'date', date: dateKey });
+      currentDate = dateKey;
+    }
+    timelineItems.push({ type: 'event', event, index: eventIndex });
+    eventIndex++;
+  });
+
   return (
-    <div ref={containerRef} className="min-h-full">
+    <div className="min-h-full">
       {/* Fixed View Toggle Below Header */}
       {onViewChange && (
         <div className="fixed top-[4.5rem] left-0 right-0 z-40 px-4 sm:px-6 pt-4 pb-3 backdrop-blur-xl bg-gradient-to-b from-black/40 via-black/30 to-transparent">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2 shadow-lg shadow-black/20">
               <button
                 type="button"
@@ -144,61 +116,68 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
         </div>
       )}
 
-      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto" style={{ paddingTop: onViewChange ? '7.5rem' : undefined }}>
+      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-4xl mx-auto" style={{ paddingTop: onViewChange ? '7.5rem' : undefined }}>
         {/* Header */}
-        <div className="w-full px-1 sm:px-2 mb-4 sm:mb-6">
-        <div className="flex items-start justify-between gap-3 sm:gap-6">
-          <div className="flex-1">
-            <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
-            <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">Your events in time</p>
+        <div className="w-full px-1 sm:px-2 mb-6 sm:mb-8">
+          <div className="flex items-start justify-between gap-3 sm:gap-6">
+            <div className="flex-1">
+              <h1 className="text-4xl sm:text-5xl font-bold text-white">Timeline</h1>
+              <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">Your events in time</p>
+            </div>
+            {onAddEvent && (
+              <button
+                type="button"
+                onClick={onAddEvent}
+                data-testid="button-add-event"
+                className="w-11 h-11 sm:w-10 sm:h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-1 sm:mt-2 touch-manipulation"
+                aria-label="Add event"
+              >
+                <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+              </button>
+            )}
           </div>
-          {onAddEvent && (
-            <button
-              type="button"
-              onClick={onAddEvent}
-              data-testid="button-add-event"
-              className="w-11 h-11 sm:w-10 sm:h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-1 sm:mt-2 touch-manipulation"
-              aria-label="Add event"
-            >
-              <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
-            </button>
-          )}
         </div>
-      </div>
 
-      {/* Timeline */}
-      <div className="flex-1 w-full">
-        {/* Events */}
-        <div className="space-y-4 sm:space-y-5 pb-20">
-          {events.map((event, index) => {
-            const color = getEventColor(event);
-            const eventMessage = getEventMessage(event.id);
-            
-            return (
-              <div key={event.id} className="space-y-2">
-                {/* Date marker */}
-                <div className="px-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                    {format(event.startTime, 'EEEE, MMMM d')}
-                  </p>
-                </div>
+        {/* Timeline with alternating events */}
+        <div className="relative pb-20">
+          {/* Central vertical line - hidden on mobile for single column */}
+          <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/30 via-white/20 to-white/10 transform -translate-x-1/2" />
 
-                {/* Event card */}
-                <button
-                  onClick={() => onEventClick(event)}
-                  data-testid={`timeline-event-${event.id}`}
-                  className="w-full"
-                >
-                  <div
-                    ref={(el) => {
-                      if (el) cardRefs.current[event.id] = el;
-                    }}
-                    className="rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl relative"
-                    style={{ 
-                      backgroundColor: color,
-                      transform: `scale(${cardScales[event.id] || 0.92})`,
-                    }}
-                  >
+          {/* Timeline items */}
+          <div className="space-y-6 md:space-y-12">
+            {timelineItems.map((item, idx) => {
+              if (item.type === 'date') {
+                return (
+                  <div key={`date-${item.date}`} className="relative">
+                    <div className="md:absolute md:left-1/2 md:transform md:-translate-x-1/2 mb-4 md:mb-0 flex justify-center">
+                      <div className="px-3 py-1 rounded-full backdrop-blur-md bg-white/15 border border-white/30">
+                        <span className="text-xs font-semibold text-white/80">{item.date}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Event item
+              const { event, index } = item;
+              const isLeft = index % 2 === 0;
+              const eventMessage = getEventMessage(event.id);
+              const color = getEventColor(event);
+
+              return (
+                <div key={event.id} className="relative">
+                  {/* Event card container - single column on mobile, alternating on desktop */}
+                  <div className={`relative flex ${isLeft ? 'md:justify-start md:pr-[52%]' : 'md:justify-end md:pl-[52%]'}`}>
+                    {/* Connector dot on timeline - desktop only */}
+                    <div className="hidden md:block absolute left-1/2 top-8 transform -translate-x-1/2 w-3 h-3 rounded-full bg-white/40 border-2 border-white/60 backdrop-blur-sm z-10" />
+
+                    {/* Event card */}
+                    <button
+                      onClick={() => onEventClick(event)}
+                      data-testid={`timeline-event-${event.id}`}
+                      className="relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl"
+                      style={{ backgroundColor: color }}
+                    >
                       {/* Love Note Bubble */}
                       {eventMessage && (
                         <button
@@ -208,77 +187,79 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                           className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[180px]"
                           aria-label="View love note"
                         >
-                          <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
-                          <span className="text-xs text-white/90 truncate font-medium">
+                          <span className="text-base sm:text-lg flex-shrink-0">{eventMessage.emoji}</span>
+                          <span className="hidden sm:inline text-xs text-white/90 truncate font-medium">
                             {eventMessage.content}
                           </span>
                         </button>
                       )}
-                      {/* Title */}
-                      <h3 className="text-xl font-bold text-white mb-1.5 leading-tight pr-48">
-                        {event.title}
-                      </h3>
 
-                      {/* Description */}
-                      {event.description && (
-                        <p className="text-sm text-white/80 mb-2 line-clamp-2">
-                          {event.description}
-                        </p>
-                      )}
-
-                      {/* Time */}
-                      <div className="flex items-center gap-2 text-xs text-white/90 mb-3">
-                        <div className="bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1">
-                          {isSometimeToday(event) ? (
-                            "Sometime today"
-                          ) : (
-                            `${format(event.startTime, 'h:mm a')} - ${format(event.endTime, 'h:mm a')}`
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Bottom row: Category badge and Member avatars */}
-                      <div className="flex items-center justify-between gap-2">
-                        {/* Category badge */}
-                        {event.categories && event.categories.length > 0 ? (
-                          <div>
-                            <span className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium text-white">
-                              {event.categories[0]}
+                      {/* Member avatars - bottom of card on mobile, outer edge on desktop */}
+                      <div className={`flex gap-2 mt-3 md:mt-0 md:absolute md:${isLeft ? '-right-4' : '-left-4'} md:top-4 md:flex-col`}>
+                        {event.members.slice(0, 3).map((member) => (
+                          <Avatar
+                            key={member.id}
+                            className="h-7 w-7 md:h-8 md:w-8 ring-2 ring-white/60 shadow-lg"
+                            style={{
+                              '--tw-ring-color': `${member.color}80`
+                            } as React.CSSProperties}
+                          >
+                            <AvatarFallback
+                              className="text-white font-semibold text-[10px]"
+                              style={{ backgroundColor: member.color }}
+                            >
+                              {member.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                        {event.members.length > 3 && (
+                          <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-white/20 backdrop-blur-md border-2 border-white/60 flex items-center justify-center">
+                            <span className="text-[10px] font-semibold text-white">
+                              +{event.members.length - 3}
                             </span>
                           </div>
-                        ) : (
-                          <div />
+                        )}
+                      </div>
+
+                      {/* Event content */}
+                      <div className={eventMessage ? 'pr-12 sm:pr-48' : 'pr-4'}>
+                        <h3 className="text-lg sm:text-xl font-bold text-white mb-1.5 leading-tight">
+                          {event.title}
+                        </h3>
+
+                        {event.description && (
+                          <p className="text-sm text-white/80 mb-2 line-clamp-2">
+                            {event.description}
+                          </p>
                         )}
 
-                        {/* Member avatars */}
-                        <div className="flex gap-1">
-                          {event.members.slice(0, 3).map((member, idx) => (
-                            <Avatar 
-                              key={member.id} 
-                              className="h-7 w-7 ring-2 ring-white/60 shadow-lg"
-                              style={{ 
-                                '--tw-ring-color': `${member.color}80`
-                              } as React.CSSProperties}
-                            >
-                              <AvatarFallback 
-                                className="text-white font-semibold text-[10px]"
-                                style={{ backgroundColor: member.color }}
-                              >
-                                {member.initials}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
+                        {/* Time */}
+                        <div className="flex items-center gap-2 text-xs text-white/90 mb-2">
+                          <div className="bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1">
+                            {isSometimeToday(event) ? (
+                              "Sometime today"
+                            ) : (
+                              `${format(event.startTime, 'h:mm a')} - ${format(event.endTime, 'h:mm a')}`
+                            )}
+                          </div>
                         </div>
+
+                        {/* Category badge */}
+                        {event.categories && event.categories.length > 0 && (
+                          <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium text-white mb-2 md:mb-0">
+                            {event.categories[0]}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  </button>
+                    </button>
+                  </div>
                 </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
-      </div>
-      
+
       {/* Love Note Popup */}
       <LoveNotePopup
         isOpen={loveNotePopupOpen}
