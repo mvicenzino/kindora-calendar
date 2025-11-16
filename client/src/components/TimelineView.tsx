@@ -57,19 +57,15 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
     setLoveNotePopupOpen(true);
   };
 
-  // Create a flat list with date markers
-  const timelineItems: Array<{type: 'date'; date: string} | {type: 'event'; event: Event; index: number}> = [];
-  let currentDate = '';
-  let eventIndex = 0;
-  
-  events.forEach((event) => {
+  // Track which events are first of their date for overlay pills
+  const eventsWithDateInfo = events.map((event, index) => {
     const dateKey = format(event.startTime, 'MMM d');
-    if (dateKey !== currentDate) {
-      timelineItems.push({ type: 'date', date: dateKey });
-      currentDate = dateKey;
-    }
-    timelineItems.push({ type: 'event', event, index: eventIndex });
-    eventIndex++;
+    const isFirstOfDate = index === 0 || format(events[index - 1].startTime, 'MMM d') !== dateKey;
+    return {
+      event,
+      index,
+      dateLabel: isFirstOfDate ? dateKey : null
+    };
   });
 
   return (
@@ -145,27 +141,22 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
           {/* Timeline items */}
           <div className="space-y-6 md:space-y-12">
-            {timelineItems.map((item, idx) => {
-              if (item.type === 'date') {
-                return (
-                  <div key={`date-${item.date}`} className="relative">
-                    <div className="md:absolute md:left-1/2 md:transform md:-translate-x-1/2 mb-4 md:mb-0 flex justify-center">
-                      <div className="px-3 py-1 rounded-full backdrop-blur-md bg-white/15 border border-white/30">
-                        <span className="text-xs font-semibold text-white/80">{item.date}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
-
-              // Event item
-              const { event, index } = item;
+            {eventsWithDateInfo.map(({ event, index, dateLabel }) => {
               const isLeft = index % 2 === 0;
               const eventMessage = getEventMessage(event.id);
               const color = getEventColor(event);
 
               return (
                 <div key={event.id} className="relative">
+                  {/* Date pill overlay - appears on first event of each date */}
+                  {dateLabel && (
+                    <div className="absolute left-1/2 transform -translate-x-1/2 -top-3 z-30">
+                      <div className="px-4 py-1.5 rounded-full backdrop-blur-2xl bg-white/8 border border-white/20 shadow-lg">
+                        <span className="text-xs font-semibold text-white/90">{dateLabel}</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Event card container - single column on mobile, alternating on desktop */}
                   <div className={`relative flex ${isLeft ? 'md:justify-start md:pr-[52%]' : 'md:justify-end md:pl-[52%]'}`}>
                     {/* Connector dot on timeline - desktop only */}
