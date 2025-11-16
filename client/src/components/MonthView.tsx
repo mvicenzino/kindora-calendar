@@ -214,18 +214,25 @@ export default function MonthView({ date, events, members, messages, onEventClic
                   >
                     {/* Love Note Bubble */}
                     {eventMessage && (
-                      <button
-                        type="button"
+                      <div
                         onClick={(e) => handleEmojiClick(e, eventMessage)}
                         data-testid={`love-note-bubble-${event.id}`}
-                        className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[150px]"
+                        className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[130px] cursor-pointer"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleEmojiClick(e as any, eventMessage);
+                          }
+                        }}
                         aria-label="View love note"
                       >
                         <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
                         <span className="text-[10px] text-white/90 truncate font-medium">
                           {eventMessage.content}
                         </span>
-                      </button>
+                      </div>
                     )}
                     
                     {/* Member avatars - positioned at far right */}

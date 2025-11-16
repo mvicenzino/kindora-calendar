@@ -212,28 +212,42 @@ export default function WeekView({ date, events, members, messages, onEventClick
                 {/* Love Note Bubble */}
                 {eventMessage && (
                   isDesktop ? (
-                    <button
-                      type="button"
+                    <div
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[140px]"
+                      className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[140px] cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleEmojiClick(e as any, eventMessage);
+                        }
+                      }}
                       aria-label="View love note"
                     >
                       <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
                       <span className="text-[10px] text-white/90 truncate font-medium max-w-[100px]">
                         {eventMessage.content}
                       </span>
-                    </button>
+                    </div>
                   ) : (
-                    <button
-                      type="button"
+                    <div
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20"
+                      className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleEmojiClick(e as any, eventMessage);
+                        }
+                      }}
                       aria-label="View love note"
                     >
                       <span className="text-sm">{eventMessage.emoji}</span>
-                    </button>
+                    </div>
                   )
                 )}
                 
