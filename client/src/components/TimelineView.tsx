@@ -169,12 +169,12 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                       className="relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl min-h-[120px]"
                       style={{ backgroundColor: color }}
                     >
-                      {/* Love Note Bubble */}
+                      {/* Love Note Bubble - moved to bottom-left */}
                       {eventMessage && (
                         <div
                           onClick={(e) => handleEmojiClick(e, eventMessage)}
                           data-testid={`love-note-bubble-${event.id}`}
-                          className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[150px] cursor-pointer"
+                          className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[160px] cursor-pointer"
                           role="button"
                           tabIndex={0}
                           onKeyDown={(e) => {
@@ -217,7 +217,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                       </div>
 
                       {/* Event content */}
-                      <div className="pr-14 sm:pr-16 pb-12">
+                      <div className="pr-14 sm:pr-16">
                         <h3 className="text-lg sm:text-xl font-bold text-white mb-2 line-clamp-2 leading-snug">
                           {event.title}
                         </h3>
@@ -229,7 +229,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                         )}
 
                         {/* Time */}
-                        <div className="flex items-center gap-2 text-xs text-white/90 mt-3">
+                        <div className="flex items-center gap-2 text-xs text-white/90 mt-3 mb-12">
                           <div className="bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1">
                             {isSometimeToday(event) ? (
                               "Sometime today"
