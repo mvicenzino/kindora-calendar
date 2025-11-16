@@ -37,6 +37,7 @@ export default function Home() {
   const [messagesModalOpen, setMessagesModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [selectedMemberId, setSelectedMemberId] = useState<string>();
+  const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState<Date | undefined>();
 
   // Fetch family members
   const { data: members = [] } = useQuery<FamilyMember[]>({
@@ -160,8 +161,9 @@ export default function Home() {
     await deleteEventMutation.mutateAsync(eventId);
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = (date?: Date) => {
     setSelectedEventId(undefined);
+    setSelectedDateForNewEvent(date);
     setEventModalOpen(true);
   };
 
@@ -419,6 +421,7 @@ export default function Home() {
         onClose={() => {
           setEventModalOpen(false);
           setSelectedEventId(undefined);
+          setSelectedDateForNewEvent(undefined);
         }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
@@ -429,6 +432,7 @@ export default function Home() {
           endTime: new Date(selectedEvent.endTime)
         } : undefined}
         members={members}
+        selectedDate={selectedDateForNewEvent}
         onAddMember={() => setMemberModalOpen(true)}
       />
 

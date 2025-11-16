@@ -27,7 +27,7 @@ interface MonthViewProps {
   messages: Message[];
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
-  onAddEvent?: () => void;
+  onAddEvent?: (date?: Date) => void;
 }
 
 export default function MonthView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent }: MonthViewProps) {
@@ -134,7 +134,7 @@ export default function MonthView({ date, events, members, messages, onEventClic
             </div>
             {onAddEvent && (
               <button
-                onClick={onAddEvent}
+                onClick={() => onAddEvent()}
                 data-testid="button-add-event"
                 className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
               >
@@ -166,14 +166,20 @@ export default function MonthView({ date, events, members, messages, onEventClic
               return (
                 <button
                   key={day.toISOString()}
-                  onClick={() => hasEvents && onEventClick(dayEvents[0])}
+                  onClick={() => {
+                    if (hasEvents) {
+                      onEventClick(dayEvents[0]);
+                    } else if (onAddEvent) {
+                      onAddEvent(day);
+                    }
+                  }}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
-                  className="aspect-square rounded-xl backdrop-blur-md border transition-all flex flex-col items-center justify-center p-1"
+                  className="aspect-square rounded-xl backdrop-blur-md border transition-all flex flex-col items-center justify-center p-1 hover:bg-white/10 active:scale-95"
                   style={{
                     backgroundColor: bgColor,
                     borderColor: hasEvents ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.15)',
                     opacity: isCurrentMonth ? 1 : 0.35,
-                    cursor: hasEvents ? 'pointer' : 'default',
+                    cursor: 'pointer',
                   }}
                 >
                   <span className={`text-sm font-medium ${hasEvents ? 'text-white' : 'text-white/60'}`}>
