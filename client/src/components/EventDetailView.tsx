@@ -125,18 +125,17 @@ export default function EventDetailView({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl">
         <DialogHeader className="flex-shrink-0 pb-4 border-b border-white/10">
-          <DialogTitle className="text-2xl font-bold flex items-center justify-between pr-8 text-white">
+          <DialogTitle className="text-2xl font-bold text-white">
             Event Details
-            <Button
-              onClick={onEdit}
-              data-testid="button-edit-event"
-              size="icon"
-              variant="ghost"
-              className="hover-elevate active-elevate-2 text-white hover:text-white"
-            >
-              <Edit className="h-5 w-5" />
-            </Button>
           </DialogTitle>
+          <button
+            onClick={onEdit}
+            data-testid="button-edit-event"
+            className="absolute right-16 top-4 w-8 h-8 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-0"
+            aria-label="Edit event"
+          >
+            <Edit className="w-4 h-4 text-white drop-shadow-md" strokeWidth={2.5} />
+          </button>
         </DialogHeader>
 
         <div className="space-y-5 py-4 overflow-y-auto flex-1 custom-scrollbar">
