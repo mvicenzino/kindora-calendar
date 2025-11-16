@@ -71,7 +71,9 @@ export default function EventModal({
   selectedDate,
   onAddMember,
 }: EventModalProps) {
-  const defaultDate = selectedDate || new Date();
+  const defaultDate = (selectedDate && selectedDate instanceof Date && !isNaN(selectedDate.getTime())) 
+    ? selectedDate 
+    : new Date();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [memberIds, setMemberIds] = useState<string[]>([]);
@@ -120,7 +122,10 @@ export default function EventModal({
       setTitle("");
       setDescription("");
       setMemberIds(members[0] ? [members[0].id] : []);
-      setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+      const validDate = (selectedDate && selectedDate instanceof Date && !isNaN(selectedDate.getTime())) 
+        ? selectedDate 
+        : new Date();
+      setStartDate(format(validDate, 'yyyy-MM-dd'));
       const currentTime = getCurrentTimeRounded();
       setStartTime(currentTime);
       setEndTime(addHoursToTime(currentTime, 1));
