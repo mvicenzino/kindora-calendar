@@ -166,7 +166,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                     <button
                       onClick={() => onEventClick(event)}
                       data-testid={`timeline-event-${event.id}`}
-                      className="relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl"
+                      className="relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl min-h-[120px]"
                       style={{ backgroundColor: color }}
                     >
                       {/* Love Note Bubble */}
@@ -217,19 +217,19 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                       </div>
 
                       {/* Event content */}
-                      <div className="pr-14 sm:pr-16">
-                        <h3 className="text-lg sm:text-xl font-bold text-white mb-1.5 leading-tight">
+                      <div className="pr-14 sm:pr-16 pb-12">
+                        <h3 className="text-lg sm:text-xl font-bold text-white mb-2 line-clamp-2 leading-snug">
                           {event.title}
                         </h3>
 
                         {event.description && (
-                          <p className="text-sm text-white/80 mb-2 line-clamp-2">
+                          <p className="text-sm text-white/80 mb-3 line-clamp-2 leading-relaxed">
                             {event.description}
                           </p>
                         )}
 
                         {/* Time */}
-                        <div className="flex items-center gap-2 text-xs text-white/90 mb-2">
+                        <div className="flex items-center gap-2 text-xs text-white/90 mt-3">
                           <div className="bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-1">
                             {isSometimeToday(event) ? (
                               "Sometime today"
@@ -241,7 +241,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
                         {/* Category badge */}
                         {event.categories && event.categories.length > 0 && (
-                          <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium text-white mb-2 md:mb-0">
+                          <div className="inline-block bg-white/20 backdrop-blur-sm rounded-full px-2.5 py-0.5 text-xs font-medium text-white mt-2">
                             {event.categories[0]}
                           </div>
                         )}
