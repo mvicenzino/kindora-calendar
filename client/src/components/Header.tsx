@@ -55,7 +55,7 @@ export default function Header({ onMessagesClick, onProfileClick }: HeaderProps)
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-bold text-white leading-none" style={{ fontFamily: 'Inter, sans-serif' }}>Calendora</h1>
-            <p className="text-[10px] sm:text-xs text-white/70 hidden sm:block">Family Planning without the Noise</p>
+            <p className="text-[10px] sm:text-xs text-white/70 hidden sm:block">Family Schedules, Finally Simplified</p>
           </div>
         </div>
 
