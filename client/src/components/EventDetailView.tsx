@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, Edit, MessageCircle } from "lucide-react";
+import { Calendar, Clock, Edit, MessageCircle, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
@@ -48,6 +48,7 @@ export default function EventDetailView({
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>("");
+  const [isLoveNoteExpanded, setIsLoveNoteExpanded] = useState(false);
   const { toast } = useToast();
 
   // Create message mutation
@@ -88,6 +89,7 @@ export default function EventDetailView({
       setSelectedEmoji("");
       setIsBold(false);
       setIsItalic(false);
+      setIsLoveNoteExpanded(false);
       // Auto-select first available recipient (not event owner)
       const otherMembers = allMembers.filter(m => m.id !== event.memberId);
       setSelectedRecipientId(otherMembers.length > 0 ? otherMembers[0].id : "");
@@ -138,7 +140,7 @@ export default function EventDetailView({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-4 overflow-y-auto flex-1">
+        <div className="space-y-5 py-4 overflow-y-auto flex-1 custom-scrollbar">
           {/* Event Title & Member */}
           <div className="p-5 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20">
             <div className="flex items-start gap-3">
@@ -191,48 +193,66 @@ export default function EventDetailView({
 
           <Separator className="bg-white/10" />
 
-          {/* Message Section */}
+          {/* Message Section - Collapsible */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-white/70" />
-              <h4 className="text-lg font-semibold text-white">Send a Love Note</h4>
-            </div>
-            
-            {/* Recipient Selector */}
-            <div className="p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-2">
-              <p className="text-xs font-medium text-white/60">Send to</p>
-              <div className="flex flex-wrap gap-2">
-                {allMembers
-                  .filter(m => m.id !== event.memberId)
-                  .map((recipient) => (
-                    <Button
-                      key={recipient.id}
-                      type="button"
-                      size="sm"
-                      variant={selectedRecipientId === recipient.id ? "default" : "outline"}
-                      onClick={() => setSelectedRecipientId(recipient.id)}
-                      className="hover-elevate active-elevate-2"
-                      data-testid={`button-recipient-${recipient.id}`}
-                    >
-                      <Avatar className="h-5 w-5 mr-2 ring-1" style={{ '--tw-ring-color': recipient.color } as React.CSSProperties}>
-                        <AvatarFallback 
-                          className="text-white text-xs font-semibold"
-                          style={{ backgroundColor: recipient.color }}
-                        >
-                          {recipient.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      {recipient.name}
-                    </Button>
-                  ))}
-                {allMembers.filter(m => m.id !== event.memberId).length === 0 && (
-                  <p className="text-sm text-white/60">No other family members to send to</p>
-                )}
+            <button
+              type="button"
+              onClick={() => setIsLoveNoteExpanded(!isLoveNoteExpanded)}
+              className="w-full flex items-center justify-between p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 hover-elevate active-elevate-2 transition-all"
+              data-testid="button-toggle-love-note"
+            >
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-white/70" />
+                <h4 className="text-base font-medium text-white">Send a Love Note</h4>
               </div>
-            </div>
+              <ChevronDown 
+                className={`h-5 w-5 text-white/70 transition-transform duration-300 ${
+                  isLoveNoteExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
             
-            {/* Formatting Controls */}
-            <div className="p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-4">
+            {isLoveNoteExpanded && (
+              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                {/* Recipient Selector */}
+                <div className="p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-2">
+                  <p className="text-xs font-medium text-white/60">Send to</p>
+                  <div className="flex flex-wrap gap-2">
+                    {allMembers
+                      .filter(m => m.id !== event.memberId)
+                      .map((recipient) => (
+                        <button
+                          key={recipient.id}
+                          type="button"
+                          onClick={() => setSelectedRecipientId(recipient.id)}
+                          className={`relative group transition-all ${
+                            selectedRecipientId === recipient.id ? 'scale-110' : 'hover:scale-105'
+                          }`}
+                          data-testid={`button-recipient-${recipient.id}`}
+                          aria-label={`Send to ${recipient.name}`}
+                        >
+                          <Avatar className={`h-10 w-10 ring-2 transition-all ${
+                            selectedRecipientId === recipient.id 
+                              ? 'ring-white/50 shadow-lg' 
+                              : 'ring-white/20 hover:ring-white/30'
+                          }`}>
+                            <AvatarFallback 
+                              className="text-white text-sm font-semibold"
+                              style={{ backgroundColor: recipient.color }}
+                            >
+                              {recipient.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                        </button>
+                      ))}
+                    {allMembers.filter(m => m.id !== event.memberId).length === 0 && (
+                      <p className="text-sm text-white/60">No other family members to send to</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Formatting Controls */}
+                <div className="p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-4">
               <div className="space-y-2">
                 <p className="text-xs font-medium text-white/60">Add an emoji</p>
                 <div className="flex flex-wrap gap-2">
@@ -282,34 +302,36 @@ export default function EventDetailView({
                     Italic
                   </Button>
                 </div>
+                </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Textarea
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder={`Write your love note to ${allMembers.find(m => m.id === selectedRecipientId)?.name || 'family member'}...`}
+                    data-testid="textarea-event-message"
+                    className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl resize-none min-h-[100px] text-white placeholder:text-white/50"
+                    style={{
+                      fontWeight: isBold ? 'bold' : 'normal',
+                      fontStyle: isItalic ? 'italic' : 'normal',
+                    }}
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!message.trim() || !selectedRecipientId || createMessageMutation.isPending}
+                      data-testid="button-send-message"
+                      size="sm"
+                      className="hover-elevate active-elevate-2"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      {createMessageMutation.isPending ? "Sending..." : "Send Love Note"}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={`Write your love note to ${allMembers.find(m => m.id === selectedRecipientId)?.name || 'family member'}...`}
-                data-testid="textarea-event-message"
-                className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl resize-none min-h-[100px] text-white placeholder:text-white/50"
-                style={{
-                  fontWeight: isBold ? 'bold' : 'normal',
-                  fontStyle: isItalic ? 'italic' : 'normal',
-                }}
-              />
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!message.trim() || !selectedRecipientId || createMessageMutation.isPending}
-                  data-testid="button-send-message"
-                  size="sm"
-                  className="hover-elevate active-elevate-2"
-                >
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  {createMessageMutation.isPending ? "Sending..." : "Send Love Note"}
-                </Button>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
