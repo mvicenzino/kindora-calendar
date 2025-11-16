@@ -53,27 +53,13 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
     setLoveNotePopupOpen(true);
   };
 
-  // Separate "Sometime Today" events (23:58-23:59) from timed events
+  // Check if event is "Sometime Today" (23:58-23:59)
   const isSometimeTodayEvent = (event: Event) => {
     const startHour = event.startTime.getHours();
     const startMinute = event.startTime.getMinutes();
     const endHour = event.endTime.getHours();
     const endMinute = event.endTime.getMinutes();
     return startHour === 23 && startMinute === 58 && endHour === 23 && endMinute === 59;
-  };
-
-  const timedEvents = events.filter(e => !isSometimeTodayEvent(e));
-  const sometimeTodayEvents = events.filter(e => isSometimeTodayEvent(e));
-
-  const formatTimeRange = (start: Date, end: Date) => {
-    return `${format(start, 'h:mm')} ${format(start, 'a')} - ${format(end, 'h:mm')} ${format(end, 'a')}`;
-  };
-
-  const getTimeOfDay = (time: Date) => {
-    const hour = time.getHours();
-    if (hour < 12) return 'Morning';
-    if (hour < 17) return 'Afternoon';
-    return 'Evening';
   };
 
   return (
@@ -100,12 +86,13 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
           </div>
         </div>
 
-        {/* Timed Events */}
-        {timedEvents.length > 0 && (
+        {/* All Events */}
+        {events.length > 0 && (
           <div className="space-y-2 sm:space-y-3">
-            {timedEvents.map((event, idx) => {
+            {events.map((event: Event) => {
               const eventMessage = getEventMessage(event.id);
               const eventColor = event.members[0]?.color || '#6D7A8E';
+              const isSometime = isSometimeTodayEvent(event);
               
               return (
                 <button
@@ -142,7 +129,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                           {event.categories[0]}
                         </span>
                       )}
-                      {event.members.map(member => (
+                      {event.members.map((member: FamilyMember) => (
                         <div
                           key={member.id}
                           className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white border border-white/30"
@@ -154,74 +141,11 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     </div>
                   </div>
                   <p className="text-sm text-white/80">
-                    {format(event.startTime, 'h:mm a')}–{format(event.endTime, 'h:mm a')}
+                    {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
                   </p>
                 </button>
               );
             })}
-          </div>
-        )}
-
-        {/* Sometime Today */}
-        {sometimeTodayEvents.length > 0 && (
-          <div className="space-y-3 pt-6">
-            <div className="px-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                Sometime Today
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {sometimeTodayEvents.map((event, idx) => {
-                const eventMessage = getEventMessage(event.id);
-                const eventColor = event.members[0]?.color || '#6D7A8E';
-                
-                return (
-                  <button
-                    key={event.id}
-                    onClick={() => onEventClick(event)}
-                    data-testid={`sometime-event-${event.id}`}
-                    className="rounded-2xl p-3 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md relative"
-                    style={{ backgroundColor: eventColor }}
-                  >
-                    {/* Love Note Bubble */}
-                    {eventMessage && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleEmojiClick(e, eventMessage)}
-                        data-testid={`love-note-bubble-${event.id}`}
-                        className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[140px]"
-                        aria-label="View love note"
-                      >
-                        <span className="text-sm flex-shrink-0">{eventMessage.emoji}</span>
-                        <span className="text-[10px] text-white/90 truncate font-medium">
-                          {eventMessage.content}
-                        </span>
-                      </button>
-                    )}
-                    
-                    <div className="flex items-start justify-between mb-1 pr-36">
-                      <h4 className="text-sm font-semibold text-white flex-1 leading-tight">
-                        {event.title}
-                      </h4>
-                      {event.members.map(member => (
-                        <div
-                          key={member.id}
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/30 ml-1"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.initials}
-                        </div>
-                      ))}
-                    </div>
-                    {event.categories && event.categories.length > 0 && (
-                      <span className="text-[10px] text-white/70">
-                        {event.categories[0]}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
           </div>
         )}
 
