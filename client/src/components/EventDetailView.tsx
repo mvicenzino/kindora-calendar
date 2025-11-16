@@ -90,9 +90,10 @@ export default function EventDetailView({
       setIsBold(false);
       setIsItalic(false);
       setIsLoveNoteExpanded(false);
-      // Auto-select first available recipient (not assigned to event)
+      // Auto-select wife (Carolyn) as default recipient, or first available
       const otherMembers = allMembers.filter(m => !event.memberIds.includes(m.id));
-      setSelectedRecipientId(otherMembers.length > 0 ? otherMembers[0].id : "");
+      const wife = otherMembers.find(m => m.name.toLowerCase().includes('carolyn'));
+      setSelectedRecipientId(wife?.id || (otherMembers.length > 0 ? otherMembers[0].id : ""));
     }
   }, [isOpen, event?.id, allMembers]);
 
@@ -222,95 +223,100 @@ export default function EventDetailView({
             
             {isLoveNoteExpanded && (
               <div id="love-note-panel" className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 motion-reduce:animate-none">
-                {/* Recipient Selector */}
-                <div className="p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-2">
-                  <p className="text-xs font-medium text-white/60">Send to</p>
-                  <div className="flex flex-wrap gap-2">
-                    {allMembers
-                      .filter(m => !event.memberIds.includes(m.id))
-                      .map((recipient) => (
-                        <button
-                          key={recipient.id}
-                          type="button"
-                          onClick={() => setSelectedRecipientId(recipient.id)}
-                          className={`relative group transition-all ${
-                            selectedRecipientId === recipient.id ? 'scale-110' : 'hover:scale-105'
-                          }`}
-                          data-testid={`button-recipient-${recipient.id}`}
-                          aria-label={`Send to ${recipient.name}`}
-                        >
-                          <Avatar className={`h-10 w-10 ring-2 transition-all ${
-                            selectedRecipientId === recipient.id 
-                              ? 'ring-white/50 shadow-lg' 
-                              : 'ring-white/20 hover:ring-white/30'
-                          }`}>
-                            <AvatarFallback 
-                              className="text-white text-sm font-semibold"
-                              style={{ backgroundColor: recipient.color }}
+                {/* Combined Send To & Formatting */}
+                <div className="p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-3">
+                  {/* Send to & Text style row */}
+                  <div className="flex flex-wrap items-start gap-4">
+                    {/* Recipient Selector */}
+                    <div className="flex-1 min-w-[200px] space-y-2">
+                      <p className="text-xs font-medium text-white/60">Send to</p>
+                      <div className="flex flex-wrap gap-2">
+                        {allMembers
+                          .filter(m => !event.memberIds.includes(m.id))
+                          .map((recipient) => (
+                            <button
+                              key={recipient.id}
+                              type="button"
+                              onClick={() => setSelectedRecipientId(recipient.id)}
+                              className={`relative group transition-all ${
+                                selectedRecipientId === recipient.id ? 'scale-110' : 'hover:scale-105'
+                              }`}
+                              data-testid={`button-recipient-${recipient.id}`}
+                              aria-label={`Send to ${recipient.name}`}
                             >
-                              {recipient.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                        </button>
-                      ))}
-                    {allMembers.filter(m => !event.memberIds.includes(m.id)).length === 0 && (
-                      <p className="text-sm text-white/60">No other family members to send to</p>
-                    )}
+                              <Avatar className={`h-10 w-10 ring-2 transition-all ${
+                                selectedRecipientId === recipient.id 
+                                  ? 'ring-white/50 shadow-lg' 
+                                  : 'ring-white/20 hover:ring-white/30'
+                              }`}>
+                                <AvatarFallback 
+                                  className="text-white text-sm font-semibold"
+                                  style={{ backgroundColor: recipient.color }}
+                                >
+                                  {recipient.name.split(' ').map(n => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                            </button>
+                          ))}
+                        {allMembers.filter(m => !event.memberIds.includes(m.id)).length === 0 && (
+                          <p className="text-sm text-white/60">No other family members to send to</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Text style */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-white/60">Text style</p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isBold ? "default" : "outline"}
+                          onClick={() => setIsBold(!isBold)}
+                          className={`font-bold hover-elevate active-elevate-2 ${
+                            !isBold ? "bg-white/20 border-white/30 text-white" : ""
+                          }`}
+                          data-testid="button-bold"
+                        >
+                          Bold
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={isItalic ? "default" : "outline"}
+                          onClick={() => setIsItalic(!isItalic)}
+                          className={`italic hover-elevate active-elevate-2 ${
+                            !isItalic ? "bg-white/20 border-white/30 text-white" : ""
+                          }`}
+                          data-testid="button-italic"
+                        >
+                          Italic
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                
-                {/* Formatting Controls */}
-                <div className="p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-4">
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-white/60">Add an emoji</p>
-                <div className="flex flex-wrap gap-2">
-                  {loveEmojis.map((emoji) => (
-                    <Button
-                      key={emoji}
-                      type="button"
-                      size="sm"
-                      variant={selectedEmoji === emoji ? "default" : "outline"}
-                      onClick={() => setSelectedEmoji(selectedEmoji === emoji ? "" : emoji)}
-                      className={`text-lg h-10 w-10 p-0 hover-elevate active-elevate-2 ${
-                        selectedEmoji !== emoji ? "bg-white/20 border-white/30" : ""
-                      }`}
-                      data-testid={`button-emoji-${emoji}`}
-                    >
-                      {emoji}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-white/60">Text style</p>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={isBold ? "default" : "outline"}
-                    onClick={() => setIsBold(!isBold)}
-                    className={`font-bold hover-elevate active-elevate-2 ${
-                      !isBold ? "bg-white/20 border-white/30 text-white" : ""
-                    }`}
-                    data-testid="button-bold"
-                  >
-                    Bold
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={isItalic ? "default" : "outline"}
-                    onClick={() => setIsItalic(!isItalic)}
-                    className={`italic hover-elevate active-elevate-2 ${
-                      !isItalic ? "bg-white/20 border-white/30 text-white" : ""
-                    }`}
-                    data-testid="button-italic"
-                  >
-                    Italic
-                  </Button>
-                </div>
-                </div>
+                  
+                  {/* Emoji selector */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-white/60">Add an emoji</p>
+                    <div className="flex flex-wrap gap-2">
+                      {loveEmojis.map((emoji) => (
+                        <Button
+                          key={emoji}
+                          type="button"
+                          size="sm"
+                          variant={selectedEmoji === emoji ? "default" : "outline"}
+                          onClick={() => setSelectedEmoji(selectedEmoji === emoji ? "" : emoji)}
+                          className={`text-lg h-10 w-10 p-0 hover-elevate active-elevate-2 ${
+                            selectedEmoji !== emoji ? "bg-white/20 border-white/30" : ""
+                          }`}
+                          data-testid={`button-emoji-${emoji}`}
+                        >
+                          {emoji}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
