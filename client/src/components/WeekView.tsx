@@ -3,6 +3,7 @@ import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks 
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface FamilyMember {
   id: string;
@@ -35,6 +36,7 @@ interface WeekViewProps {
 export default function WeekView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent, onDateChange, onWeekChange }: WeekViewProps) {
   const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  const isDesktop = useMediaQuery('(min-width: 640px)');
   
   const weekStart = startOfWeek(date);
   const weekEnd = endOfWeek(date);
@@ -209,21 +211,33 @@ export default function WeekView({ date, events, members, messages, onEventClick
               >
                 {/* Love Note Bubble */}
                 {eventMessage && (
-                  <button
-                    type="button"
-                    onClick={(e) => handleEmojiClick(e, eventMessage)}
-                    data-testid={`love-note-bubble-${event.id}`}
-                    className="absolute top-2.5 right-2.5 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[140px]"
-                    aria-label="View love note"
-                  >
-                    <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
-                    <span className="text-[10px] text-white/90 truncate font-medium">
-                      {eventMessage.content}
-                    </span>
-                  </button>
+                  isDesktop ? (
+                    <button
+                      type="button"
+                      onClick={(e) => handleEmojiClick(e, eventMessage)}
+                      data-testid={`love-note-bubble-${event.id}`}
+                      className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[140px]"
+                      aria-label="View love note"
+                    >
+                      <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
+                      <span className="text-[10px] text-white/90 truncate font-medium max-w-[100px]">
+                        {eventMessage.content}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={(e) => handleEmojiClick(e, eventMessage)}
+                      data-testid={`love-note-bubble-${event.id}`}
+                      className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10"
+                      aria-label="View love note"
+                    >
+                      <span className="text-sm">{eventMessage.emoji}</span>
+                    </button>
+                  )
                 )}
                 
-                <h3 className="text-base font-semibold text-white mb-1 leading-tight pr-36">
+                <h3 className="text-base font-semibold text-white mb-1 leading-tight pr-12 sm:pr-36">
                   {event.title}
                 </h3>
                 <p className="text-sm text-white/90">
