@@ -200,20 +200,22 @@ export default function EventDetailView({
               onClick={() => setIsLoveNoteExpanded(!isLoveNoteExpanded)}
               className="w-full flex items-center justify-between p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 hover-elevate active-elevate-2 transition-all"
               data-testid="button-toggle-love-note"
+              aria-expanded={isLoveNoteExpanded}
+              aria-controls="love-note-panel"
             >
               <div className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-white/70" />
                 <h4 className="text-base font-medium text-white">Send a Love Note</h4>
               </div>
               <ChevronDown 
-                className={`h-5 w-5 text-white/70 transition-transform duration-300 ${
+                className={`h-5 w-5 text-white/70 transition-transform duration-300 motion-reduce:transition-none ${
                   isLoveNoteExpanded ? 'rotate-180' : ''
                 }`}
               />
             </button>
             
             {isLoveNoteExpanded && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div id="love-note-panel" className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300 motion-reduce:animate-none">
                 {/* Recipient Selector */}
                 <div className="p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-2">
                   <p className="text-xs font-medium text-white/60">Send to</p>
