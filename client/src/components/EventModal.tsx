@@ -258,10 +258,14 @@ export default function EventModal({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-              <ImageIcon className="h-4 w-4" />
-              Event Photo (Optional)
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
+                <ImageIcon className="h-4 w-4" />
+                Event Photo
+              </Label>
+              <span className="text-xs text-white">Optional</span>
+            </div>
+            <p className="text-xs text-white/60">Add a photo to remember this moment</p>
             {photoUrl ? (
               <div className="relative rounded-xl overflow-hidden backdrop-blur-md bg-white/10 border border-white/20">
                 <img 
@@ -287,9 +291,9 @@ export default function EventModal({
                 maxFileSize={10485760}
                 onGetUploadParameters={handleGetUploadParameters}
                 onComplete={handleUploadComplete}
-                buttonClassName="w-full backdrop-blur-md bg-white/10 border border-white/20 hover-elevate active-elevate-2"
+                buttonClassName="w-full backdrop-blur-md bg-white/10 border border-white/20 hover-elevate active-elevate-2 text-white"
               >
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-2 py-2">
                   <ImageIcon className="h-5 w-5" />
                   <span>Add Photo</span>
                 </div>
