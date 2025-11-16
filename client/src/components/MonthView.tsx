@@ -210,7 +210,7 @@ export default function MonthView({ date, events, members, messages, onEventClic
                     key={event.id}
                     onClick={() => onEventClick(event)}
                     data-testid={`upcoming-event-${event.id}`}
-                    className="w-full rounded-2xl p-4 sm:p-5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left relative"
+                    className="w-full rounded-2xl p-4 sm:p-5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left relative min-h-[90px]"
                   >
                     {/* Love Note Bubble */}
                     {eventMessage && (
@@ -248,11 +248,11 @@ export default function MonthView({ date, events, members, messages, onEventClic
                       ))}
                     </div>
                     
-                    <div className="pr-14 sm:pr-16">
-                      <h3 className="text-base font-medium text-white mb-1.5">
+                    <div className="pr-14 sm:pr-16 pb-12">
+                      <h3 className="text-base font-medium text-white mb-2 line-clamp-2 leading-snug">
                         {event.title}
                       </h3>
-                      <p className="text-sm text-white/80">
+                      <p className="text-sm text-white/80 mt-2">
                         {format(event.startTime, 'h:mm a')}
                       </p>
                     </div>
