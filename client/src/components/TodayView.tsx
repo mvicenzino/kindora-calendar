@@ -143,7 +143,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   data-testid={`event-${event.id}`}
-                  className="w-full rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative min-h-[100px] sm:min-h-[110px]"
+                  className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative"
                   style={{ backgroundColor: eventColor }}
                 >
                   {/* Love Note Bubble */}
@@ -151,7 +151,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     <div
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[150px] cursor-pointer"
+                      className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[150px] cursor-pointer"
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -169,12 +169,12 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     </div>
                   )}
                   
-                  {/* Member avatars - positioned at far right */}
-                  <div className="absolute right-4 bottom-4 flex flex-col gap-2">
+                  {/* Member avatars - horizontal layout */}
+                  <div className="absolute right-3 bottom-3 flex flex-row-reverse -space-x-2 space-x-reverse">
                     {event.members.map((member: FamilyMember) => (
                       <div
                         key={member.id}
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40 ring-2 ring-white/20"
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40"
                         style={{ backgroundColor: member.color }}
                       >
                         {member.initials}
@@ -182,11 +182,11 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     ))}
                   </div>
                   
-                  <div className="pr-16 sm:pr-20">
-                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
+                  <div className="pr-14 sm:pr-16">
+                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-1.5">
                       {event.title}
                     </h3>
-                    <p className="text-sm text-white/80 mt-1">
+                    <p className="text-sm text-white/80">
                       {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
                     </p>
                   </div>
