@@ -124,55 +124,38 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
       </div>
 
       {/* Timeline */}
-      <div className="flex-1 w-full relative">
-        {/* Center line */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/40 via-white/20 to-white/40 -translate-x-1/2" />
-
+      <div className="flex-1 w-full">
         {/* Events */}
-        <div className="space-y-6 pb-20">
+        <div className="space-y-4 sm:space-y-5 pb-20">
           {events.map((event, index) => {
-            const isLeft = index % 2 === 0;
             const color = getEventColor(event);
             const eventMessage = getEventMessage(event.id);
             
             return (
-              <div key={event.id} className="relative">
-                {/* Date marker on timeline */}
-                <div className="absolute left-1/2 top-4 -translate-x-1/2 z-10">
-                  <div className="bg-gradient-to-br from-white/50 to-white/30 backdrop-blur-xl rounded-full px-3 py-1.5 border-2 border-white/60 shadow-lg">
-                    <p className="text-xs font-semibold text-white whitespace-nowrap">
-                      {format(event.startTime, 'MMM d')}
-                    </p>
-                  </div>
+              <div key={event.id} className="space-y-2">
+                {/* Date marker */}
+                <div className="px-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                    {format(event.startTime, 'EEEE, MMMM d')}
+                  </p>
                 </div>
 
                 {/* Event card */}
-                <div className={`flex ${isLeft ? 'justify-start pr-[52%]' : 'justify-end pl-[52%]'}`}>
-                  <button
-                    onClick={() => onEventClick(event)}
-                    data-testid={`timeline-event-${event.id}`}
-                    className="group relative w-full"
+                <button
+                  onClick={() => onEventClick(event)}
+                  data-testid={`timeline-event-${event.id}`}
+                  className="w-full"
+                >
+                  <div
+                    ref={(el) => {
+                      if (el) cardRefs.current[event.id] = el;
+                    }}
+                    className="rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl relative"
+                    style={{ 
+                      backgroundColor: color,
+                      transform: `scale(${cardScales[event.id] || 0.92})`,
+                    }}
                   >
-                    {/* Connecting line to center */}
-                    <div 
-                      className={`absolute top-6 w-6 h-0.5 bg-gradient-to-r ${
-                        isLeft 
-                          ? 'right-0 translate-x-full from-white/40 to-transparent' 
-                          : 'left-0 -translate-x-full from-transparent to-white/40'
-                      }`}
-                    />
-
-                    {/* Event card */}
-                    <div
-                      ref={(el) => {
-                        if (el) cardRefs.current[event.id] = el;
-                      }}
-                      className="rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all duration-300 ease-out active:scale-[0.98] text-left shadow-xl relative"
-                      style={{ 
-                        backgroundColor: color,
-                        transform: `scale(${cardScales[event.id] || 0.92})`,
-                      }}
-                    >
                       {/* Love Note Bubble */}
                       {eventMessage && (
                         <button
@@ -248,7 +231,6 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                     </div>
                   </button>
                 </div>
-              </div>
             );
           })}
         </div>

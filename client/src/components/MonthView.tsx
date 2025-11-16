@@ -125,19 +125,26 @@ export default function MonthView({ date, events, members, messages, onEventClic
                   key={day.toISOString()}
                   onClick={() => hasEvents && onEventClick(dayEvents[0])}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
-                  className="aspect-square rounded-xl backdrop-blur-md border transition-all"
+                  className="aspect-square rounded-xl backdrop-blur-md border transition-all flex flex-col items-center justify-center p-1"
                   style={{
                     backgroundColor: bgColor,
-                    borderColor: hasEvents ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.15)',
-                    opacity: isCurrentMonth ? 1 : 0.4,
+                    borderColor: hasEvents ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.15)',
+                    opacity: isCurrentMonth ? 1 : 0.35,
                     cursor: hasEvents ? 'pointer' : 'default',
-                    transform: 'scale(1)',
                   }}
                 >
-                  {hasEvents && (
-                    <span className="text-lg font-semibold text-white">
-                      {format(day, 'd')}
-                    </span>
+                  <span className={`text-sm font-medium ${hasEvents ? 'text-white' : 'text-white/60'}`}>
+                    {format(day, 'd')}
+                  </span>
+                  {hasEvents && dayEvents.length > 1 && (
+                    <div className="flex gap-0.5 mt-1">
+                      {dayEvents.slice(0, 3).map((_, idx) => (
+                        <div 
+                          key={idx}
+                          className="w-1 h-1 rounded-full bg-white/70"
+                        />
+                      ))}
+                    </div>
                   )}
                 </button>
               );
