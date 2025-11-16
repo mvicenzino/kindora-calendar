@@ -197,7 +197,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
         </div>
 
         {/* Events Grid */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {events.map((event) => {
             const eventMessage = getEventMessage(event.id);
             
@@ -206,7 +206,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
                 key={event.id}
                 onClick={() => onEventClick(event)}
                 data-testid={`event-${event.id}`}
-                className="rounded-3xl p-4 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative"
+                className="rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative min-h-[120px] sm:min-h-[130px]"
                 style={{ backgroundColor: getEventColor(event) }}
               >
                 {/* Love Note Bubble */}
@@ -215,7 +215,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
                     <div
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-2 right-2 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[140px] cursor-pointer"
+                      className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[120px] cursor-pointer"
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -227,7 +227,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
                       aria-label="View love note"
                     >
                       <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
-                      <span className="text-[10px] text-white/90 truncate font-medium max-w-[100px]">
+                      <span className="text-[10px] text-white/90 truncate font-medium max-w-[80px]">
                         {eventMessage.content}
                       </span>
                     </div>
@@ -235,7 +235,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
                     <div
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
                       data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 cursor-pointer"
+                      className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 cursor-pointer"
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -252,11 +252,11 @@ export default function WeekView({ date, events, members, messages, onEventClick
                 )}
                 
                 {/* Member avatars - positioned at far right */}
-                <div className="absolute right-2 bottom-2 flex flex-col gap-1.5">
+                <div className="absolute right-3 bottom-3 flex flex-col gap-2">
                   {event.members.map((member) => (
                     <div
                       key={member.id}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white/40 ring-1 ring-white/20"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white/40 ring-1 ring-white/20"
                       style={{ backgroundColor: member.color }}
                     >
                       {member.initials}
@@ -264,10 +264,10 @@ export default function WeekView({ date, events, members, messages, onEventClick
                   ))}
                 </div>
                 
-                <h3 className="text-base font-semibold text-white mb-1 leading-tight pr-12">
+                <h3 className="text-base font-semibold text-white mb-2 leading-tight pr-12 sm:pr-14">
                   {event.title}
                 </h3>
-                <p className="text-sm text-white/90">
+                <p className="text-sm text-white/90 mt-1">
                   {format(event.startTime, 'h:mm a')}
                 </p>
               </button>
