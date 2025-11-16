@@ -40,7 +40,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
   
   const isViewingToday = isToday(date);
   const dayTitle = isViewingToday ? "Today" : format(date, 'EEEE');
-  const daySubtitle = isViewingToday ? undefined : format(date, 'MMM d, yyyy');
+  const daySubtitle = format(date, 'EEEE, MMMM d, yyyy');
 
   // Find message with emoji for a given event
   const getEventMessage = (eventId: string) => {
@@ -84,9 +84,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
           <div className="flex items-start gap-3 sm:gap-6">
             <div className="flex-1">
               <h1 className="text-4xl sm:text-5xl font-bold text-white">{dayTitle}</h1>
-              {daySubtitle && (
-                <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">{daySubtitle}</p>
-              )}
+              <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">{daySubtitle}</p>
             </div>
             {onAddEvent && (
               <button
