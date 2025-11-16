@@ -162,20 +162,23 @@ export default function MonthView({ date, events, members, messages, onEventClic
                     data-testid={`upcoming-event-${event.id}`}
                     className="w-full rounded-2xl p-4 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left relative"
                   >
-                    {/* Love Note Emoji */}
+                    {/* Love Note Bubble */}
                     {eventMessage && (
                       <button
                         type="button"
                         onClick={(e) => handleEmojiClick(e, eventMessage)}
-                        data-testid={`emoji-${event.id}`}
-                        className="absolute top-3 right-3 text-xl hover:scale-110 transition-transform active:scale-95 z-10"
+                        data-testid={`love-note-bubble-${event.id}`}
+                        className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[150px]"
                         aria-label="View love note"
                       >
-                        {eventMessage.emoji}
+                        <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
+                        <span className="text-[10px] text-white/90 truncate font-medium">
+                          {eventMessage.content}
+                        </span>
                       </button>
                     )}
                     
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between pr-40">
                       <div className="flex items-center gap-3">
                         <div
                           className="w-10 h-10 rounded-lg"

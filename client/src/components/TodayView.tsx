@@ -121,20 +121,23 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                   className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative"
                   style={{ backgroundColor: eventColors[idx % eventColors.length] }}
                 >
-                  {/* Love Note Emoji */}
+                  {/* Love Note Bubble */}
                   {eventMessage && (
                     <button
                       type="button"
                       onClick={(e) => handleEmojiClick(e, eventMessage)}
-                      data-testid={`emoji-${event.id}`}
-                      className="absolute top-3 right-3 text-2xl hover:scale-110 transition-transform active:scale-95 z-10"
+                      data-testid={`love-note-bubble-${event.id}`}
+                      className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[200px]"
                       aria-label="View love note"
                     >
-                      {eventMessage.emoji}
+                      <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
+                      <span className="text-xs text-white/90 truncate font-medium">
+                        {eventMessage.content}
+                      </span>
                     </button>
                   )}
                   
-                  <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+                  <div className="flex items-start justify-between mb-1.5 sm:mb-2 pr-56">
                     <h3 className="text-lg sm:text-xl font-semibold text-white flex-1">
                       {event.title}
                     </h3>
@@ -190,20 +193,23 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md relative"
                     style={{ backgroundColor: complementaryColors[idx % complementaryColors.length] }}
                   >
-                    {/* Love Note Emoji */}
+                    {/* Love Note Bubble */}
                     {eventMessage && (
                       <button
                         type="button"
                         onClick={(e) => handleEmojiClick(e, eventMessage)}
-                        data-testid={`emoji-${event.id}`}
-                        className="absolute top-2 right-2 text-lg hover:scale-110 transition-transform active:scale-95 z-10"
+                        data-testid={`love-note-bubble-${event.id}`}
+                        className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[140px]"
                         aria-label="View love note"
                       >
-                        {eventMessage.emoji}
+                        <span className="text-sm flex-shrink-0">{eventMessage.emoji}</span>
+                        <span className="text-[10px] text-white/90 truncate font-medium">
+                          {eventMessage.content}
+                        </span>
                       </button>
                     )}
                     
-                    <div className="flex items-start justify-between mb-1">
+                    <div className="flex items-start justify-between mb-1 pr-36">
                       <h4 className="text-sm font-semibold text-white flex-1 leading-tight">
                         {event.title}
                       </h4>
