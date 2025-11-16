@@ -35,6 +35,25 @@ interface EventModalProps {
   selectedDate?: Date;
 }
 
+// Helper function to get current time rounded to nearest 15 minutes
+const getCurrentTimeRounded = () => {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const roundedMinutes = Math.round(minutes / 15) * 15;
+  now.setMinutes(roundedMinutes);
+  now.setSeconds(0);
+  now.setMilliseconds(0);
+  return format(now, 'HH:mm');
+};
+
+// Helper function to add hours to a time string
+const addHoursToTime = (timeStr: string, hours: number) => {
+  const [h, m] = timeStr.split(':').map(Number);
+  const date = new Date();
+  date.setHours(h + hours, m, 0, 0);
+  return format(date, 'HH:mm');
+};
+
 export default function EventModal({
   isOpen,
   onClose,
@@ -49,8 +68,8 @@ export default function EventModal({
   const [description, setDescription] = useState("");
   const [memberId, setMemberId] = useState("");
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const [startTime, setStartTime] = useState(() => getCurrentTimeRounded());
+  const [endTime, setEndTime] = useState(() => addHoursToTime(getCurrentTimeRounded(), 1));
   const [isSometimeToday, setIsSometimeToday] = useState(false);
 
   // Update form state when event prop changes
@@ -69,8 +88,9 @@ export default function EventModal({
       setDescription("");
       setMemberId(members[0]?.id || "");
       setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-      setStartTime('09:00');
-      setEndTime('10:00');
+      const currentTime = getCurrentTimeRounded();
+      setStartTime(currentTime);
+      setEndTime(addHoursToTime(currentTime, 1));
       setIsSometimeToday(false);
     }
   }, [event, members, selectedDate]);
