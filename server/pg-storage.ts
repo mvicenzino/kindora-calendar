@@ -1,6 +1,6 @@
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool } from "@neondatabase/serverless";
-import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { eq, desc } from "drizzle-orm";
 import {
   familyMembers,
   events,
@@ -18,8 +18,8 @@ export class PgStorage implements IStorage {
   private db;
 
   constructor() {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    this.db = drizzle(pool);
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql);
   }
 
   // Family Members
@@ -106,20 +106,18 @@ export class PgStorage implements IStorage {
 
   // Messages
   async getMessages(): Promise<Message[]> {
-    const result = await this.db
+    return await this.db
       .select()
       .from(messages)
-      .orderBy(messages.createdAt);
-    return result.reverse(); // Most recent first
+      .orderBy(desc(messages.createdAt)); // Most recent first
   }
 
   async getMessagesByEvent(eventId: string): Promise<Message[]> {
-    const result = await this.db
+    return await this.db
       .select()
       .from(messages)
       .where(eq(messages.eventId, eventId))
-      .orderBy(messages.createdAt);
-    return result.reverse(); // Most recent first
+      .orderBy(desc(messages.createdAt)); // Most recent first
   }
 
   async createMessage(message: InsertMessage): Promise<Message> {

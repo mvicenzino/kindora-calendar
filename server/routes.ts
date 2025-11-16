@@ -10,6 +10,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const members = await storage.getFamilyMembers();
       res.json(members);
     } catch (error) {
+      console.error("Error fetching family members:", error);
       res.status(500).json({ error: "Failed to fetch family members" });
     }
   });
@@ -43,6 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const events = await storage.getEvents();
       res.json(events);
     } catch (error) {
+      console.error("Error fetching events:", error);
       res.status(500).json({ error: "Failed to fetch events" });
     }
   });
@@ -90,6 +92,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messages = await storage.getMessages();
       res.json(messages);
     } catch (error) {
+      console.error("Error fetching messages:", error);
       res.status(500).json({ error: "Failed to fetch messages" });
     }
   });
