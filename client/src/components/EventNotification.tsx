@@ -23,14 +23,14 @@ interface EventNotificationProps {
   isOpen: boolean;
   onClose: () => void;
   event?: Event;
-  member?: FamilyMember;
+  members?: FamilyMember[];
 }
 
 export default function EventNotification({
   isOpen,
   onClose,
   event,
-  member,
+  members = [],
 }: EventNotificationProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -76,7 +76,7 @@ export default function EventNotification({
     }
   }, [isOpen, event]);
 
-  if (!event || !member) return null;
+  if (!event || members.length === 0) return null;
 
   return (
     <>
@@ -126,17 +126,21 @@ export default function EventNotification({
                 </span>
               </div>
 
-              {member && (
-                <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-                  <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40"
-                    style={{ backgroundColor: member.color }}
-                  >
-                    {member.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <span className="text-sm text-white/80">
-                    {member.name}
-                  </span>
+              {members.length > 0 && (
+                <div className="flex items-center gap-2 pt-2 border-t border-white/10 flex-wrap">
+                  {members.map(member => (
+                    <div key={member.id} className="flex items-center gap-2">
+                      <div 
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40"
+                        style={{ backgroundColor: member.color }}
+                      >
+                        {member.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <span className="text-sm text-white/80">
+                        {member.name}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

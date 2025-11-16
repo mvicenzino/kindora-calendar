@@ -410,7 +410,7 @@ export default function Home() {
           startTime: new Date(selectedEvent.startTime),
           endTime: new Date(selectedEvent.endTime)
         } : undefined}
-        member={selectedEventMembers[0]}
+        members={selectedEventMembers}
         allMembers={members}
       />
 
@@ -473,7 +473,7 @@ export default function Home() {
         isOpen={isNotificationOpen}
         onClose={closeNotification}
         event={notificationEvent || undefined}
-        member={notificationEvent ? members.find(m => notificationEvent.memberIds.includes(m.id)) : undefined}
+        members={notificationEvent ? members.filter(m => notificationEvent.memberIds.includes(m.id)) : []}
       />
     </div>
   );

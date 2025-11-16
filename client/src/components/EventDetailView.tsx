@@ -31,7 +31,7 @@ interface EventDetailViewProps {
   onClose: () => void;
   onEdit: () => void;
   event?: Event;
-  member?: FamilyMember;
+  members?: FamilyMember[];
   allMembers?: FamilyMember[];
 }
 
@@ -40,7 +40,7 @@ export default function EventDetailView({
   onClose,
   onEdit,
   event,
-  member,
+  members = [],
   allMembers = [],
 }: EventDetailViewProps) {
   const [message, setMessage] = useState("");
@@ -98,7 +98,7 @@ export default function EventDetailView({
 
   const loveEmojis = ["❤️", "💕", "💖", "💝", "🌹", "💐", "🥰", "😍", "💗", "💓"];
 
-  if (!event || !member) return null;
+  if (!event || members.length === 0) return null;
 
   const isSometimeToday = event.startTime.getHours() === 23 && 
                           event.startTime.getMinutes() === 58 &&
@@ -106,7 +106,7 @@ export default function EventDetailView({
                           event.endTime.getMinutes() === 59;
 
   const handleSendMessage = async () => {
-    if (!event || !member || !message.trim() || !selectedRecipientId) return;
+    if (!event || members.length === 0 || !message.trim() || !selectedRecipientId) return;
     
     const recipient = allMembers.find(m => m.id === selectedRecipientId);
     if (!recipient) return;
@@ -141,20 +141,26 @@ export default function EventDetailView({
         </DialogHeader>
 
         <div className="space-y-5 py-4 overflow-y-auto flex-1 custom-scrollbar">
-          {/* Event Title & Member */}
+          {/* Event Title & Members */}
           <div className="p-5 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20">
             <div className="flex items-start gap-3">
-              <Avatar className="h-12 w-12 ring-2 ring-white/30" style={{ '--tw-ring-color': `${member.color}80` } as React.CSSProperties}>
-                <AvatarFallback 
-                  className="text-white font-semibold text-lg"
-                  style={{ backgroundColor: member.color }}
-                >
-                  {member.name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
+              <div className="flex -space-x-2">
+                {members.map(member => (
+                  <Avatar key={member.id} className="h-12 w-12 ring-2 ring-white/30" style={{ '--tw-ring-color': `${member.color}80` } as React.CSSProperties}>
+                    <AvatarFallback 
+                      className="text-white font-semibold text-lg"
+                      style={{ backgroundColor: member.color }}
+                    >
+                      {member.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+              </div>
               <div className="flex-1">
                 <h3 className="text-2xl font-bold mb-1 text-white">{event.title}</h3>
-                <p className="text-sm text-white/70">Assigned to {member.name}</p>
+                <p className="text-sm text-white/70">
+                  Assigned to {members.map(m => m.name).join(', ')}
+                </p>
               </div>
             </div>
           </div>
