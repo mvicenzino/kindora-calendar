@@ -102,9 +102,9 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
   return (
     <div ref={containerRef} className="min-h-full">
-      {/* Fixed View Toggle at Top */}
+      {/* Fixed View Toggle Below Header */}
       {onViewChange && (
-        <div className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 pt-4 pb-3 backdrop-blur-xl bg-gradient-to-b from-black/40 via-black/30 to-transparent">
+        <div className="fixed top-[4.5rem] left-0 right-0 z-40 px-4 sm:px-6 pt-4 pb-3 backdrop-blur-xl bg-gradient-to-b from-black/40 via-black/30 to-transparent">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2 shadow-lg shadow-black/20">
               <button
@@ -144,7 +144,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
         </div>
       )}
 
-      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto" style={{ paddingTop: onViewChange ? '5.5rem' : undefined }}>
+      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto" style={{ paddingTop: onViewChange ? '7.5rem' : undefined }}>
         {/* Header */}
         <div className="w-full px-1 sm:px-2 mb-4 sm:mb-6">
         <div className="flex items-start justify-between gap-3 sm:gap-6">
