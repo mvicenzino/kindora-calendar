@@ -69,8 +69,7 @@ export default function EventDetailView({
       
       // Show success toast
       toast({
-        title: "Love note sent",
-        description: `Your love note was sent to ${recipient?.name || 'family member'}`,
+        description: "you're love is real!",
       });
     },
     onError: () => {
