@@ -212,12 +212,12 @@ export default function MonthView({ date, events, members, messages, onEventClic
                     data-testid={`upcoming-event-${event.id}`}
                     className="w-full rounded-2xl p-4 sm:p-5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left relative min-h-[90px]"
                   >
-                    {/* Love Note Bubble */}
+                    {/* Love Note Bubble - moved to bottom-left */}
                     {eventMessage && (
                       <div
                         onClick={(e) => handleEmojiClick(e, eventMessage)}
                         data-testid={`love-note-bubble-${event.id}`}
-                        className="absolute top-3 right-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[130px] cursor-pointer"
+                        className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[140px] cursor-pointer"
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
@@ -248,11 +248,11 @@ export default function MonthView({ date, events, members, messages, onEventClic
                       ))}
                     </div>
                     
-                    <div className="pr-14 sm:pr-16 pb-12">
+                    <div className="pr-14 sm:pr-16">
                       <h3 className="text-base font-medium text-white mb-2 line-clamp-2 leading-snug">
                         {event.title}
                       </h3>
-                      <p className="text-sm text-white/80 mt-2">
+                      <p className="text-sm text-white/80 mt-2 mb-12">
                         {format(event.startTime, 'h:mm a')}
                       </p>
                     </div>
