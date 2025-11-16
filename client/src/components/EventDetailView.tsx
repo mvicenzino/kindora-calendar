@@ -90,10 +90,8 @@ export default function EventDetailView({
       setIsBold(false);
       setIsItalic(false);
       setIsLoveNoteExpanded(false);
-      // Auto-select wife (Carolyn) as default recipient, or first available
-      const otherMembers = allMembers.filter(m => !event.memberIds.includes(m.id));
-      const wife = otherMembers.find(m => m.name.toLowerCase().includes('carolyn'));
-      setSelectedRecipientId(wife?.id || (otherMembers.length > 0 ? otherMembers[0].id : ""));
+      // Auto-select first family member as default recipient
+      setSelectedRecipientId(allMembers.length > 0 ? allMembers[0].id : "");
     }
   }, [isOpen, event?.id, allMembers]);
 
@@ -231,35 +229,33 @@ export default function EventDetailView({
                     <div className="flex-1 min-w-[200px] space-y-2">
                       <p className="text-xs font-medium text-white/60">Send to</p>
                       <div className="flex flex-wrap gap-2">
-                        {allMembers
-                          .filter(m => !event.memberIds.includes(m.id))
-                          .map((recipient) => (
-                            <button
-                              key={recipient.id}
-                              type="button"
-                              onClick={() => setSelectedRecipientId(recipient.id)}
-                              className={`relative group transition-all ${
-                                selectedRecipientId === recipient.id ? 'scale-110' : 'hover:scale-105'
-                              }`}
-                              data-testid={`button-recipient-${recipient.id}`}
-                              aria-label={`Send to ${recipient.name}`}
-                            >
-                              <Avatar className={`h-10 w-10 ring-2 transition-all ${
-                                selectedRecipientId === recipient.id 
-                                  ? 'ring-white/50 shadow-lg' 
-                                  : 'ring-white/20 hover:ring-white/30'
-                              }`}>
-                                <AvatarFallback 
-                                  className="text-white text-sm font-semibold"
-                                  style={{ backgroundColor: recipient.color }}
-                                >
-                                  {recipient.name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                            </button>
-                          ))}
-                        {allMembers.filter(m => !event.memberIds.includes(m.id)).length === 0 && (
-                          <p className="text-sm text-white/60">No other family members to send to</p>
+                        {allMembers.map((recipient) => (
+                          <button
+                            key={recipient.id}
+                            type="button"
+                            onClick={() => setSelectedRecipientId(recipient.id)}
+                            className={`relative group transition-all ${
+                              selectedRecipientId === recipient.id ? 'scale-110' : 'hover:scale-105'
+                            }`}
+                            data-testid={`button-recipient-${recipient.id}`}
+                            aria-label={`Send to ${recipient.name}`}
+                          >
+                            <Avatar className={`h-10 w-10 ring-2 transition-all ${
+                              selectedRecipientId === recipient.id 
+                                ? 'ring-white/50 shadow-lg' 
+                                : 'ring-white/20 hover:ring-white/30'
+                            }`}>
+                              <AvatarFallback 
+                                className="text-white text-sm font-semibold"
+                                style={{ backgroundColor: recipient.color }}
+                              >
+                                {recipient.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                          </button>
+                        ))}
+                        {allMembers.length === 0 && (
+                          <p className="text-sm text-white/60">No family members available</p>
                         )}
                       </div>
                     </div>
