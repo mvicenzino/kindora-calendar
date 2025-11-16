@@ -232,7 +232,7 @@ export default function EventDetailView({
             </div>
             
             {/* Formatting Controls */}
-            <div className="p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-3">
+            <div className="p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-4">
               <div className="space-y-2">
                 <p className="text-xs font-medium text-white/60">Add an emoji</p>
                 <div className="flex flex-wrap gap-2">
@@ -243,7 +243,9 @@ export default function EventDetailView({
                       size="sm"
                       variant={selectedEmoji === emoji ? "default" : "outline"}
                       onClick={() => setSelectedEmoji(selectedEmoji === emoji ? "" : emoji)}
-                      className="text-lg h-10 w-10 p-0 hover-elevate active-elevate-2"
+                      className={`text-lg h-10 w-10 p-0 hover-elevate active-elevate-2 ${
+                        selectedEmoji !== emoji ? "bg-white/20 border-white/30" : ""
+                      }`}
                       data-testid={`button-emoji-${emoji}`}
                     >
                       {emoji}
@@ -260,7 +262,9 @@ export default function EventDetailView({
                     size="sm"
                     variant={isBold ? "default" : "outline"}
                     onClick={() => setIsBold(!isBold)}
-                    className="font-bold hover-elevate active-elevate-2"
+                    className={`font-bold hover-elevate active-elevate-2 ${
+                      !isBold ? "bg-white/20 border-white/30 text-white" : ""
+                    }`}
                     data-testid="button-bold"
                   >
                     Bold
@@ -270,7 +274,9 @@ export default function EventDetailView({
                     size="sm"
                     variant={isItalic ? "default" : "outline"}
                     onClick={() => setIsItalic(!isItalic)}
-                    className="italic hover-elevate active-elevate-2"
+                    className={`italic hover-elevate active-elevate-2 ${
+                      !isItalic ? "bg-white/20 border-white/30 text-white" : ""
+                    }`}
                     data-testid="button-italic"
                   >
                     Italic
