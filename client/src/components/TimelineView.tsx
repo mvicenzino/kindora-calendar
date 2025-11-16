@@ -208,12 +208,12 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
       {/* View Toggle */}
       {onViewChange && (
         <div className="w-full max-w-3xl mx-auto mt-6 sm:mt-8 pb-safe">
-          <div className="flex gap-1.5 sm:gap-3 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
             <button
               type="button"
               onClick={() => onViewChange('day')}
               data-testid="button-view-day"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40 md:hover:text-white"
+              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
             >
               Day
             </button>
@@ -221,7 +221,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
               type="button"
               onClick={() => onViewChange('week')}
               data-testid="button-view-week"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40 md:hover:text-white"
+              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
             >
               Week
             </button>
@@ -229,7 +229,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
               type="button"
               onClick={() => onViewChange('month')}
               data-testid="button-view-month"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40 md:hover:text-white"
+              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
             >
               Month
             </button>
@@ -237,7 +237,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
               type="button"
               onClick={() => onViewChange('timeline')}
               data-testid="button-view-timeline"
-              className="flex-1 py-3 sm:py-2.5 rounded-xl sm:rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/30 md:hover:backdrop-blur-xl md:hover:shadow-lg md:hover:shadow-white/10 md:hover:border-white/40"
+              className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/30 text-sm font-medium text-white shadow-md shadow-blue-500/10 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:from-blue-500/25 md:hover:to-purple-600/25 md:hover:shadow-lg md:hover:shadow-blue-500/20"
             >
               Timeline
             </button>
