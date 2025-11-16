@@ -23,7 +23,7 @@ Preferred communication style: Simple, everyday language.
 ### Data Storage Solutions
 - **Database Schema:** Designed around three entities: Family Members (UUID, name, color, avatar), Events (UUID, title, description, timestamps, member association, color inheritance), and Messages (UUID, event association, sender, recipient, content, formatting, timestamp).
 - **Migration:** Drizzle Kit for PostgreSQL migrations, with schema source in `/shared/schema.ts`.
-- **Current Implementation:** In-memory storage with sample data seeding, configured for PostgreSQL readiness via `@neondatabase/serverless`.
+- **Current Implementation:** PostgreSQL database (Neon) with Drizzle ORM using the HTTP driver (`drizzle-orm/neon-http`). Storage abstraction layer allows fallback to in-memory storage when `DATABASE_URL` is not available. The `PgStorage` class implements the `IStorage` interface with full CRUD operations for family members, events, and messages. Database includes manual cascade deletes to maintain referential integrity.
 
 ### Feature Specifications
 - **Calendar Views:**
