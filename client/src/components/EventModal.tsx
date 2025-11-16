@@ -3,17 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Clock, Users, Trash2, UserPlus, Image as ImageIcon, X } from "lucide-react";
+import { Calendar, Clock, Users, Trash2, UserPlus, X } from "lucide-react";
 import { format } from "date-fns";
-import { useState, useEffect, useRef } from 'react';
-import { ObjectUploader } from "./ObjectUploader";
-import type { UploadResult } from "@uppy/core";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from 'react';
 
 interface FamilyMember {
   id: string;
@@ -81,47 +75,23 @@ export default function EventModal({
   const [startTime, setStartTime] = useState(() => getCurrentTimeRounded());
   const [endTime, setEndTime] = useState(() => addHoursToTime(getCurrentTimeRounded(), 1));
   const [isSometimeToday, setIsSometimeToday] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string>("");
-  const [uploadedEventId, setUploadedEventId] = useState<string>("");
-  const pendingObjectPath = useRef<string>("");
-  const { toast } = useToast();
-
-  const attachPhotoMutation = useMutation({
-    mutationFn: async ({ eventId, photoUrl }: { eventId: string; photoUrl: string }) => {
-      const res = await apiRequest('PUT', '/api/event-photos', { eventId, photoUrl });
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        description: "Photo added to event!",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to attach photo. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const [memberSearchInput, setMemberSearchInput] = useState("");
 
   // Update form state when event prop changes
   useEffect(() => {
     if (event) {
       setTitle(event.title || "");
       setDescription(event.description || "");
-      setMemberIds(event.memberIds || (members[0] ? [members[0].id] : []));
+      setMemberIds(event.memberIds || []);
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
-      setPhotoUrl(event.photoUrl || "");
-      setUploadedEventId(event.id || "");
     } else {
       // Reset form for new event
       setTitle("");
       setDescription("");
-      setMemberIds(members[0] ? [members[0].id] : []);
+      setMemberIds([]);
       const validDate = (selectedDate && selectedDate instanceof Date && !isNaN(selectedDate.getTime())) 
         ? selectedDate 
         : new Date();
@@ -130,25 +100,25 @@ export default function EventModal({
       setStartTime(currentTime);
       setEndTime(addHoursToTime(currentTime, 1));
       setIsSometimeToday(false);
-      setPhotoUrl("");
-      setUploadedEventId("");
     }
-  }, [event, members, selectedDate]);
-  
-  // Reset pending object path when modal closes
-  useEffect(() => {
-    if (!isOpen) {
-      pendingObjectPath.current = "";
-    }
-  }, [isOpen]);
+    setMemberSearchInput("");
+  }, [event, members, selectedDate, isOpen]);
 
-  const handleMemberToggle = (memberId: string) => {
-    setMemberIds(prev => 
-      prev.includes(memberId)
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
+  const handleAddMember = (memberId: string) => {
+    if (!memberIds.includes(memberId)) {
+      setMemberIds(prev => [...prev, memberId]);
+    }
+    setMemberSearchInput("");
   };
+
+  const handleRemoveMember = (memberId: string) => {
+    setMemberIds(prev => prev.filter(id => id !== memberId));
+  };
+
+  const filteredMembers = members.filter(member => 
+    member.name.toLowerCase().includes(memberSearchInput.toLowerCase()) &&
+    !memberIds.includes(member.id)
+  );
 
   const handleSave = () => {
     // If "Sometime Today", use end of day times
@@ -165,59 +135,8 @@ export default function EventModal({
       startTime: startDateTime,
       endTime: endDateTime,
       memberIds,
-      ...(photoUrl && { photoUrl }),
     });
     onClose();
-  };
-
-  const handleGetUploadParameters = async () => {
-    const res = await apiRequest('POST', '/api/objects/upload', {});
-    const data = await res.json();
-    pendingObjectPath.current = data.objectPath;
-    return {
-      method: 'PUT' as const,
-      url: data.uploadURL,
-    };
-  };
-
-  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
-    if (result.successful && result.successful.length > 0) {
-      const objectPath = pendingObjectPath.current;
-      if (uploadedEventId && objectPath) {
-        attachPhotoMutation.mutate(
-          { eventId: uploadedEventId, photoUrl: objectPath },
-          {
-            onSuccess: (data) => {
-              setPhotoUrl(data.photoUrl);
-              pendingObjectPath.current = "";
-            },
-          }
-        );
-      } else if (objectPath) {
-        setPhotoUrl(objectPath);
-        pendingObjectPath.current = "";
-      }
-    }
-  };
-
-  const handleRemovePhoto = async () => {
-    if (uploadedEventId) {
-      try {
-        await apiRequest('PUT', '/api/event-photos', { eventId: uploadedEventId, photoUrl: null });
-        setPhotoUrl("");
-        toast({
-          description: "Photo removed from event",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to remove photo. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      setPhotoUrl("");
-    }
   };
 
   const selectedMembers = members.filter(m => memberIds.includes(m.id));
@@ -255,50 +174,6 @@ export default function EventModal({
               className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl resize-none text-white placeholder:text-white/50"
               rows={3}
             />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-                <ImageIcon className="h-4 w-4" />
-                Event Photo
-              </Label>
-              <span className="text-xs text-white">Optional</span>
-            </div>
-            <p className="text-xs text-white/60">Add a photo to remember this moment</p>
-            {photoUrl ? (
-              <div className="relative rounded-xl overflow-hidden backdrop-blur-md bg-white/10 border border-white/20">
-                <img 
-                  src={photoUrl} 
-                  alt="Event" 
-                  className="w-full h-48 object-cover"
-                  data-testid="img-event-photo-preview"
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="destructive"
-                  onClick={handleRemovePhoto}
-                  className="absolute top-2 right-2 hover-elevate active-elevate-2"
-                  data-testid="button-remove-photo"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <ObjectUploader
-                maxNumberOfFiles={1}
-                maxFileSize={10485760}
-                onGetUploadParameters={handleGetUploadParameters}
-                onComplete={handleUploadComplete}
-                buttonClassName="w-full backdrop-blur-md bg-white/10 border border-white/20 hover-elevate active-elevate-2 text-white"
-              >
-                <div className="flex items-center justify-center gap-2 py-2">
-                  <ImageIcon className="h-5 w-5" />
-                  <span>Add Photo</span>
-                </div>
-              </ObjectUploader>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -347,30 +222,59 @@ export default function EventModal({
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {members.map(member => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 hover-elevate cursor-pointer"
-                    onClick={() => handleMemberToggle(member.id)}
-                    data-testid={`checkbox-member-${member.id}`}
-                  >
-                    <Checkbox
-                      checked={memberIds.includes(member.id)}
-                      onCheckedChange={() => handleMemberToggle(member.id)}
-                      className="border-white/30"
-                    />
-                    <Avatar className="h-7 w-7 ring-1 ring-white/30">
-                      <AvatarFallback 
-                        className="text-xs text-white font-medium"
-                        style={{ backgroundColor: member.color }}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    value={memberSearchInput}
+                    onChange={(e) => setMemberSearchInput(e.target.value)}
+                    placeholder="Type to add family members..."
+                    data-testid="input-member-search"
+                    className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white placeholder:text-white/50"
+                  />
+                  {memberSearchInput && filteredMembers.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 rounded-xl backdrop-blur-xl bg-slate-800/95 border border-white/20 shadow-lg max-h-40 overflow-y-auto">
+                      {filteredMembers.map(member => (
+                        <button
+                          key={member.id}
+                          type="button"
+                          onClick={() => handleAddMember(member.id)}
+                          className="w-full flex items-center gap-2 p-2 hover-elevate text-left"
+                          data-testid={`member-option-${member.id}`}
+                        >
+                          <div 
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
+                            style={{ backgroundColor: member.color }}
+                          >
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <span className="text-sm text-white">{member.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {memberIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedMembers.map(member => (
+                      <Badge
+                        key={member.id}
+                        variant="secondary"
+                        className="pl-2 pr-1 py-1 rounded-full backdrop-blur-md bg-white/10 border border-white/20 text-white hover-elevate"
+                        data-testid={`member-tag-${member.id}`}
                       >
-                        {member.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-white font-medium">{member.name}</span>
+                        <span className="text-sm">{member.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMember(member.id)}
+                          className="ml-1 rounded-full p-0.5 hover:bg-white/20 transition-colors"
+                          data-testid={`remove-member-${member.id}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
@@ -422,42 +326,6 @@ export default function EventModal({
             </div>
           )}
 
-          {selectedMembers.length > 0 && startDate && (
-            <div className="p-4 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20">
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {selectedMembers.map(member => (
-                    <Avatar key={member.id} className="h-10 w-10 ring-2 ring-white/30">
-                      <AvatarFallback 
-                        className="text-white font-semibold"
-                        style={{ backgroundColor: member.color }}
-                      >
-                        {member.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-white">
-                    Assigned to {selectedMembers.map(m => m.name).join(', ')}
-                  </div>
-                  <div className="text-xs text-white/60">
-                    {(() => {
-                      if (isSometimeToday) {
-                        const eventDate = new Date(`${startDate}T09:00`);
-                        return `${format(eventDate, 'PPP')} - Sometime today`;
-                      }
-                      if (startTime) {
-                        const eventDate = new Date(`${startDate}T${startTime}`);
-                        return !isNaN(eventDate.getTime()) ? `${format(eventDate, 'PPP')} at ${startTime}` : 'Select date and time';
-                      }
-                      return 'Select date and time';
-                    })()}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="flex justify-between gap-3 pt-4 border-t border-white/10">
