@@ -30,9 +30,10 @@ interface MonthViewProps {
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   onAddEvent?: (date?: Date) => void;
+  onDateSelect?: (date: Date) => void;
 }
 
-export default function MonthView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent }: MonthViewProps) {
+export default function MonthView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent, onDateSelect }: MonthViewProps) {
   const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
   
@@ -170,7 +171,9 @@ export default function MonthView({ date, events, members, messages, onEventClic
                 <button
                   key={day.toISOString()}
                   onClick={() => {
-                    if (hasEvents) {
+                    if (onDateSelect) {
+                      onDateSelect(day);
+                    } else if (hasEvents) {
                       onEventClick(dayEvents[0]);
                     } else if (onAddEvent) {
                       onAddEvent(day);
