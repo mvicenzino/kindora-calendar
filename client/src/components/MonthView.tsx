@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter, isToday } from "date-fns";
 import { Plus } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
@@ -163,6 +163,7 @@ export default function MonthView({ date, events, members, messages, onEventClic
               const dayEvents = getEventsForDay(day);
               const hasEvents = dayEvents.length > 0;
               const isCurrentMonth = isSameMonth(day, date);
+              const isTodayDate = isToday(day);
               const bgColor = getDayBackgroundColor(dayEvents);
 
               return (
@@ -176,15 +177,23 @@ export default function MonthView({ date, events, members, messages, onEventClic
                     }
                   }}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
-                  className="aspect-square rounded-xl backdrop-blur-md border transition-all flex flex-col items-center justify-center p-1 hover:bg-white/10 active:scale-95"
+                  className={`aspect-square rounded-xl backdrop-blur-md border transition-all flex flex-col items-center justify-center p-1 hover:bg-white/10 active:scale-95 ${
+                    isTodayDate ? 'ring-2 ring-white/60 shadow-lg shadow-white/20' : ''
+                  }`}
                   style={{
-                    backgroundColor: bgColor,
-                    borderColor: hasEvents ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.15)',
+                    backgroundColor: isTodayDate 
+                      ? 'rgba(255, 255, 255, 0.25)' 
+                      : bgColor,
+                    borderColor: isTodayDate 
+                      ? 'rgba(255, 255, 255, 0.7)' 
+                      : hasEvents 
+                        ? 'rgba(255, 255, 255, 0.5)' 
+                        : 'rgba(255, 255, 255, 0.15)',
                     opacity: isCurrentMonth ? 1 : 0.35,
                     cursor: 'pointer',
                   }}
                 >
-                  <span className={`text-sm font-medium ${hasEvents ? 'text-white' : 'text-white/60'}`}>
+                  <span className={`text-sm font-medium ${isTodayDate ? 'text-white font-bold' : hasEvents ? 'text-white' : 'text-white/60'}`}>
                     {format(day, 'd')}
                   </span>
                   {hasEvents && dayEvents.length > 1 && (
