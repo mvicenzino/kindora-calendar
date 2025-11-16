@@ -48,10 +48,20 @@ export function ObjectUploader({
       })
   );
 
+  const handleOpenModal = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowModal(true);
+  };
+
   return (
     <div>
       <Button 
-        onClick={() => setShowModal(true)} 
+        onClick={handleOpenModal}
+        onTouchEnd={(e) => {
+          e.preventDefault();
+          handleOpenModal(e);
+        }}
         className={buttonClassName}
         data-testid="button-upload-photo"
         type="button"
