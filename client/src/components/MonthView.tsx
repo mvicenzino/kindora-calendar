@@ -198,7 +198,7 @@ export default function MonthView({ date, events, members, messages, onEventClic
 
         {/* View Toggle */}
         {onViewChange && (
-          <div className="flex items-center gap-1.5 sm:gap-2 pt-3 sm:pt-4 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2">
             <button
               type="button"
               onClick={() => onViewChange('day')}
