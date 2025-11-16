@@ -68,11 +68,11 @@ export default function WeekView({ date, events, members, messages, onEventClick
     onViewChange?.('day');
   };
 
-  // Group events by day and sort - show all days even if empty
+  // Group events by day and sort - show all days even if empty (latest first)
   const eventsByDay = daysInWeek.map(day => {
     const dayEvents = events
       .filter(e => isSameDay(new Date(e.startTime), day))
-      .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+      .sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
     
     return {
       day,
