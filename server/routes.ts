@@ -25,6 +25,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const member = await storage.createFamilyMember(result.data);
       res.status(201).json(member);
     } catch (error) {
+      console.error("Error creating family member:", error);
       res.status(500).json({ error: "Failed to create family member" });
     }
   });
@@ -34,6 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteFamilyMember(req.params.id);
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting family member:", error);
       res.status(500).json({ error: "Failed to delete family member" });
     }
   });
@@ -59,6 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = await storage.createEvent(result.data);
       res.status(201).json(event);
     } catch (error) {
+      console.error("Error creating event:", error);
       res.status(500).json({ error: "Failed to create event" });
     }
   });
@@ -73,6 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = await storage.updateEvent(req.params.id, result.data);
       res.json(event);
     } catch (error) {
+      console.error("Error updating event:", error);
       res.status(500).json({ error: "Failed to update event" });
     }
   });
@@ -82,6 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteEvent(req.params.id);
       res.status(204).send();
     } catch (error) {
+      console.error("Error deleting event:", error);
       res.status(500).json({ error: "Failed to delete event" });
     }
   });
@@ -107,6 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const message = await storage.createMessage(result.data);
       res.status(201).json(message);
     } catch (error) {
+      console.error("Error creating message:", error);
       res.status(500).json({ error: "Failed to create message" });
     }
   });
