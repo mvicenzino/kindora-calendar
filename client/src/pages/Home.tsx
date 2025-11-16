@@ -9,9 +9,11 @@ import EventDetailView from "@/components/EventDetailView";
 import MemberModal from "@/components/MemberModal";
 import ProfileModal from "@/components/ProfileModal";
 import MessagesModal from "@/components/MessagesModal";
+import EventNotification from "@/components/EventNotification";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useEventNotifications } from "@/hooks/useEventNotifications";
 import type { FamilyMember, Event, InsertEvent, Message } from "@shared/schema";
 
 interface TodayEvent {
@@ -50,6 +52,16 @@ export default function Home() {
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ['/api/messages'],
   });
+
+  // Event notifications - converts events with Date objects for the hook
+  const eventsWithDates = events.map(e => ({
+    ...e,
+    description: e.description || undefined,
+    startTime: new Date(e.startTime),
+    endTime: new Date(e.endTime)
+  }));
+  
+  const { notificationEvent, isNotificationOpen, closeNotification } = useEventNotifications(eventsWithDates);
 
   // Create event mutation
   const createEventMutation = useMutation({
@@ -454,6 +466,13 @@ export default function Home() {
           startTime: new Date(e.startTime),
           endTime: new Date(e.endTime)
         }))}
+      />
+
+      <EventNotification
+        isOpen={isNotificationOpen}
+        onClose={closeNotification}
+        event={notificationEvent || undefined}
+        member={notificationEvent ? members.find(m => m.id === notificationEvent.memberId) : undefined}
       />
     </div>
   );
