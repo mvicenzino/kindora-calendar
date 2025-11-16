@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus } from "lucide-react";
@@ -33,6 +33,49 @@ interface TimelineViewProps {
 export default function TimelineView({ events, messages, onEventClick, onViewChange, onAddEvent }: TimelineViewProps) {
   const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  const [cardScales, setCardScales] = useState<Record<string, number>>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement>>({});
+
+  // Calculate scale based on distance from viewport center
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      
+      const viewportCenter = window.innerHeight / 2;
+      const newScales: Record<string, number> = {};
+      
+      Object.entries(cardRefs.current).forEach(([eventId, cardElement]) => {
+        if (!cardElement) return;
+        
+        const rect = cardElement.getBoundingClientRect();
+        const cardCenter = rect.top + rect.height / 2;
+        const distanceFromCenter = Math.abs(cardCenter - viewportCenter);
+        
+        // Calculate scale: cards near center get scale 1.0, far cards get 0.92
+        // Use a smooth curve for the transition
+        const maxDistance = window.innerHeight;
+        const normalizedDistance = Math.min(distanceFromCenter / maxDistance, 1);
+        const scale = 1 - (normalizedDistance * 0.08); // Scale from 1.0 to 0.92
+        
+        newScales[eventId] = Math.max(0.92, Math.min(1.0, scale));
+      });
+      
+      setCardScales(newScales);
+    };
+    
+    // Initial calculation
+    handleScroll();
+    
+    // Add scroll listener
+    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('resize', handleScroll);
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [events]);
   
   const isSometimeToday = (event: Event) => {
     const startHour = event.startTime.getHours();
@@ -66,7 +109,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
   };
 
   return (
-    <div className="min-h-full px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto">
+    <div ref={containerRef} className="min-h-full px-4 sm:px-6 py-4 sm:py-6 max-w-3xl mx-auto">
       {/* Header */}
       <div className="w-full px-1 sm:px-2 mb-4 sm:mb-6">
         <div className="flex items-start justify-between gap-3 sm:gap-6">
@@ -129,8 +172,14 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
                     {/* Event card */}
                     <div
-                      className="rounded-2xl p-4 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all active:scale-[0.98] text-left shadow-xl relative"
-                      style={{ backgroundColor: color }}
+                      ref={(el) => {
+                        if (el) cardRefs.current[event.id] = el;
+                      }}
+                      className="rounded-2xl p-4 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all duration-300 ease-out active:scale-[0.98] text-left shadow-xl relative"
+                      style={{ 
+                        backgroundColor: color,
+                        transform: `scale(${cardScales[event.id] || 0.92})`,
+                      }}
                     >
                       {/* Love Note Emoji */}
                       {eventMessage && (
