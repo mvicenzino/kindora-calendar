@@ -34,7 +34,8 @@ Preferred communication style: Simple, everyday language.
 - **Event Management:**
     - **Creation & Editing:** Modal-based, form validation (Zod), title, description, time, multiple member selection via checkboxes, "Sometime Today" toggle. Start time defaults to current system time (rounded to nearest 15 minutes). Events can be assigned to multiple family members simultaneously, with a preview showing overlapping avatars for all selected members.
     - **Multi-Member Events:** Events support multiple family member assignments using memberIds array. All calendar views (Day, Week, Month, Timeline) display overlapping member avatars with -space-x-2 spacing. Event detail view shows all assigned members with "Assigned to {names}" text.
-    - **Detail View:** Displays full event details with all assigned member avatars, includes "Love Note" section for messaging, edit/delete options.
+    - **Photo Upload:** Events can include photos as memories. Upload interface powered by Uppy with image preview and remove functionality. Photos stored in Replit Object Storage with permanent /objects/... URLs. Supports creation-time and post-creation photo uploads. Photos displayed in event detail view with full-width preview (max 10MB, images only).
+    - **Detail View:** Displays full event details with all assigned member avatars, event photo (if uploaded), includes "Love Note" section for messaging, edit/delete options.
     - **Deletion:** Confirmation and automatic cache invalidation.
     - **Event Notifications:** Animated notification dialog appears when events are within 10 minutes of starting. Features calming notification sound (Web Audio API), blue-purple gradient design with animated bell icon, dismissible with "Got it" button. Monitors all events every 30 seconds, tracks notified events to prevent duplicates. Shows all assigned members for multi-member events.
 - **Messages Feature (Love Notes):**
@@ -48,6 +49,8 @@ Preferred communication style: Simple, everyday language.
 
 ## External Dependencies
 - **UI Libraries:** Radix UI (accessible primitives), Lucide React (icons), date-fns (date manipulation), class-variance-authority (CVA) (styling), embla-carousel-react (carousel).
+- **File Upload:** Uppy (@uppy/core, @uppy/react, @uppy/aws-s3) for image upload with dashboard modal.
+- **Object Storage:** Replit Object Storage via @google-cloud/storage for persistent photo storage.
 - **Development Tools:** Replit-specific plugins, ESBuild, TSX.
 - **Styling & Design:** Tailwind CSS, PostCSS, Autoprefixer, Google Fonts (Inter, Space Grotesk).
 - **Backend Dependencies:** `@neondatabase/serverless` (PostgreSQL client), `connect-pg-simple` (PostgreSQL session store), Drizzle ORM, Drizzle Zod.
