@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
@@ -118,7 +118,7 @@ export default function DayTimelineModal({
           {events.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20">
               <div className="w-16 h-16 rounded-full backdrop-blur-md bg-white/10 border border-white/20 flex items-center justify-center mb-4">
-                <span className="text-3xl">📅</span>
+                <Calendar className="w-8 h-8 text-white/60" />
               </div>
               <p className="text-white/70 text-center">No events scheduled for this day</p>
               {onAddEvent && (
