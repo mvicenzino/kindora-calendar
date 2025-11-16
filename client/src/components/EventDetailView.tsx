@@ -3,13 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, Edit, MessageCircle, ChevronDown } from "lucide-react";
+import { Calendar, Clock, Edit, MessageCircle, ChevronDown, Image as ImageIcon, X } from "lucide-react";
 import { format } from "date-fns";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { InsertMessage } from "@shared/schema";
+import { ObjectUploader } from "./ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 
 interface FamilyMember {
   id: string;
@@ -50,6 +52,8 @@ export default function EventDetailView({
   const [isItalic, setIsItalic] = useState(false);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>("");
   const [isLoveNoteExpanded, setIsLoveNoteExpanded] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string>("");
+  const pendingObjectPath = useRef<string>("");
   const { toast } = useToast();
 
   // Create message mutation
@@ -83,6 +87,27 @@ export default function EventDetailView({
     },
   });
 
+  // Attach photo mutation
+  const attachPhotoMutation = useMutation({
+    mutationFn: async ({ eventId, photoUrl }: { eventId: string; photoUrl: string }) => {
+      const res = await apiRequest('PUT', '/api/event-photos', { eventId, photoUrl });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({
+        description: "Photo added to event!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to attach photo. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Reset message when a new event is opened
   useEffect(() => {
     if (isOpen && event) {
@@ -91,6 +116,8 @@ export default function EventDetailView({
       setIsBold(false);
       setIsItalic(false);
       setIsLoveNoteExpanded(false);
+      setPhotoUrl(event.photoUrl || "");
+      pendingObjectPath.current = "";
       // Auto-select first family member as default recipient
       setSelectedRecipientId(allMembers.length > 0 ? allMembers[0].id : "");
     }
@@ -140,6 +167,52 @@ export default function EventDetailView({
     });
   };
 
+  const handleGetUploadParameters = async () => {
+    const res = await apiRequest('POST', '/api/objects/upload', {});
+    const data = await res.json();
+    pendingObjectPath.current = data.objectPath;
+    return {
+      method: 'PUT' as const,
+      url: data.uploadURL,
+    };
+  };
+
+  const handleUploadComplete = async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful && result.successful.length > 0 && event) {
+      const objectPath = pendingObjectPath.current;
+      if (objectPath) {
+        attachPhotoMutation.mutate(
+          { eventId: event.id, photoUrl: objectPath },
+          {
+            onSuccess: (data) => {
+              setPhotoUrl(data.photoUrl);
+              pendingObjectPath.current = "";
+            },
+          }
+        );
+      }
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (event) {
+      try {
+        await apiRequest('PUT', '/api/event-photos', { eventId: event.id, photoUrl: null });
+        setPhotoUrl("");
+        queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+        toast({
+          description: "Photo removed from event",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to remove photo. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl">
@@ -183,14 +256,24 @@ export default function EventDetailView({
           </div>
 
           {/* Event Photo */}
-          {event.photoUrl && (
-            <div className="rounded-2xl overflow-hidden backdrop-blur-md bg-white/10 border border-white/20">
+          {photoUrl && (
+            <div className="relative rounded-2xl overflow-hidden backdrop-blur-md bg-white/10 border border-white/20">
               <img 
-                src={event.photoUrl} 
+                src={photoUrl} 
                 alt={event.title}
                 className="w-full h-64 object-cover"
                 data-testid="img-event-photo"
               />
+              <Button
+                type="button"
+                size="icon"
+                variant="destructive"
+                onClick={handleRemovePhoto}
+                className="absolute top-2 right-2 hover-elevate active-elevate-2"
+                data-testid="button-remove-photo-detail"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           )}
 
@@ -227,6 +310,32 @@ export default function EventDetailView({
           )}
 
           <Separator className="bg-white/10" />
+
+          {/* Upload Photo Section */}
+          {!photoUrl && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-white/70" />
+                  <h4 className="text-sm font-medium text-white/80">Event Photo</h4>
+                </div>
+                <span className="text-xs text-white/60">Optional</span>
+              </div>
+              <p className="text-xs text-white/60">Add a photo to remember this moment</p>
+              <ObjectUploader
+                maxNumberOfFiles={1}
+                maxFileSize={10485760}
+                onGetUploadParameters={handleGetUploadParameters}
+                onComplete={handleUploadComplete}
+                buttonClassName="w-full backdrop-blur-md bg-white/10 border border-white/20 hover-elevate active-elevate-2 text-white"
+              >
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <ImageIcon className="h-5 w-5" />
+                  <span>Add Photo</span>
+                </div>
+              </ObjectUploader>
+            </div>
+          )}
 
           {/* Message Section - Collapsible */}
           <div className="space-y-3">
