@@ -8,6 +8,7 @@ export const familyMembers = pgTable("family_members", {
   name: text("name").notNull(),
   color: text("color").notNull(),
   avatar: text("avatar"),
+  email: text("email"),
 });
 
 export const events = pgTable("events", {
