@@ -38,8 +38,8 @@ export default function WeekView({ date, events, members, messages, onEventClick
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
   const isDesktop = useMediaQuery('(min-width: 640px)');
   
-  const weekStart = startOfWeek(date);
-  const weekEnd = endOfWeek(date);
+  const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
   const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
   // Find message with emoji for a given event
@@ -68,7 +68,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
     onViewChange?.('day');
   };
 
-  // Group events by day and sort
+  // Group events by day and sort - show all days even if empty
   const eventsByDay = daysInWeek.map(day => {
     const dayEvents = events
       .filter(e => isSameDay(new Date(e.startTime), day))
@@ -78,7 +78,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
       day,
       events: dayEvents
     };
-  }).filter(group => group.events.length > 0);
+  });
 
   // Get event color from member
   const getEventColor = (event: Event) => {
@@ -221,8 +221,9 @@ export default function WeekView({ date, events, members, messages, onEventClick
               </div>
 
               {/* Events Grid for this day */}
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                {dayEvents.map((event) => {
+              {dayEvents.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  {dayEvents.map((event) => {
                   const eventMessage = getEventMessage(event.id);
                   
                   return (
@@ -300,6 +301,11 @@ export default function WeekView({ date, events, members, messages, onEventClick
                   );
                 })}
               </div>
+              ) : (
+                <div className="px-2 py-6 text-center">
+                  <p className="text-sm text-white/50">No events scheduled</p>
+                </div>
+              )}
             </div>
           ))}
         </div>

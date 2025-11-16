@@ -208,7 +208,7 @@ export default function Home() {
 
   // Convert events to week view format
   const weekEvents = events
-    .filter(e => isSameWeek(new Date(e.startTime), currentDate, { weekStartsOn: 0 }))
+    .filter(e => isSameWeek(new Date(e.startTime), currentDate, { weekStartsOn: 1 }))
     .map(e => {
       const eventMembers = members
         .filter(m => e.memberIds.includes(m.id))
