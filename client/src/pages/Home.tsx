@@ -25,6 +25,7 @@ interface TodayEvent {
   members: { id: string; name: string; color: string; initials: string }[];
   categories?: string[];
   isFocus?: boolean;
+  photoUrl?: string | null;
 }
 
 export default function Home() {
@@ -203,7 +204,8 @@ export default function Home() {
         endTime: new Date(e.endTime),
         members: eventMembers,
         categories,
-        isFocus: false // Remove focus event concept
+        isFocus: false, // Remove focus event concept
+        photoUrl: e.photoUrl
       };
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime()); // Sort purely by time
@@ -234,7 +236,8 @@ export default function Home() {
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
-        categories
+        categories,
+        photoUrl: e.photoUrl
       };
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
@@ -265,7 +268,8 @@ export default function Home() {
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
-        categories
+        categories,
+        photoUrl: e.photoUrl
       };
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
@@ -296,7 +300,8 @@ export default function Home() {
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
-        categories
+        categories,
+        photoUrl: e.photoUrl
       };
     })
     .sort((a, b) => b.startTime.getTime() - a.startTime.getTime()); // Reversed: newest first
