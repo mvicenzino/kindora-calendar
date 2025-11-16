@@ -10,6 +10,7 @@ import MemberModal from "@/components/MemberModal";
 import ProfileModal from "@/components/ProfileModal";
 import MessagesModal from "@/components/MessagesModal";
 import EventNotification from "@/components/EventNotification";
+import DayTimelineModal from "@/components/DayTimelineModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -39,6 +40,8 @@ export default function Home() {
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [selectedMemberId, setSelectedMemberId] = useState<string>();
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState<Date | undefined>();
+  const [dayTimelineModalOpen, setDayTimelineModalOpen] = useState(false);
+  const [selectedTimelineDate, setSelectedTimelineDate] = useState<Date | undefined>();
 
   // Fetch family members
   const { data: members = [] } = useQuery<FamilyMember[]>({
@@ -176,6 +179,18 @@ export default function Home() {
     setCurrentDate(date);
   };
 
+  const handleDateSelect = (date: Date) => {
+    setSelectedTimelineDate(date);
+    setDayTimelineModalOpen(true);
+  };
+
+  const handleAddEventForTimeline = () => {
+    setDayTimelineModalOpen(false);
+    if (selectedTimelineDate) {
+      handleAddEvent(selectedTimelineDate);
+    }
+  };
+
   // Convert events to today view format
   const todayEvents: TodayEvent[] = events
     .filter(e => isSameDay(new Date(e.startTime), currentDate))
@@ -306,6 +321,41 @@ export default function Home() {
     })
     .sort((a, b) => b.startTime.getTime() - a.startTime.getTime()); // Reversed: newest first
 
+  // Convert events for day timeline modal (filtered by selected date)
+  const dayTimelineEvents = selectedTimelineDate
+    ? events
+        .filter(e => isSameDay(new Date(e.startTime), selectedTimelineDate))
+        .map(e => {
+          const eventMembers = members
+            .filter(m => e.memberIds.includes(m.id))
+            .map(m => ({
+              ...m,
+              initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+            }));
+          
+          let categories: string[] | undefined;
+          if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
+            categories = ['Family'];
+          } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client') || e.title.toLowerCase().includes('project')) {
+            categories = ['Work'];
+          } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga') || e.title.toLowerCase().includes('workout')) {
+            categories = ['Health'];
+          }
+          
+          return {
+            id: e.id,
+            title: e.title,
+            description: e.description || undefined,
+            startTime: new Date(e.startTime),
+            endTime: new Date(e.endTime),
+            members: eventMembers,
+            categories,
+            photoUrl: e.photoUrl
+          };
+        })
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+    : [];
+
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
   const selectedEventMembers = selectedEvent ? members.filter(m => selectedEvent.memberIds.includes(m.id)) : [];
 
@@ -387,6 +437,7 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
+          onDateSelect={handleDateSelect}
         />
       )}
 
@@ -484,6 +535,22 @@ export default function Home() {
         onClose={closeNotification}
         event={notificationEvent || undefined}
         members={notificationEvent ? members.filter(m => notificationEvent.memberIds.includes(m.id)) : []}
+      />
+
+      <DayTimelineModal
+        isOpen={dayTimelineModalOpen}
+        onClose={() => {
+          setDayTimelineModalOpen(false);
+          setSelectedTimelineDate(undefined);
+        }}
+        date={selectedTimelineDate || new Date()}
+        events={dayTimelineEvents}
+        messages={messages.map(m => ({
+          ...m,
+          createdAt: new Date(m.createdAt)
+        }))}
+        onEventClick={handleEventClick}
+        onAddEvent={handleAddEventForTimeline}
       />
     </div>
   );
