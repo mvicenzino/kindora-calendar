@@ -6,9 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Clock, Users, Trash2, UserPlus } from "lucide-react";
+import { Calendar, Clock, Users, Trash2, UserPlus, Image as ImageIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from 'react';
+import { ObjectUploader } from "./ObjectUploader";
+import type { UploadResult } from "@uppy/core";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface FamilyMember {
   id: string;
@@ -23,6 +28,7 @@ interface Event {
   startTime: Date;
   endTime: Date;
   memberIds: string[];
+  photoUrl?: string;
 }
 
 interface EventModalProps {
@@ -73,6 +79,28 @@ export default function EventModal({
   const [startTime, setStartTime] = useState(() => getCurrentTimeRounded());
   const [endTime, setEndTime] = useState(() => addHoursToTime(getCurrentTimeRounded(), 1));
   const [isSometimeToday, setIsSometimeToday] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState<string>("");
+  const [uploadedEventId, setUploadedEventId] = useState<string>("");
+  const { toast } = useToast();
+
+  const attachPhotoMutation = useMutation({
+    mutationFn: async ({ eventId, photoUrl }: { eventId: string; photoUrl: string }) => {
+      const res = await apiRequest('PUT', '/api/event-photos', { eventId, photoUrl });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        description: "Photo added to event!",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to attach photo. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Update form state when event prop changes
   useEffect(() => {
@@ -84,6 +112,8 @@ export default function EventModal({
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
+      setPhotoUrl(event.photoUrl || "");
+      setUploadedEventId(event.id || "");
     } else {
       // Reset form for new event
       setTitle("");
@@ -94,6 +124,8 @@ export default function EventModal({
       setStartTime(currentTime);
       setEndTime(addHoursToTime(currentTime, 1));
       setIsSometimeToday(false);
+      setPhotoUrl("");
+      setUploadedEventId("");
     }
   }, [event, members, selectedDate]);
 
@@ -120,8 +152,35 @@ export default function EventModal({
       startTime: startDateTime,
       endTime: endDateTime,
       memberIds,
+      ...(photoUrl && { photoUrl }),
     });
     onClose();
+  };
+
+  const handleGetUploadParameters = async () => {
+    const res = await apiRequest('POST', '/api/objects/upload', {});
+    const data = await res.json();
+    return {
+      method: 'PUT' as const,
+      url: data.uploadURL,
+    };
+  };
+
+  const handleUploadComplete = (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+    if (result.successful && result.successful.length > 0) {
+      const uploadURL = result.successful[0].uploadURL;
+      if (uploadURL) {
+        setPhotoUrl(uploadURL);
+        
+        if (uploadedEventId) {
+          attachPhotoMutation.mutate({ eventId: uploadedEventId, photoUrl: uploadURL });
+        }
+      }
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoUrl("");
   };
 
   const selectedMembers = members.filter(m => memberIds.includes(m.id));
@@ -159,6 +218,46 @@ export default function EventModal({
               className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl resize-none text-white placeholder:text-white/50"
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
+              <ImageIcon className="h-4 w-4" />
+              Event Photo (Optional)
+            </Label>
+            {photoUrl ? (
+              <div className="relative rounded-xl overflow-hidden backdrop-blur-md bg-white/10 border border-white/20">
+                <img 
+                  src={photoUrl} 
+                  alt="Event" 
+                  className="w-full h-48 object-cover"
+                  data-testid="img-event-photo-preview"
+                />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                  onClick={handleRemovePhoto}
+                  className="absolute top-2 right-2 hover-elevate active-elevate-2"
+                  data-testid="button-remove-photo"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <ObjectUploader
+                maxNumberOfFiles={1}
+                maxFileSize={10485760}
+                onGetUploadParameters={handleGetUploadParameters}
+                onComplete={handleUploadComplete}
+                buttonClassName="w-full backdrop-blur-md bg-white/10 border border-white/20 hover-elevate active-elevate-2"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <ImageIcon className="h-5 w-5" />
+                  <span>Add Photo</span>
+                </div>
+              </ObjectUploader>
+            )}
           </div>
 
           <div className="space-y-2">
