@@ -40,6 +40,7 @@ Preferred communication style: Simple, everyday language.
     - **In-App Messaging:** Personalized messages related to events.
     - **Recipient Selection:** Choose family member (excluding self), visual selector, auto-selection, success toasts.
     - **Formatting:** 10 love emojis, bold/italic text, live preview.
+    - **Love Note Bubbles:** Events with messages display a liquid glass bubble showing the emoji and truncated message preview. Bubbles appear in all calendar views (Day, Week, Month, Timeline) with consistent styling (backdrop-blur-xl, bg-white/20, border-white/30) and hover/active interactions. Clicking opens the full message in a popup modal.
     - **Messages Modal:** Accessible via header icon, displays messages grouped by event with formatting, scrollable, liquid glass design. Messages are deleted with their parent event.
 - **Family Member Management:** Unique color coding, initials on events, color-coded avatars, member creation via modal.
 - **Navigation & UX:** Seamless view switching, date navigation, smooth transitions.
