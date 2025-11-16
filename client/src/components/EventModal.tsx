@@ -98,42 +98,42 @@ export default function EventModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-card/95 border-2 rounded-3xl shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
+      <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl">
+        <DialogHeader className="pb-4 border-b border-white/10">
+          <DialogTitle className="text-2xl font-bold text-white">
             {event?.id ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-5 py-4">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium">Event Title</Label>
+            <Label htmlFor="title" className="text-sm font-medium text-white/80">Event Title</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Team meeting, Soccer practice..."
               data-testid="input-event-title"
-              className="backdrop-blur-md bg-background/50 rounded-xl"
+              className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white placeholder:text-white/50"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+            <Label htmlFor="description" className="text-sm font-medium text-white/80">Description</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add event details..."
               data-testid="input-event-description"
-              className="backdrop-blur-md bg-background/50 rounded-xl resize-none"
+              className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl resize-none text-white placeholder:text-white/50"
               rows={3}
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
+              <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
                 <Calendar className="h-4 w-4" />
                 Date
               </Label>
@@ -142,27 +142,27 @@ export default function EventModal({
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 data-testid="input-event-date"
-                className="backdrop-blur-md bg-background/50 rounded-xl"
+                className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
+              <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
                 <User className="h-4 w-4" />
                 Family Member
               </Label>
               <Select value={memberId} onValueChange={setMemberId}>
                 <SelectTrigger 
                   data-testid="select-family-member"
-                  className="backdrop-blur-md bg-background/50 rounded-xl"
+                  className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="backdrop-blur-xl">
+                <SelectContent className="backdrop-blur-xl bg-slate-800/95 border-white/20">
                   {members.map(member => (
-                    <SelectItem key={member.id} value={member.id}>
+                    <SelectItem key={member.id} value={member.id} className="text-white">
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6 ring-1" style={{ '--tw-ring-color': member.color } as React.CSSProperties}>
+                        <Avatar className="h-6 w-6 ring-1 ring-white/30">
                           <AvatarFallback 
                             className="text-xs text-white"
                             style={{ backgroundColor: member.color }}
@@ -179,12 +179,12 @@ export default function EventModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl backdrop-blur-md bg-background/50">
+          <div className="flex items-center justify-between p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20">
             <div className="space-y-0.5">
-              <Label htmlFor="sometime-today" className="text-sm font-medium cursor-pointer">
+              <Label htmlFor="sometime-today" className="text-sm font-medium cursor-pointer text-white">
                 Sometime Today
               </Label>
-              <p className="text-xs text-muted-foreground">No specific time needed</p>
+              <p className="text-xs text-white/60">No specific time needed</p>
             </div>
             <Switch
               id="sometime-today"
@@ -195,9 +195,9 @@ export default function EventModal({
           </div>
 
           {!isSometimeToday && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-2">
+                <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
                   <Clock className="h-4 w-4" />
                   Start Time
                 </Label>
@@ -206,12 +206,12 @@ export default function EventModal({
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
                   data-testid="input-start-time"
-                  className="backdrop-blur-md bg-background/50 rounded-xl"
+                  className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-2">
+                <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
                   <Clock className="h-4 w-4" />
                   End Time
                 </Label>
@@ -220,19 +220,16 @@ export default function EventModal({
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   data-testid="input-end-time"
-                  className="backdrop-blur-md bg-background/50 rounded-xl"
+                  className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
                 />
               </div>
             </div>
           )}
 
           {selectedMember && startDate && (
-            <div className="p-4 rounded-2xl backdrop-blur-md" style={{ 
-              backgroundColor: `${selectedMember.color}10`,
-              borderColor: `${selectedMember.color}30`
-            }}>
+            <div className="p-4 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20">
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 ring-2" style={{ '--tw-ring-color': selectedMember.color } as React.CSSProperties}>
+                <Avatar className="h-10 w-10 ring-2 ring-white/30">
                   <AvatarFallback 
                     className="text-white font-semibold"
                     style={{ backgroundColor: selectedMember.color }}
@@ -241,8 +238,8 @@ export default function EventModal({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <div className="text-sm font-medium">Assigned to {selectedMember.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-sm font-medium text-white">Assigned to {selectedMember.name}</div>
+                  <div className="text-xs text-white/60">
                     {(() => {
                       if (isSometimeToday) {
                         const eventDate = new Date(`${startDate}T09:00`);
@@ -261,7 +258,7 @@ export default function EventModal({
           )}
         </div>
 
-        <div className="flex justify-between gap-3">
+        <div className="flex justify-between gap-3 pt-4 border-t border-white/10">
           {event?.id && onDelete && (
             <Button
               variant="destructive"
@@ -282,7 +279,7 @@ export default function EventModal({
               variant="outline"
               onClick={onClose}
               data-testid="button-cancel"
-              className="backdrop-blur-md hover-elevate active-elevate-2"
+              className="backdrop-blur-md border-white/30 text-white hover:text-white hover-elevate active-elevate-2"
             >
               Cancel
             </Button>

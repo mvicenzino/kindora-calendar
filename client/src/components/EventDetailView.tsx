@@ -122,30 +122,27 @@ export default function EventDetailView({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col backdrop-blur-3xl bg-card/95 border-2 rounded-3xl shadow-2xl">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-2xl font-bold flex items-center justify-between pr-8">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl">
+        <DialogHeader className="flex-shrink-0 pb-4 border-b border-white/10">
+          <DialogTitle className="text-2xl font-bold flex items-center justify-between pr-8 text-white">
             Event Details
             <Button
               onClick={onEdit}
               data-testid="button-edit-event"
               size="icon"
               variant="ghost"
-              className="hover-elevate active-elevate-2"
+              className="hover-elevate active-elevate-2 text-white hover:text-white"
             >
               <Edit className="h-5 w-5" />
             </Button>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4 overflow-y-auto flex-1">
+        <div className="space-y-5 py-4 overflow-y-auto flex-1">
           {/* Event Title & Member */}
-          <div className="p-4 rounded-2xl backdrop-blur-md" style={{ 
-            backgroundColor: `${member.color}10`,
-            borderColor: `${member.color}30`
-          }}>
+          <div className="p-5 rounded-2xl backdrop-blur-md bg-white/10 border border-white/20">
             <div className="flex items-start gap-3">
-              <Avatar className="h-12 w-12 ring-2" style={{ '--tw-ring-color': member.color } as React.CSSProperties}>
+              <Avatar className="h-12 w-12 ring-2 ring-white/30" style={{ '--tw-ring-color': `${member.color}80` } as React.CSSProperties}>
                 <AvatarFallback 
                   className="text-white font-semibold text-lg"
                   style={{ backgroundColor: member.color }}
@@ -154,26 +151,26 @@ export default function EventDetailView({
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <h3 className="text-2xl font-bold mb-1">{event.title}</h3>
-                <p className="text-sm text-muted-foreground">Assigned to {member.name}</p>
+                <h3 className="text-2xl font-bold mb-1 text-white">{event.title}</h3>
+                <p className="text-sm text-white/70">Assigned to {member.name}</p>
               </div>
             </div>
           </div>
 
           {/* Date & Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-start gap-3 p-4 rounded-xl backdrop-blur-md bg-background/50">
-              <Calendar className="h-5 w-5 mt-0.5 text-muted-foreground" />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-start gap-3 p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20">
+              <Calendar className="h-5 w-5 mt-0.5 text-white/70" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Date</p>
-                <p className="text-base font-semibold">{format(event.startTime, 'PPP')}</p>
+                <p className="text-xs font-medium text-white/60 mb-1">Date</p>
+                <p className="text-base font-semibold text-white">{format(event.startTime, 'PPP')}</p>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-4 rounded-xl backdrop-blur-md bg-background/50">
-              <Clock className="h-5 w-5 mt-0.5 text-muted-foreground" />
+            <div className="flex items-start gap-3 p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20">
+              <Clock className="h-5 w-5 mt-0.5 text-white/70" />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Time</p>
-                <p className="text-base font-semibold">
+                <p className="text-xs font-medium text-white/60 mb-1">Time</p>
+                <p className="text-base font-semibold text-white">
                   {isSometimeToday ? (
                     "Sometime today"
                   ) : (
@@ -186,24 +183,24 @@ export default function EventDetailView({
 
           {/* Description */}
           {event.description && (
-            <div className="p-4 rounded-xl backdrop-blur-md bg-background/50">
-              <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
-              <p className="text-base">{event.description}</p>
+            <div className="p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20">
+              <p className="text-xs font-medium text-white/60 mb-2">Description</p>
+              <p className="text-base text-white">{event.description}</p>
             </div>
           )}
 
-          <Separator />
+          <Separator className="bg-white/10" />
 
           {/* Message Section */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-muted-foreground" />
-              <h4 className="text-lg font-semibold">Send a Love Note</h4>
+              <MessageCircle className="h-5 w-5 text-white/70" />
+              <h4 className="text-lg font-semibold text-white">Send a Love Note</h4>
             </div>
             
             {/* Recipient Selector */}
-            <div className="p-3 rounded-xl backdrop-blur-md bg-background/50 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">Send to</p>
+            <div className="p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-2">
+              <p className="text-xs font-medium text-white/60">Send to</p>
               <div className="flex flex-wrap gap-2">
                 {allMembers
                   .filter(m => m.id !== event.memberId)
@@ -229,15 +226,15 @@ export default function EventDetailView({
                     </Button>
                   ))}
                 {allMembers.filter(m => m.id !== event.memberId).length === 0 && (
-                  <p className="text-sm text-muted-foreground">No other family members to send to</p>
+                  <p className="text-sm text-white/60">No other family members to send to</p>
                 )}
               </div>
             </div>
             
             {/* Formatting Controls */}
-            <div className="p-3 rounded-xl backdrop-blur-md bg-background/50 space-y-3">
+            <div className="p-3 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 space-y-3">
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Add an emoji</p>
+                <p className="text-xs font-medium text-white/60">Add an emoji</p>
                 <div className="flex flex-wrap gap-2">
                   {loveEmojis.map((emoji) => (
                     <Button
@@ -256,7 +253,7 @@ export default function EventDetailView({
               </div>
               
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Text style</p>
+                <p className="text-xs font-medium text-white/60">Text style</p>
                 <div className="flex gap-2">
                   <Button
                     type="button"
@@ -288,7 +285,7 @@ export default function EventDetailView({
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={`Write your love note to ${allMembers.find(m => m.id === selectedRecipientId)?.name || 'family member'}...`}
                 data-testid="textarea-event-message"
-                className="backdrop-blur-md bg-background/50 rounded-xl resize-none min-h-[100px]"
+                className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl resize-none min-h-[100px] text-white placeholder:text-white/50"
                 style={{
                   fontWeight: isBold ? 'bold' : 'normal',
                   fontStyle: isItalic ? 'italic' : 'normal',
@@ -310,12 +307,12 @@ export default function EventDetailView({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t flex-shrink-0">
+        <div className="flex justify-end gap-3 pt-4 border-t border-white/10 flex-shrink-0">
           <Button
             variant="outline"
             onClick={onClose}
             data-testid="button-close-detail"
-            className="backdrop-blur-md hover-elevate active-elevate-2"
+            className="backdrop-blur-md border-white/30 text-white hover:text-white hover-elevate active-elevate-2"
           >
             Close
           </Button>
