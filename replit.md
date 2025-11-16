@@ -32,9 +32,10 @@ Preferred communication style: Simple, everyday language.
     - **Month View:** Grid with event indicators, upcoming events section, month navigation.
     - **Timeline View:** Vertical scrolling, alternating event cards, date markers, member avatars, chronological display of all events.
 - **Event Management:**
-    - **Creation & Editing:** Modal-based, form validation (Zod), title, description, time, member, "Sometime Today" toggle.
+    - **Creation & Editing:** Modal-based, form validation (Zod), title, description, time, member, "Sometime Today" toggle. Start time defaults to current system time (rounded to nearest 15 minutes).
     - **Detail View:** Displays full event details, includes "Love Note" section for messaging, edit/delete options.
     - **Deletion:** Confirmation and automatic cache invalidation.
+    - **Event Notifications:** Animated notification dialog appears when events are within 10 minutes of starting. Features calming notification sound (Web Audio API), blue-purple gradient design with animated bell icon, dismissible with "Got it" button. Monitors all events every 30 seconds, tracks notified events to prevent duplicates.
 - **Messages Feature (Love Notes):**
     - **In-App Messaging:** Personalized messages related to events.
     - **Recipient Selection:** Choose family member (excluding self), visual selector, auto-selection, success toasts.
