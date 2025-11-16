@@ -56,15 +56,9 @@ export default function ProfileModal({
                   <h3 className="text-base sm:text-lg font-semibold text-[#4A5A6A] truncate">
                     {member.name}
                   </h3>
-                  <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
-                    <div
-                      className="w-3 h-3 sm:w-4 sm:h-4 rounded-full border-2 border-white/60 flex-shrink-0"
-                      style={{ backgroundColor: member.color }}
-                    />
-                    <span className="text-xs sm:text-sm text-[#4A5A6A]/70 truncate">
-                      {member.color}
-                    </span>
-                  </div>
+                  <p className="text-xs sm:text-sm text-[#4A5A6A]/70 mt-0.5 sm:mt-1">
+                    Family member
+                  </p>
                 </div>
 
                 {onEditMember && (
