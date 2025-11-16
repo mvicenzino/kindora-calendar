@@ -180,7 +180,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     key={event.id}
                     onClick={() => onEventClick(event)}
                     data-testid={`sometime-event-${event.id}`}
-                    className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md relative"
+                    className="rounded-2xl p-3 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md relative"
                     style={{ backgroundColor: eventColor }}
                   >
                     {/* Love Note Bubble */}

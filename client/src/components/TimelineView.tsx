@@ -167,7 +167,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                       ref={(el) => {
                         if (el) cardRefs.current[event.id] = el;
                       }}
-                      className="rounded-2xl p-4 border-2 border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all duration-300 ease-out active:scale-[0.98] text-left shadow-xl relative"
+                      className="rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:scale-[1.02] transition-all duration-300 ease-out active:scale-[0.98] text-left shadow-xl relative"
                       style={{ 
                         backgroundColor: color,
                         transform: `scale(${cardScales[event.id] || 0.92})`,
