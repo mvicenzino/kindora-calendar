@@ -67,9 +67,10 @@ export default function EventDetailView({
       setIsBold(false);
       setIsItalic(false);
       
-      // Show success toast
+      // Show success toast with random loving message
+      const randomMessage = loveMessages[Math.floor(Math.random() * loveMessages.length)];
       toast({
-        description: "you're love is real!",
+        description: randomMessage,
       });
     },
     onError: () => {
@@ -95,6 +96,24 @@ export default function EventDetailView({
   }, [isOpen, event?.id, allMembers]);
 
   const loveEmojis = ["❤️", "💕", "💖", "💝", "🌹", "💐", "🥰", "😍", "💗", "💓"];
+  
+  const loveMessages = [
+    "Family love sent!",
+    "Your heart is full!",
+    "Love makes everything better!",
+    "Family is everything!",
+    "Spreading the love!",
+    "You're the best!",
+    "Love never fails!",
+    "Together is our favorite place!",
+    "Family first, always!",
+    "Your love lights up their day!",
+    "Making memories with love!",
+    "Love you to the moon and back!",
+    "Home is wherever you are!",
+    "Love grows here!",
+    "The best things in life are family!",
+  ];
 
   if (!event || members.length === 0) return null;
 
