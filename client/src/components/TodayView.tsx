@@ -143,7 +143,7 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   data-testid={`event-${event.id}`}
-                  className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative"
+                  className="w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative min-h-[100px]"
                   style={{ backgroundColor: eventColor }}
                 >
                   {/* Love Note Bubble */}
@@ -182,11 +182,11 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                     ))}
                   </div>
                   
-                  <div className="pr-14 sm:pr-16">
-                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-1.5">
+                  <div className="pr-14 sm:pr-16 pb-12">
+                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 line-clamp-2 leading-snug">
                       {event.title}
                     </h3>
-                    <p className="text-sm text-white/80">
+                    <p className="text-sm text-white/80 mt-2">
                       {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
                     </p>
                   </div>
