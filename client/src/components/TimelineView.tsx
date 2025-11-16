@@ -184,44 +184,36 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                 </div>
 
                 {/* Event card */}
-                <div
-                  ref={(el) => {
-                    if (el) cardRefs.current[event.id] = el;
-                  }}
-                  className="relative w-full"
-                  style={{ 
-                    transform: `scale(${cardScales[event.id] || 0.92})`,
-                  }}
+                <button
+                  onClick={() => onEventClick(event)}
+                  data-testid={`timeline-event-${event.id}`}
+                  className="w-full"
                 >
-                  {/* Love Note Bubble */}
-                  {eventMessage && (
-                    <div className="absolute top-7 right-7 z-10">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEmojiClick(e, eventMessage);
-                        }}
-                        data-testid={`love-note-bubble-${event.id}`}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 max-w-[180px]"
-                        aria-label="View love note"
-                      >
-                        <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
-                        <span className="text-xs text-white/90 truncate font-medium">
-                          {eventMessage.content}
-                        </span>
-                      </button>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => onEventClick(event)}
-                    data-testid={`timeline-event-${event.id}`}
-                    className="w-full rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl"
+                  <div
+                    ref={(el) => {
+                      if (el) cardRefs.current[event.id] = el;
+                    }}
+                    className="rounded-2xl p-4 border border-white/50 backdrop-blur-xl hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl relative"
                     style={{ 
                       backgroundColor: color,
+                      transform: `scale(${cardScales[event.id] || 0.92})`,
                     }}
                   >
+                      {/* Love Note Bubble */}
+                      {eventMessage && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleEmojiClick(e, eventMessage)}
+                          data-testid={`love-note-bubble-${event.id}`}
+                          className="absolute top-3 right-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-10 max-w-[180px]"
+                          aria-label="View love note"
+                        >
+                          <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
+                          <span className="text-xs text-white/90 truncate font-medium">
+                            {eventMessage.content}
+                          </span>
+                        </button>
+                      )}
                       {/* Title */}
                       <h3 className="text-xl font-bold text-white mb-1.5 leading-tight pr-48">
                         {event.title}
@@ -278,6 +270,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                           ))}
                         </div>
                       </div>
+                    </div>
                   </button>
                 </div>
             );
