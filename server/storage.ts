@@ -156,6 +156,46 @@ export class MemStorage implements IStorage {
     ];
 
     sampleEvents.forEach(event => this.events.set(event.id, event));
+
+    // Initialize with sample messages (love notes)
+    const eventIds = Array.from(this.events.keys());
+    const sampleMessages: Message[] = [
+      {
+        id: randomUUID(),
+        eventId: eventIds[0], // Date Night at Jockey Hollow
+        senderName: member2.name,
+        recipientId: member1.id,
+        content: "Can't wait for tonight! Love you ❤️",
+        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1),
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        emoji: '💕',
+      },
+      {
+        id: randomUUID(),
+        eventId: eventIds[1], // Brunch with Mom
+        senderName: member1.name,
+        recipientId: member2.id,
+        content: "Enjoy brunch! Give mom a hug from me",
+        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 20, 0),
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        emoji: '🤗',
+      },
+      {
+        id: randomUUID(),
+        eventId: eventIds[6], // Project Meeting
+        senderName: member1.name,
+        recipientId: member2.id,
+        content: "Good luck with your presentation!",
+        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+        fontWeight: 'bold',
+        fontStyle: 'normal',
+        emoji: '💪',
+      },
+    ];
+
+    sampleMessages.forEach(message => this.messages.set(message.id, message));
   }
 
   // Family Members
