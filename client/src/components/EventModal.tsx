@@ -177,8 +177,8 @@ export default function EventModal({
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-              <Calendar className="h-4 w-4" />
+            <Label className="text-sm font-medium flex items-center gap-1.5 text-white/80">
+              <Calendar className="h-4 w-4 text-white/40" strokeWidth={1.5} />
               Date
             </Label>
             <Input
@@ -297,8 +297,8 @@ export default function EventModal({
           {!isSometimeToday && (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-                  <Clock className="h-4 w-4" />
+                <Label className="text-sm font-medium flex items-center gap-1.5 text-white/80">
+                  <Clock className="h-4 w-4 text-white/40" strokeWidth={1.5} />
                   Start Time
                 </Label>
                 <Input
@@ -311,8 +311,8 @@ export default function EventModal({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-                  <Clock className="h-4 w-4" />
+                <Label className="text-sm font-medium flex items-center gap-1.5 text-white/80">
+                  <Clock className="h-4 w-4 text-white/40" strokeWidth={1.5} />
                   End Time
                 </Label>
                 <Input
