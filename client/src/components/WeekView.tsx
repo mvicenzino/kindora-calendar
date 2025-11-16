@@ -68,7 +68,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
     onViewChange?.('day');
   };
 
-  // Group events by day
+  // Group events by day and sort
   const eventsByDay = daysInWeek.map(day => {
     const dayEvents = events
       .filter(e => isSameDay(new Date(e.startTime), day))
@@ -83,6 +83,12 @@ export default function WeekView({ date, events, members, messages, onEventClick
   // Get event color from member
   const getEventColor = (event: Event) => {
     return event.members[0]?.color || '#6D7A8E';
+  };
+
+  // Check if day is today
+  const isToday = (day: Date) => {
+    const today = new Date();
+    return isSameDay(day, today);
   };
 
   return (
@@ -196,85 +202,106 @@ export default function WeekView({ date, events, members, messages, onEventClick
           })}
         </div>
 
-        {/* Events Grid */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-          {events.map((event) => {
-            const eventMessage = getEventMessage(event.id);
-            
-            return (
-              <button
-                key={event.id}
-                onClick={() => onEventClick(event)}
-                data-testid={`event-${event.id}`}
-                className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative min-h-[110px]"
-                style={{ backgroundColor: getEventColor(event) }}
-              >
-                {/* Love Note Bubble - moved to bottom-left */}
-                {eventMessage && (
-                  isDesktop ? (
-                    <div
-                      onClick={(e) => handleEmojiClick(e, eventMessage)}
-                      data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[120px] cursor-pointer"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleEmojiClick(e as any, eventMessage);
-                        }
-                      }}
-                      aria-label="View love note"
-                    >
-                      <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
-                      <span className="text-[10px] text-white/90 truncate font-medium max-w-[80px]">
-                        {eventMessage.content}
-                      </span>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={(e) => handleEmojiClick(e, eventMessage)}
-                      data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute bottom-3 left-3 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 cursor-pointer"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleEmojiClick(e as any, eventMessage);
-                        }
-                      }}
-                      aria-label="View love note"
-                    >
-                      <span className="text-sm">{eventMessage.emoji}</span>
-                    </div>
-                  )
-                )}
-                
-                {/* Member avatars - horizontal layout */}
-                <div className="absolute right-3 bottom-3 flex flex-row-reverse -space-x-2 space-x-reverse">
-                  {event.members.map((member) => (
-                    <div
-                      key={member.id}
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white/40"
-                      style={{ backgroundColor: member.color }}
-                    >
-                      {member.initials}
-                    </div>
-                  ))}
+        {/* Events by Day */}
+        <div className="space-y-6">
+          {eventsByDay.map(({ day, events: dayEvents }) => (
+            <div key={day.toISOString()} className="space-y-3">
+              {/* Day Header */}
+              <div className="px-2">
+                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md ${isToday(day) ? 'bg-white/20 border border-white/40' : 'bg-white/10 border border-white/20'}`}>
+                  <span className={`text-sm font-semibold ${isToday(day) ? 'text-white' : 'text-white/80'}`}>
+                    {format(day, 'EEEE, MMM d')}
+                  </span>
+                  {isToday(day) && (
+                    <span className="text-xs font-medium text-white/90 bg-white/20 px-2 py-0.5 rounded-full">
+                      Today
+                    </span>
+                  )}
                 </div>
-                
-                <div className="pr-14 sm:pr-16">
-                  <h3 className="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">
-                    {event.title}
-                  </h3>
-                  <p className="text-sm text-white/90 mt-2 mb-12">
-                    {format(event.startTime, 'h:mm a')}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
+              </div>
+
+              {/* Events Grid for this day */}
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {dayEvents.map((event) => {
+                  const eventMessage = getEventMessage(event.id);
+                  
+                  return (
+                    <button
+                      key={event.id}
+                      onClick={() => onEventClick(event)}
+                      data-testid={`event-${event.id}`}
+                      className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative min-h-[110px]"
+                      style={{ backgroundColor: getEventColor(event) }}
+                    >
+                      {/* Love Note Bubble - moved to bottom-left */}
+                      {eventMessage && (
+                        isDesktop ? (
+                          <div
+                            onClick={(e) => handleEmojiClick(e, eventMessage)}
+                            data-testid={`love-note-bubble-${event.id}`}
+                            className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[120px] cursor-pointer"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleEmojiClick(e as any, eventMessage);
+                              }
+                            }}
+                            aria-label="View love note"
+                          >
+                            <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
+                            <span className="text-[10px] text-white/90 truncate font-medium max-w-[80px]">
+                              {eventMessage.content}
+                            </span>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={(e) => handleEmojiClick(e, eventMessage)}
+                            data-testid={`love-note-bubble-${event.id}`}
+                            className="absolute bottom-3 left-3 w-7 h-7 flex items-center justify-center rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 cursor-pointer"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleEmojiClick(e as any, eventMessage);
+                              }
+                            }}
+                            aria-label="View love note"
+                          >
+                            <span className="text-sm">{eventMessage.emoji}</span>
+                          </div>
+                        )
+                      )}
+                      
+                      {/* Member avatars - horizontal layout */}
+                      <div className="absolute right-3 bottom-3 flex flex-row-reverse -space-x-2 space-x-reverse">
+                        {event.members.map((member) => (
+                          <div
+                            key={member.id}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border-2 border-white/40"
+                            style={{ backgroundColor: member.color }}
+                          >
+                            {member.initials}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="pr-14 sm:pr-16">
+                        <h3 className="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">
+                          {event.title}
+                        </h3>
+                        <p className="text-sm text-white/90 mt-2 mb-12">
+                          {format(event.startTime, 'h:mm a')}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
         </div>
       </div>
