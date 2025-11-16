@@ -3,6 +3,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOf
 import { Plus } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
+import EventThumbnail from "./EventThumbnail";
 
 interface FamilyMember {
   id: string;
@@ -18,6 +19,7 @@ interface Event {
   endTime: Date;
   members: FamilyMember[];
   categories?: string[];
+  photoUrl?: string;
 }
 
 interface MonthViewProps {
@@ -255,9 +257,12 @@ export default function MonthView({ date, events, members, messages, onEventClic
                     </div>
                     
                     <div className="pr-14 sm:pr-16">
-                      <h3 className="text-base font-medium text-white mb-2 line-clamp-2 leading-snug">
-                        {event.title}
-                      </h3>
+                      <div className="flex items-start gap-2 mb-2">
+                        <EventThumbnail photoUrl={event.photoUrl} />
+                        <h3 className="text-base font-medium text-white line-clamp-2 leading-snug flex-1">
+                          {event.title}
+                        </h3>
+                      </div>
                       <p className="text-sm text-white/80 mt-2 mb-12">
                         {format(event.startTime, 'h:mm a')}
                       </p>

@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Plus } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
+import EventThumbnail from "./EventThumbnail";
 
 interface FamilyMember {
   id: string;
@@ -20,6 +21,7 @@ interface Event {
   endTime: Date;
   members: FamilyMember[];
   categories?: string[];
+  photoUrl?: string;
 }
 
 interface TimelineViewProps {
@@ -218,9 +220,12 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
                       {/* Event content */}
                       <div className="pr-14 sm:pr-16">
-                        <h3 className="text-lg sm:text-xl font-bold text-white mb-2 line-clamp-2 leading-snug">
-                          {event.title}
-                        </h3>
+                        <div className="flex items-start gap-2 mb-2">
+                          <EventThumbnail photoUrl={event.photoUrl} />
+                          <h3 className="text-lg sm:text-xl font-bold text-white line-clamp-2 leading-snug flex-1">
+                            {event.title}
+                          </h3>
+                        </div>
 
                         {event.description && (
                           <p className="text-sm text-white/80 mb-3 line-clamp-2 leading-relaxed">

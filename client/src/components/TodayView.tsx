@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Plus } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
+import EventThumbnail from "./EventThumbnail";
 
 interface FamilyMember {
   id: string;
@@ -22,6 +23,7 @@ interface Event {
   members: FamilyMember[];
   categories?: string[];
   isFocus?: boolean;
+  photoUrl?: string;
 }
 
 interface TodayViewProps {
@@ -183,9 +185,12 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                   </div>
                   
                   <div className="pr-14 sm:pr-16">
-                    <h3 className="text-lg sm:text-xl font-semibold text-white mb-2 line-clamp-2 leading-snug">
-                      {event.title}
-                    </h3>
+                    <div className="flex items-start gap-2 mb-2">
+                      <EventThumbnail photoUrl={event.photoUrl} />
+                      <h3 className="text-lg sm:text-xl font-semibold text-white line-clamp-2 leading-snug flex-1">
+                        {event.title}
+                      </h3>
+                    </div>
                     <p className="text-sm text-white/80 mt-2 mb-12">
                       {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
                     </p>
