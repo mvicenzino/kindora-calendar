@@ -36,6 +36,8 @@ interface MonthViewProps {
 export default function MonthView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent, onDateSelect }: MonthViewProps) {
   const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
+  const [hoveredDay, setHoveredDay] = useState<Date | null>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number; showAbove?: boolean } | null>(null);
   
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
@@ -57,6 +59,41 @@ export default function MonthView({ date, events, members, messages, onEventClic
     e.stopPropagation();
     setSelectedMessage(message);
     setLoveNotePopupOpen(true);
+  };
+
+  const handleDayMouseEnter = (day: Date, e: React.MouseEvent<HTMLButtonElement>) => {
+    const dayEvents = getEventsForDay(day);
+    if (dayEvents.length > 0) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const panelWidth = 256; // 16rem = 256px
+      const viewportPadding = 16; // Min distance from viewport edge
+      
+      // Calculate centered X position
+      let x = rect.left + rect.width / 2;
+      
+      // Clamp X to viewport boundaries
+      const minX = viewportPadding + panelWidth / 2;
+      const maxX = window.innerWidth - viewportPadding - panelWidth / 2;
+      x = Math.max(minX, Math.min(maxX, x));
+      
+      // Determine if panel should appear above or below
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const panelHeight = 280; // Approximate max height
+      const showAbove = spaceBelow < panelHeight && spaceAbove > spaceBelow;
+      
+      setHoveredDay(day);
+      setHoverPosition({
+        x,
+        y: showAbove ? rect.top - 8 : rect.bottom + 8,
+        showAbove
+      });
+    }
+  };
+
+  const handleDayMouseLeave = () => {
+    setHoveredDay(null);
+    setHoverPosition(null);
   };
 
   // Get upcoming events (sorted by time, only future events)
@@ -179,6 +216,8 @@ export default function MonthView({ date, events, members, messages, onEventClic
                       onAddEvent(day);
                     }
                   }}
+                  onMouseEnter={(e) => handleDayMouseEnter(day, e)}
+                  onMouseLeave={handleDayMouseLeave}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
                   className={`aspect-square rounded-xl backdrop-blur-md border transition-all flex flex-col items-center justify-center p-1 hover:bg-white/10 active:scale-95 ${
                     isTodayDate ? 'ring-2 ring-white/60 shadow-lg shadow-white/20' : ''
@@ -288,6 +327,167 @@ export default function MonthView({ date, events, members, messages, onEventClic
         </div>
       </div>
       
+      {/* Desktop Hover Panel */}
+      {hoveredDay && hoverPosition && (
+        <div
+          className="hidden md:block fixed z-50 pointer-events-none"
+          style={{
+            left: `${hoverPosition.x}px`,
+            top: hoverPosition.showAbove ? undefined : `${hoverPosition.y}px`,
+            bottom: hoverPosition.showAbove ? `${window.innerHeight - hoverPosition.y}px` : undefined,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          {/* Panel Content (show above if needed) */}
+          {hoverPosition.showAbove && (
+            <>
+              {/* Panel Content */}
+              <div className="w-64 backdrop-blur-xl bg-white/20 border border-white/40 rounded-lg shadow-2xl shadow-black/40 overflow-hidden mb-1.5">
+                {/* Date Header */}
+                <div className="px-4 py-2.5 bg-white/10 border-b border-white/20">
+                  <p className="text-sm font-semibold text-white">
+                    {format(hoveredDay, 'EEEE, MMMM d')}
+                  </p>
+                </div>
+                
+                {/* Events List */}
+                <div className="p-2 space-y-1.5 max-h-64 overflow-y-auto">
+                  {getEventsForDay(hoveredDay).map((event) => {
+                    const eventMessage = getEventMessage(event.id);
+                    
+                    return (
+                      <div
+                        key={event.id}
+                        className="rounded-md p-2.5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
+                      >
+                        <div className="flex items-start gap-2">
+                          {event.photoUrl && (
+                            <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden">
+                              <img src={event.photoUrl} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-white line-clamp-2 leading-tight">
+                              {event.title}
+                            </h4>
+                            <p className="text-xs text-white/70 mt-0.5">
+                              {format(event.startTime, 'h:mm a')}
+                            </p>
+                          </div>
+                          
+                          <div className="flex flex-row-reverse -space-x-1 space-x-reverse flex-shrink-0">
+                            {event.members.slice(0, 2).map((member) => (
+                              <div
+                                key={member.id}
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/40"
+                                style={{ backgroundColor: member.color }}
+                                title={member.name}
+                              >
+                                {member.initials}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {eventMessage && (
+                          <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded bg-white/10 border border-white/20">
+                            <span className="text-xs">{eventMessage.emoji}</span>
+                            <span className="text-[10px] text-white/80 truncate">
+                              {eventMessage.content}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Pointer Arrow (below panel when showing above) */}
+              <div 
+                className="w-3 h-3 bg-white/20 backdrop-blur-xl border-r border-b border-white/40 mx-auto -mt-1.5"
+                style={{ transform: 'rotate(45deg)' }}
+              />
+            </>
+          )}
+          
+          {/* Default: Show below */}
+          {!hoverPosition.showAbove && (
+            <>
+              {/* Pointer Arrow */}
+              <div 
+                className="w-3 h-3 bg-white/20 backdrop-blur-xl border-l border-t border-white/40 mx-auto"
+                style={{ transform: 'translateY(-1px) rotate(45deg)' }}
+              />
+              
+              {/* Panel Content */}
+              <div className="w-64 backdrop-blur-xl bg-white/20 border border-white/40 rounded-lg shadow-2xl shadow-black/40 overflow-hidden -mt-1.5">
+                {/* Date Header */}
+                <div className="px-4 py-2.5 bg-white/10 border-b border-white/20">
+                  <p className="text-sm font-semibold text-white">
+                    {format(hoveredDay, 'EEEE, MMMM d')}
+                  </p>
+                </div>
+                
+                {/* Events List */}
+                <div className="p-2 space-y-1.5 max-h-64 overflow-y-auto">
+                  {getEventsForDay(hoveredDay).map((event) => {
+                    const eventMessage = getEventMessage(event.id);
+                    
+                    return (
+                      <div
+                        key={event.id}
+                        className="rounded-md p-2.5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
+                      >
+                        <div className="flex items-start gap-2">
+                          {event.photoUrl && (
+                            <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden">
+                              <img src={event.photoUrl} alt="" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-white line-clamp-2 leading-tight">
+                              {event.title}
+                            </h4>
+                            <p className="text-xs text-white/70 mt-0.5">
+                              {format(event.startTime, 'h:mm a')}
+                            </p>
+                          </div>
+                          
+                          <div className="flex flex-row-reverse -space-x-1 space-x-reverse flex-shrink-0">
+                            {event.members.slice(0, 2).map((member) => (
+                              <div
+                                key={member.id}
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/40"
+                                style={{ backgroundColor: member.color }}
+                                title={member.name}
+                              >
+                                {member.initials}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {eventMessage && (
+                          <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded bg-white/10 border border-white/20">
+                            <span className="text-xs">{eventMessage.emoji}</span>
+                            <span className="text-[10px] text-white/80 truncate">
+                              {eventMessage.content}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Love Note Popup */}
       <LoveNotePopup
         isOpen={loveNotePopupOpen}
