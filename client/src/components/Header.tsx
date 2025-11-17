@@ -7,7 +7,7 @@ interface HeaderProps {
 
 export default function Header({ onMessagesClick, onProfileClick }: HeaderProps) {
   return (
-    <header className="w-full px-3 sm:px-4 md:px-6 py-3 sm:py-4 backdrop-blur-xl bg-gradient-to-r from-slate-900/60 via-slate-800/50 to-slate-900/60 border-b border-white/10 sticky top-0 z-50">
+    <header className="fixed top-0 left-0 right-0 w-full px-3 sm:px-4 md:px-6 py-3 sm:py-4 backdrop-blur-xl bg-gradient-to-r from-slate-900/60 via-slate-800/50 to-slate-900/60 border-b border-white/10 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Left: App branding */}
         <div className="flex items-center gap-2 sm:gap-3">

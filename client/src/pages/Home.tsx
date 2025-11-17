@@ -386,7 +386,7 @@ export default function Home() {
         onProfileClick={handleProfileClick}
       />
       
-      <div className="flex-1 overflow-y-auto overflow-x-hidden pt-2 sm:pt-3">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {view === 'day' && (
         <TodayView
           date={currentDate}
