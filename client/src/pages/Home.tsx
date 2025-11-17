@@ -9,6 +9,7 @@ import EventDetailView from "@/components/EventDetailView";
 import MemberModal from "@/components/MemberModal";
 import ProfileModal from "@/components/ProfileModal";
 import MessagesModal from "@/components/MessagesModal";
+import MemoriesModal from "@/components/MemoriesModal";
 import EventNotification from "@/components/EventNotification";
 import DayTimelineModal from "@/components/DayTimelineModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
@@ -37,6 +38,7 @@ export default function Home() {
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [messagesModalOpen, setMessagesModalOpen] = useState(false);
+  const [memoriesModalOpen, setMemoriesModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [selectedMemberId, setSelectedMemberId] = useState<string>();
   const [selectedDateForNewEvent, setSelectedDateForNewEvent] = useState<Date | undefined>();
@@ -359,6 +361,10 @@ export default function Home() {
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
   const selectedEventMembers = selectedEvent ? members.filter(m => selectedEvent.memberIds.includes(m.id)) : [];
 
+  const handleMemoriesClick = () => {
+    setMemoriesModalOpen(true);
+  };
+
   const handleMessagesClick = () => {
     setMessagesModalOpen(true);
   };
@@ -382,6 +388,7 @@ export default function Home() {
   return (
     <div className="min-h-screen h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex flex-col overflow-hidden">
       <Header 
+        onMemoriesClick={handleMemoriesClick}
         onMessagesClick={handleMessagesClick}
         onProfileClick={handleProfileClick}
       />
@@ -530,6 +537,20 @@ export default function Home() {
           ...e,
           startTime: new Date(e.startTime),
           endTime: new Date(e.endTime)
+        }))}
+      />
+
+      <MemoriesModal
+        isOpen={memoriesModalOpen}
+        onClose={() => setMemoriesModalOpen(false)}
+        events={events.map(e => ({
+          ...e,
+          startTime: new Date(e.startTime),
+          endTime: new Date(e.endTime)
+        }))}
+        members={members.map(m => ({
+          ...m,
+          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
         }))}
       />
 

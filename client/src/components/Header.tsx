@@ -1,11 +1,12 @@
-import { MessageCircle, User } from "lucide-react";
+import { MessageCircle, User, Images } from "lucide-react";
 
 interface HeaderProps {
+  onMemoriesClick?: () => void;
   onMessagesClick?: () => void;
   onProfileClick?: () => void;
 }
 
-export default function Header({ onMessagesClick, onProfileClick }: HeaderProps) {
+export default function Header({ onMemoriesClick, onMessagesClick, onProfileClick }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 right-0 w-full px-3 sm:px-4 md:px-6 py-3 sm:py-4 backdrop-blur-xl bg-gradient-to-r from-slate-900/60 via-slate-800/50 to-slate-900/60 border-b border-white/10 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -61,6 +62,15 @@ export default function Header({ onMessagesClick, onProfileClick }: HeaderProps)
 
         {/* Right: Action icons */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={onMemoriesClick}
+            data-testid="button-memories"
+            className="w-11 h-11 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover-elevate active-elevate-2 transition-all touch-manipulation"
+            aria-label="Memories"
+          >
+            <Images className="w-5 h-5 text-white" strokeWidth={2} />
+          </button>
           <button
             type="button"
             onClick={onMessagesClick}
