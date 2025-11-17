@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks } from "date-fns";
-import { Plus, ChevronLeft, ChevronRight, Trash2, Check } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, Trash2, Check, CheckCircle2 } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import EventThumbnail from "./EventThumbnail";
 import DeleteEventDialog from "./DeleteEventDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const COMPLETION_MESSAGES = [
   "Nice job!",
@@ -36,6 +38,7 @@ interface Event {
   members: FamilyMember[];
   categories?: string[];
   photoUrl?: string;
+  completed?: boolean;
 }
 
 interface WeekViewProps {
@@ -58,6 +61,16 @@ export default function WeekView({ date, events, members, messages, onEventClick
   const [eventToDelete, setEventToDelete] = useState<Event | undefined>();
   const isDesktop = useMediaQuery('(min-width: 640px)');
   const { toast } = useToast();
+  
+  const completeMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const res = await apiRequest('PUT', `/api/events/${eventId}/complete`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    },
+  });
   
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
@@ -90,12 +103,16 @@ export default function WeekView({ date, events, members, messages, onEventClick
 
   const handleCompleteClick = (e: React.MouseEvent, event: Event) => {
     e.stopPropagation();
-    const randomMessage = COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)];
-    toast({
-      title: randomMessage,
-      description: `"${event.title}" is done!`,
-      duration: 2000,
-    });
+    completeMutation.mutate(event.id);
+    
+    if (!event.completed) {
+      const randomMessage = COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)];
+      toast({
+        title: randomMessage,
+        description: `"${event.title}" is done!`,
+        duration: 2000,
+      });
+    }
   };
 
   const isEventPast = (event: Event) => {
@@ -281,7 +298,9 @@ export default function WeekView({ date, events, members, messages, onEventClick
                       key={event.id}
                       onClick={() => onEventClick(event)}
                       data-testid={`event-${event.id}`}
-                      className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative min-h-[110px]"
+                      className={`rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left relative min-h-[110px] ${
+                        event.completed ? 'opacity-50 grayscale' : ''
+                      }`}
                       style={{ backgroundColor: getEventColor(event) }}
                     >
                       {/* Action Icons - top right */}
@@ -291,9 +310,13 @@ export default function WeekView({ date, events, members, messages, onEventClick
                           <div
                             onClick={(e) => handleCompleteClick(e, event)}
                             data-testid={`complete-event-${event.id}`}
-                            className="w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-green-500/30 hover:border-green-400/50 transition-all active:scale-90 cursor-pointer"
+                            className={`w-8 h-8 rounded-full backdrop-blur-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
+                              event.completed
+                                ? 'bg-green-500/40 border border-green-400/60 hover:bg-green-500/50'
+                                : 'bg-white/10 border border-white/20 hover:bg-green-500/30 hover:border-green-400/50'
+                            }`}
                             role="button"
-                            aria-label="Mark as complete"
+                            aria-label={event.completed ? "Mark as incomplete" : "Mark as complete"}
                             tabIndex={0}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
@@ -302,7 +325,11 @@ export default function WeekView({ date, events, members, messages, onEventClick
                               }
                             }}
                           >
-                            <Check className="w-4 h-4 text-white/70 hover:text-green-300" strokeWidth={2.5} />
+                            {event.completed ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-300" strokeWidth={2.5} />
+                            ) : (
+                              <Check className="w-4 h-4 text-white/70 hover:text-green-300" strokeWidth={2.5} />
+                            )}
                           </div>
                         )}
                         

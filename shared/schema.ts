@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -20,6 +20,7 @@ export const events = pgTable("events", {
   memberIds: varchar("member_ids").array().notNull(),
   color: text("color").notNull(),
   photoUrl: text("photo_url"),
+  completed: boolean("completed").notNull().default(false),
 });
 
 export const messages = pgTable("messages", {
@@ -43,6 +44,7 @@ export const insertEventSchema = createInsertSchema(events).omit({
 }).extend({
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
+  completed: z.boolean().optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({

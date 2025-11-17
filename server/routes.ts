@@ -110,6 +110,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/events/:id/complete", async (req, res) => {
+    try {
+      const events = await storage.getEvents();
+      const event = events.find(e => e.id === req.params.id);
+      
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      
+      const updatedEvent = await storage.updateEvent(req.params.id, { 
+        completed: !event.completed 
+      });
+      res.json(updatedEvent);
+    } catch (error) {
+      console.error("Error toggling event completion:", error);
+      res.status(500).json({ error: "Failed to toggle event completion" });
+    }
+  });
+
   // Messages Routes
   app.get("/api/messages", async (_req, res) => {
     try {

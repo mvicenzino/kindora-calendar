@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, CheckCircle2 } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 import EventThumbnail from "./EventThumbnail";
 import DeleteEventDialog from "./DeleteEventDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const COMPLETION_MESSAGES = [
   "Nice job!",
@@ -37,6 +39,7 @@ interface Event {
   members: FamilyMember[];
   categories?: string[];
   photoUrl?: string;
+  completed?: boolean;
 }
 
 interface TimelineViewProps {
@@ -54,6 +57,16 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | undefined>();
   const { toast } = useToast();
+
+  const completeMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      const res = await apiRequest('PUT', `/api/events/${eventId}/complete`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    },
+  });
 
   const isSometimeToday = (event: Event) => {
     const startHour = event.startTime.getHours();
@@ -94,12 +107,16 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
 
   const handleCompleteClick = (e: React.MouseEvent, event: Event) => {
     e.stopPropagation();
-    const randomMessage = COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)];
-    toast({
-      title: randomMessage,
-      description: `"${event.title}" is done!`,
-      duration: 2000,
-    });
+    completeMutation.mutate(event.id);
+    
+    if (!event.completed) {
+      const randomMessage = COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)];
+      toast({
+        title: randomMessage,
+        description: `"${event.title}" is done!`,
+        duration: 2000,
+      });
+    }
   };
 
   const isEventPast = (event: Event) => {
@@ -215,7 +232,9 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                     <button
                       onClick={() => onEventClick(event)}
                       data-testid={`timeline-event-${event.id}`}
-                      className="relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl min-h-[120px]"
+                      className={`relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl min-h-[120px] ${
+                        event.completed ? 'opacity-50 grayscale' : ''
+                      }`}
                       style={{ backgroundColor: color }}
                     >
                       {/* Action Icons - top right */}
@@ -225,9 +244,13 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                           <div
                             onClick={(e) => handleCompleteClick(e, event)}
                             data-testid={`complete-event-${event.id}`}
-                            className="w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-green-500/30 hover:border-green-400/50 transition-all active:scale-90 cursor-pointer"
+                            className={`w-8 h-8 rounded-full backdrop-blur-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
+                              event.completed
+                                ? 'bg-green-500/40 border border-green-400/60 hover:bg-green-500/50'
+                                : 'bg-white/10 border border-white/20 hover:bg-green-500/30 hover:border-green-400/50'
+                            }`}
                             role="button"
-                            aria-label="Mark as complete"
+                            aria-label={event.completed ? "Mark as incomplete" : "Mark as complete"}
                             tabIndex={0}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
@@ -236,7 +259,11 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                               }
                             }}
                           >
-                            <Check className="w-4 h-4 text-white/70 hover:text-green-300" strokeWidth={2.5} />
+                            {event.completed ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-300" strokeWidth={2.5} />
+                            ) : (
+                              <Check className="w-4 h-4 text-white/70 hover:text-green-300" strokeWidth={2.5} />
+                            )}
                           </div>
                         )}
                         
