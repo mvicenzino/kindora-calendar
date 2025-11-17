@@ -21,6 +21,7 @@ import type { FamilyMember, Event, InsertEvent, Message } from "@shared/schema";
 interface TodayEvent {
   id: string;
   title: string;
+  description?: string;
   startTime: Date;
   endTime: Date;
   timeOfDay?: string;
@@ -217,6 +218,7 @@ export default function Home() {
       return {
         id: e.id,
         title: e.title,
+        description: e.description || undefined,
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
@@ -250,6 +252,7 @@ export default function Home() {
       return {
         id: e.id,
         title: e.title,
+        description: e.description || undefined,
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
@@ -282,6 +285,7 @@ export default function Home() {
       return {
         id: e.id,
         title: e.title,
+        description: e.description || undefined,
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,

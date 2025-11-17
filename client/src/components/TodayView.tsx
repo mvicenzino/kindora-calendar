@@ -18,6 +18,7 @@ interface FamilyMember {
 interface Event {
   id: string;
   title: string;
+  description?: string;
   startTime: Date;
   endTime: Date;
   timeOfDay?: string;
@@ -229,9 +230,15 @@ export default function TodayView({ date, events, tasks, messages, onEventClick,
                         {event.title}
                       </h3>
                     </div>
-                    <p className="text-sm text-white/80 mt-2 mb-12">
+                    <p className="text-sm text-white/80 mt-2">
                       {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
                     </p>
+                    {event.description && (
+                      <p className="text-xs text-white mt-2 mb-12 line-clamp-2">
+                        {event.description}
+                      </p>
+                    )}
+                    {!event.description && <div className="mb-12" />}
                   </div>
                 </button>
               );
