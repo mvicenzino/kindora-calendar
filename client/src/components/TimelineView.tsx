@@ -1,11 +1,25 @@
 import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Check } from "lucide-react";
 import type { Message } from "@shared/schema";
 import LoveNotePopup from "./LoveNotePopup";
 import EventThumbnail from "./EventThumbnail";
 import DeleteEventDialog from "./DeleteEventDialog";
+import { useToast } from "@/hooks/use-toast";
+
+const COMPLETION_MESSAGES = [
+  "Nice job!",
+  "You're killing it!",
+  "Well done!",
+  "Crushing it!",
+  "Way to go!",
+  "Awesome work!",
+  "You nailed it!",
+  "Great job!",
+  "Keep it up!",
+  "Fantastic!",
+];
 
 interface FamilyMember {
   id: string;
@@ -39,6 +53,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
   const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | undefined>();
+  const { toast } = useToast();
 
   const isSometimeToday = (event: Event) => {
     const startHour = event.startTime.getHours();
@@ -75,6 +90,20 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
     }
     setDeleteDialogOpen(false);
     setEventToDelete(undefined);
+  };
+
+  const handleCompleteClick = (e: React.MouseEvent, event: Event) => {
+    e.stopPropagation();
+    const randomMessage = COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)];
+    toast({
+      title: randomMessage,
+      description: `"${event.title}" is done!`,
+      duration: 2000,
+    });
+  };
+
+  const isEventPast = (event: Event) => {
+    return event.endTime < new Date();
   };
 
   // Track which events are first of their date for overlay pills
@@ -189,25 +218,48 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
                       className="relative w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left shadow-xl min-h-[120px]"
                       style={{ backgroundColor: color }}
                     >
-                      {/* Delete Icon - top right */}
-                      {onDeleteEvent && (
-                        <div
-                          onClick={(e) => handleDeleteClick(e, event)}
-                          data-testid={`delete-event-${event.id}`}
-                          className="absolute top-3 right-3 w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-red-500/30 hover:border-red-400/50 transition-all active:scale-90 z-20 cursor-pointer"
-                          role="button"
-                          aria-label="Delete event"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleDeleteClick(e as any, event);
-                            }
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4 text-white/70 hover:text-red-300" strokeWidth={2} />
-                        </div>
-                      )}
+                      {/* Action Icons - top right */}
+                      <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
+                        {/* Complete Icon - only for past events */}
+                        {isEventPast(event) && (
+                          <div
+                            onClick={(e) => handleCompleteClick(e, event)}
+                            data-testid={`complete-event-${event.id}`}
+                            className="w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-green-500/30 hover:border-green-400/50 transition-all active:scale-90 cursor-pointer"
+                            role="button"
+                            aria-label="Mark as complete"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleCompleteClick(e as any, event);
+                              }
+                            }}
+                          >
+                            <Check className="w-4 h-4 text-white/70 hover:text-green-300" strokeWidth={2.5} />
+                          </div>
+                        )}
+                        
+                        {/* Delete Icon */}
+                        {onDeleteEvent && (
+                          <div
+                            onClick={(e) => handleDeleteClick(e, event)}
+                            data-testid={`delete-event-${event.id}`}
+                            className="w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-red-500/30 hover:border-red-400/50 transition-all active:scale-90 cursor-pointer"
+                            role="button"
+                            aria-label="Delete event"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleDeleteClick(e as any, event);
+                              }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-white/70 hover:text-red-300" strokeWidth={2} />
+                          </div>
+                        )}
+                      </div>
 
                       {/* Love Note Bubble - moved to bottom-left */}
                       {eventMessage && (
