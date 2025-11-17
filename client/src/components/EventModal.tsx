@@ -143,14 +143,14 @@ export default function EventModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl">
-        <DialogHeader className="pb-4 border-b border-white/10 relative">
+      <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="pb-4 border-b border-white/10 relative flex-shrink-0">
           <DialogTitle className="text-2xl font-bold text-white pr-10">
             {event?.id ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-4">
+        <div className="space-y-5 py-4 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-2">
             <Label htmlFor="title" className="text-sm font-medium text-white/80">Event Title</Label>
             <Input
@@ -328,7 +328,7 @@ export default function EventModal({
 
         </div>
 
-        <div className="flex justify-between gap-3 pt-4 border-t border-white/10">
+        <div className="flex justify-between gap-3 pt-4 border-t border-white/10 flex-shrink-0">
           {event?.id && onDelete && (
             <Button
               variant="destructive"
