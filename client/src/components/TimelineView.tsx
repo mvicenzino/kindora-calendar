@@ -132,7 +132,7 @@ export default function TimelineView({ events, messages, onEventClick, onViewCha
         </div>
       )}
 
-      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-4xl mx-auto" style={{ paddingTop: onViewChange ? '7.5rem' : undefined }}>
+      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-4xl mx-auto" style={{ paddingTop: onViewChange ? '10rem' : undefined }}>
         {/* Header */}
         <div className="w-full px-1 sm:px-2 mb-6 sm:mb-8">
           <div className="flex items-start justify-between gap-3 sm:gap-6">

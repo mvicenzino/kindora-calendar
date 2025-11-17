@@ -157,7 +157,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
         </div>
       )}
 
-      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-2xl mx-auto" style={{ paddingTop: onViewChange ? '7.5rem' : undefined }}>
+      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-2xl mx-auto" style={{ paddingTop: onViewChange ? '10rem' : undefined }}>
         <div className="w-full space-y-4 sm:space-y-5">
           {/* Header */}
           <div className="px-1 sm:px-2">
