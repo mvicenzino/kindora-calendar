@@ -49,7 +49,13 @@ const getCurrentTimeRounded = () => {
 
 // Helper function to add hours to a time string
 const addHoursToTime = (timeStr: string, hours: number) => {
+  if (!timeStr || !timeStr.includes(':')) {
+    return timeStr; // Return original if invalid
+  }
   const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) {
+    return timeStr; // Return original if invalid
+  }
   const date = new Date();
   date.setHours(h + hours, m, 0, 0);
   return format(date, 'HH:mm');
@@ -113,6 +119,13 @@ export default function EventModal({
 
   const handleRemoveMember = (memberId: string) => {
     setMemberIds(prev => prev.filter(id => id !== memberId));
+  };
+
+  const handleStartTimeChange = (newStartTime: string) => {
+    setStartTime(newStartTime);
+    // Automatically set end time to 1 hour later
+    const newEndTime = addHoursToTime(newStartTime, 1);
+    setEndTime(newEndTime);
   };
 
   const filteredMembers = members.filter(member => 
@@ -304,7 +317,7 @@ export default function EventModal({
                 <Input
                   type="time"
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
+                  onChange={(e) => handleStartTimeChange(e.target.value)}
                   data-testid="input-start-time"
                   className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
                 />
