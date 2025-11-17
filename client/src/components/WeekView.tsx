@@ -88,7 +88,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
     onViewChange?.('day');
   };
 
-  // Group events by day and sort - show all days even if empty (latest first)
+  // Group events by day and sort - show all days in chronological order (Monday to Sunday)
   const eventsByDay = daysInWeek
     .map(day => {
       const dayEvents = events
@@ -99,8 +99,7 @@ export default function WeekView({ date, events, members, messages, onEventClick
         day,
         events: dayEvents
       };
-    })
-    .reverse(); // Reverse days so latest day (Sunday) appears first
+    }); // Days are now in order: Monday → Sunday
 
   // Get event color from member
   const getEventColor = (event: Event) => {
