@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { X } from "lucide-react";
+import { X, Images, Camera } from "lucide-react";
 import { format, startOfMonth, isSameMonth } from "date-fns";
 import { useState } from "react";
 
@@ -65,17 +65,24 @@ export default function MemoriesModal({ isOpen, onClose, events, members }: Memo
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-6xl max-h-[90vh] backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl flex flex-col">
           <DialogHeader className="pb-4 border-b border-white/10 relative flex-shrink-0">
-            <DialogTitle className="text-2xl font-bold text-white pr-10">
-              📸 Memories
-            </DialogTitle>
-            <p className="text-sm text-white/60 mt-1">Your photo scrapbook from special moments</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Images className="w-5 h-5 text-white" strokeWidth={2} />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl font-bold text-white">
+                  Memories
+                </DialogTitle>
+                <p className="text-sm text-white/60 mt-0.5">Your photo scrapbook from special moments</p>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-8">
             {sortedMonths.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-                <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-4">
-                  <span className="text-4xl">📷</span>
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-white/20 flex items-center justify-center mb-4">
+                  <Camera className="w-10 h-10 text-white/70" strokeWidth={1.5} />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">No Memories Yet</h3>
                 <p className="text-white/60 max-w-md">
