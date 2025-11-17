@@ -150,7 +150,7 @@ export default function EventModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-4 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-5 p-4 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-2">
             <Label htmlFor="title" className="text-sm font-medium text-white/80">Event Title</Label>
             <Input
