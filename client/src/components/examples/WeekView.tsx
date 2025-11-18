@@ -10,7 +10,7 @@ export default function WeekViewExample() {
   const mockEvents = [
     {
       id: '1',
-      title: 'Dinner with Carolyn',
+      title: 'Dinner with Emma',
       startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 17, 30),
       endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 19, 0),
       members: [mockMembers[0]],
@@ -45,7 +45,6 @@ export default function WeekViewExample() {
       date={new Date()}
       events={mockEvents}
       members={mockMembers}
-      messages={[]}
       onEventClick={(event) => console.log('Event clicked:', event.title)}
     />
   );

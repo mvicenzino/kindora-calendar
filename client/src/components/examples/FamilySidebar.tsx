@@ -7,7 +7,7 @@ export default function FamilySidebarExample() {
   const mockMembers = [
     { id: '1', name: 'Sarah Johnson', color: '#8B5CF6' },
     { id: '2', name: 'Mike Johnson', color: '#EC4899' },
-    { id: '3', name: 'Carolyn Johnson', color: '#10B981' },
+    { id: '3', name: 'Emma Johnson', color: '#10B981' },
     { id: '4', name: 'Noah Johnson', color: '#F59E0B' },
   ];
 

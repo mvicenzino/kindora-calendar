@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, Users, Trash2, UserPlus, X } from "lucide-react";
+import { Calendar, Clock, User, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect } from 'react';
 
@@ -21,8 +22,7 @@ interface Event {
   description?: string;
   startTime: Date;
   endTime: Date;
-  memberIds: string[];
-  photoUrl?: string;
+  memberId: string;
 }
 
 interface EventModalProps {
@@ -33,33 +33,7 @@ interface EventModalProps {
   event?: Event;
   members: FamilyMember[];
   selectedDate?: Date;
-  onAddMember?: () => void;
 }
-
-// Helper function to get current time rounded to nearest 15 minutes
-const getCurrentTimeRounded = () => {
-  const now = new Date();
-  const minutes = now.getMinutes();
-  const roundedMinutes = Math.round(minutes / 15) * 15;
-  now.setMinutes(roundedMinutes);
-  now.setSeconds(0);
-  now.setMilliseconds(0);
-  return format(now, 'HH:mm');
-};
-
-// Helper function to add hours to a time string
-const addHoursToTime = (timeStr: string, hours: number) => {
-  if (!timeStr || !timeStr.includes(':')) {
-    return timeStr; // Return original if invalid
-  }
-  const [h, m] = timeStr.split(':').map(Number);
-  if (isNaN(h) || isNaN(m)) {
-    return timeStr; // Return original if invalid
-  }
-  const date = new Date();
-  date.setHours(h + hours, m, 0, 0);
-  return format(date, 'HH:mm');
-};
 
 export default function EventModal({
   isOpen,
@@ -69,26 +43,22 @@ export default function EventModal({
   event,
   members,
   selectedDate,
-  onAddMember,
 }: EventModalProps) {
-  const defaultDate = (selectedDate && selectedDate instanceof Date && !isNaN(selectedDate.getTime())) 
-    ? selectedDate 
-    : new Date();
+  const defaultDate = selectedDate || new Date();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [memberIds, setMemberIds] = useState<string[]>([]);
+  const [memberId, setMemberId] = useState("");
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
-  const [startTime, setStartTime] = useState(() => getCurrentTimeRounded());
-  const [endTime, setEndTime] = useState(() => addHoursToTime(getCurrentTimeRounded(), 1));
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
   const [isSometimeToday, setIsSometimeToday] = useState(false);
-  const [memberSearchInput, setMemberSearchInput] = useState("");
 
   // Update form state when event prop changes
   useEffect(() => {
     if (event) {
       setTitle(event.title || "");
       setDescription(event.description || "");
-      setMemberIds(event.memberIds || []);
+      setMemberId(event.memberId || members[0]?.id || "");
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
@@ -97,41 +67,13 @@ export default function EventModal({
       // Reset form for new event
       setTitle("");
       setDescription("");
-      setMemberIds([]);
-      const validDate = (selectedDate && selectedDate instanceof Date && !isNaN(selectedDate.getTime())) 
-        ? selectedDate 
-        : new Date();
-      setStartDate(format(validDate, 'yyyy-MM-dd'));
-      const currentTime = getCurrentTimeRounded();
-      setStartTime(currentTime);
-      setEndTime(addHoursToTime(currentTime, 1));
+      setMemberId(members[0]?.id || "");
+      setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+      setStartTime('09:00');
+      setEndTime('10:00');
       setIsSometimeToday(false);
     }
-    setMemberSearchInput("");
-  }, [event, members, selectedDate, isOpen]);
-
-  const handleAddMember = (memberId: string) => {
-    if (!memberIds.includes(memberId)) {
-      setMemberIds(prev => [...prev, memberId]);
-    }
-    setMemberSearchInput("");
-  };
-
-  const handleRemoveMember = (memberId: string) => {
-    setMemberIds(prev => prev.filter(id => id !== memberId));
-  };
-
-  const handleStartTimeChange = (newStartTime: string) => {
-    setStartTime(newStartTime);
-    // Automatically set end time to 1 hour later
-    const newEndTime = addHoursToTime(newStartTime, 1);
-    setEndTime(newEndTime);
-  };
-
-  const filteredMembers = members.filter(member => 
-    member.name.toLowerCase().includes(memberSearchInput.toLowerCase()) &&
-    !memberIds.includes(member.id)
-  );
+  }, [event, members, selectedDate]);
 
   const handleSave = () => {
     // If "Sometime Today", use end of day times
@@ -147,157 +89,102 @@ export default function EventModal({
       description,
       startTime: startDateTime,
       endTime: endDateTime,
-      memberIds,
+      memberId,
     });
     onClose();
   };
 
-  const selectedMembers = members.filter(m => memberIds.includes(m.id));
+  const selectedMember = members.find(m => m.id === memberId);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 border-2 border-white/20 rounded-3xl shadow-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="pb-4 border-b border-white/10 relative flex-shrink-0">
-          <DialogTitle className="text-2xl font-bold text-white pr-10">
+      <DialogContent className="sm:max-w-2xl backdrop-blur-3xl bg-card/95 border-2 rounded-3xl shadow-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">
             {event?.id ? 'Edit Event' : 'Create New Event'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 p-4 overflow-y-auto flex-1 min-h-0">
+        <div className="space-y-6 py-4">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-sm font-medium text-white/80">Event Title</Label>
+            <Label htmlFor="title" className="text-sm font-medium">Event Title</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Team meeting, Soccer practice..."
               data-testid="input-event-title"
-              className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white placeholder:text-white/50"
+              className="backdrop-blur-md bg-background/50 rounded-xl"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium text-white/80">Description</Label>
+            <Label htmlFor="description" className="text-sm font-medium">Description</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add event details..."
               data-testid="input-event-description"
-              className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl resize-none text-white placeholder:text-white/50"
+              className="backdrop-blur-md bg-background/50 rounded-xl resize-none"
               rows={3}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-1.5 text-white/80">
-              <Calendar className="h-4 w-4 text-white/40" strokeWidth={1.5} />
-              Date
-            </Label>
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              data-testid="input-event-date"
-              className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Date
+              </Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                data-testid="input-event-date"
+                className="backdrop-blur-md bg-background/50 rounded-xl"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-2 text-white/80">
-              <Users className="h-4 w-4" />
-              Family Members
-            </Label>
-            {members.length === 0 ? (
-              <div className="p-6 rounded-xl backdrop-blur-md bg-white/10 border border-white/20 text-center space-y-3">
-                <div className="flex justify-center">
-                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                    <UserPlus className="w-6 h-6 text-white/70" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-white">No family members yet</p>
-                  <p className="text-xs text-white/60">Add family members to assign events</p>
-                </div>
-                {onAddMember && (
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      onAddMember();
-                    }}
-                    data-testid="button-add-member-from-event"
-                    className="w-full hover-elevate active-elevate-2"
-                  >
-                    <UserPlus className="w-4 h-4 mr-2" />
-                    Add Family Member
-                  </Button>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="relative">
-                  <Input
-                    value={memberSearchInput}
-                    onChange={(e) => setMemberSearchInput(e.target.value)}
-                    placeholder="Type to add family members..."
-                    data-testid="input-member-search"
-                    className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white placeholder:text-white/50"
-                  />
-                  {memberSearchInput && filteredMembers.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 rounded-xl backdrop-blur-xl bg-slate-800/95 border border-white/20 shadow-lg max-h-40 overflow-y-auto">
-                      {filteredMembers.map(member => (
-                        <button
-                          key={member.id}
-                          type="button"
-                          onClick={() => handleAddMember(member.id)}
-                          className="w-full flex items-center gap-2 p-2 hover-elevate text-left"
-                          data-testid={`member-option-${member.id}`}
-                        >
-                          <div 
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Family Member
+              </Label>
+              <Select value={memberId} onValueChange={setMemberId}>
+                <SelectTrigger 
+                  data-testid="select-family-member"
+                  className="backdrop-blur-md bg-background/50 rounded-xl"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="backdrop-blur-xl">
+                  {members.map(member => (
+                    <SelectItem key={member.id} value={member.id}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6 ring-1" style={{ '--tw-ring-color': member.color } as React.CSSProperties}>
+                          <AvatarFallback 
+                            className="text-xs text-white"
                             style={{ backgroundColor: member.color }}
                           >
                             {member.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <span className="text-sm text-white">{member.name}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {memberIds.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {selectedMembers.map(member => (
-                      <Badge
-                        key={member.id}
-                        variant="secondary"
-                        className="pl-2 pr-1 py-1 rounded-full backdrop-blur-md bg-white/10 border border-white/20 text-white hover-elevate"
-                        data-testid={`member-tag-${member.id}`}
-                      >
-                        <span className="text-sm">{member.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveMember(member.id)}
-                          className="ml-1 rounded-full p-0.5 hover:bg-white/20 transition-colors"
-                          data-testid={`remove-member-${member.id}`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        {member.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between p-4 rounded-xl backdrop-blur-md bg-white/10 border border-white/20">
+          <div className="flex items-center justify-between p-4 rounded-xl backdrop-blur-md bg-background/50">
             <div className="space-y-0.5">
-              <Label htmlFor="sometime-today" className="text-sm font-medium cursor-pointer text-white">
+              <Label htmlFor="sometime-today" className="text-sm font-medium cursor-pointer">
                 Sometime Today
               </Label>
-              <p className="text-xs text-white/60">No specific time needed</p>
+              <p className="text-xs text-muted-foreground">No specific time needed</p>
             </div>
             <Switch
               id="sometime-today"
@@ -308,24 +195,24 @@ export default function EventModal({
           </div>
 
           {!isSometimeToday && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5 text-white/80">
-                  <Clock className="h-4 w-4 text-white/40" strokeWidth={1.5} />
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
                   Start Time
                 </Label>
                 <Input
                   type="time"
                   value={startTime}
-                  onChange={(e) => handleStartTimeChange(e.target.value)}
+                  onChange={(e) => setStartTime(e.target.value)}
                   data-testid="input-start-time"
-                  className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
+                  className="backdrop-blur-md bg-background/50 rounded-xl"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-1.5 text-white/80">
-                  <Clock className="h-4 w-4 text-white/40" strokeWidth={1.5} />
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
                   End Time
                 </Label>
                 <Input
@@ -333,15 +220,48 @@ export default function EventModal({
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
                   data-testid="input-end-time"
-                  className="backdrop-blur-md bg-white/10 border-white/20 rounded-xl text-white"
+                  className="backdrop-blur-md bg-background/50 rounded-xl"
                 />
               </div>
             </div>
           )}
 
+          {selectedMember && startDate && (
+            <div className="p-4 rounded-2xl backdrop-blur-md" style={{ 
+              backgroundColor: `${selectedMember.color}10`,
+              borderColor: `${selectedMember.color}30`
+            }}>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 ring-2" style={{ '--tw-ring-color': selectedMember.color } as React.CSSProperties}>
+                  <AvatarFallback 
+                    className="text-white font-semibold"
+                    style={{ backgroundColor: selectedMember.color }}
+                  >
+                    {selectedMember.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="text-sm font-medium">Assigned to {selectedMember.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {(() => {
+                      if (isSometimeToday) {
+                        const eventDate = new Date(`${startDate}T09:00`);
+                        return `${format(eventDate, 'PPP')} - Sometime today`;
+                      }
+                      if (startTime) {
+                        const eventDate = new Date(`${startDate}T${startTime}`);
+                        return !isNaN(eventDate.getTime()) ? `${format(eventDate, 'PPP')} at ${startTime}` : 'Select date and time';
+                      }
+                      return 'Select date and time';
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex justify-between gap-3 pt-4 border-t border-white/10 flex-shrink-0">
+        <div className="flex justify-between gap-3">
           {event?.id && onDelete && (
             <Button
               variant="destructive"
@@ -362,13 +282,13 @@ export default function EventModal({
               variant="outline"
               onClick={onClose}
               data-testid="button-cancel"
-              className="backdrop-blur-md border-white/30 text-white hover:text-white hover-elevate active-elevate-2"
+              className="backdrop-blur-md hover-elevate active-elevate-2"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!title || memberIds.length === 0}
+              disabled={!title || !memberId}
               data-testid="button-save-event"
               className="hover-elevate active-elevate-2"
             >

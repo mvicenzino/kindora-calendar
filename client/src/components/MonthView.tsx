@@ -1,9 +1,5 @@
-import { useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter, isToday } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter } from "date-fns";
 import { Plus } from "lucide-react";
-import type { Message } from "@shared/schema";
-import LoveNotePopup from "./LoveNotePopup";
-import EventThumbnail from "./EventThumbnail";
 
 interface FamilyMember {
   id: string;
@@ -19,26 +15,18 @@ interface Event {
   endTime: Date;
   members: FamilyMember[];
   categories?: string[];
-  photoUrl?: string;
 }
 
 interface MonthViewProps {
   date: Date;
   events: Event[];
   members: FamilyMember[];
-  messages: Message[];
   onEventClick: (event: Event) => void;
-  onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
-  onAddEvent?: (date?: Date) => void;
-  onDateSelect?: (date: Date) => void;
+  onViewChange?: (view: 'day' | 'week' | 'month') => void;
+  onAddEvent?: () => void;
 }
 
-export default function MonthView({ date, events, members, messages, onEventClick, onViewChange, onAddEvent, onDateSelect }: MonthViewProps) {
-  const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
-  const [hoveredDay, setHoveredDay] = useState<Date | null>(null);
-  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number; showAbove?: boolean } | null>(null);
-  
+export default function MonthView({ date, events, members, onEventClick, onViewChange, onAddEvent }: MonthViewProps) {
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const calendarStart = startOfWeek(monthStart);
@@ -48,52 +36,6 @@ export default function MonthView({ date, events, members, messages, onEventClic
   // Get events for a specific day
   const getEventsForDay = (day: Date) => {
     return events.filter(e => isSameDay(new Date(e.startTime), day));
-  };
-
-  // Find message with emoji for a given event
-  const getEventMessage = (eventId: string) => {
-    return messages.find(m => m.eventId === eventId && m.emoji);
-  };
-
-  const handleEmojiClick = (e: React.MouseEvent, message: Message) => {
-    e.stopPropagation();
-    setSelectedMessage(message);
-    setLoveNotePopupOpen(true);
-  };
-
-  const handleDayMouseEnter = (day: Date, e: React.MouseEvent<HTMLButtonElement>) => {
-    const dayEvents = getEventsForDay(day);
-    if (dayEvents.length > 0) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const panelWidth = 256; // 16rem = 256px
-      const viewportPadding = 16; // Min distance from viewport edge
-      
-      // Calculate centered X position
-      let x = rect.left + rect.width / 2;
-      
-      // Clamp X to viewport boundaries
-      const minX = viewportPadding + panelWidth / 2;
-      const maxX = window.innerWidth - viewportPadding - panelWidth / 2;
-      x = Math.max(minX, Math.min(maxX, x));
-      
-      // Determine if panel should appear above or below
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const spaceAbove = rect.top;
-      const panelHeight = 280; // Approximate max height
-      const showAbove = spaceBelow < panelHeight && spaceAbove > spaceBelow;
-      
-      setHoveredDay(day);
-      setHoverPosition({
-        x,
-        y: showAbove ? rect.top - 8 : rect.bottom + 8,
-        showAbove
-      });
-    }
-  };
-
-  const handleDayMouseLeave = () => {
-    setHoveredDay(null);
-    setHoverPosition(null);
   };
 
   // Get upcoming events (sorted by time, only future events)
@@ -116,65 +58,22 @@ export default function MonthView({ date, events, members, messages, onEventClic
   };
 
   return (
-    <div className="min-h-full">
-      {/* Fixed View Toggle Below Header */}
-      {onViewChange && (
-        <div className="fixed top-[4.5rem] left-0 right-0 z-40 px-4 sm:px-6 pt-4 pb-3 backdrop-blur-xl bg-gradient-to-b from-black/40 via-black/30 to-transparent">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2 shadow-lg shadow-black/20">
-              <button
-                type="button"
-                onClick={() => onViewChange('day')}
-                data-testid="button-view-day"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-              >
-                Day
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewChange('week')}
-                data-testid="button-view-week"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-              >
-                Week
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewChange('month')}
-                data-testid="button-view-month"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
-              >
-                Month
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewChange('timeline')}
-                data-testid="button-view-timeline"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-              >
-                Timeline
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-2xl mx-auto" style={{ paddingTop: onViewChange ? '10rem' : undefined }}>
-        <div className="w-full space-y-4 sm:space-y-5">
-          {/* Header */}
-          <div className="px-1 sm:px-2">
-          <div className="flex items-center gap-3 sm:gap-6">
-            <div className="flex-1">
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Header */}
+        <div className="px-2">
+          <div className="flex items-center gap-6">
+            <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
                 MONTH
               </p>
-              <h1 className="text-4xl sm:text-5xl font-bold text-white">
+              <h1 className="text-5xl font-bold text-white">
                 {format(date, 'MMMM yyyy')}
               </h1>
             </div>
             {onAddEvent && (
               <button
-                onClick={() => onAddEvent()}
+                onClick={onAddEvent}
                 data-testid="button-add-event"
                 className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
               >
@@ -201,52 +100,26 @@ export default function MonthView({ date, events, members, messages, onEventClic
               const dayEvents = getEventsForDay(day);
               const hasEvents = dayEvents.length > 0;
               const isCurrentMonth = isSameMonth(day, date);
-              const isTodayDate = isToday(day);
               const bgColor = getDayBackgroundColor(dayEvents);
 
               return (
                 <button
                   key={day.toISOString()}
-                  onClick={() => {
-                    if (onDateSelect) {
-                      onDateSelect(day);
-                    } else if (hasEvents) {
-                      onEventClick(dayEvents[0]);
-                    } else if (onAddEvent) {
-                      onAddEvent(day);
-                    }
-                  }}
-                  onMouseEnter={(e) => handleDayMouseEnter(day, e)}
-                  onMouseLeave={handleDayMouseLeave}
+                  onClick={() => hasEvents && onEventClick(dayEvents[0])}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
-                  className={`aspect-square rounded-xl backdrop-blur-md border transition-all flex flex-col items-center justify-center p-1 hover:bg-white/10 active:scale-95 ${
-                    isTodayDate ? 'ring-2 ring-white/60 shadow-lg shadow-white/20' : ''
-                  }`}
+                  className="aspect-square rounded-xl backdrop-blur-md border transition-all"
                   style={{
-                    backgroundColor: isTodayDate 
-                      ? 'rgba(255, 255, 255, 0.25)' 
-                      : bgColor,
-                    borderColor: isTodayDate 
-                      ? 'rgba(255, 255, 255, 0.7)' 
-                      : hasEvents 
-                        ? 'rgba(255, 255, 255, 0.5)' 
-                        : 'rgba(255, 255, 255, 0.15)',
-                    opacity: isCurrentMonth ? 1 : 0.35,
-                    cursor: 'pointer',
+                    backgroundColor: bgColor,
+                    borderColor: hasEvents ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.15)',
+                    opacity: isCurrentMonth ? 1 : 0.4,
+                    cursor: hasEvents ? 'pointer' : 'default',
+                    transform: 'scale(1)',
                   }}
                 >
-                  <span className={`text-sm font-medium ${isTodayDate ? 'text-white font-bold' : hasEvents ? 'text-white' : 'text-white/60'}`}>
-                    {format(day, 'd')}
-                  </span>
-                  {hasEvents && dayEvents.length > 1 && (
-                    <div className="flex gap-0.5 mt-1">
-                      {dayEvents.slice(0, 3).map((_, idx) => (
-                        <div 
-                          key={idx}
-                          className="w-1 h-1 rounded-full bg-white/70"
-                        />
-                      ))}
-                    </div>
+                  {hasEvents && (
+                    <span className="text-lg font-semibold text-white">
+                      {format(day, 'd')}
+                    </span>
                   )}
                 </button>
               );
@@ -261,239 +134,60 @@ export default function MonthView({ date, events, members, messages, onEventClic
               UPCOMING
             </p>
             <div className="space-y-2">
-              {upcomingEvents.map((event) => {
-                const eventMessage = getEventMessage(event.id);
-                
-                return (
-                  <button
-                    key={event.id}
-                    onClick={() => onEventClick(event)}
-                    data-testid={`upcoming-event-${event.id}`}
-                    className="w-full rounded-2xl p-4 sm:p-5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left relative min-h-[90px]"
-                  >
-                    {/* Love Note Bubble - moved to bottom-left */}
-                    {eventMessage && (
+              {upcomingEvents.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => onEventClick(event)}
+                  data-testid={`upcoming-event-${event.id}`}
+                  className="w-full rounded-2xl p-4 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
                       <div
-                        onClick={(e) => handleEmojiClick(e, eventMessage)}
-                        data-testid={`love-note-bubble-${event.id}`}
-                        className="absolute bottom-3 left-3 flex items-center gap-2 px-2.5 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[140px] cursor-pointer"
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleEmojiClick(e as any, eventMessage);
-                          }
-                        }}
-                        aria-label="View love note"
-                      >
-                        <span className="text-base flex-shrink-0">{eventMessage.emoji}</span>
-                        <span className="text-[10px] text-white/90 truncate font-medium">
-                          {eventMessage.content}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Member avatars - horizontal layout */}
-                    <div className="absolute right-3 bottom-3 flex flex-row-reverse -space-x-2 space-x-reverse">
-                      {event.members.map((member) => (
-                        <div
-                          key={member.id}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.initials}
-                        </div>
-                      ))}
+                        className="w-10 h-10 rounded-lg"
+                        style={{ backgroundColor: event.members[0]?.color || '#6D7A8E' }}
+                      />
+                      <span className="text-base font-medium text-white">
+                        {event.title}
+                      </span>
                     </div>
-                    
-                    <div className="pr-14 sm:pr-16">
-                      <div className="flex items-start gap-2 mb-2">
-                        <EventThumbnail photoUrl={event.photoUrl} />
-                        <h3 className="text-base font-medium text-white line-clamp-2 leading-snug flex-1">
-                          {event.title}
-                        </h3>
-                      </div>
-                      <p className="text-sm text-white/80 mt-2 mb-12">
-                        {format(event.startTime, 'h:mm a')}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
+                    <span className="text-sm text-white/80">
+                      {format(event.startTime, 'h:mm a')}
+                    </span>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         )}
-        </div>
-      </div>
-      
-      {/* Desktop Hover Panel */}
-      {hoveredDay && hoverPosition && (
-        <div
-          className="hidden md:block fixed z-50 pointer-events-none"
-          style={{
-            left: `${hoverPosition.x}px`,
-            top: hoverPosition.showAbove ? undefined : `${hoverPosition.y}px`,
-            bottom: hoverPosition.showAbove ? `${window.innerHeight - hoverPosition.y}px` : undefined,
-            transform: 'translateX(-50%)',
-          }}
-        >
-          {/* Panel Content (show above if needed) */}
-          {hoverPosition.showAbove && (
-            <>
-              {/* Panel Content */}
-              <div className="w-64 backdrop-blur-xl bg-white/20 border border-white/40 rounded-lg shadow-2xl shadow-black/40 overflow-hidden mb-1.5">
-                {/* Date Header */}
-                <div className="px-4 py-2.5 bg-white/10 border-b border-white/20">
-                  <p className="text-sm font-semibold text-white">
-                    {format(hoveredDay, 'EEEE, MMMM d')}
-                  </p>
-                </div>
-                
-                {/* Events List */}
-                <div className="p-2 space-y-1.5 max-h-64 overflow-y-auto">
-                  {getEventsForDay(hoveredDay).map((event) => {
-                    const eventMessage = getEventMessage(event.id);
-                    
-                    return (
-                      <div
-                        key={event.id}
-                        className="rounded-md p-2.5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
-                      >
-                        <div className="flex items-start gap-2">
-                          {event.photoUrl && (
-                            <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden">
-                              <img src={event.photoUrl} alt="" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                          
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-white line-clamp-2 leading-tight">
-                              {event.title}
-                            </h4>
-                            <p className="text-xs text-white/70 mt-0.5">
-                              {format(event.startTime, 'h:mm a')}
-                            </p>
-                          </div>
-                          
-                          <div className="flex flex-row-reverse -space-x-1 space-x-reverse flex-shrink-0">
-                            {event.members.slice(0, 2).map((member) => (
-                              <div
-                                key={member.id}
-                                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/40"
-                                style={{ backgroundColor: member.color }}
-                                title={member.name}
-                              >
-                                {member.initials}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {eventMessage && (
-                          <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded bg-white/10 border border-white/20">
-                            <span className="text-xs">{eventMessage.emoji}</span>
-                            <span className="text-[10px] text-white/80 truncate">
-                              {eventMessage.content}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Pointer Arrow (below panel when showing above) */}
-              <div 
-                className="w-3 h-3 bg-white/20 backdrop-blur-xl border-r border-b border-white/40 mx-auto -mt-1.5"
-                style={{ transform: 'rotate(45deg)' }}
-              />
-            </>
-          )}
-          
-          {/* Default: Show below */}
-          {!hoverPosition.showAbove && (
-            <>
-              {/* Pointer Arrow */}
-              <div 
-                className="w-3 h-3 bg-white/20 backdrop-blur-xl border-l border-t border-white/40 mx-auto"
-                style={{ transform: 'translateY(-1px) rotate(45deg)' }}
-              />
-              
-              {/* Panel Content */}
-              <div className="w-64 backdrop-blur-xl bg-white/20 border border-white/40 rounded-lg shadow-2xl shadow-black/40 overflow-hidden -mt-1.5">
-                {/* Date Header */}
-                <div className="px-4 py-2.5 bg-white/10 border-b border-white/20">
-                  <p className="text-sm font-semibold text-white">
-                    {format(hoveredDay, 'EEEE, MMMM d')}
-                  </p>
-                </div>
-                
-                {/* Events List */}
-                <div className="p-2 space-y-1.5 max-h-64 overflow-y-auto">
-                  {getEventsForDay(hoveredDay).map((event) => {
-                    const eventMessage = getEventMessage(event.id);
-                    
-                    return (
-                      <div
-                        key={event.id}
-                        className="rounded-md p-2.5 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all"
-                      >
-                        <div className="flex items-start gap-2">
-                          {event.photoUrl && (
-                            <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden">
-                              <img src={event.photoUrl} alt="" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                          
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm font-medium text-white line-clamp-2 leading-tight">
-                              {event.title}
-                            </h4>
-                            <p className="text-xs text-white/70 mt-0.5">
-                              {format(event.startTime, 'h:mm a')}
-                            </p>
-                          </div>
-                          
-                          <div className="flex flex-row-reverse -space-x-1 space-x-reverse flex-shrink-0">
-                            {event.members.slice(0, 2).map((member) => (
-                              <div
-                                key={member.id}
-                                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/40"
-                                style={{ backgroundColor: member.color }}
-                                title={member.name}
-                              >
-                                {member.initials}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {eventMessage && (
-                          <div className="mt-2 flex items-center gap-1.5 px-2 py-1 rounded bg-white/10 border border-white/20">
-                            <span className="text-xs">{eventMessage.emoji}</span>
-                            <span className="text-[10px] text-white/80 truncate">
-                              {eventMessage.content}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
 
-      {/* Love Note Popup */}
-      <LoveNotePopup
-        isOpen={loveNotePopupOpen}
-        onClose={() => setLoveNotePopupOpen(false)}
-        message={selectedMessage}
-      />
+        {/* View Toggle */}
+        {onViewChange && (
+          <div className="flex gap-3 pt-4 rounded-3xl bg-white/10 backdrop-blur-md p-2">
+            <button
+              onClick={() => onViewChange('day')}
+              data-testid="button-view-day"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Day
+            </button>
+            <button
+              onClick={() => onViewChange('week')}
+              data-testid="button-view-week"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Week
+            </button>
+            <button
+              onClick={() => onViewChange('month')}
+              data-testid="button-view-month"
+              className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98]"
+            >
+              Month
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,28 +1,7 @@
-import { useState } from "react";
 import { format, isToday } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Plus, Trash2, Check, CheckCircle2 } from "lucide-react";
-import type { Message } from "@shared/schema";
-import LoveNotePopup from "./LoveNotePopup";
-import EventThumbnail from "./EventThumbnail";
-import DeleteEventDialog from "./DeleteEventDialog";
-import { useToast } from "@/hooks/use-toast";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-
-const COMPLETION_MESSAGES = [
-  "Nice job!",
-  "You're killing it!",
-  "Well done!",
-  "Crushing it!",
-  "Way to go!",
-  "Awesome work!",
-  "You nailed it!",
-  "Great job!",
-  "Keep it up!",
-  "Fantastic!",
-];
+import { Clock, Plus } from "lucide-react";
 
 interface FamilyMember {
   id: string;
@@ -34,317 +13,198 @@ interface FamilyMember {
 interface Event {
   id: string;
   title: string;
-  description?: string;
   startTime: Date;
   endTime: Date;
   timeOfDay?: string;
   members: FamilyMember[];
   categories?: string[];
   isFocus?: boolean;
-  photoUrl?: string;
-  completed?: boolean;
 }
 
 interface TodayViewProps {
   date: Date;
   events: Event[];
   tasks: string[];
-  messages: Message[];
   onEventClick: (event: Event) => void;
-  onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
+  onViewChange?: (view: 'day' | 'week' | 'month') => void;
   onAddEvent?: () => void;
-  onDeleteEvent?: (eventId: string) => void;
 }
 
-export default function TodayView({ date, events, tasks, messages, onEventClick, onViewChange, onAddEvent, onDeleteEvent }: TodayViewProps) {
-  const [loveNotePopupOpen, setLoveNotePopupOpen] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<Message | undefined>();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<Event | undefined>();
-  const { toast } = useToast();
-  
-  const completeMutation = useMutation({
-    mutationFn: async (eventId: string) => {
-      const res = await apiRequest('PUT', `/api/events/${eventId}/complete`);
-      return await res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-    },
-  });
-  
+export default function TodayView({ date, events, tasks, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
   const isViewingToday = isToday(date);
   const dayTitle = isViewingToday ? "Today" : format(date, 'EEEE');
-  const daySubtitle = format(date, 'EEEE, MMMM d, yyyy');
+  const daySubtitle = isViewingToday ? undefined : format(date, 'MMM d, yyyy');
 
-  // Find message with emoji for a given event
-  const getEventMessage = (eventId: string) => {
-    return messages.find(m => m.eventId === eventId && m.emoji);
-  };
-
-  const handleEmojiClick = (e: React.MouseEvent, message: Message) => {
-    e.stopPropagation();
-    setSelectedMessage(message);
-    setLoveNotePopupOpen(true);
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent, event: Event) => {
-    e.stopPropagation();
-    setEventToDelete(event);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = () => {
-    if (eventToDelete && onDeleteEvent) {
-      onDeleteEvent(eventToDelete.id);
-    }
-    setDeleteDialogOpen(false);
-    setEventToDelete(undefined);
-  };
-
-  const handleCompleteClick = (e: React.MouseEvent, event: Event) => {
-    e.stopPropagation();
-    completeMutation.mutate(event.id);
-    
-    if (!event.completed) {
-      const randomMessage = COMPLETION_MESSAGES[Math.floor(Math.random() * COMPLETION_MESSAGES.length)];
-      toast({
-        title: randomMessage,
-        description: `"${event.title}" is done!`,
-        duration: 2000,
-      });
-    }
-  };
-
-  // Check if event has passed
-  const isEventPast = (event: Event) => {
-    return event.endTime < new Date();
-  };
-
-  // Check if event is "Sometime Today" (23:58-23:59)
+  // Separate "Sometime Today" events (23:58-23:59) from timed events
   const isSometimeTodayEvent = (event: Event) => {
-    const startHour = event.startTime.getHours();
-    const startMinute = event.startTime.getMinutes();
-    const endHour = event.endTime.getHours();
-    const endMinute = event.endTime.getMinutes();
-    return startHour === 23 && startMinute === 58 && endHour === 23 && endMinute === 59;
+    const hour = event.startTime.getHours();
+    const minute = event.startTime.getMinutes();
+    return hour === 23 && minute === 58;
+  };
+
+  const timedEvents = events.filter(e => !isSometimeTodayEvent(e));
+  const sometimeTodayEvents = events.filter(e => isSometimeTodayEvent(e));
+
+  const formatTimeRange = (start: Date, end: Date) => {
+    return `${format(start, 'h:mm')} ${format(start, 'a')} - ${format(end, 'h:mm')} ${format(end, 'a')}`;
+  };
+
+  const getTimeOfDay = (time: Date) => {
+    const hour = time.getHours();
+    if (hour < 12) return 'Morning';
+    if (hour < 17) return 'Afternoon';
+    return 'Evening';
   };
 
   return (
-    <div className="min-h-full">
-      {/* Fixed View Toggle Below Header */}
-      {onViewChange && (
-        <div className="fixed top-[4.5rem] left-0 right-0 z-40 px-4 sm:px-6 pt-4 pb-3 backdrop-blur-xl bg-gradient-to-b from-black/40 via-black/30 to-transparent">
-          <div className="max-w-2xl mx-auto">
-            <div className="flex items-center gap-1.5 sm:gap-2 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md p-1.5 sm:p-2 shadow-lg shadow-black/20">
-              <button
-                type="button"
-                onClick={() => onViewChange('day')}
-                data-testid="button-view-day"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/15 border border-white/40 text-sm font-medium text-white transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/20 md:hover:border-white/50"
-              >
-                Day
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewChange('week')}
-                data-testid="button-view-week"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-              >
-                Week
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewChange('month')}
-                data-testid="button-view-month"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-              >
-                Month
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewChange('timeline')}
-                data-testid="button-view-timeline"
-                className="flex-1 py-2.5 sm:py-2 rounded-xl sm:rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98] cursor-pointer touch-manipulation md:hover:bg-white/25 md:hover:backdrop-blur-xl md:hover:border-white/40 md:hover:text-white"
-              >
-                Timeline
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="px-4 sm:px-6 py-4 sm:py-6 max-w-2xl mx-auto" style={{ paddingTop: onViewChange ? '10rem' : undefined }}>
-        <div className="w-full space-y-4 sm:space-y-5">
-          {/* Header */}
-          <div className="px-1 sm:px-2">
-            <div className="flex items-start gap-3 sm:gap-6">
-              <div className="flex-1">
-                <h1 className="text-4xl sm:text-5xl font-bold text-white">{dayTitle}</h1>
-                <p className="text-base sm:text-lg text-white/70 mt-0.5 sm:mt-1">{daySubtitle}</p>
-              </div>
-              {onAddEvent && (
-                <button
-                  type="button"
-                  onClick={onAddEvent}
-                  data-testid="button-add-event"
-                  className="w-11 h-11 sm:w-10 sm:h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-1 sm:mt-2 touch-manipulation"
-                  aria-label="Add event"
-                >
-                  <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
-                </button>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Header */}
+        <div className="px-2">
+          <div className="flex items-start gap-6">
+            <div>
+              <h1 className="text-5xl font-bold text-white">{dayTitle}</h1>
+              {daySubtitle && (
+                <p className="text-lg text-white/70 mt-1">{daySubtitle}</p>
               )}
             </div>
+            {onAddEvent && (
+              <button
+                onClick={onAddEvent}
+                data-testid="button-add-event"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
+              >
+                <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+              </button>
+            )}
           </div>
+        </div>
 
-        {/* All Events */}
-        {events.length > 0 && (
-          <div className="space-y-2 sm:space-y-3">
-            {events.map((event: Event) => {
-              const eventMessage = getEventMessage(event.id);
-              const eventColor = event.members[0]?.color || '#6D7A8E';
-              const isSometime = isSometimeTodayEvent(event);
-              
+        {/* Timed Events */}
+        {timedEvents.length > 0 && (
+          <div className="space-y-3">
+            {timedEvents.map((event, idx) => {
+              const eventColors = [
+                '#7A8A7D', // brownish-green for Brunch
+                '#5D6D7E', // blue-gray for Meeting
+                '#7A8A7D', // brownish-green for Birthday
+                '#5D7A8E', // blue for Gym
+              ];
               return (
                 <button
-                  type="button"
                   key={event.id}
                   onClick={() => onEventClick(event)}
                   data-testid={`event-${event.id}`}
-                  className={`w-full rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left touch-manipulation relative min-h-[100px] ${
-                    event.completed ? 'opacity-50 grayscale' : ''
-                  }`}
-                  style={{ backgroundColor: eventColor }}
+                  className="w-full rounded-3xl p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
+                  style={{ backgroundColor: eventColors[idx % eventColors.length] }}
                 >
-                  {/* Action Icons - top right */}
-                  <div className="absolute top-3 right-3 flex items-center gap-2 z-20">
-                    {/* Complete Icon - only for past events */}
-                    {isEventPast(event) && (
-                      <div
-                        onClick={(e) => handleCompleteClick(e, event)}
-                        data-testid={`complete-event-${event.id}`}
-                        className={`w-8 h-8 rounded-full backdrop-blur-xl flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
-                          event.completed
-                            ? 'bg-green-500/40 border border-green-400/60 hover:bg-green-500/50'
-                            : 'bg-white/10 border border-white/20 hover:bg-green-500/30 hover:border-green-400/50'
-                        }`}
-                        role="button"
-                        aria-label={event.completed ? "Mark as incomplete" : "Mark as complete"}
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleCompleteClick(e as any, event);
-                          }
-                        }}
-                      >
-                        {event.completed ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-300" strokeWidth={2.5} />
-                        ) : (
-                          <Check className="w-4 h-4 text-white/70 hover:text-green-300" strokeWidth={2.5} />
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Delete Icon */}
-                    {onDeleteEvent && (
-                      <div
-                        onClick={(e) => handleDeleteClick(e, event)}
-                        data-testid={`delete-event-${event.id}`}
-                        className="w-8 h-8 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center hover:bg-red-500/30 hover:border-red-400/50 transition-all active:scale-90 cursor-pointer"
-                        role="button"
-                        aria-label="Delete event"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleDeleteClick(e as any, event);
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-white/70 hover:text-red-300" strokeWidth={2} />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Love Note Bubble - moved to bottom-left */}
-                  {eventMessage && (
-                    <div
-                      onClick={(e) => handleEmojiClick(e, eventMessage)}
-                      data-testid={`love-note-bubble-${event.id}`}
-                      className="absolute bottom-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-xl bg-white/20 border border-white/30 hover:bg-white/30 hover:scale-105 transition-all active:scale-95 z-20 max-w-[160px] cursor-pointer"
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleEmojiClick(e as any, eventMessage);
-                        }
-                      }}
-                      aria-label="View love note"
-                    >
-                      <span className="text-lg flex-shrink-0">{eventMessage.emoji}</span>
-                      <span className="text-xs text-white/90 truncate font-medium">
-                        {eventMessage.content}
-                      </span>
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-xl font-semibold text-white flex-1">
+                      {event.title}
+                    </h3>
+                    <div className="flex items-center gap-2 ml-3">
+                      {event.categories && event.categories.length > 0 && (
+                        <span className="text-sm text-white/80">
+                          {event.categories[0]}
+                        </span>
+                      )}
+                      {event.members.map(member => (
+                        <div
+                          key={member.id}
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white border border-white/30"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.initials}
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  
-                  {/* Member avatars - horizontal layout */}
-                  <div className="absolute right-3 bottom-3 flex flex-row-reverse -space-x-2 space-x-reverse">
-                    {event.members.map((member: FamilyMember) => (
-                      <div
-                        key={member.id}
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/40"
-                        style={{ backgroundColor: member.color }}
-                      >
-                        {member.initials}
-                      </div>
-                    ))}
                   </div>
-                  
-                  <div className="pr-14 sm:pr-16">
-                    <div className="flex items-start gap-2 mb-2">
-                      <EventThumbnail photoUrl={event.photoUrl} />
-                      <h3 className="text-lg sm:text-xl font-semibold text-white line-clamp-2 leading-snug flex-1">
-                        {event.title}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-white/80 mt-2">
-                      {isSometime ? 'Sometime today' : `${format(event.startTime, 'h:mm a')}–${format(event.endTime, 'h:mm a')}`}
-                    </p>
-                    {event.description && (
-                      <p className="text-xs text-white mt-2 mb-12 line-clamp-2">
-                        {event.description}
-                      </p>
-                    )}
-                    {!event.description && <div className="mb-12" />}
-                  </div>
+                  <p className="text-sm text-white/80">
+                    {format(event.startTime, 'h:mm a')}–{format(event.endTime, 'h:mm a')}
+                  </p>
                 </button>
               );
             })}
           </div>
         )}
-        </div>
-      </div>
-      
-      {/* Love Note Popup */}
-      <LoveNotePopup
-        isOpen={loveNotePopupOpen}
-        onClose={() => setLoveNotePopupOpen(false)}
-        message={selectedMessage}
-      />
 
-      {/* Delete Confirmation Dialog */}
-      <DeleteEventDialog
-        isOpen={deleteDialogOpen}
-        onClose={() => {
-          setDeleteDialogOpen(false);
-          setEventToDelete(undefined);
-        }}
-        onConfirm={handleConfirmDelete}
-        eventTitle={eventToDelete?.title || ""}
-      />
+        {/* Sometime Today */}
+        {sometimeTodayEvents.length > 0 && (
+          <div className="space-y-3 pt-6">
+            <div className="px-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
+                Sometime Today
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {sometimeTodayEvents.map((event, idx) => {
+                const complementaryColors = [
+                  '#9A7A8D', // muted purple-pink
+                  '#7A8A9D', // soft blue-gray
+                  '#8A9A7D', // sage green
+                  '#9D8A7A', // warm taupe
+                ];
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => onEventClick(event)}
+                    data-testid={`sometime-event-${event.id}`}
+                    className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md"
+                    style={{ backgroundColor: complementaryColors[idx % complementaryColors.length] }}
+                  >
+                    <div className="flex items-start justify-between mb-1">
+                      <h4 className="text-sm font-semibold text-white flex-1 leading-tight">
+                        {event.title}
+                      </h4>
+                      {event.members.map(member => (
+                        <div
+                          key={member.id}
+                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/30 ml-1"
+                          style={{ backgroundColor: member.color }}
+                        >
+                          {member.initials}
+                        </div>
+                      ))}
+                    </div>
+                    {event.categories && event.categories.length > 0 && (
+                      <span className="text-[10px] text-white/70">
+                        {event.categories[0]}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* View Toggle */}
+        {onViewChange && (
+          <div className="flex gap-3 pt-4 rounded-3xl bg-white/10 backdrop-blur-md p-2">
+            <button
+              onClick={() => onViewChange('day')}
+              data-testid="button-view-day"
+              className="flex-1 py-2.5 rounded-2xl bg-white/20 border border-white/30 text-sm font-medium text-white transition-all active:scale-[0.98]"
+            >
+              Day
+            </button>
+            <button
+              onClick={() => onViewChange('week')}
+              data-testid="button-view-week"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Week
+            </button>
+            <button
+              onClick={() => onViewChange('month')}
+              data-testid="button-view-month"
+              className="flex-1 py-2.5 rounded-2xl bg-white/10 border border-white/20 text-sm font-medium text-white/70 transition-all active:scale-[0.98]"
+            >
+              Month
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

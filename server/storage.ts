@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -14,22 +14,15 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event>;
   deleteEvent(id: string): Promise<void>;
-
-  // Messages
-  getMessages(): Promise<Message[]>;
-  getMessagesByEvent(eventId: string): Promise<Message[]>;
-  createMessage(message: InsertMessage): Promise<Message>;
 }
 
 export class MemStorage implements IStorage {
   private familyMembers: Map<string, FamilyMember>;
   private events: Map<string, Event>;
-  private messages: Map<string, Message>;
 
   constructor() {
     this.familyMembers = new Map();
     this.events = new Map();
-    this.messages = new Map();
     
     // Initialize with default family members
     const member1: FamilyMember = {
@@ -58,7 +51,7 @@ export class MemStorage implements IStorage {
         description: 'Evening out',
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 19, 30),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 0),
-        memberIds: [member1.id],
+        memberId: member1.id,
         color: member1.color,
       },
       {
@@ -67,17 +60,17 @@ export class MemStorage implements IStorage {
         description: 'Family time',
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 11, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 30),
-        memberIds: [member2.id],
+        memberId: member2.id,
         color: member2.color,
       },
       // Earlier this week
       {
         id: randomUUID(),
-        title: 'Dinner with Carolyn',
+        title: 'Dinner with Emma',
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 17, 30),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 19, 0),
-        memberIds: [member1.id],
+        memberId: member1.id,
         color: member1.color,
       },
       {
@@ -86,7 +79,7 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 11, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 12, 0),
-        memberIds: [member1.id],
+        memberId: member1.id,
         color: member1.color,
       },
       {
@@ -95,7 +88,7 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 9, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 11, 0),
-        memberIds: [member2.id],
+        memberId: member2.id,
         color: member2.color,
       },
       {
@@ -104,7 +97,7 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 9, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 10, 0),
-        memberIds: [member1.id],
+        memberId: member1.id,
         color: member1.color,
       },
       // Later this week
@@ -114,7 +107,7 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 13, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 14, 0),
-        memberIds: [member2.id],
+        memberId: member2.id,
         color: member2.color,
       },
       {
@@ -123,7 +116,7 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 9, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 10, 0),
-        memberIds: [member1.id],
+        memberId: member1.id,
         color: member1.color,
       },
       {
@@ -132,7 +125,7 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 12, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 13, 0),
-        memberIds: [member2.id],
+        memberId: member2.id,
         color: member2.color,
       },
       {
@@ -141,7 +134,7 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 8, 30),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 9, 30),
-        memberIds: [member1.id],
+        memberId: member1.id,
         color: member1.color,
       },
       {
@@ -150,52 +143,12 @@ export class MemStorage implements IStorage {
         description: null,
         startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 14, 0),
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 16, 0),
-        memberIds: [member2.id],
+        memberId: member2.id,
         color: member2.color,
       },
     ];
 
     sampleEvents.forEach(event => this.events.set(event.id, event));
-
-    // Initialize with sample messages (love notes)
-    const eventIds = Array.from(this.events.keys());
-    const sampleMessages: Message[] = [
-      {
-        id: randomUUID(),
-        eventId: eventIds[0], // Date Night at Jockey Hollow
-        senderName: member2.name,
-        recipientId: member1.id,
-        content: "Can't wait for tonight! Love you ❤️",
-        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1),
-        fontWeight: 'normal',
-        fontStyle: 'normal',
-        emoji: '💕',
-      },
-      {
-        id: randomUUID(),
-        eventId: eventIds[1], // Brunch with Mom
-        senderName: member1.name,
-        recipientId: member2.id,
-        content: "Enjoy brunch! Give mom a hug from me",
-        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 20, 0),
-        fontWeight: 'normal',
-        fontStyle: 'normal',
-        emoji: '🤗',
-      },
-      {
-        id: randomUUID(),
-        eventId: eventIds[6], // Project Meeting
-        senderName: member1.name,
-        recipientId: member2.id,
-        content: "Good luck with your presentation!",
-        createdAt: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
-        fontWeight: 'bold',
-        fontStyle: 'normal',
-        emoji: '💪',
-      },
-    ];
-
-    sampleMessages.forEach(message => this.messages.set(message.id, message));
   }
 
   // Family Members
@@ -216,10 +169,12 @@ export class MemStorage implements IStorage {
 
   async deleteFamilyMember(id: string): Promise<void> {
     this.familyMembers.delete(id);
-    // Note: For now, we don't delete events when a member is deleted
-    // since events may have multiple members. In a production app,
-    // you'd want to either remove the member from memberIds or
-    // delete events with only that member.
+    // Also delete events associated with this member
+    const eventsToDelete = Array.from(this.events.entries())
+      .filter(([_, event]) => event.memberId === id)
+      .map(([eventId, _]) => eventId);
+    
+    eventsToDelete.forEach(eventId => this.events.delete(eventId));
   }
 
   // Events
@@ -263,45 +218,7 @@ export class MemStorage implements IStorage {
 
   async deleteEvent(id: string): Promise<void> {
     this.events.delete(id);
-    // Also delete messages associated with this event
-    const messagesToDelete = Array.from(this.messages.entries())
-      .filter(([_, message]) => message.eventId === id)
-      .map(([messageId, _]) => messageId);
-    
-    messagesToDelete.forEach(messageId => this.messages.delete(messageId));
-  }
-
-  // Messages
-  async getMessages(): Promise<Message[]> {
-    return Array.from(this.messages.values())
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()); // Most recent first
-  }
-
-  async getMessagesByEvent(eventId: string): Promise<Message[]> {
-    return Array.from(this.messages.values())
-      .filter(message => message.eventId === eventId)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }
-
-  async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const id = randomUUID();
-    const message: Message = {
-      ...insertMessage,
-      id,
-      createdAt: new Date(),
-      fontWeight: insertMessage.fontWeight || null,
-      fontStyle: insertMessage.fontStyle || null,
-      emoji: insertMessage.emoji || null,
-    };
-    this.messages.set(id, message);
-    return message;
   }
 }
 
-// Import PgStorage
-import { PgStorage } from "./pg-storage";
-
-// Use PostgreSQL storage if DATABASE_URL is available, otherwise fall back to MemStorage
-export const storage: IStorage = process.env.DATABASE_URL 
-  ? new PgStorage()
-  : new MemStorage();
+export const storage = new MemStorage();
