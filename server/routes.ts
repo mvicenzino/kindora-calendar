@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { insertFamilyMemberSchema, insertEventSchema } from "@shared/schema";
+import { storage, NotFoundError } from "./storage";
+import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Family Members Routes
@@ -33,6 +33,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteFamilyMember(req.params.id);
       res.status(204).send();
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to delete family member" });
     }
   });
@@ -71,6 +74,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = await storage.updateEvent(req.params.id, result.data);
       res.json(event);
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to update event" });
     }
   });
@@ -80,7 +86,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.deleteEvent(req.params.id);
       res.status(204).send();
     } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to delete event" });
+    }
+  });
+
+  app.post("/api/events/:id/toggle-completion", async (req, res) => {
+    try {
+      const event = await storage.toggleEventCompletion(req.params.id);
+      res.json(event);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to toggle event completion" });
+    }
+  });
+
+  // Messages Routes
+  app.get("/api/events/:eventId/messages", async (req, res) => {
+    try {
+      const messages = await storage.getMessages(req.params.eventId);
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/events/:eventId/messages", async (req, res) => {
+    try {
+      const messageData = {
+        ...req.body,
+        eventId: req.params.eventId,
+      };
+      
+      const result = insertMessageSchema.safeParse(messageData);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+      
+      const message = await storage.createMessage(result.data);
+      res.status(201).json(message);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to create message" });
+    }
+  });
+
+  app.delete("/api/messages/:id", async (req, res) => {
+    try {
+      await storage.deleteMessage(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete message" });
     }
   });
 

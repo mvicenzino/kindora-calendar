@@ -1,5 +1,12 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage } from "@shared/schema";
 import { randomUUID } from "crypto";
+
+export class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}
 
 export interface IStorage {
   // Family Members
@@ -14,15 +21,23 @@ export interface IStorage {
   createEvent(event: InsertEvent): Promise<Event>;
   updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event>;
   deleteEvent(id: string): Promise<void>;
+  toggleEventCompletion(id: string): Promise<Event>;
+
+  // Messages
+  getMessages(eventId: string): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  deleteMessage(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
   private familyMembers: Map<string, FamilyMember>;
   private events: Map<string, Event>;
+  private messages: Map<string, Message>;
 
   constructor() {
     this.familyMembers = new Map();
     this.events = new Map();
+    this.messages = new Map();
     
     // Initialize with default family members
     const member1: FamilyMember = {
@@ -60,6 +75,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 0),
         memberId: member1.id,
         color: member1.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -69,6 +87,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 30),
         memberId: member2.id,
         color: member2.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       // Earlier this week
       {
@@ -79,6 +100,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 19, 0),
         memberId: member1.id,
         color: member1.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -88,6 +112,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 12, 0),
         memberId: member1.id,
         color: member1.color,
+        photoUrl: null,
+        completed: true,
+        completedAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 12, 0),
       },
       {
         id: randomUUID(),
@@ -97,6 +124,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 11, 0),
         memberId: member2.id,
         color: member2.color,
+        photoUrl: null,
+        completed: true,
+        completedAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 11, 0),
       },
       {
         id: randomUUID(),
@@ -106,6 +136,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 10, 0),
         memberId: member1.id,
         color: member1.color,
+        photoUrl: null,
+        completed: true,
+        completedAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 10, 0),
       },
       // Later this week
       {
@@ -116,6 +149,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 14, 0),
         memberId: member2.id,
         color: member2.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -125,6 +161,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 10, 0),
         memberId: member1.id,
         color: member1.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -134,6 +173,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 13, 0),
         memberId: member2.id,
         color: member2.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -143,6 +185,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 9, 30),
         memberId: member1.id,
         color: member1.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -152,6 +197,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 16, 0),
         memberId: member2.id,
         color: member2.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       // Sebby's December 2025 School Lunches
       {
@@ -162,6 +210,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(2025, 11, 2, 12, 15),
         memberId: sebby.id,
         color: sebby.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -171,6 +222,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(2025, 11, 3, 12, 15),
         memberId: sebby.id,
         color: sebby.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -180,6 +234,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(2025, 11, 5, 12, 15),
         memberId: sebby.id,
         color: sebby.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -189,6 +246,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(2025, 11, 10, 12, 15),
         memberId: sebby.id,
         color: sebby.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -198,6 +258,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(2025, 11, 12, 12, 15),
         memberId: sebby.id,
         color: sebby.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -207,6 +270,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(2025, 11, 17, 12, 15),
         memberId: sebby.id,
         color: sebby.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
       {
         id: randomUUID(),
@@ -216,6 +282,9 @@ export class MemStorage implements IStorage {
         endTime: new Date(2025, 11, 19, 12, 15),
         memberId: sebby.id,
         color: sebby.color,
+        photoUrl: null,
+        completed: false,
+        completedAt: null,
       },
     ];
 
@@ -239,13 +308,28 @@ export class MemStorage implements IStorage {
   }
 
   async deleteFamilyMember(id: string): Promise<void> {
+    if (!this.familyMembers.has(id)) {
+      throw new NotFoundError(`Family member with id ${id} not found`);
+    }
+    
     this.familyMembers.delete(id);
-    // Also delete events associated with this member
+    
+    // Get events associated with this member
     const eventsToDelete = Array.from(this.events.entries())
       .filter(([_, event]) => event.memberId === id)
       .map(([eventId, _]) => eventId);
     
-    eventsToDelete.forEach(eventId => this.events.delete(eventId));
+    // Delete those events and their associated messages
+    eventsToDelete.forEach(eventId => {
+      this.events.delete(eventId);
+      
+      // Delete messages for this event
+      const messagesToDelete = Array.from(this.messages.entries())
+        .filter(([_, message]) => message.eventId === eventId)
+        .map(([messageId, _]) => messageId);
+      
+      messagesToDelete.forEach(messageId => this.messages.delete(messageId));
+    });
   }
 
   // Events
@@ -263,6 +347,9 @@ export class MemStorage implements IStorage {
       ...insertEvent,
       id,
       description: insertEvent.description || null,
+      photoUrl: insertEvent.photoUrl || null,
+      completed: false,
+      completedAt: null,
     };
     this.events.set(id, event);
     return event;
@@ -271,7 +358,7 @@ export class MemStorage implements IStorage {
   async updateEvent(id: string, updateData: Partial<InsertEvent>): Promise<Event> {
     const existingEvent = this.events.get(id);
     if (!existingEvent) {
-      throw new Error(`Event with id ${id} not found`);
+      throw new NotFoundError(`Event with id ${id} not found`);
     }
     
     // Ensure dates are Date objects after merge
@@ -282,13 +369,72 @@ export class MemStorage implements IStorage {
       startTime: updateData.startTime ? new Date(updateData.startTime) : existingEvent.startTime,
       endTime: updateData.endTime ? new Date(updateData.endTime) : existingEvent.endTime,
       description: updateData.description !== undefined ? updateData.description : existingEvent.description,
+      photoUrl: updateData.photoUrl !== undefined ? updateData.photoUrl : existingEvent.photoUrl,
     };
     this.events.set(id, updatedEvent);
     return updatedEvent;
   }
 
   async deleteEvent(id: string): Promise<void> {
+    if (!this.events.has(id)) {
+      throw new NotFoundError(`Event with id ${id} not found`);
+    }
+    
     this.events.delete(id);
+    
+    // Also delete messages for this event
+    const messagesToDelete = Array.from(this.messages.entries())
+      .filter(([_, message]) => message.eventId === id)
+      .map(([messageId, _]) => messageId);
+    
+    messagesToDelete.forEach(messageId => this.messages.delete(messageId));
+  }
+
+  async toggleEventCompletion(id: string): Promise<Event> {
+    const event = this.events.get(id);
+    if (!event) {
+      throw new NotFoundError(`Event with id ${id} not found`);
+    }
+    
+    const updatedEvent: Event = {
+      ...event,
+      completed: !event.completed,
+      completedAt: !event.completed ? new Date() : null,
+    };
+    this.events.set(id, updatedEvent);
+    return updatedEvent;
+  }
+
+  // Messages
+  async getMessages(eventId: string): Promise<Message[]> {
+    return Array.from(this.messages.values()).filter(m => m.eventId === eventId);
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    // Validate that event exists
+    const event = this.events.get(insertMessage.eventId);
+    if (!event) {
+      throw new NotFoundError(`Event with id ${insertMessage.eventId} not found`);
+    }
+    
+    // Validate that member exists
+    const member = this.familyMembers.get(insertMessage.memberId);
+    if (!member) {
+      throw new NotFoundError(`Family member with id ${insertMessage.memberId} not found`);
+    }
+    
+    const id = randomUUID();
+    const message: Message = {
+      ...insertMessage,
+      id,
+      createdAt: new Date(),
+    };
+    this.messages.set(id, message);
+    return message;
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    this.messages.delete(id);
   }
 }
 
