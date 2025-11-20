@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Header from "@/components/Header";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
@@ -22,7 +23,7 @@ interface TodayEvent {
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
+  const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
@@ -240,6 +241,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
+      <Header currentView={view} onViewChange={setView} />
+      
       {view === 'day' && (
         <TodayView
           date={currentDate}
@@ -280,6 +283,12 @@ export default function Home() {
           onAddEvent={handleAddEvent}
           onDateChange={handleDateChange}
         />
+      )}
+
+      {view === 'timeline' && (
+        <div className="p-6 text-white text-center">
+          <p className="text-2xl">Timeline view coming soon...</p>
+        </div>
       )}
 
       <EventModal
