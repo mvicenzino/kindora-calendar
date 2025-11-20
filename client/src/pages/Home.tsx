@@ -278,6 +278,7 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
+          onDateChange={handleDateChange}
         />
       )}
 

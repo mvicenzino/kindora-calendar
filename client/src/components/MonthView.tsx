@@ -1,5 +1,5 @@
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter } from "date-fns";
-import { Plus } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter, addMonths, subMonths } from "date-fns";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface FamilyMember {
   id: string;
@@ -24,9 +24,10 @@ interface MonthViewProps {
   onEventClick: (event: Event) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
   onAddEvent?: () => void;
+  onDateChange?: (date: Date) => void;
 }
 
-export default function MonthView({ date, events, members, onEventClick, onViewChange, onAddEvent }: MonthViewProps) {
+export default function MonthView({ date, events, members, onEventClick, onViewChange, onAddEvent, onDateChange }: MonthViewProps) {
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const calendarStart = startOfWeek(monthStart);
@@ -62,14 +63,34 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="px-2">
-          <div className="flex items-center gap-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
-                MONTH
-              </p>
-              <h1 className="text-5xl font-bold text-white">
-                {format(date, 'MMMM yyyy')}
-              </h1>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {onDateChange && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onDateChange(subMonths(date, 1))}
+                    data-testid="button-previous-month"
+                    className="w-9 h-9 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center border border-white/40 shadow-md hover:from-white/40 hover:to-white/20 transition-all active:scale-[0.95]"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={() => onDateChange(addMonths(date, 1))}
+                    data-testid="button-next-month"
+                    className="w-9 h-9 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center border border-white/40 shadow-md hover:from-white/40 hover:to-white/20 transition-all active:scale-[0.95]"
+                  >
+                    <ChevronRight className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+                  </button>
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
+                  MONTH
+                </p>
+                <h1 className="text-5xl font-bold text-white">
+                  {format(date, 'MMMM yyyy')}
+                </h1>
+              </div>
             </div>
             {onAddEvent && (
               <button

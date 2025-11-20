@@ -37,9 +37,16 @@ export class MemStorage implements IStorage {
       color: '#EC4899',
       avatar: null,
     };
+    const sebby: FamilyMember = {
+      id: randomUUID(),
+      name: 'Sebby',
+      color: '#10B981',
+      avatar: null,
+    };
     
     this.familyMembers.set(member1.id, member1);
     this.familyMembers.set(member2.id, member2);
+    this.familyMembers.set(sebby.id, sebby);
 
     // Initialize with sample events for the week
     const today = new Date();
@@ -145,6 +152,70 @@ export class MemStorage implements IStorage {
         endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 16, 0),
         memberId: member2.id,
         color: member2.color,
+      },
+      // Sebby's December 2025 School Lunches
+      {
+        id: randomUUID(),
+        title: 'Lunch: Beef Hotdogs with Tater Tots',
+        description: null,
+        startTime: new Date(2025, 11, 2, 11, 30),
+        endTime: new Date(2025, 11, 2, 12, 15),
+        memberId: sebby.id,
+        color: sebby.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Lunch: Pancakes with Sausage',
+        description: null,
+        startTime: new Date(2025, 11, 3, 11, 30),
+        endTime: new Date(2025, 11, 3, 12, 15),
+        memberId: sebby.id,
+        color: sebby.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Lunch: Buttered Noodles with Peas and Garlic Bread',
+        description: null,
+        startTime: new Date(2025, 11, 5, 11, 30),
+        endTime: new Date(2025, 11, 5, 12, 15),
+        memberId: sebby.id,
+        color: sebby.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Lunch: French Toast Sticks with Sausage',
+        description: null,
+        startTime: new Date(2025, 11, 10, 11, 30),
+        endTime: new Date(2025, 11, 10, 12, 15),
+        memberId: sebby.id,
+        color: sebby.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Lunch: Mac & Cheese with Broccoli',
+        description: null,
+        startTime: new Date(2025, 11, 12, 11, 30),
+        endTime: new Date(2025, 11, 12, 12, 15),
+        memberId: sebby.id,
+        color: sebby.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Lunch: Waffles with Sausage',
+        description: null,
+        startTime: new Date(2025, 11, 17, 11, 30),
+        endTime: new Date(2025, 11, 17, 12, 15),
+        memberId: sebby.id,
+        color: sebby.color,
+      },
+      {
+        id: randomUUID(),
+        title: 'Lunch: Pasta with Marinara Sauce and Garlic Bread',
+        description: null,
+        startTime: new Date(2025, 11, 19, 11, 30),
+        endTime: new Date(2025, 11, 19, 12, 15),
+        memberId: sebby.id,
+        color: sebby.color,
       },
     ];
 
