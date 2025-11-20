@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
+import TimelineView from "@/components/TimelineView";
 import EventModal from "@/components/EventModal";
 import MemberModal from "@/components/MemberModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
@@ -286,9 +287,20 @@ export default function Home() {
       )}
 
       {view === 'timeline' && (
-        <div className="p-6 text-white text-center">
-          <p className="text-2xl">Timeline view coming soon...</p>
-        </div>
+        <TimelineView
+          events={events.map(e => ({
+            ...e,
+            startTime: new Date(e.startTime),
+            endTime: new Date(e.endTime),
+            members: members
+              .filter(m => m.id === e.memberId)
+              .map(m => ({
+                ...m,
+                initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
+              }))
+          }))}
+          onEventClick={handleEventClick}
+        />
       )}
 
       <EventModal
