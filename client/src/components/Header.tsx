@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
-import calendoraIcon from "@assets/IMG_3241_1763832923764.jpeg";
+import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
 
 interface HeaderProps {
   currentView: 'day' | 'week' | 'month' | 'timeline';
@@ -29,8 +29,8 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
       <div className="backdrop-blur-xl bg-white/10 border-b border-white/20 shadow-lg">
         <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 gap-4">
           <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto justify-between md:justify-start">
-            <div className="flex items-center gap-2">
-              <img src={calendoraIcon} alt="Calendora" className="w-8 h-8 rounded-lg" data-testid="icon-logo" />
+            <div className="flex items-center gap-3">
+              <img src={calendoraIcon} alt="Calendora" className="w-10 h-10" data-testid="icon-logo" />
               <span className="text-xl font-bold text-white">Calendora</span>
             </div>
             
