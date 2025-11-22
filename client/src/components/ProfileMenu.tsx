@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UiFamilyMember } from "@shared/types";
-import { X, User } from 'lucide-react';
+import { X, User, UserPlus } from 'lucide-react';
 
 interface ProfileMenuProps {
   members: UiFamilyMember[];
   onMemberColorChange: (memberId: string, color: string) => void;
+  onAddMember?: () => void;
 }
 
 const PRESET_COLORS = [
@@ -20,7 +21,7 @@ const PRESET_COLORS = [
   '#F97316', // Orange
 ];
 
-export default function ProfileMenu({ members, onMemberColorChange }: ProfileMenuProps) {
+export default function ProfileMenu({ members, onMemberColorChange, onAddMember }: ProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -143,6 +144,21 @@ export default function ProfileMenu({ members, onMemberColorChange }: ProfileMen
             <div className="text-center py-6">
               <p className="text-sm text-white/50">No family members yet</p>
             </div>
+          )}
+
+          {/* Add Member Button */}
+          {onAddMember && (
+            <button
+              onClick={() => {
+                onAddMember();
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white transition-all mt-2"
+              data-testid="button-add-member"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span className="text-sm font-medium">Add Family Member</span>
+            </button>
           )}
         </div>
       )}

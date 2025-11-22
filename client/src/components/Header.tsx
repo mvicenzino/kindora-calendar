@@ -10,9 +10,10 @@ interface HeaderProps {
   members?: UiFamilyMember[];
   onMemberColorChange?: (memberId: string, color: string) => void;
   onSearchClick?: () => void;
+  onAddMember?: () => void;
 }
 
-export default function Header({ currentView, onViewChange, members = [], onMemberColorChange, onSearchClick }: HeaderProps) {
+export default function Header({ currentView, onViewChange, members = [], onMemberColorChange, onSearchClick, onAddMember }: HeaderProps) {
   const [, setLocation] = useLocation();
   
   const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
@@ -53,8 +54,8 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               >
                 <Search className="w-5 h-5" />
               </Button>
-              {members.length > 0 && onMemberColorChange ? (
-                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} />
+              {onMemberColorChange ? (
+                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} />
               ) : (
                 <Button
                   size="icon"
@@ -112,8 +113,8 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             >
               <Search className="w-5 h-5" />
             </Button>
-            {members.length > 0 && onMemberColorChange ? (
-              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} />
+            {onMemberColorChange ? (
+              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} />
             ) : (
               <Button
                 size="icon"

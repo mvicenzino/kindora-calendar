@@ -187,6 +187,7 @@ export default function Home() {
         members={members}
         onMemberColorChange={handleMemberColorChange}
         onSearchClick={() => setSearchOpen(true)}
+        onAddMember={() => setMemberModalOpen(true)}
       />
       
       <SearchPanel
