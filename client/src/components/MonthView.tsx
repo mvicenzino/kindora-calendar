@@ -106,7 +106,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                     aspect-square rounded-lg flex flex-col items-center justify-center transition-all
                     ${isCurrentMonth ? 'text-white' : 'text-white/30'}
                     ${isTodayDate ? 'border-2 border-white' : 'border border-white/20'}
-                    ${hasEvents ? 'bg-white/10' : 'bg-transparent'}
+                    ${hasEvents ? 'bg-white/15 backdrop-blur-md border-white/30' : 'bg-transparent'}
                     hover:bg-white/15 active:scale-[0.95]
                   `}
                 >
