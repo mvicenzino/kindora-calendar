@@ -1,26 +1,13 @@
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import EventCard from "@/components/EventCard";
-import type { Event as DBEvent } from "@shared/schema";
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  color: string;
-  initials: string;
-}
-
-interface Event extends DBEvent {
-  startTime: Date;
-  endTime: Date;
-  members: FamilyMember[];
-}
+import type { UiEvent, UiFamilyMember } from "@shared/types";
 
 interface WeekViewProps {
   date: Date;
-  events: Event[];
-  members: FamilyMember[];
-  onEventClick: (event: Event) => void;
+  events: UiEvent[];
+  members: UiFamilyMember[];
+  onEventClick: (event: UiEvent) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
   onAddEvent?: () => void;
   onDateChange?: (date: Date) => void;
@@ -54,47 +41,45 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
   })).filter(group => group.events.length > 0);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen p-6">
+      <div className="w-full max-w-2xl mx-auto space-y-6">
         {/* Header */}
-        <div className="px-2">
-          <div className="flex items-start justify-between gap-6">
-            <div>
-              <h1 className="text-5xl font-bold text-white">This Week</h1>
-              <p className="text-lg text-white/70 mt-1">
-                {format(weekStart, 'MMM d')}–{format(weekEnd, 'd')}
-              </p>
-            </div>
-            <div className="flex items-center gap-3 mt-2">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="text-5xl font-bold text-white">This Week</h1>
+            <p className="text-lg text-white/70 mt-1">
+              {format(weekStart, 'MMM d')}–{format(weekEnd, 'd')}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePreviousWeek}
+              data-testid="button-previous-week"
+              className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
+            >
+              <ChevronLeft className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={handleNextWeek}
+              data-testid="button-next-week"
+              className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
+            >
+              <ChevronRight className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+            </button>
+            {onAddEvent && (
               <button
-                onClick={handlePreviousWeek}
-                data-testid="button-previous-week"
+                onClick={onAddEvent}
+                data-testid="button-add-event"
                 className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
               >
-                <ChevronLeft className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+                <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
-              <button
-                onClick={handleNextWeek}
-                data-testid="button-next-week"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
-              >
-                <ChevronRight className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
-              </button>
-              {onAddEvent && (
-                <button
-                  onClick={onAddEvent}
-                  data-testid="button-add-event"
-                  className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
-                >
-                  <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
-                </button>
-              )}
-            </div>
+            )}
           </div>
         </div>
 
         {/* Mini Week Selector */}
-        <div className="flex justify-center gap-3 px-2">
+        <div className="flex justify-center gap-3">
           {daysInWeek.slice(0, 7).map((day) => {
             const dayEvents = events.filter(e => isSameDay(new Date(e.startTime), day));
             const hasEvents = dayEvents.length > 0;
@@ -125,7 +110,7 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
             {eventsByDay.map((group) => (
               <div key={group.day.toISOString()} className="space-y-3">
                 {/* Day Label */}
-                <div className="px-2">
+                <div>
                   <p className="text-sm font-semibold text-white/80">
                     {format(group.day, 'EEEE, MMM d')}
                   </p>
@@ -137,7 +122,7 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
                     <EventCard
                       key={event.id}
                       event={event}
-                      member={event.members[0]}
+                      member={event.members?.[0]}
                       onClick={() => onEventClick(event)}
                       variant="grid"
                       showTime={true}

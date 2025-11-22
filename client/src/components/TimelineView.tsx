@@ -1,24 +1,11 @@
 import { format, isSameDay, isToday, startOfDay } from "date-fns";
 import { Plus } from "lucide-react";
 import EventCard from "@/components/EventCard";
-import type { Event as DBEvent, FamilyMember as DBFamilyMember } from "@shared/schema";
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  color: string;
-  initials: string;
-}
-
-interface Event extends DBEvent {
-  startTime: Date;
-  endTime: Date;
-  members: FamilyMember[];
-}
+import type { UiEvent } from "@shared/types";
 
 interface TimelineViewProps {
-  events: Event[];
-  onEventClick: (event: Event) => void;
+  events: UiEvent[];
+  onEventClick: (event: UiEvent) => void;
   onAddEvent?: () => void;
 }
 
@@ -27,7 +14,7 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
     a.startTime.getTime() - b.startTime.getTime()
   );
 
-  const groupedEvents: Array<{ date: Date; events: Event[] }> = [];
+  const groupedEvents: Array<{ date: Date; events: UiEvent[] }> = [];
   
   sortedEvents.forEach((event) => {
     const eventDate = startOfDay(event.startTime);
@@ -46,10 +33,10 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
   });
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-2xl mx-auto space-y-6 pt-4">
+    <div className="min-h-screen p-6">
+      <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between px-2">
+        <div className="flex items-start justify-between gap-6">
           <div>
             <h1 className="text-5xl font-bold text-white">Timeline</h1>
             <p className="text-lg text-white/70 mt-1">Your events in time</p>
@@ -58,7 +45,7 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
             <button
               onClick={onAddEvent}
               data-testid="button-add-event"
-              className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
+              className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
             >
               <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
             </button>
@@ -85,7 +72,7 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
                 <EventCard
                   key={event.id}
                   event={event}
-                  member={event.members[0]}
+                  member={event.members?.[0]}
                   onClick={() => onEventClick(event)}
                   variant="full"
                   showTime={true}

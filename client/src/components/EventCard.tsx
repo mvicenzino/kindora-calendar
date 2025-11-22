@@ -3,30 +3,11 @@ import { Check, Trash2, Clock } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  color: string;
-  initials?: string;
-}
-
-interface Event {
-  id: string;
-  title: string;
-  description?: string;
-  startTime: Date;
-  endTime: Date;
-  memberId: string;
-  color: string;
-  photoUrl?: string;
-  completed: boolean;
-  completedAt?: Date;
-}
+import type { UiEvent, UiFamilyMember } from "@shared/types";
 
 interface EventCardProps {
-  event: Event;
-  member?: FamilyMember;
+  event: UiEvent;
+  member?: UiFamilyMember;
   onClick?: () => void;
   variant?: 'full' | 'compact' | 'grid';
   showTime?: boolean;

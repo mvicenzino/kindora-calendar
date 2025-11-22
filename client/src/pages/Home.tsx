@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Header from "@/components/Header";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
@@ -10,6 +10,7 @@ import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, is
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
+import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
 
 export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -19,14 +20,21 @@ export default function Home() {
   const [selectedEventId, setSelectedEventId] = useState<string>();
 
   // Fetch family members
-  const { data: members = [] } = useQuery<FamilyMember[]>({
+  const { data: rawMembers = [] } = useQuery<FamilyMember[]>({
     queryKey: ['/api/family-members'],
   });
 
   // Fetch events
-  const { data: events = [] } = useQuery<Event[]>({
+  const { data: rawEvents = [] } = useQuery<Event[]>({
     queryKey: ['/api/events'],
   });
+
+  // Map to UI types
+  const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
+  const events = useMemo(() => rawEvents.map(e => ({
+    ...mapEventFromDb(e),
+    members: members.filter(m => m.id === e.memberId)
+  })), [rawEvents, members]);
 
   // Create event mutation
   const createEventMutation = useMutation({
@@ -132,64 +140,17 @@ export default function Home() {
     setCurrentDate(date);
   };
 
-  // Convert events to today view format
+  // Filter events for each view (already mapped to UI types)
   const todayEvents = events
-    .filter(e => isSameDay(new Date(e.startTime), currentDate))
-    .map(e => {
-      const eventMembers = members
-        .filter(m => m.id === e.memberId)
-        .map(m => ({
-          ...m,
-          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-        }));
-      
-      return {
-        ...e,
-        startTime: new Date(e.startTime),
-        endTime: new Date(e.endTime),
-        members: eventMembers,
-      };
-    })
+    .filter(e => isSameDay(e.startTime, currentDate))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  // Convert events to week view format
   const weekEvents = events
-    .filter(e => isSameWeek(new Date(e.startTime), currentDate, { weekStartsOn: 0 }))
-    .map(e => {
-      const eventMembers = members
-        .filter(m => m.id === e.memberId)
-        .map(m => ({
-          ...m,
-          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-        }));
-      
-      return {
-        ...e,
-        startTime: new Date(e.startTime),
-        endTime: new Date(e.endTime),
-        members: eventMembers,
-      };
-    })
+    .filter(e => isSameWeek(e.startTime, currentDate, { weekStartsOn: 0 }))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  // Convert events to month view format
   const monthEvents = events
-    .filter(e => isSameMonth(new Date(e.startTime), currentDate))
-    .map(e => {
-      const eventMembers = members
-        .filter(m => m.id === e.memberId)
-        .map(m => ({
-          ...m,
-          initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-        }));
-      
-      return {
-        ...e,
-        startTime: new Date(e.startTime),
-        endTime: new Date(e.endTime),
-        members: eventMembers,
-      };
-    })
+    .filter(e => isSameMonth(e.startTime, currentDate))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
@@ -213,10 +174,7 @@ export default function Home() {
         <WeekView
           date={currentDate}
           events={weekEvents}
-          members={members.map(m => ({
-            ...m,
-            initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-          }))}
+          members={members}
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
@@ -229,10 +187,7 @@ export default function Home() {
         <MonthView
           date={currentDate}
           events={monthEvents}
-          members={members.map(m => ({
-            ...m,
-            initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-          }))}
+          members={members}
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
@@ -242,17 +197,7 @@ export default function Home() {
 
       {view === 'timeline' && (
         <TimelineView
-          events={events.map(e => ({
-            ...e,
-            startTime: new Date(e.startTime),
-            endTime: new Date(e.endTime),
-            members: members
-              .filter(m => m.id === e.memberId)
-              .map(m => ({
-                ...m,
-                initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
-              }))
-          }))}
+          events={events}
           onEventClick={handleEventClick}
           onAddEvent={handleAddEvent}
         />

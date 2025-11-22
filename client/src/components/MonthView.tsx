@@ -1,26 +1,13 @@
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter, addMonths, subMonths, isToday } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import EventCard from "@/components/EventCard";
-import type { Event as DBEvent } from "@shared/schema";
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  color: string;
-  initials: string;
-}
-
-interface Event extends DBEvent {
-  startTime: Date;
-  endTime: Date;
-  members: FamilyMember[];
-}
+import type { UiEvent, UiFamilyMember } from "@shared/types";
 
 interface MonthViewProps {
   date: Date;
-  events: Event[];
-  members: FamilyMember[];
-  onEventClick: (event: Event) => void;
+  events: UiEvent[];
+  members: UiFamilyMember[];
+  onEventClick: (event: UiEvent) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
   onAddEvent?: () => void;
   onDateChange?: (date: Date) => void;
@@ -45,44 +32,42 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
     .slice(0, 3);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen p-6">
+      <div className="w-full max-w-2xl mx-auto space-y-6">
         {/* Header */}
-        <div className="px-2">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              {onDateChange && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onDateChange(subMonths(date, 1))}
-                    data-testid="button-previous-month"
-                    className="w-9 h-9 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center border border-white/40 shadow-md hover:from-white/40 hover:to-white/20 transition-all active:scale-[0.95]"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
-                  </button>
-                  <button
-                    onClick={() => onDateChange(addMonths(date, 1))}
-                    data-testid="button-next-month"
-                    className="w-9 h-9 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center border border-white/40 shadow-md hover:from-white/40 hover:to-white/20 transition-all active:scale-[0.95]"
-                  >
-                    <ChevronRight className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
-                  </button>
-                </div>
-              )}
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
-                  MONTH
-                </p>
-                <h1 className="text-4xl font-bold text-white">
-                  {format(date, 'MMMM yyyy')}
-                </h1>
-              </div>
-            </div>
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
+              MONTH
+            </p>
+            <h1 className="text-5xl font-bold text-white">
+              {format(date, 'MMMM yyyy')}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {onDateChange && (
+              <>
+                <button
+                  onClick={() => onDateChange(subMonths(date, 1))}
+                  data-testid="button-previous-month"
+                  className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
+                >
+                  <ChevronLeft className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+                </button>
+                <button
+                  onClick={() => onDateChange(addMonths(date, 1))}
+                  data-testid="button-next-month"
+                  className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
+                >
+                  <ChevronRight className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+                </button>
+              </>
+            )}
             {onAddEvent && (
               <button
                 onClick={onAddEvent}
                 data-testid="button-add-event"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
               >
                 <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
               </button>
@@ -93,7 +78,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
         {/* Calendar Grid */}
         <div className="space-y-3">
           {/* Days of week header */}
-          <div className="grid grid-cols-7 gap-2 px-2">
+          <div className="grid grid-cols-7 gap-2">
             {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
               <div key={idx} className="text-center text-sm font-medium text-white/70">
                 {day}
@@ -102,7 +87,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
           </div>
 
           {/* Calendar days */}
-          <div className="grid grid-cols-7 gap-2 px-2">
+          <div className="grid grid-cols-7 gap-2">
             {calendarDays.map((day) => {
               const dayEvents = getEventsForDay(day);
               const hasEvents = dayEvents.length > 0;
@@ -149,19 +134,19 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
         {/* Upcoming Events */}
         {upcomingEvents.length > 0 && (
           <div className="space-y-3 pt-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-white/60 px-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
               UPCOMING
             </p>
             <div className="space-y-2">
               {upcomingEvents.map((event) => (
-                <div key={event.id} className="px-2">
+                <div key={event.id}>
                   <button
                     onClick={() => onEventClick(event)}
                     data-testid={`upcoming-event-${event.id}`}
                     className="w-full rounded-2xl p-3 bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left flex items-center justify-between"
                   >
                     <div className="flex items-center gap-3">
-                      {event.members[0] && (
+                      {event.members?.[0] && (
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white"
                           style={{ backgroundColor: event.members[0].color }}
