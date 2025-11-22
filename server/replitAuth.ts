@@ -130,6 +130,47 @@ export async function setupAuth(app: Express) {
       );
     });
   });
+
+  // Demo/Guest login for testing
+  app.get("/api/login/demo", async (req, res) => {
+    try {
+      // Generate a unique demo user ID
+      const demoUserId = `demo-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      
+      // Create demo user claims
+      const demoClaims = {
+        sub: demoUserId,
+        email: `demo-${Date.now()}@example.com`,
+        first_name: "Demo",
+        last_name: "User",
+        profile_image_url: null,
+        exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+      };
+
+      // Upsert demo user to database
+      await upsertUser(demoClaims);
+
+      // Create demo session
+      const demoUser = {
+        claims: demoClaims,
+        access_token: "demo-token",
+        refresh_token: null,
+        expires_at: demoClaims.exp,
+      };
+
+      // Log in the demo user
+      req.login(demoUser, (err) => {
+        if (err) {
+          console.error("Demo login error:", err);
+          return res.redirect("/api/login");
+        }
+        res.redirect("/");
+      });
+    } catch (error) {
+      console.error("Demo login error:", error);
+      res.redirect("/api/login");
+    }
+  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {

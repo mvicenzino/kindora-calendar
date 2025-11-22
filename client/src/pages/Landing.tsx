@@ -60,7 +60,7 @@ export default function Landing() {
             <img src={calendoraIcon} alt="Calendora" className="w-10 h-10" />
             <span className="text-xl font-bold text-white">Calendora</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isAuthenticated ? (
               <>
                 <Button
@@ -81,13 +81,23 @@ export default function Landing() {
                 </Button>
               </>
             ) : (
-              <Button
-                onClick={() => (window.location.href = "/api/login")}
-                className="bg-white text-slate-900 hover:bg-white/90"
-                data-testid="button-login"
-              >
-                Sign In
-              </Button>
+              <>
+                <Button
+                  onClick={() => (window.location.href = "/api/login/demo")}
+                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
+                  data-testid="button-demo"
+                >
+                  Try Demo
+                </Button>
+                <Button
+                  onClick={() => (window.location.href = "/api/login")}
+                  variant="outline"
+                  className="border-white text-white hover:bg-white/10 bg-white/5 backdrop-blur-sm"
+                  data-testid="button-login"
+                >
+                  Sign In
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -134,22 +144,27 @@ export default function Landing() {
                     if (isAuthenticated) {
                       setLocation("/");
                     } else {
-                      window.location.href = "/api/login";
+                      window.location.href = "/api/login/demo";
                     }
                   }}
                   size="lg"
                   className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 text-lg font-semibold shadow-2xl shadow-purple-500/50 border-0"
                   data-testid="button-get-started"
                 >
-                  {isAuthenticated ? "Go to Calendar" : "Get Started Free"}
+                  {isAuthenticated ? "Go to Calendar" : "Try Demo"}
                 </Button>
                 <Button
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      window.location.href = "/api/login";
+                    }
+                  }}
                   variant="outline"
                   size="lg"
                   className="border-2 border-white/50 text-white hover:bg-white/10 backdrop-blur-md text-lg font-semibold bg-white/5"
                   data-testid="button-learn-more"
                 >
-                  Learn More
+                  {isAuthenticated ? "Learn More" : "Sign In"}
                 </Button>
               </div>
 
@@ -283,14 +298,14 @@ export default function Landing() {
               if (isAuthenticated) {
                 setLocation("/");
               } else {
-                window.location.href = "/api/login";
+                window.location.href = "/api/login/demo";
               }
             }}
             size="lg"
             className="bg-gradient-to-r from-purple-500 via-pink-500 to-teal-500 text-white hover:from-purple-600 hover:via-pink-600 hover:to-teal-600 text-lg font-semibold shadow-2xl shadow-purple-500/50 border-0"
             data-testid="button-start-now"
           >
-            {isAuthenticated ? "Open Calendar" : "Start Now — It's Free"}
+            {isAuthenticated ? "Open Calendar" : "Try Demo Now"}
           </Button>
         </div>
       </section>
