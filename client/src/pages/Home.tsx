@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import Header from "@/components/Header";
+import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
@@ -20,6 +21,7 @@ export default function Home() {
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Fetch family members
   const { data: rawMembers = [] } = useQuery<FamilyMember[]>({
@@ -184,6 +186,14 @@ export default function Home() {
         onViewChange={setView} 
         members={members}
         onMemberColorChange={handleMemberColorChange}
+        onSearchClick={() => setSearchOpen(true)}
+      />
+      
+      <SearchPanel
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        events={events}
+        onSelectEvent={handleEventClick}
       />
       
       {view === 'day' && (

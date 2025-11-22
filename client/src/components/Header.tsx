@@ -9,9 +9,10 @@ interface HeaderProps {
   onViewChange: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   members?: UiFamilyMember[];
   onMemberColorChange?: (memberId: string, color: string) => void;
+  onSearchClick?: () => void;
 }
 
-export default function Header({ currentView, onViewChange, members = [], onMemberColorChange }: HeaderProps) {
+export default function Header({ currentView, onViewChange, members = [], onMemberColorChange, onSearchClick }: HeaderProps) {
   const [, setLocation] = useLocation();
   
   const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
@@ -47,6 +48,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 variant="ghost"
                 className="text-white border border-white/50"
                 aria-label="Search events"
+                onClick={onSearchClick}
                 data-testid="button-search-mobile"
               >
                 <Search className="w-5 h-5" />
@@ -105,6 +107,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               variant="ghost"
               className="text-white border border-white/50"
               aria-label="Search events"
+              onClick={onSearchClick}
               data-testid="button-search-desktop"
             >
               <Search className="w-5 h-5" />
