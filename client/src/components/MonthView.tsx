@@ -112,7 +112,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                     hover:bg-white/15 active:scale-[0.95]
                   `}
                 >
-                  <span className={`text-sm font-semibold ${hasEvents || isTodayDate ? 'text-white' : ''}`}>
+                  <span className="text-sm font-semibold text-white">
                     {format(day, 'd')}
                   </span>
                 </button>
