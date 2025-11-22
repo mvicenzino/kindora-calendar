@@ -78,7 +78,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const event = await storage.createEvent(result.data);
       res.status(201).json(event);
     } catch (error) {
-      res.status(500).json({ error: "Failed to create event" });
+      console.error("Error creating event:", error);
+      res.status(500).json({ error: "Failed to create event", details: String(error) });
     }
   });
 
@@ -95,7 +96,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof NotFoundError) {
         return res.status(404).json({ error: error.message });
       }
-      res.status(500).json({ error: "Failed to update event" });
+      console.error("Error updating event:", error);
+      res.status(500).json({ error: "Failed to update event", details: String(error) });
     }
   });
 
