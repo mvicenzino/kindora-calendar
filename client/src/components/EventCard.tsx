@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Check, Trash2, Clock } from "lucide-react";
+import { Check, Trash2, Clock, Image as ImageIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -97,6 +97,8 @@ export default function EventCard({
     ${className}
   `;
 
+  const photoOpacity = variant === 'grid' ? 'opacity-50' : 'opacity-35';
+
   return (
     <div
       onClick={onClick}
@@ -106,10 +108,17 @@ export default function EventCard({
     >
       {/* Photo Background (if exists) */}
       {event.photoUrl && (
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-30"
-          style={{ backgroundImage: `url(${event.photoUrl})` }}
-        />
+        <>
+          <div 
+            className={`absolute inset-0 bg-cover bg-center ${photoOpacity}`}
+            style={{ backgroundImage: `url(${event.photoUrl})` }}
+            data-testid={`photo-bg-${event.id}`}
+          />
+          {/* Photo indicator badge */}
+          <div className="absolute top-2 right-2 z-20 bg-white/30 backdrop-blur-sm rounded-full p-1.5 border border-white/40">
+            <ImageIcon className="w-3 h-3 text-white" data-testid={`photo-indicator-${event.id}`} />
+          </div>
+        </>
       )}
 
       {/* Content */}
