@@ -107,12 +107,12 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                   className={`
                     aspect-square rounded-lg flex flex-col items-center justify-center transition-all
                     ${isCurrentMonth ? 'text-white' : 'text-white/30'}
-                    ${isTodayDate ? 'border-2 border-white' : 'border border-white/20'}
-                    ${hasEvents ? 'backdrop-blur-md border-white/30' : ''}
+                    ${isTodayDate ? 'border-2 border-white' : hasEvents ? 'border border-white/50' : 'border border-white/20'}
+                    ${hasEvents ? 'backdrop-blur-md' : ''}
                     hover:bg-white/15 active:scale-[0.95]
                   `}
                 >
-                  <span className={`text-sm font-semibold ${isTodayDate ? 'text-white' : ''}`}>
+                  <span className={`text-sm font-semibold ${hasEvents || isTodayDate ? 'text-white' : ''}`}>
                     {format(day, 'd')}
                   </span>
                 </button>
