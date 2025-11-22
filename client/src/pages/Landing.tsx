@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut } from "lucide-react";
-import heroVideo from "@assets/generated_videos/chaotic_to_calm_family_transformation.mp4";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles } from "lucide-react";
+import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -94,33 +94,41 @@ export default function Landing() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden px-4 md:px-6 py-12 md:py-20">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
-            {/* Video */}
-            <div className="rounded-3xl overflow-hidden shadow-2xl">
-              <video
-                src={heroVideo}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
-            </div>
+      <section className="relative overflow-hidden min-h-[90vh] flex items-center">
+        {/* Full-width Video Background */}
+        <div className="absolute inset-0 w-full h-full">
+          <video
+            src={heroVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+          {/* Dark gradient overlay for readability */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/70 to-slate-900/80" />
+          {/* Colorful gradient accents */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-transparent to-teal-500/20" />
+        </div>
 
-            {/* Content */}
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
-                  Turn Family Chaos Into Perfect Harmony
-                </h1>
-                <p className="text-xl text-white/80">
-                  Calendora brings order, connection, and peace to your busy family life. One app. One calendar. Everyone's on the same page.
-                </p>
+        {/* Content */}
+        <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
+          <div className="max-w-6xl mx-auto">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
+                <Sparkles className="w-4 h-4 text-teal-300" />
+                <span className="text-sm font-medium text-white">Transform chaos into harmony</span>
               </div>
+              
+              <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight mb-6 bg-gradient-to-r from-white via-purple-100 to-teal-100 bg-clip-text text-transparent">
+                Your Family's Perfect Calendar
+              </h1>
+              
+              <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
+                Calendora brings order, connection, and peace to your busy family life. One app. One calendar. Everyone's on the same page.
+              </p>
 
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button
                   onClick={() => {
                     if (isAuthenticated) {
@@ -130,7 +138,7 @@ export default function Landing() {
                     }
                   }}
                   size="lg"
-                  className="bg-white text-slate-900 hover:bg-white/90 text-base font-semibold"
+                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 text-lg font-semibold shadow-2xl shadow-purple-500/50 border-0"
                   data-testid="button-get-started"
                 >
                   {isAuthenticated ? "Go to Calendar" : "Get Started Free"}
@@ -138,26 +146,38 @@ export default function Landing() {
                 <Button
                   variant="outline"
                   size="lg"
-                  className="border-white text-white hover:bg-white/10 text-base font-semibold"
+                  className="border-2 border-white/50 text-white hover:bg-white/10 backdrop-blur-md text-lg font-semibold bg-white/5"
                   data-testid="button-learn-more"
                 >
                   Learn More
                 </Button>
               </div>
 
-              <p className="text-sm text-white/60 pt-4">
-                ✓ No credit card required • ✓ Works on all devices • ✓ Instant sync
-              </p>
+              <div className="flex flex-wrap gap-6 text-sm text-white/80">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                  <span>No credit card required</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                  <span>Works on all devices</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+                  <span>Instant sync</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section className="px-4 md:px-6 py-16 md:py-24 border-t border-white/10">
-        <div className="max-w-6xl mx-auto">
+      <section className="px-4 md:px-6 py-16 md:py-24 border-t border-white/10 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-transparent to-teal-900/10" />
+        <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-white to-teal-200 bg-clip-text text-transparent mb-4">
               Why Families Love Calendora
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
@@ -166,25 +186,42 @@ export default function Landing() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-            {benefits.map((benefit, index) => (
-              <div
-                key={index}
-                className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 md:p-8 hover-elevate transition-all"
-                data-testid={`card-benefit-${index}`}
-              >
-                <h3 className="text-xl font-bold text-white mb-2">{benefit.title}</h3>
-                <p className="text-white/70 leading-relaxed">{benefit.description}</p>
-              </div>
-            ))}
+            {benefits.map((benefit, index) => {
+              const gradients = [
+                'from-purple-500/20 to-purple-600/10',
+                'from-teal-500/20 to-teal-600/10',
+                'from-pink-500/20 to-pink-600/10',
+                'from-blue-500/20 to-blue-600/10',
+              ];
+              const borderColors = [
+                'border-purple-400/30',
+                'border-teal-400/30',
+                'border-pink-400/30',
+                'border-blue-400/30',
+              ];
+              return (
+                <div
+                  key={index}
+                  className={`backdrop-blur-md bg-gradient-to-br ${gradients[index]} border ${borderColors[index]} rounded-2xl p-6 md:p-8 hover-elevate transition-all group`}
+                  data-testid={`card-benefit-${index}`}
+                >
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-purple-100 group-hover:bg-clip-text transition-all">
+                    {benefit.title}
+                  </h3>
+                  <p className="text-white/70 leading-relaxed">{benefit.description}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="px-4 md:px-6 py-16 md:py-24">
-        <div className="max-w-6xl mx-auto">
+      <section className="px-4 md:px-6 py-16 md:py-24 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-900/10 via-transparent to-purple-900/10" />
+        <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-teal-200 via-white to-purple-200 bg-clip-text text-transparent mb-4">
               Powerful Features Made Simple
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
@@ -195,14 +232,26 @@ export default function Landing() {
           <div className="grid md:grid-cols-2 gap-6 md:gap-8">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
+              const iconColors = [
+                'bg-gradient-to-br from-purple-500 to-purple-600',
+                'bg-gradient-to-br from-teal-500 to-teal-600',
+                'bg-gradient-to-br from-pink-500 to-pink-600',
+                'bg-gradient-to-br from-blue-500 to-blue-600',
+              ];
+              const glowColors = [
+                'group-hover:shadow-purple-500/50',
+                'group-hover:shadow-teal-500/50',
+                'group-hover:shadow-pink-500/50',
+                'group-hover:shadow-blue-500/50',
+              ];
               return (
                 <div
                   key={index}
-                  className="backdrop-blur-md bg-white/10 border border-white/20 rounded-2xl p-6 md:p-8 hover-elevate transition-all"
+                  className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 md:p-8 hover-elevate transition-all group"
                   data-testid={`card-feature-${index}`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-lg bg-white/10">
+                    <div className={`p-3 rounded-xl ${iconColors[index]} shadow-lg ${glowColors[index]} transition-shadow`}>
                       <IconComponent className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
@@ -218,12 +267,13 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="px-4 md:px-6 py-16 md:py-24 border-t border-white/10">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+      <section className="px-4 md:px-6 py-16 md:py-24 border-t border-white/10 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-teal-600/20" />
+        <div className="max-w-4xl mx-auto text-center relative">
+          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-pink-100 to-teal-200 bg-clip-text text-transparent mb-6">
             {isAuthenticated ? "Welcome Back!" : "Ready to Transform Your Family's Schedule?"}
           </h2>
-          <p className="text-lg text-white/70 mb-8">
+          <p className="text-lg text-white/90 mb-8">
             {isAuthenticated 
               ? "Your calendar is ready for you. Manage events and family memories in one beautiful place."
               : "Join families who have taken control of their schedules and strengthened their connections."}
@@ -237,7 +287,7 @@ export default function Landing() {
               }
             }}
             size="lg"
-            className="bg-white text-slate-900 hover:bg-white/90 text-base font-semibold"
+            className="bg-gradient-to-r from-purple-500 via-pink-500 to-teal-500 text-white hover:from-purple-600 hover:via-pink-600 hover:to-teal-600 text-lg font-semibold shadow-2xl shadow-purple-500/50 border-0"
             data-testid="button-start-now"
           >
             {isAuthenticated ? "Open Calendar" : "Start Now — It's Free"}
