@@ -224,14 +224,23 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
             </div>
           </div>
 
-          {/* Close Button */}
-          <Button
-            onClick={onClose}
-            className="w-full bg-white/15 hover:bg-white/20 text-white border border-white/30 rounded-lg h-12 font-medium"
-            data-testid="button-close-bottom"
-          >
-            Close
-          </Button>
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <Button
+              onClick={onEdit}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white border border-white/30 rounded-lg h-12 font-medium"
+              data-testid="button-edit-event-bottom"
+            >
+              Edit Event
+            </Button>
+            <Button
+              onClick={onClose}
+              className="flex-1 bg-white/15 hover:bg-white/20 text-white border border-white/30 rounded-lg h-12 font-medium"
+              data-testid="button-close-bottom"
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
