@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema } from "@shared/schema";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Family Members Routes
@@ -160,6 +161,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete message" });
+    }
+  });
+
+  // Object Storage Routes
+  app.get("/objects/:objectPath(*)", async (req, res) => {
+    const objectStorageService = new ObjectStorageService();
+    try {
+      const objectFile = await objectStorageService.getObjectEntityFile(req.path);
+      objectStorageService.downloadObject(objectFile, res);
+    } catch (error) {
+      console.error("Error accessing object:", error);
+      if (error instanceof ObjectNotFoundError) {
+        return res.sendStatus(404);
+      }
+      return res.sendStatus(500);
+    }
+  });
+
+  app.post("/api/objects/upload", async (req, res) => {
+    const objectStorageService = new ObjectStorageService();
+    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+    res.json({ uploadURL });
+  });
+
+  app.put("/api/events/:id/photo", async (req, res) => {
+    if (!req.body.photoURL) {
+      return res.status(400).json({ error: "photoURL is required" });
+    }
+
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.photoURL);
+      
+      const event = await storage.updateEvent(req.params.id, { photoUrl: objectPath });
+      res.json(event);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      console.error("Error setting event photo:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
