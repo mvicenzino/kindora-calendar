@@ -1,14 +1,13 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
 import { Calendar, Clock, Users, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface FamilyMember {
   id: string;
@@ -48,10 +47,14 @@ export default function EventModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [memberId, setMemberId] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('09:00');
   const [isSometimeToday, setIsSometimeToday] = useState(false);
+  const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Update form state when event prop changes
   useEffect(() => {
@@ -59,6 +62,7 @@ export default function EventModal({
       setTitle(event.title || "");
       setDescription(event.description || "");
       setMemberId(event.memberId || members[0]?.id || "");
+      setSelectedMemberIds(event.memberId ? [event.memberId] : []);
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
@@ -67,13 +71,59 @@ export default function EventModal({
       // Reset form for new event
       setTitle("");
       setDescription("");
-      setMemberId(members[0]?.id || "");
+      const defaultMemberId = members[0]?.id || "";
+      setMemberId(defaultMemberId);
+      setSelectedMemberIds(defaultMemberId ? [defaultMemberId] : []);
       setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
       setStartTime('08:00');
       setEndTime('09:00');
       setIsSometimeToday(false);
     }
+    setMemberSearch("");
+    setShowMemberDropdown(false);
   }, [event, members, selectedDate]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowMemberDropdown(false);
+      }
+    };
+    
+    if (showMemberDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMemberDropdown]);
+
+  const toggleMember = (id: string) => {
+    setSelectedMemberIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(m => m !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+    // Update primary memberId to first selected member
+    if (!selectedMemberIds.includes(id)) {
+      setMemberId(id);
+    }
+  };
+
+  const removeMember = (id: string) => {
+    const newSelected = selectedMemberIds.filter(m => m !== id);
+    setSelectedMemberIds(newSelected);
+    if (memberId === id && newSelected.length > 0) {
+      setMemberId(newSelected[0]);
+    } else if (newSelected.length === 0) {
+      setMemberId("");
+    }
+  };
+
+  const filteredMembers = members.filter(m => 
+    m.name.toLowerCase().includes(memberSearch.toLowerCase())
+  );
 
   const handleSave = () => {
     // If "Sometime Today", use end of day times
@@ -100,6 +150,12 @@ export default function EventModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl">
+        <DialogTitle className="sr-only">
+          {event?.id ? 'Edit Event' : 'Create New Event'}
+        </DialogTitle>
+        <DialogDescription className="sr-only">
+          {event?.id ? 'Edit your event details' : 'Create a new calendar event'}
+        </DialogDescription>
         {/* Dark background container */}
         <div className="bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] p-8 space-y-6">
           {/* Header */}
@@ -169,23 +225,73 @@ export default function EventModal({
                 </button>
               </div>
 
-              {/* Family Members */}
+              {/* Family Members - Multi-select Typeahead */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-white flex items-center gap-2">
                   <Users className="w-4 h-4" />
                   Family Members
                 </Label>
-                <Select value={memberId} onValueChange={setMemberId}>
-                  <SelectTrigger 
-                    data-testid="select-family-member"
-                    className="bg-white/15 border border-white/40 rounded-2xl text-white focus:border-purple-400 focus:ring-purple-400/50 h-12"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gradient-to-br from-[#4A5A6A] to-[#5A6A7A] border-white/20">
-                    {members.map(member => (
-                      <SelectItem key={member.id} value={member.id} className="text-white">
-                        <div className="flex items-center gap-2">
+                <div className="relative" ref={dropdownRef}>
+                  <div className="bg-white/15 border border-white/40 rounded-2xl p-2 min-h-12 flex flex-wrap items-center gap-2">
+                    {selectedMemberIds.length === 0 ? (
+                      <span className="text-white/50 text-sm">Type to add family members...</span>
+                    ) : (
+                      selectedMemberIds.map(id => {
+                        const member = members.find(m => m.id === id);
+                        return member ? (
+                          <div
+                            key={id}
+                            className="flex items-center gap-2 bg-white/20 rounded-lg px-2 py-1"
+                          >
+                            <Avatar className="h-5 w-5">
+                              <AvatarFallback 
+                                className="text-xs text-white"
+                                style={{ backgroundColor: member.color }}
+                              >
+                                {member.name.split(' ').map(n => n[0]).join('')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-white text-sm">{member.name}</span>
+                            <button
+                              onClick={() => removeMember(id)}
+                              className="text-white/70 hover:text-white ml-1"
+                              data-testid={`button-remove-member-${id}`}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : null;
+                      })
+                    )}
+                    <input
+                      type="text"
+                      value={memberSearch}
+                      onChange={(e) => {
+                        setMemberSearch(e.target.value);
+                        setShowMemberDropdown(true);
+                      }}
+                      onFocus={() => setShowMemberDropdown(true)}
+                      placeholder={selectedMemberIds.length === 0 ? "Type to add family members..." : ""}
+                      className="flex-1 min-w-[150px] bg-transparent text-white placeholder:text-white/50 outline-none text-sm"
+                      data-testid="input-member-search"
+                    />
+                  </div>
+
+                  {/* Dropdown menu */}
+                  {showMemberDropdown && filteredMembers.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-gradient-to-br from-[#4A5A6A] to-[#5A6A7A] border border-white/40 rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                      {filteredMembers.map(member => (
+                        <button
+                          key={member.id}
+                          onClick={() => {
+                            toggleMember(member.id);
+                            setMemberSearch("");
+                          }}
+                          className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/10 transition-all border-b border-white/10 last:border-0 ${
+                            selectedMemberIds.includes(member.id) ? 'bg-white/15' : ''
+                          }`}
+                          data-testid={`option-member-${member.id}`}
+                        >
                           <Avatar className="h-6 w-6">
                             <AvatarFallback 
                               className="text-xs text-white"
@@ -194,12 +300,15 @@ export default function EventModal({
                               {member.name.split(' ').map(n => n[0]).join('')}
                             </AvatarFallback>
                           </Avatar>
-                          {member.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                          <span className="text-white text-sm flex-1">{member.name}</span>
+                          {selectedMemberIds.includes(member.id) && (
+                            <div className="w-4 h-4 rounded border border-white bg-white/30" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
