@@ -186,11 +186,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.put("/api/events/:id/photo", async (req, res) => {
-    if (!req.body.photoURL) {
-      return res.status(400).json({ error: "photoURL is required" });
-    }
-
     try {
+      // Allow null to delete photo
+      if (req.body.photoURL === null) {
+        const event = await storage.updateEvent(req.params.id, { photoUrl: null });
+        return res.json(event);
+      }
+
+      if (!req.body.photoURL) {
+        return res.status(400).json({ error: "photoURL is required" });
+      }
+
       const objectStorageService = new ObjectStorageService();
       const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.photoURL);
       

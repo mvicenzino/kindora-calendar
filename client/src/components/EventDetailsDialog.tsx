@@ -167,11 +167,16 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
                   alt={event.title}
                   className="w-full rounded-lg object-cover max-h-96"
                   data-testid="event-photo"
+                  onError={(e) => {
+                    console.error('Failed to load image:', event.photoUrl);
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
                 <button
                   onClick={handleDeletePhoto}
                   className="absolute top-2 left-2 w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 transition-all"
                   data-testid="button-delete-photo"
+                  disabled={deletePhotoMutation.isPending}
                 >
                   <X className="w-5 h-5" />
                 </button>
