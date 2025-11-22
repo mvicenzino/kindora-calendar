@@ -173,11 +173,11 @@ export default function Landing() {
       </section>
 
       {/* Benefits Section */}
-      <section className="px-4 md:px-6 py-16 md:py-24 border-t border-white/10 relative">
+      <section className="px-4 md:px-6 py-12 md:py-16 border-t border-white/10 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-transparent to-teal-900/10" />
         <div className="max-w-6xl mx-auto relative">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-white to-teal-200 bg-clip-text text-transparent mb-4">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-white to-teal-200 bg-clip-text text-transparent mb-3">
               Why Families Love Calendora
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
@@ -185,7 +185,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+          <div className="grid md:grid-cols-2 gap-5 md:gap-6">
             {benefits.map((benefit, index) => {
               const gradients = [
                 'from-purple-500/20 to-purple-600/10',
@@ -202,7 +202,7 @@ export default function Landing() {
               return (
                 <div
                   key={index}
-                  className={`backdrop-blur-md bg-gradient-to-br ${gradients[index]} border ${borderColors[index]} rounded-2xl p-6 md:p-8 hover-elevate transition-all group`}
+                  className={`backdrop-blur-md bg-gradient-to-br ${gradients[index]} border ${borderColors[index]} rounded-2xl p-5 md:p-6 hover-elevate transition-all group`}
                   data-testid={`card-benefit-${index}`}
                 >
                   <h3 className="text-xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-purple-100 group-hover:bg-clip-text transition-all">
@@ -217,11 +217,11 @@ export default function Landing() {
       </section>
 
       {/* Features Section */}
-      <section className="px-4 md:px-6 py-16 md:py-24 relative">
+      <section className="px-4 md:px-6 py-12 md:py-16 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-teal-900/10 via-transparent to-purple-900/10" />
         <div className="max-w-6xl mx-auto relative">
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-teal-200 via-white to-purple-200 bg-clip-text text-transparent mb-4">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-teal-200 via-white to-purple-200 bg-clip-text text-transparent mb-3">
               Powerful Features Made Simple
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
@@ -229,7 +229,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+          <div className="grid md:grid-cols-2 gap-5 md:gap-6">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
               const iconColors = [
@@ -247,7 +247,7 @@ export default function Landing() {
               return (
                 <div
                   key={index}
-                  className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 md:p-8 hover-elevate transition-all group"
+                  className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-5 md:p-6 hover-elevate transition-all group"
                   data-testid={`card-feature-${index}`}
                 >
                   <div className="flex items-start gap-4">
@@ -267,13 +267,13 @@ export default function Landing() {
       </section>
 
       {/* CTA Section */}
-      <section className="px-4 md:px-6 py-16 md:py-24 border-t border-white/10 relative">
+      <section className="px-4 md:px-6 py-12 md:py-16 border-t border-white/10 relative">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-teal-600/20" />
         <div className="max-w-4xl mx-auto text-center relative">
-          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-pink-100 to-teal-200 bg-clip-text text-transparent mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-pink-100 to-teal-200 bg-clip-text text-transparent mb-4">
             {isAuthenticated ? "Welcome Back!" : "Ready to Transform Your Family's Schedule?"}
           </h2>
-          <p className="text-lg text-white/90 mb-8">
+          <p className="text-lg text-white/90 mb-6">
             {isAuthenticated 
               ? "Your calendar is ready for you. Manage events and family memories in one beautiful place."
               : "Join families who have taken control of their schedules and strengthened their connections."}
