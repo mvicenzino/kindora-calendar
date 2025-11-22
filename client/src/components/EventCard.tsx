@@ -111,7 +111,7 @@ export default function EventCard({
   };
 
   const cardClasses = `
-    relative rounded-3xl overflow-hidden text-left transition-all hover:opacity-90 active:scale-[0.98] cursor-pointer
+    relative rounded-3xl overflow-hidden text-left transition-all hover:opacity-90 active:scale-[0.98] cursor-pointer border border-white/50
     ${variant === 'compact' ? 'p-3' : variant === 'grid' ? 'p-4' : 'p-5'}
     ${className}
   `;

@@ -28,7 +28,7 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white"
+                className="text-white border border-white/50"
                 aria-label="Copy calendar link"
                 data-testid="button-copy-mobile"
               >
@@ -37,7 +37,7 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white"
+                className="text-white border border-white/50"
                 aria-label="Search events"
                 data-testid="button-search-mobile"
               >
@@ -46,7 +46,7 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white"
+                className="text-white border border-white/50"
                 aria-label="User profile"
                 data-testid="button-profile-mobile"
               >
@@ -64,7 +64,7 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
                 aria-pressed={currentView === view.value}
                 aria-label={`Switch to ${view.label} view`}
                 className={`
-                  flex-1 md:flex-none px-3 md:px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 overflow-visible
+                  flex-1 md:flex-none px-3 md:px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 overflow-visible border border-white/50
                   focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                   ${currentView === view.value
                     ? 'bg-white/20 text-white shadow-md'
@@ -81,7 +81,7 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
             <Button
               size="icon"
               variant="ghost"
-              className="text-white"
+              className="text-white border border-white/50"
               aria-label="Copy calendar link"
               data-testid="button-copy-desktop"
             >
@@ -90,7 +90,7 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
             <Button
               size="icon"
               variant="ghost"
-              className="text-white"
+              className="text-white border border-white/50"
               aria-label="Search events"
               data-testid="button-search-desktop"
             >
@@ -99,7 +99,7 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
             <Button
               size="icon"
               variant="ghost"
-              className="text-white"
+              className="text-white border border-white/50"
               aria-label="User profile"
               data-testid="button-profile-desktop"
             >
