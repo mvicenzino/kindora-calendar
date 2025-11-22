@@ -26,7 +26,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      <div className="backdrop-blur-xl bg-white/10 border-b border-white/20 shadow-lg">
+      <div className="backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
         <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 gap-4">
           <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
