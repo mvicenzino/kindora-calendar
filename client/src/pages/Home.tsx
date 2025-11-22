@@ -5,6 +5,7 @@ import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
 import TimelineView from "@/components/TimelineView";
 import EventModal from "@/components/EventModal";
+import EventDetailsDialog from "@/components/EventDetailsDialog";
 import MemberModal from "@/components/MemberModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
 
@@ -94,6 +96,11 @@ export default function Home() {
 
   const handleEventClick = (event: any) => {
     setSelectedEventId(event.id);
+    setEventDetailsOpen(true);
+  };
+
+  const handleEditFromDetails = () => {
+    setEventDetailsOpen(false);
     setEventModalOpen(true);
   };
 
@@ -223,6 +230,20 @@ export default function Home() {
         />
       )}
 
+      {/* Event Details Dialog */}
+      {selectedEvent && (
+        <EventDetailsDialog
+          isOpen={eventDetailsOpen}
+          onClose={() => {
+            setEventDetailsOpen(false);
+            setSelectedEventId(undefined);
+          }}
+          onEdit={handleEditFromDetails}
+          event={selectedEvent}
+        />
+      )}
+
+      {/* Event Modal */}
       <EventModal
         isOpen={eventModalOpen}
         onClose={() => {
