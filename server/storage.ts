@@ -1,5 +1,7 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, familyMembers, events, messages } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { drizzle } from "drizzle-orm/neon-http";
+import { eq } from "drizzle-orm";
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -454,4 +456,119 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// DrizzleStorage implementation for persistent database storage
+class DrizzleStorage implements IStorage {
+  private db: any;
+
+  constructor() {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL is required for DrizzleStorage");
+    }
+    this.db = drizzle(process.env.DATABASE_URL);
+  }
+
+  // Family Members
+  async getFamilyMembers(): Promise<FamilyMember[]> {
+    return await this.db.select().from(familyMembers);
+  }
+
+  async getFamilyMember(id: string): Promise<FamilyMember | undefined> {
+    const result = await this.db.select().from(familyMembers).where(eq(familyMembers.id, id));
+    return result[0];
+  }
+
+  async createFamilyMember(insertMember: InsertFamilyMember): Promise<FamilyMember> {
+    const result = await this.db.insert(familyMembers).values(insertMember).returning();
+    return result[0];
+  }
+
+  async updateFamilyMember(id: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+    const result = await this.db.update(familyMembers).set(updates).where(eq(familyMembers.id, id)).returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Family member with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async deleteFamilyMember(id: string): Promise<void> {
+    const result = await this.db.delete(familyMembers).where(eq(familyMembers.id, id)).returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Family member with id ${id} not found`);
+    }
+  }
+
+  // Events
+  async getEvents(): Promise<Event[]> {
+    return await this.db.select().from(events);
+  }
+
+  async getEvent(id: string): Promise<Event | undefined> {
+    const result = await this.db.select().from(events).where(eq(events.id, id));
+    return result[0];
+  }
+
+  async createEvent(insertEvent: InsertEvent): Promise<Event> {
+    const result = await this.db.insert(events).values(insertEvent).returning();
+    return result[0];
+  }
+
+  async updateEvent(id: string, updateData: Partial<InsertEvent>): Promise<Event> {
+    const result = await this.db.update(events).set(updateData).where(eq(events.id, id)).returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Event with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    const result = await this.db.delete(events).where(eq(events.id, id)).returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Event with id ${id} not found`);
+    }
+  }
+
+  async toggleEventCompletion(id: string): Promise<Event> {
+    const event = await this.getEvent(id);
+    if (!event) {
+      throw new NotFoundError(`Event with id ${id} not found`);
+    }
+
+    const updatedEvent = {
+      completed: !event.completed,
+      completedAt: !event.completed ? new Date() : null,
+    };
+
+    const result = await this.db.update(events).set(updatedEvent).where(eq(events.id, id)).returning();
+    return result[0];
+  }
+
+  // Messages
+  async getMessages(eventId: string): Promise<Message[]> {
+    return await this.db.select().from(messages).where(eq(messages.eventId, eventId));
+  }
+
+  async createMessage(insertMessage: InsertMessage): Promise<Message> {
+    const result = await this.db.insert(messages).values(insertMessage).returning();
+    return result[0];
+  }
+
+  async deleteMessage(id: string): Promise<void> {
+    await this.db.delete(messages).where(eq(messages.id, id));
+  }
+}
+
+// Initialize database storage if DATABASE_URL is set, otherwise use in-memory
+let storage: IStorage;
+
+try {
+  if (process.env.DATABASE_URL) {
+    storage = new DrizzleStorage();
+  } else {
+    storage = new MemStorage();
+  }
+} catch (error) {
+  console.error("Failed to initialize database storage, falling back to in-memory:", error);
+  storage = new MemStorage();
+}
+
+export { storage };
