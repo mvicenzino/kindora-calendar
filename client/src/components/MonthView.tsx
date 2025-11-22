@@ -93,6 +93,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
               const hasEvents = dayEvents.length > 0;
               const isCurrentMonth = isSameMonth(day, date);
               const isTodayDate = isToday(day);
+              const eventColor = dayEvents.length > 0 ? dayEvents[0].color : null;
 
               return (
                 <button
@@ -102,29 +103,18 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                     onViewChange?.('day');
                   }}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
+                  style={hasEvents && eventColor ? { backgroundColor: eventColor, opacity: 0.25 } : undefined}
                   className={`
                     aspect-square rounded-lg flex flex-col items-center justify-center transition-all
                     ${isCurrentMonth ? 'text-white' : 'text-white/30'}
                     ${isTodayDate ? 'border-2 border-white' : 'border border-white/20'}
-                    ${hasEvents ? 'bg-white/15 backdrop-blur-md border-white/30' : 'bg-transparent'}
+                    ${hasEvents ? 'backdrop-blur-md border-white/30' : ''}
                     hover:bg-white/15 active:scale-[0.95]
                   `}
                 >
                   <span className={`text-sm font-semibold ${isTodayDate ? 'text-white' : ''}`}>
                     {format(day, 'd')}
                   </span>
-                  {/* Event indicators */}
-                  {hasEvents && (
-                    <div className="flex gap-0.5 mt-1">
-                      {dayEvents.slice(0, 3).map((event, idx) => (
-                        <div
-                          key={idx}
-                          className="w-1 h-1 rounded-full"
-                          style={{ backgroundColor: event.color }}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </button>
               );
             })}
