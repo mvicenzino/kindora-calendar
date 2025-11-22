@@ -82,7 +82,15 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             </div>
           </div>
           
-          <nav className="flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
+          <nav className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
+            <div
+              className="absolute inset-y-1 bg-white/25 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-white/30"
+              style={{
+                left: `${views.findIndex(v => v.value === currentView) * (100 / views.length)}%`,
+                width: `calc(${100 / views.length}% - 0.25rem)`,
+                marginLeft: '0.125rem',
+              }}
+            />
             {views.map((view) => (
               <button
                 key={view.value}
@@ -91,11 +99,12 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 aria-pressed={currentView === view.value}
                 aria-label={`Switch to ${view.label} view`}
                 className={`
-                  flex-1 md:flex-none px-3 md:px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 overflow-visible border border-white/50
+                  relative z-10 flex-1 md:flex-none px-3 md:px-4 py-2 rounded-full text-sm font-medium 
+                  transition-all duration-300 ease-out
                   focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                   ${currentView === view.value
-                    ? 'bg-white/25 backdrop-blur-md text-white shadow-md'
-                    : 'text-white/70 hover-elevate active-elevate-2'
+                    ? 'text-white scale-105'
+                    : 'text-white/60 hover:text-white/90 hover:scale-[1.02] active:scale-95'
                   }
                 `}
               >
