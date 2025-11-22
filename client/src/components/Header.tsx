@@ -1,7 +1,8 @@
-import { Calendar, Copy, Search, User } from "lucide-react";
+import { Calendar, Copy, Search, User, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import type { UiFamilyMember } from "@shared/types";
+import { useLocation } from "wouter";
 
 interface HeaderProps {
   currentView: 'day' | 'week' | 'month' | 'timeline';
@@ -11,6 +12,8 @@ interface HeaderProps {
 }
 
 export default function Header({ currentView, onViewChange, members = [], onMemberColorChange }: HeaderProps) {
+  const [, setLocation] = useLocation();
+  
   const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
     { value: 'day', label: 'Day' },
     { value: 'week', label: 'Week' },
@@ -33,10 +36,11 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 size="icon"
                 variant="ghost"
                 className="text-white border border-white/50"
-                aria-label="Copy calendar link"
-                data-testid="button-copy-mobile"
+                aria-label="Memories"
+                onClick={() => setLocation('/memories')}
+                data-testid="button-memories-mobile"
               >
-                <Copy className="w-5 h-5" />
+                <Image className="w-5 h-5" />
               </Button>
               <Button
                 size="icon"
@@ -90,10 +94,11 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               size="icon"
               variant="ghost"
               className="text-white border border-white/50"
-              aria-label="Copy calendar link"
-              data-testid="button-copy-desktop"
+              aria-label="Memories"
+              onClick={() => setLocation('/memories')}
+              data-testid="button-memories-desktop"
             >
-              <Copy className="w-5 h-5" />
+              <Image className="w-5 h-5" />
             </Button>
             <Button
               size="icon"
