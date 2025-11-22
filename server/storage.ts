@@ -13,6 +13,7 @@ export interface IStorage {
   getFamilyMembers(): Promise<FamilyMember[]>;
   getFamilyMember(id: string): Promise<FamilyMember | undefined>;
   createFamilyMember(member: InsertFamilyMember): Promise<FamilyMember>;
+  updateFamilyMember(id: string, updates: Partial<FamilyMember>): Promise<FamilyMember>;
   deleteFamilyMember(id: string): Promise<void>;
 
   // Events
@@ -305,6 +306,21 @@ export class MemStorage implements IStorage {
     const member: FamilyMember = { ...insertMember, id, avatar: insertMember.avatar || null };
     this.familyMembers.set(id, member);
     return member;
+  }
+
+  async updateFamilyMember(id: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+    const existingMember = this.familyMembers.get(id);
+    if (!existingMember) {
+      throw new NotFoundError(`Family member with id ${id} not found`);
+    }
+    
+    const updatedMember: FamilyMember = {
+      ...existingMember,
+      ...updates,
+      id, // Ensure ID doesn't change
+    };
+    this.familyMembers.set(id, updatedMember);
+    return updatedMember;
   }
 
   async deleteFamilyMember(id: string): Promise<void> {

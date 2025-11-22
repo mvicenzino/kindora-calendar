@@ -28,6 +28,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/family-members/:id", async (req, res) => {
+    try {
+      const { color } = req.body;
+      if (!color) {
+        return res.status(400).json({ error: "Color is required" });
+      }
+      
+      const member = await storage.updateFamilyMember(req.params.id, { color });
+      res.json(member);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to update family member" });
+    }
+  });
+
   app.delete("/api/family-members/:id", async (req, res) => {
     try {
       await storage.deleteFamilyMember(req.params.id);

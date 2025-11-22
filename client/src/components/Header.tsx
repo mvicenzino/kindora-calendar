@@ -1,12 +1,16 @@
 import { Calendar, Copy, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ProfileMenu from "@/components/ProfileMenu";
+import type { UiFamilyMember } from "@shared/types";
 
 interface HeaderProps {
   currentView: 'day' | 'week' | 'month' | 'timeline';
   onViewChange: (view: 'day' | 'week' | 'month' | 'timeline') => void;
+  members?: UiFamilyMember[];
+  onMemberColorChange?: (memberId: string, color: string) => void;
 }
 
-export default function Header({ currentView, onViewChange }: HeaderProps) {
+export default function Header({ currentView, onViewChange, members = [], onMemberColorChange }: HeaderProps) {
   const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
     { value: 'day', label: 'Day' },
     { value: 'week', label: 'Week' },
@@ -43,15 +47,19 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
               >
                 <Search className="w-5 h-5" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50"
-                aria-label="User profile"
-                data-testid="button-profile-mobile"
-              >
-                <User className="w-5 h-5" />
-              </Button>
+              {members.length > 0 && onMemberColorChange ? (
+                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} />
+              ) : (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-white border border-white/50"
+                  aria-label="User profile"
+                  data-testid="button-profile-mobile"
+                >
+                  <User className="w-5 h-5" />
+                </Button>
+              )}
             </div>
           </div>
           
@@ -96,15 +104,19 @@ export default function Header({ currentView, onViewChange }: HeaderProps) {
             >
               <Search className="w-5 h-5" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/50"
-              aria-label="User profile"
-              data-testid="button-profile-desktop"
-            >
-              <User className="w-5 h-5" />
-            </Button>
+            {members.length > 0 && onMemberColorChange ? (
+              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} />
+            ) : (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white border border-white/50"
+                aria-label="User profile"
+                data-testid="button-profile-desktop"
+              >
+                <User className="w-5 h-5" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

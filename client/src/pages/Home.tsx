@@ -79,6 +79,17 @@ export default function Home() {
     },
   });
 
+  // Update member color mutation
+  const updateMemberColorMutation = useMutation({
+    mutationFn: async ({ memberId, color }: { memberId: string; color: string }) => {
+      const res = await apiRequest('PUT', `/api/family-members/${memberId}`, { color });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+    },
+  });
+
   const [tasks] = useState(['Call plumber', 'Order cake', 'Family walk']);
 
   const handleEventClick = (event: any) => {
@@ -155,9 +166,18 @@ export default function Home() {
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
 
+  const handleMemberColorChange = async (memberId: string, color: string) => {
+    await updateMemberColorMutation.mutateAsync({ memberId, color });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
-      <Header currentView={view} onViewChange={setView} />
+      <Header 
+        currentView={view} 
+        onViewChange={setView} 
+        members={members}
+        onMemberColorChange={handleMemberColorChange}
+      />
       
       {view === 'day' && (
         <TodayView
