@@ -34,7 +34,7 @@ export default function SearchPanel({ isOpen, onClose, events, onSelectEvent }: 
     <>
       {/* Slide down panel */}
       <div 
-        className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ease-out transform ${
+        className={`fixed top-0 left-0 right-0 z-[60] transition-all duration-300 ease-out transform ${
           isOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
         }`}
       >
@@ -104,7 +104,7 @@ export default function SearchPanel({ isOpen, onClose, events, onSelectEvent }: 
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm"
+          className="fixed inset-0 z-[55] bg-black/20 backdrop-blur-sm"
           onClick={onClose}
           data-testid="search-backdrop"
         />
