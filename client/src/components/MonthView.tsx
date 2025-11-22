@@ -1,5 +1,7 @@
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter, addMonths, subMonths, isToday } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import EventCard from "@/components/EventCard";
+import type { Event as DBEvent } from "@shared/schema";
 
 interface FamilyMember {
   id: string;
@@ -8,13 +10,10 @@ interface FamilyMember {
   initials: string;
 }
 
-interface Event {
-  id: string;
-  title: string;
+interface Event extends DBEvent {
   startTime: Date;
   endTime: Date;
   members: FamilyMember[];
-  categories?: string[];
 }
 
 interface MonthViewProps {
@@ -43,20 +42,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
   const upcomingEvents = events
     .filter(e => isAfter(new Date(e.startTime), new Date()))
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-    .slice(0, 2);
-
-  // Get background color for event day based on event color/category
-  const getDayBackgroundColor = (dayEvents: Event[]) => {
-    if (dayEvents.length === 0) return 'transparent';
-    
-    // Use the first event's associated member color with low opacity
-    const firstEvent = dayEvents[0];
-    if (firstEvent.members.length > 0) {
-      return firstEvent.members[0].color + '40'; // Add 40 for 25% opacity
-    }
-    
-    return 'rgba(255, 255, 255, 0.15)';
-  };
+    .slice(0, 3);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -87,7 +73,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                 <p className="text-xs font-semibold uppercase tracking-wider text-white/60 mb-1">
                   MONTH
                 </p>
-                <h1 className="text-5xl font-bold text-white">
+                <h1 className="text-4xl font-bold text-white">
                   {format(date, 'MMMM yyyy')}
                 </h1>
               </div>
@@ -121,26 +107,38 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
               const dayEvents = getEventsForDay(day);
               const hasEvents = dayEvents.length > 0;
               const isCurrentMonth = isSameMonth(day, date);
-              const bgColor = getDayBackgroundColor(dayEvents);
+              const isTodayDate = isToday(day);
 
               return (
                 <button
                   key={day.toISOString()}
-                  onClick={() => hasEvents && onEventClick(dayEvents[0])}
-                  data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
-                  className="aspect-square rounded-xl backdrop-blur-md border transition-all"
-                  style={{
-                    backgroundColor: bgColor,
-                    borderColor: hasEvents ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.15)',
-                    opacity: isCurrentMonth ? 1 : 0.4,
-                    cursor: hasEvents ? 'pointer' : 'default',
-                    transform: 'scale(1)',
+                  onClick={() => {
+                    onDateChange?.(day);
+                    onViewChange?.('day');
                   }}
+                  data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
+                  className={`
+                    aspect-square rounded-lg flex flex-col items-center justify-center transition-all
+                    ${isCurrentMonth ? 'text-white' : 'text-white/30'}
+                    ${isTodayDate ? 'border-2 border-white' : 'border border-white/20'}
+                    ${hasEvents ? 'bg-white/10' : 'bg-transparent'}
+                    hover:bg-white/15 active:scale-[0.95]
+                  `}
                 >
+                  <span className={`text-sm font-semibold ${isTodayDate ? 'text-white' : ''}`}>
+                    {format(day, 'd')}
+                  </span>
+                  {/* Event indicators */}
                   {hasEvents && (
-                    <span className="text-lg font-semibold text-white">
-                      {format(day, 'd')}
-                    </span>
+                    <div className="flex gap-0.5 mt-1">
+                      {dayEvents.slice(0, 3).map((event, idx) => (
+                        <div
+                          key={idx}
+                          className="w-1 h-1 rounded-full"
+                          style={{ backgroundColor: event.color }}
+                        />
+                      ))}
+                    </div>
                   )}
                 </button>
               );
@@ -156,27 +154,35 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
             </p>
             <div className="space-y-2">
               {upcomingEvents.map((event) => (
-                <button
-                  key={event.id}
-                  onClick={() => onEventClick(event)}
-                  data-testid={`upcoming-event-${event.id}`}
-                  className="w-full rounded-2xl p-4 backdrop-blur-md bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left"
-                >
-                  <div className="flex items-center justify-between">
+                <div key={event.id} className="px-2">
+                  <button
+                    onClick={() => onEventClick(event)}
+                    data-testid={`upcoming-event-${event.id}`}
+                    className="w-full rounded-2xl p-3 bg-white/10 border border-white/20 hover:bg-white/15 transition-all active:scale-[0.98] text-left flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg"
-                        style={{ backgroundColor: event.members[0]?.color || '#6D7A8E' }}
-                      />
-                      <span className="text-base font-medium text-white">
-                        {event.title}
-                      </span>
+                      {event.members[0] && (
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white"
+                          style={{ backgroundColor: event.members[0].color }}
+                        >
+                          {event.members[0].initials}
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-white">
+                          {event.title}
+                        </p>
+                        <p className="text-xs text-white/70">
+                          {format(event.startTime, 'MMM d')}
+                        </p>
+                      </div>
                     </div>
                     <span className="text-sm text-white/80">
                       {format(event.startTime, 'h:mm a')}
                     </span>
-                  </div>
-                </button>
+                  </button>
+                </div>
               ))}
             </div>
           </div>

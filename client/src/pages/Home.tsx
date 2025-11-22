@@ -11,17 +11,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
 
-interface TodayEvent {
-  id: string;
-  title: string;
-  startTime: Date;
-  endTime: Date;
-  timeOfDay?: string;
-  members: { id: string; name: string; color: string; initials: string }[];
-  categories?: string[];
-  isFocus?: boolean;
-}
-
 export default function Home() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
@@ -84,7 +73,7 @@ export default function Home() {
 
   const [tasks] = useState(['Call plumber', 'Order cake', 'Family walk']);
 
-  const handleEventClick = (event: TodayEvent) => {
+  const handleEventClick = (event: any) => {
     setSelectedEventId(event.id);
     setEventModalOpen(true);
   };
@@ -144,7 +133,7 @@ export default function Home() {
   };
 
   // Convert events to today view format
-  const todayEvents: TodayEvent[] = events
+  const todayEvents = events
     .filter(e => isSameDay(new Date(e.startTime), currentDate))
     .map(e => {
       const eventMembers = members
@@ -154,27 +143,14 @@ export default function Home() {
           initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
         }));
       
-      // Determine category based on title
-      let categories: string[] | undefined;
-      if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
-        categories = ['Family'];
-      } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client')) {
-        categories = ['Work'];
-      } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga')) {
-        categories = ['Health'];
-      }
-      
       return {
-        id: e.id,
-        title: e.title,
+        ...e,
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
-        categories,
-        isFocus: false // Remove focus event concept
       };
     })
-    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime()); // Sort purely by time
+    .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
   // Convert events to week view format
   const weekEvents = events
@@ -187,22 +163,11 @@ export default function Home() {
           initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
         }));
       
-      let categories: string[] | undefined;
-      if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
-        categories = ['Family'];
-      } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client') || e.title.toLowerCase().includes('project')) {
-        categories = ['Work'];
-      } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga') || e.title.toLowerCase().includes('workout')) {
-        categories = ['Health'];
-      }
-      
       return {
-        id: e.id,
-        title: e.title,
+        ...e,
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
-        categories
       };
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
@@ -218,22 +183,11 @@ export default function Home() {
           initials: m.name.split(' ').map(n => n[0]).join('').toUpperCase()
         }));
       
-      let categories: string[] | undefined;
-      if (e.title.toLowerCase().includes('mom') || e.title.toLowerCase().includes('birthday')) {
-        categories = ['Family'];
-      } else if (e.title.toLowerCase().includes('meeting') || e.title.toLowerCase().includes('client') || e.title.toLowerCase().includes('project')) {
-        categories = ['Work'];
-      } else if (e.title.toLowerCase().includes('gym') || e.title.toLowerCase().includes('yoga') || e.title.toLowerCase().includes('workout')) {
-        categories = ['Health'];
-      }
-      
       return {
-        id: e.id,
-        title: e.title,
+        ...e,
         startTime: new Date(e.startTime),
         endTime: new Date(e.endTime),
         members: eventMembers,
-        categories
       };
     })
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
@@ -300,6 +254,7 @@ export default function Home() {
               }))
           }))}
           onEventClick={handleEventClick}
+          onAddEvent={handleAddEvent}
         />
       )}
 

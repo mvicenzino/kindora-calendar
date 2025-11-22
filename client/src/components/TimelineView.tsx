@@ -1,8 +1,7 @@
 import { format, isSameDay, isToday, startOfDay } from "date-fns";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Clock } from "lucide-react";
+import { Plus } from "lucide-react";
+import EventCard from "@/components/EventCard";
+import type { Event as DBEvent, FamilyMember as DBFamilyMember } from "@shared/schema";
 
 interface FamilyMember {
   id: string;
@@ -11,31 +10,19 @@ interface FamilyMember {
   initials: string;
 }
 
-interface Event {
-  id: string;
-  title: string;
+interface Event extends DBEvent {
   startTime: Date;
   endTime: Date;
   members: FamilyMember[];
-  categories?: string[];
 }
 
 interface TimelineViewProps {
   events: Event[];
   onEventClick: (event: Event) => void;
+  onAddEvent?: () => void;
 }
 
-export default function TimelineView({ events, onEventClick }: TimelineViewProps) {
-  const isSometimeTodayEvent = (event: Event) => {
-    const hour = event.startTime.getHours();
-    const minute = event.startTime.getMinutes();
-    return hour === 23 && minute === 58;
-  };
-
-  const formatTimeRange = (start: Date, end: Date) => {
-    return `${format(start, 'h:mm a')} - ${format(end, 'h:mm a')}`;
-  };
-
+export default function TimelineView({ events, onEventClick, onAddEvent }: TimelineViewProps) {
   const sortedEvents = [...events].sort((a, b) => 
     a.startTime.getTime() - b.startTime.getTime()
   );
@@ -61,10 +48,29 @@ export default function TimelineView({ events, onEventClick }: TimelineViewProps
   return (
     <div className="min-h-screen p-4">
       <div className="max-w-2xl mx-auto space-y-6 pt-4">
+        {/* Header */}
+        <div className="flex items-start justify-between px-2">
+          <div>
+            <h1 className="text-5xl font-bold text-white">Timeline</h1>
+            <p className="text-lg text-white/70 mt-1">Your events in time</p>
+          </div>
+          {onAddEvent && (
+            <button
+              onClick={onAddEvent}
+              data-testid="button-add-event"
+              className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98] mt-2"
+            >
+              <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+            </button>
+          )}
+        </div>
+
+        {/* Grouped Events */}
         {groupedEvents.map((group, groupIndex) => (
           <div key={groupIndex} className="space-y-3">
             <div 
-              className="sticky top-20 z-10 backdrop-blur-md bg-white/10 rounded-full px-4 py-2 inline-block border border-white/20 shadow-lg"
+              className="sticky top-20 z-10 rounded-full px-4 py-2 inline-block border-2 border-white/40 shadow-lg"
+              style={{ backgroundColor: '#8B5CF6' }}
               data-testid={`date-badge-${format(group.date, 'yyyy-MM-dd')}`}
             >
               <span className="text-white font-semibold text-sm">
@@ -76,64 +82,14 @@ export default function TimelineView({ events, onEventClick }: TimelineViewProps
             
             <div className="space-y-3">
               {group.events.map((event) => (
-                <Card
+                <EventCard
                   key={event.id}
-                  className="bg-card overflow-visible"
-                  data-testid={`event-card-${event.id}`}
-                >
-                  <Button
-                    variant="ghost"
-                    className="w-full h-auto p-4 text-left justify-start hover-elevate active-elevate-2 overflow-visible"
-                    onClick={() => onEventClick(event)}
-                    data-testid={`button-event-${event.id}`}
-                  >
-                    <div className="flex items-start gap-3 w-full">
-                      <div className="flex-1 space-y-2">
-                        <h3 className="text-white font-semibold" data-testid={`text-event-title-${event.id}`}>
-                          {event.title}
-                        </h3>
-                        
-                        <div className="flex items-center gap-2">
-                          {isSometimeTodayEvent(event) ? (
-                            <span 
-                              className="inline-flex items-center gap-1 text-white/70 text-sm bg-white/10 px-3 py-1 rounded-full border border-white/20"
-                              data-testid={`text-event-time-allday-${event.id}`}
-                            >
-                              <Clock className="w-3 h-3" />
-                              Sometime today
-                            </span>
-                          ) : (
-                            <span 
-                              className="inline-flex items-center gap-1 text-white/70 text-sm"
-                              data-testid={`text-event-time-${event.id}`}
-                            >
-                              <Clock className="w-3 h-3" />
-                              {formatTimeRange(event.startTime, event.endTime)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex -space-x-2">
-                        {event.members.map((member) => (
-                          <Avatar 
-                            key={member.id}
-                            className="w-8 h-8 border-2 border-white/20"
-                            style={{ borderColor: member.color }}
-                            data-testid={`avatar-event-${event.id}-member-${member.id}`}
-                          >
-                            <AvatarFallback 
-                              className="text-white text-xs font-semibold"
-                              style={{ backgroundColor: member.color }}
-                            >
-                              {member.initials}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </div>
-                  </Button>
-                </Card>
+                  event={event}
+                  member={event.members[0]}
+                  onClick={() => onEventClick(event)}
+                  variant="full"
+                  showTime={true}
+                />
               ))}
             </div>
           </div>

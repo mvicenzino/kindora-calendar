@@ -1,5 +1,7 @@
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import EventCard from "@/components/EventCard";
+import type { Event as DBEvent } from "@shared/schema";
 
 interface FamilyMember {
   id: string;
@@ -8,13 +10,10 @@ interface FamilyMember {
   initials: string;
 }
 
-interface Event {
-  id: string;
-  title: string;
+interface Event extends DBEvent {
   startTime: Date;
   endTime: Date;
   members: FamilyMember[];
-  categories?: string[];
 }
 
 interface WeekViewProps {
@@ -48,37 +47,11 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
     onViewChange?.('day');
   };
 
-  // Event colors based on categories or members
-  const getEventColor = (event: Event) => {
-    if (event.title.toLowerCase().includes('dinner') || event.title.toLowerCase().includes('emma')) {
-      return '#B8836D'; // coral/brownish
-    } else if (event.categories?.includes('Family') || event.title.toLowerCase().includes('sebby') || event.title.toLowerCase().includes('zoo')) {
-      return '#8B7A6D'; // brownish
-    } else if (event.categories?.includes('Work') || event.title.toLowerCase().includes('meeting')) {
-      return '#5D7A8E'; // blue
-    } else if (event.categories?.includes('Health') || event.title.toLowerCase().includes('workout')) {
-      return '#6D8A7D'; // greenish-blue
-    } else if (event.title.toLowerCase().includes('grocery')) {
-      return '#9B8A7D'; // tan
-    } else if (event.title.toLowerCase().includes('pack') || event.title.toLowerCase().includes('pavnity')) {
-      return '#8B7A6D'; // brownish
-    } else if (event.title.toLowerCase().includes('dr.') || event.title.toLowerCase().includes('doctor')) {
-      return '#B8836D'; // coral
-    } else if (event.title.toLowerCase().includes('rental') || event.title.toLowerCase().includes('car')) {
-      return '#9B8A7D'; // tan
-    }
-    return '#6D7A8E'; // default blue-gray
-  };
-
-  const getCategoryLabel = (event: Event) => {
-    if (event.title.toLowerCase().includes('grocery')) return 'PERSONAL';
-    if (event.title.toLowerCase().includes('sebby')) return 'W';
-    if (event.title.toLowerCase().includes('pack')) return 'Pavnity';
-    if (event.title.toLowerCase().includes('rental')) return 'FAMILY';
-    if (event.title.toLowerCase().includes('dr.')) return 'M';
-    if (event.title.toLowerCase().includes('zoo')) return 'Family';
-    return event.categories?.[0];
-  };
+  // Group events by day
+  const eventsByDay = daysInWeek.map(day => ({
+    day,
+    events: events.filter(e => isSameDay(new Date(e.startTime), day))
+  })).filter(group => group.events.length > 0);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -120,9 +93,9 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
           </div>
         </div>
 
-        {/* Days of Week */}
-        <div className="grid grid-cols-7 gap-2 px-2">
-          {daysInWeek.map((day) => {
+        {/* Mini Week Selector */}
+        <div className="flex justify-center gap-3 px-2">
+          {daysInWeek.slice(0, 7).map((day) => {
             const dayEvents = events.filter(e => isSameDay(new Date(e.startTime), day));
             const hasEvents = dayEvents.length > 0;
             
@@ -131,51 +104,54 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
                 key={day.toISOString()}
                 onClick={() => handleDayClick(day)}
                 data-testid={`button-day-${format(day, 'yyyy-MM-dd')}`}
-                className="flex flex-col items-center hover:opacity-80 transition-opacity active:scale-[0.95]"
+                className={`
+                  w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all
+                  ${hasEvents 
+                    ? 'bg-white/20 border-2 border-white/40 text-white' 
+                    : 'text-white/50'
+                  }
+                  hover:opacity-80 active:scale-[0.95]
+                `}
               >
-                <div className="text-xs font-medium text-white/70 mb-2">
-                  {format(day, 'EEEEE')}
-                </div>
-                {hasEvents && (
-                  <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                    <span className="text-sm font-semibold text-white">
-                      {format(day, 'd')}
-                    </span>
-                  </div>
-                )}
+                {format(day, 'd')}
               </button>
             );
           })}
         </div>
 
-        {/* Events Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          {events.map((event) => {
-            const categoryLabel = getCategoryLabel(event);
-            
-            return (
-              <button
-                key={event.id}
-                onClick={() => onEventClick(event)}
-                data-testid={`event-${event.id}`}
-                className="rounded-3xl p-4 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
-                style={{ backgroundColor: getEventColor(event) }}
-              >
-                {categoryLabel && (
-                  <div className="text-xs font-semibold text-white/80 mb-1">
-                    {categoryLabel}
-                  </div>
-                )}
-                <h3 className="text-base font-semibold text-white mb-1 leading-tight">
-                  {event.title}
-                </h3>
-                <p className="text-sm text-white/90">
-                  {format(event.startTime, 'h:mm a')}
-                </p>
-              </button>
-            );
-          })}
-        </div>
+        {/* Events Grid - 2 Column Layout */}
+        {eventsByDay.length > 0 ? (
+          <div className="space-y-4">
+            {eventsByDay.map((group) => (
+              <div key={group.day.toISOString()} className="space-y-3">
+                {/* Day Label */}
+                <div className="px-2">
+                  <p className="text-sm font-semibold text-white/80">
+                    {format(group.day, 'EEEE, MMM d')}
+                  </p>
+                </div>
+                
+                {/* 2-Column Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {group.events.map((event) => (
+                    <EventCard
+                      key={event.id}
+                      event={event}
+                      member={event.members[0]}
+                      onClick={() => onEventClick(event)}
+                      variant="grid"
+                      showTime={true}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-white/70 text-lg">No events this week</p>
+          </div>
+        )}
 
         {/* View Toggle */}
         {onViewChange && (

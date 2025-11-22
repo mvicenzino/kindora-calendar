@@ -1,7 +1,7 @@
 import { format, isToday } from "date-fns";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
+import EventCard from "@/components/EventCard";
+import type { Event as DBEvent } from "@shared/schema";
 
 interface FamilyMember {
   id: string;
@@ -10,15 +10,10 @@ interface FamilyMember {
   initials: string;
 }
 
-interface Event {
-  id: string;
-  title: string;
+interface Event extends DBEvent {
   startTime: Date;
   endTime: Date;
-  timeOfDay?: string;
   members: FamilyMember[];
-  categories?: string[];
-  isFocus?: boolean;
 }
 
 interface TodayViewProps {
@@ -30,43 +25,20 @@ interface TodayViewProps {
   onAddEvent?: () => void;
 }
 
-export default function TodayView({ date, events, tasks, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
+export default function TodayView({ date, events, onEventClick, onViewChange, onAddEvent }: TodayViewProps) {
   const isViewingToday = isToday(date);
   const dayTitle = isViewingToday ? "Today" : format(date, 'EEEE');
-  const daySubtitle = isViewingToday ? undefined : format(date, 'MMM d, yyyy');
-
-  // Separate "Sometime Today" events (23:58-23:59) from timed events
-  const isSometimeTodayEvent = (event: Event) => {
-    const hour = event.startTime.getHours();
-    const minute = event.startTime.getMinutes();
-    return hour === 23 && minute === 58;
-  };
-
-  const timedEvents = events.filter(e => !isSometimeTodayEvent(e));
-  const sometimeTodayEvents = events.filter(e => isSometimeTodayEvent(e));
-
-  const formatTimeRange = (start: Date, end: Date) => {
-    return `${format(start, 'h:mm')} ${format(start, 'a')} - ${format(end, 'h:mm')} ${format(end, 'a')}`;
-  };
-
-  const getTimeOfDay = (time: Date) => {
-    const hour = time.getHours();
-    if (hour < 12) return 'Morning';
-    if (hour < 17) return 'Afternoon';
-    return 'Evening';
-  };
+  const daySubtitle = isViewingToday ? format(date, 'EEEE, MMMM d, yyyy') : format(date, 'EEEE, MMMM d, yyyy');
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="px-2">
-          <div className="flex items-start gap-6">
+          <div className="flex items-start justify-between gap-6">
             <div>
               <h1 className="text-5xl font-bold text-white">{dayTitle}</h1>
-              {daySubtitle && (
-                <p className="text-lg text-white/70 mt-1">{daySubtitle}</p>
-              )}
+              <p className="text-lg text-white/70 mt-1">{daySubtitle}</p>
             </div>
             {onAddEvent && (
               <button
@@ -80,101 +52,23 @@ export default function TodayView({ date, events, tasks, onEventClick, onViewCha
           </div>
         </div>
 
-        {/* Timed Events */}
-        {timedEvents.length > 0 && (
+        {/* Events */}
+        {events.length > 0 ? (
           <div className="space-y-3">
-            {timedEvents.map((event, idx) => {
-              const eventColors = [
-                '#7A8A7D', // brownish-green for Brunch
-                '#5D6D7E', // blue-gray for Meeting
-                '#7A8A7D', // brownish-green for Birthday
-                '#5D7A8E', // blue for Gym
-              ];
-              return (
-                <button
-                  key={event.id}
-                  onClick={() => onEventClick(event)}
-                  data-testid={`event-${event.id}`}
-                  className="w-full rounded-3xl p-5 border border-white/50 hover:opacity-90 transition-all active:scale-[0.98] text-left"
-                  style={{ backgroundColor: eventColors[idx % eventColors.length] }}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-xl font-semibold text-white flex-1">
-                      {event.title}
-                    </h3>
-                    <div className="flex items-center gap-2 ml-3">
-                      {event.categories && event.categories.length > 0 && (
-                        <span className="text-sm text-white/80">
-                          {event.categories[0]}
-                        </span>
-                      )}
-                      {event.members.map(member => (
-                        <div
-                          key={member.id}
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white border border-white/30"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.initials}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-white/80">
-                    {format(event.startTime, 'h:mm a')}–{format(event.endTime, 'h:mm a')}
-                  </p>
-                </button>
-              );
-            })}
+            {events.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                member={event.members[0]}
+                onClick={() => onEventClick(event)}
+                variant="full"
+                showTime={true}
+              />
+            ))}
           </div>
-        )}
-
-        {/* Sometime Today */}
-        {sometimeTodayEvents.length > 0 && (
-          <div className="space-y-3 pt-6">
-            <div className="px-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-white/60">
-                Sometime Today
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {sometimeTodayEvents.map((event, idx) => {
-                const complementaryColors = [
-                  '#9A7A8D', // muted purple-pink
-                  '#7A8A9D', // soft blue-gray
-                  '#8A9A7D', // sage green
-                  '#9D8A7A', // warm taupe
-                ];
-                return (
-                  <button
-                    key={event.id}
-                    onClick={() => onEventClick(event)}
-                    data-testid={`sometime-event-${event.id}`}
-                    className="rounded-2xl p-3 border border-white/40 hover:opacity-90 transition-all active:scale-[0.98] text-left backdrop-blur-md"
-                    style={{ backgroundColor: complementaryColors[idx % complementaryColors.length] }}
-                  >
-                    <div className="flex items-start justify-between mb-1">
-                      <h4 className="text-sm font-semibold text-white flex-1 leading-tight">
-                        {event.title}
-                      </h4>
-                      {event.members.map(member => (
-                        <div
-                          key={member.id}
-                          className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold text-white border border-white/30 ml-1"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.initials}
-                        </div>
-                      ))}
-                    </div>
-                    {event.categories && event.categories.length > 0 && (
-                      <span className="text-[10px] text-white/70">
-                        {event.categories[0]}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-white/70 text-lg">No events today</p>
           </div>
         )}
 
