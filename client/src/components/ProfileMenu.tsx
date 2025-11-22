@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UiFamilyMember } from "@shared/types";
-import { X } from 'lucide-react';
+import { X, User } from 'lucide-react';
 
 interface ProfileMenuProps {
   members: UiFamilyMember[];
@@ -41,33 +41,17 @@ export default function ProfileMenu({ members, onMemberColorChange }: ProfileMen
 
   return (
     <div className="relative" ref={menuRef}>
-      {/* Avatar Button */}
-      <button
+      {/* User Profile Icon Button */}
+      <Button
+        size="icon"
+        variant="ghost"
+        className="text-white border border-white/50"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 hover-elevate active-elevate-2"
         aria-label="Family members menu"
         data-testid="button-profile-menu"
       >
-        <div className="flex -space-x-2">
-          {members.slice(0, 3).map((member) => (
-            <Avatar
-              key={member.id}
-              className="h-8 w-8 border-2 border-white/30 cursor-pointer hover:border-white/50 transition-all"
-              title={member.name}
-            >
-              <AvatarFallback
-                className="text-white text-xs font-semibold"
-                style={{ backgroundColor: member.color }}
-              >
-                {member.initials}
-              </AvatarFallback>
-            </Avatar>
-          ))}
-        </div>
-        {members.length > 3 && (
-          <span className="text-xs text-white/70 font-medium">+{members.length - 3}</span>
-        )}
-      </button>
+        <User className="w-5 h-5" />
+      </Button>
 
       {/* Dropdown Menu */}
       {isOpen && (
