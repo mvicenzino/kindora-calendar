@@ -55,7 +55,7 @@ export default function ProfileMenu({ members, onMemberColorChange }: ProfileMen
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-72 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl z-50 p-4 space-y-3">
+        <div className="absolute right-0 mt-2 w-72 bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl z-50 p-4 space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-white/10">
             <h3 className="text-sm font-semibold text-white">Family Members</h3>
             <button
