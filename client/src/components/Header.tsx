@@ -75,7 +75,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                   flex-1 md:flex-none px-3 md:px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 overflow-visible border border-white/50
                   focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                   ${currentView === view.value
-                    ? 'bg-white/30 backdrop-blur-md text-white shadow-lg'
+                    ? 'bg-white/25 backdrop-blur-md text-white shadow-md'
                     : 'text-white/70 hover-elevate active-elevate-2'
                   }
                 `}
