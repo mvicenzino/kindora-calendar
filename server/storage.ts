@@ -1,7 +1,7 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, familyMembers, events, messages } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, familyMembers, events, messages, users } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -11,339 +11,118 @@ export class NotFoundError extends Error {
 }
 
 export interface IStorage {
+  // User operations (MANDATORY for auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+
   // Family Members
-  getFamilyMembers(): Promise<FamilyMember[]>;
-  getFamilyMember(id: string): Promise<FamilyMember | undefined>;
-  createFamilyMember(member: InsertFamilyMember): Promise<FamilyMember>;
-  updateFamilyMember(id: string, updates: Partial<FamilyMember>): Promise<FamilyMember>;
-  deleteFamilyMember(id: string): Promise<void>;
+  getFamilyMembers(userId: string): Promise<FamilyMember[]>;
+  getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined>;
+  createFamilyMember(userId: string, member: InsertFamilyMember): Promise<FamilyMember>;
+  updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember>;
+  deleteFamilyMember(id: string, userId: string): Promise<void>;
 
   // Events
-  getEvents(): Promise<Event[]>;
-  getEvent(id: string): Promise<Event | undefined>;
-  createEvent(event: InsertEvent): Promise<Event>;
-  updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event>;
-  deleteEvent(id: string): Promise<void>;
-  toggleEventCompletion(id: string): Promise<Event>;
+  getEvents(userId: string): Promise<Event[]>;
+  getEvent(id: string, userId: string): Promise<Event | undefined>;
+  createEvent(userId: string, event: InsertEvent): Promise<Event>;
+  updateEvent(id: string, userId: string, event: Partial<InsertEvent>): Promise<Event>;
+  deleteEvent(id: string, userId: string): Promise<void>;
+  toggleEventCompletion(id: string, userId: string): Promise<Event>;
 
   // Messages
-  getMessages(eventId: string): Promise<Message[]>;
-  createMessage(message: InsertMessage): Promise<Message>;
-  deleteMessage(id: string): Promise<void>;
+  getMessages(eventId: string, userId: string): Promise<Message[]>;
+  createMessage(userId: string, message: InsertMessage): Promise<Message>;
+  deleteMessage(id: string, userId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
   private familyMembers: Map<string, FamilyMember>;
   private events: Map<string, Event>;
   private messages: Map<string, Message>;
+  private users: Map<string, User>;
 
   constructor() {
     this.familyMembers = new Map();
     this.events = new Map();
     this.messages = new Map();
-    
-    // Initialize with default family members
-    const member1: FamilyMember = {
-      id: randomUUID(),
-      name: 'Mike V',
-      color: '#8B5CF6',
-      avatar: null,
-    };
-    const member2: FamilyMember = {
-      id: randomUUID(),
-      name: 'Carolyn V',
-      color: '#EC4899',
-      avatar: null,
-    };
-    const sebby: FamilyMember = {
-      id: randomUUID(),
-      name: 'Sebby',
-      color: '#10B981',
-      avatar: null,
-    };
-    
-    this.familyMembers.set(member1.id, member1);
-    this.familyMembers.set(member2.id, member2);
-    this.familyMembers.set(sebby.id, sebby);
+    this.users = new Map();
+  }
 
-    // Initialize with sample events for the week
-    const today = new Date();
-    const sampleEvents: Event[] = [
-      // Today's events
-      {
-        id: randomUUID(),
-        title: 'Date Night at Jockey Hollow',
-        description: 'Evening out',
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 19, 30),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 0),
-        memberId: member1.id,
-        color: member1.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Brunch with Mom',
-        description: 'Family time',
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 11, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 30),
-        memberId: member2.id,
-        color: member2.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      // Earlier this week
-      {
-        id: randomUUID(),
-        title: 'Dinner with Emma',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 17, 30),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3, 19, 0),
-        memberId: member1.id,
-        color: member1.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Grocery Shopping',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 11, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 12, 0),
-        memberId: member1.id,
-        color: member1.color,
-        photoUrl: null,
-        completed: true,
-        completedAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 4, 12, 0),
-      },
-      {
-        id: randomUUID(),
-        title: 'Sebby\'s Birthday',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 9, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 11, 0),
-        memberId: member2.id,
-        color: member2.color,
-        photoUrl: null,
-        completed: true,
-        completedAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2, 11, 0),
-      },
-      {
-        id: randomUUID(),
-        title: 'Pack for trip',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 9, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 10, 0),
-        memberId: member1.id,
-        color: member1.color,
-        photoUrl: null,
-        completed: true,
-        completedAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 10, 0),
-      },
-      // Later this week
-      {
-        id: randomUUID(),
-        title: 'Project Meeting',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 13, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 14, 0),
-        memberId: member2.id,
-        color: member2.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Workout',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 9, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1, 10, 0),
-        memberId: member1.id,
-        color: member1.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Pick up rental car',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 12, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 13, 0),
-        memberId: member2.id,
-        color: member2.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Dr. Schwartz',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 8, 30),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 9, 30),
-        memberId: member1.id,
-        color: member1.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Zoo visit',
-        description: null,
-        startTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 14, 0),
-        endTime: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 3, 16, 0),
-        memberId: member2.id,
-        color: member2.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      // Sebby's December 2025 School Lunches
-      {
-        id: randomUUID(),
-        title: 'Lunch: Beef Hotdogs with Tater Tots',
-        description: null,
-        startTime: new Date(2025, 11, 2, 11, 30),
-        endTime: new Date(2025, 11, 2, 12, 15),
-        memberId: sebby.id,
-        color: sebby.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Lunch: Pancakes with Sausage',
-        description: null,
-        startTime: new Date(2025, 11, 3, 11, 30),
-        endTime: new Date(2025, 11, 3, 12, 15),
-        memberId: sebby.id,
-        color: sebby.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Lunch: Buttered Noodles with Peas and Garlic Bread',
-        description: null,
-        startTime: new Date(2025, 11, 5, 11, 30),
-        endTime: new Date(2025, 11, 5, 12, 15),
-        memberId: sebby.id,
-        color: sebby.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Lunch: French Toast Sticks with Sausage',
-        description: null,
-        startTime: new Date(2025, 11, 10, 11, 30),
-        endTime: new Date(2025, 11, 10, 12, 15),
-        memberId: sebby.id,
-        color: sebby.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Lunch: Mac & Cheese with Broccoli',
-        description: null,
-        startTime: new Date(2025, 11, 12, 11, 30),
-        endTime: new Date(2025, 11, 12, 12, 15),
-        memberId: sebby.id,
-        color: sebby.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Lunch: Waffles with Sausage',
-        description: null,
-        startTime: new Date(2025, 11, 17, 11, 30),
-        endTime: new Date(2025, 11, 17, 12, 15),
-        memberId: sebby.id,
-        color: sebby.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-      {
-        id: randomUUID(),
-        title: 'Lunch: Pasta with Marinara Sauce and Garlic Bread',
-        description: null,
-        startTime: new Date(2025, 11, 19, 11, 30),
-        endTime: new Date(2025, 11, 19, 12, 15),
-        memberId: sebby.id,
-        color: sebby.color,
-        photoUrl: null,
-        completed: false,
-        completedAt: null,
-      },
-    ];
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    return this.users.get(id);
+  }
 
-    sampleEvents.forEach(event => this.events.set(event.id, event));
+  async upsertUser(user: UpsertUser): Promise<User> {
+    const id = user.id;
+    const existingUser = this.users.get(id);
+    const userData: User = {
+      ...existingUser,
+      ...user,
+      id,
+      createdAt: existingUser?.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
+    this.users.set(id, userData);
+    return userData;
   }
 
   // Family Members
-  async getFamilyMembers(): Promise<FamilyMember[]> {
-    return Array.from(this.familyMembers.values());
+  async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
+    return Array.from(this.familyMembers.values()).filter(m => m.userId === userId);
   }
 
-  async getFamilyMember(id: string): Promise<FamilyMember | undefined> {
-    return this.familyMembers.get(id);
+  async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
+    const member = this.familyMembers.get(id);
+    return member && member.userId === userId ? member : undefined;
   }
 
-  async createFamilyMember(insertMember: InsertFamilyMember): Promise<FamilyMember> {
+  async createFamilyMember(userId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
     const id = randomUUID();
-    const member: FamilyMember = { ...insertMember, id, avatar: insertMember.avatar || null };
+    const member: FamilyMember = { 
+      ...insertMember, 
+      id, 
+      userId,
+      createdAt: new Date(),
+    };
     this.familyMembers.set(id, member);
     return member;
   }
 
-  async updateFamilyMember(id: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+  async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
     const existingMember = this.familyMembers.get(id);
-    if (!existingMember) {
+    if (!existingMember || existingMember.userId !== userId) {
       throw new NotFoundError(`Family member with id ${id} not found`);
     }
     
     const updatedMember: FamilyMember = {
       ...existingMember,
       ...updates,
-      id, // Ensure ID doesn't change
+      id,
+      userId,
     };
     this.familyMembers.set(id, updatedMember);
     return updatedMember;
   }
 
-  async deleteFamilyMember(id: string): Promise<void> {
-    if (!this.familyMembers.has(id)) {
+  async deleteFamilyMember(id: string, userId: string): Promise<void> {
+    const member = this.familyMembers.get(id);
+    if (!member || member.userId !== userId) {
       throw new NotFoundError(`Family member with id ${id} not found`);
     }
     
     this.familyMembers.delete(id);
     
-    // Get events associated with this member
     const eventsToDelete = Array.from(this.events.entries())
-      .filter(([_, event]) => event.memberId === id)
+      .filter(([_, event]) => event.memberId === id && event.userId === userId)
       .map(([eventId, _]) => eventId);
     
-    // Delete those events and their associated messages
     eventsToDelete.forEach(eventId => {
       this.events.delete(eventId);
       
-      // Delete messages for this event
       const messagesToDelete = Array.from(this.messages.entries())
-        .filter(([_, message]) => message.eventId === eventId)
+        .filter(([_, message]) => message.eventId === eventId && message.userId === userId)
         .map(([messageId, _]) => messageId);
       
       messagesToDelete.forEach(messageId => this.messages.delete(messageId));
@@ -351,39 +130,42 @@ export class MemStorage implements IStorage {
   }
 
   // Events
-  async getEvents(): Promise<Event[]> {
-    return Array.from(this.events.values());
+  async getEvents(userId: string): Promise<Event[]> {
+    return Array.from(this.events.values()).filter(e => e.userId === userId);
   }
 
-  async getEvent(id: string): Promise<Event | undefined> {
-    return this.events.get(id);
+  async getEvent(id: string, userId: string): Promise<Event | undefined> {
+    const event = this.events.get(id);
+    return event && event.userId === userId ? event : undefined;
   }
 
-  async createEvent(insertEvent: InsertEvent): Promise<Event> {
+  async createEvent(userId: string, insertEvent: InsertEvent): Promise<Event> {
     const id = randomUUID();
     const event: Event = {
       ...insertEvent,
       id,
+      userId,
       description: insertEvent.description || null,
       photoUrl: insertEvent.photoUrl || null,
       completed: false,
       completedAt: null,
+      createdAt: new Date(),
     };
     this.events.set(id, event);
     return event;
   }
 
-  async updateEvent(id: string, updateData: Partial<InsertEvent>): Promise<Event> {
+  async updateEvent(id: string, userId: string, updateData: Partial<InsertEvent>): Promise<Event> {
     const existingEvent = this.events.get(id);
-    if (!existingEvent) {
+    if (!existingEvent || existingEvent.userId !== userId) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
     
-    // Ensure dates are Date objects after merge
     const updatedEvent: Event = {
       ...existingEvent,
       ...updateData,
       id,
+      userId,
       startTime: updateData.startTime ? new Date(updateData.startTime) : existingEvent.startTime,
       endTime: updateData.endTime ? new Date(updateData.endTime) : existingEvent.endTime,
       description: updateData.description !== undefined ? updateData.description : existingEvent.description,
@@ -393,24 +175,24 @@ export class MemStorage implements IStorage {
     return updatedEvent;
   }
 
-  async deleteEvent(id: string): Promise<void> {
-    if (!this.events.has(id)) {
+  async deleteEvent(id: string, userId: string): Promise<void> {
+    const event = this.events.get(id);
+    if (!event || event.userId !== userId) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
     
     this.events.delete(id);
     
-    // Also delete messages for this event
     const messagesToDelete = Array.from(this.messages.entries())
-      .filter(([_, message]) => message.eventId === id)
+      .filter(([_, message]) => message.eventId === id && message.userId === userId)
       .map(([messageId, _]) => messageId);
     
     messagesToDelete.forEach(messageId => this.messages.delete(messageId));
   }
 
-  async toggleEventCompletion(id: string): Promise<Event> {
+  async toggleEventCompletion(id: string, userId: string): Promise<Event> {
     const event = this.events.get(id);
-    if (!event) {
+    if (!event || event.userId !== userId) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
     
@@ -424,39 +206,32 @@ export class MemStorage implements IStorage {
   }
 
   // Messages
-  async getMessages(eventId: string): Promise<Message[]> {
-    return Array.from(this.messages.values()).filter(m => m.eventId === eventId);
+  async getMessages(eventId: string, userId: string): Promise<Message[]> {
+    return Array.from(this.messages.values()).filter(m => m.eventId === eventId && m.userId === userId);
   }
 
-  async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    // Validate that event exists
-    const event = this.events.get(insertMessage.eventId);
-    if (!event) {
-      throw new NotFoundError(`Event with id ${insertMessage.eventId} not found`);
-    }
-    
-    // Validate that member exists
-    const member = this.familyMembers.get(insertMessage.memberId);
-    if (!member) {
-      throw new NotFoundError(`Family member with id ${insertMessage.memberId} not found`);
-    }
-    
+  async createMessage(userId: string, insertMessage: InsertMessage): Promise<Message> {
     const id = randomUUID();
     const message: Message = {
       ...insertMessage,
       id,
+      userId,
       createdAt: new Date(),
     };
     this.messages.set(id, message);
     return message;
   }
 
-  async deleteMessage(id: string): Promise<void> {
+  async deleteMessage(id: string, userId: string): Promise<void> {
+    const message = this.messages.get(id);
+    if (!message || message.userId !== userId) {
+      throw new NotFoundError(`Message with id ${id} not found`);
+    }
     this.messages.delete(id);
   }
 }
 
-// DrizzleStorage implementation for persistent database storage
+// DrizzleStorage implementation
 class DrizzleStorage implements IStorage {
   private db: any;
 
@@ -467,68 +242,107 @@ class DrizzleStorage implements IStorage {
     this.db = drizzle(process.env.DATABASE_URL);
   }
 
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const result = await this.db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return result[0];
+  }
+
   // Family Members
-  async getFamilyMembers(): Promise<FamilyMember[]> {
-    return await this.db.select().from(familyMembers);
+  async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
+    return await this.db.select().from(familyMembers).where(eq(familyMembers.userId, userId));
   }
 
-  async getFamilyMember(id: string): Promise<FamilyMember | undefined> {
-    const result = await this.db.select().from(familyMembers).where(eq(familyMembers.id, id));
+  async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
+    const result = await this.db.select().from(familyMembers).where(
+      and(eq(familyMembers.id, id), eq(familyMembers.userId, userId))
+    );
     return result[0];
   }
 
-  async createFamilyMember(insertMember: InsertFamilyMember): Promise<FamilyMember> {
-    const result = await this.db.insert(familyMembers).values(insertMember).returning();
+  async createFamilyMember(userId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
+    const result = await this.db.insert(familyMembers).values({
+      ...insertMember,
+      userId,
+    }).returning();
     return result[0];
   }
 
-  async updateFamilyMember(id: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
-    const result = await this.db.update(familyMembers).set(updates).where(eq(familyMembers.id, id)).returning();
+  async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+    const result = await this.db.update(familyMembers).set(updates).where(
+      and(eq(familyMembers.id, id), eq(familyMembers.userId, userId))
+    ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Family member with id ${id} not found`);
     }
     return result[0];
   }
 
-  async deleteFamilyMember(id: string): Promise<void> {
-    const result = await this.db.delete(familyMembers).where(eq(familyMembers.id, id)).returning();
+  async deleteFamilyMember(id: string, userId: string): Promise<void> {
+    const result = await this.db.delete(familyMembers).where(
+      and(eq(familyMembers.id, id), eq(familyMembers.userId, userId))
+    ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Family member with id ${id} not found`);
     }
   }
 
   // Events
-  async getEvents(): Promise<Event[]> {
-    return await this.db.select().from(events);
+  async getEvents(userId: string): Promise<Event[]> {
+    return await this.db.select().from(events).where(eq(events.userId, userId));
   }
 
-  async getEvent(id: string): Promise<Event | undefined> {
-    const result = await this.db.select().from(events).where(eq(events.id, id));
+  async getEvent(id: string, userId: string): Promise<Event | undefined> {
+    const result = await this.db.select().from(events).where(
+      and(eq(events.id, id), eq(events.userId, userId))
+    );
     return result[0];
   }
 
-  async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const result = await this.db.insert(events).values(insertEvent).returning();
+  async createEvent(userId: string, insertEvent: InsertEvent): Promise<Event> {
+    const result = await this.db.insert(events).values({
+      ...insertEvent,
+      userId,
+    }).returning();
     return result[0];
   }
 
-  async updateEvent(id: string, updateData: Partial<InsertEvent>): Promise<Event> {
-    const result = await this.db.update(events).set(updateData).where(eq(events.id, id)).returning();
+  async updateEvent(id: string, userId: string, updateData: Partial<InsertEvent>): Promise<Event> {
+    const result = await this.db.update(events).set(updateData).where(
+      and(eq(events.id, id), eq(events.userId, userId))
+    ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
     return result[0];
   }
 
-  async deleteEvent(id: string): Promise<void> {
-    const result = await this.db.delete(events).where(eq(events.id, id)).returning();
+  async deleteEvent(id: string, userId: string): Promise<void> {
+    const result = await this.db.delete(events).where(
+      and(eq(events.id, id), eq(events.userId, userId))
+    ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
   }
 
-  async toggleEventCompletion(id: string): Promise<Event> {
-    const event = await this.getEvent(id);
+  async toggleEventCompletion(id: string, userId: string): Promise<Event> {
+    const event = await this.getEvent(id, userId);
     if (!event) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
@@ -538,26 +352,35 @@ class DrizzleStorage implements IStorage {
       completedAt: !event.completed ? new Date() : null,
     };
 
-    const result = await this.db.update(events).set(updatedEvent).where(eq(events.id, id)).returning();
+    const result = await this.db.update(events).set(updatedEvent).where(
+      and(eq(events.id, id), eq(events.userId, userId))
+    ).returning();
     return result[0];
   }
 
   // Messages
-  async getMessages(eventId: string): Promise<Message[]> {
-    return await this.db.select().from(messages).where(eq(messages.eventId, eventId));
+  async getMessages(eventId: string, userId: string): Promise<Message[]> {
+    return await this.db.select().from(messages).where(
+      and(eq(messages.eventId, eventId), eq(messages.userId, userId))
+    );
   }
 
-  async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const result = await this.db.insert(messages).values(insertMessage).returning();
+  async createMessage(userId: string, insertMessage: InsertMessage): Promise<Message> {
+    const result = await this.db.insert(messages).values({
+      ...insertMessage,
+      userId,
+    }).returning();
     return result[0];
   }
 
-  async deleteMessage(id: string): Promise<void> {
-    await this.db.delete(messages).where(eq(messages.id, id));
+  async deleteMessage(id: string, userId: string): Promise<void> {
+    await this.db.delete(messages).where(
+      and(eq(messages.id, id), eq(messages.userId, userId))
+    );
   }
 }
 
-// Initialize database storage if DATABASE_URL is set, otherwise use in-memory
+// Initialize storage
 let storage: IStorage;
 
 try {

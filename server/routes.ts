@@ -3,40 +3,59 @@ import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Family Members Routes
-  app.get("/api/family-members", async (_req, res) => {
+  // Setup authentication
+  await setupAuth(app);
+
+  // Auth user endpoint
+  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
     try {
-      const members = await storage.getFamilyMembers();
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user || null);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+  // Family Members Routes (protected)
+  app.get("/api/family-members", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const members = await storage.getFamilyMembers(userId);
       res.json(members);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch family members" });
     }
   });
 
-  app.post("/api/family-members", async (req, res) => {
+  app.post("/api/family-members", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const result = insertFamilyMemberSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const member = await storage.createFamilyMember(result.data);
+      const member = await storage.createFamilyMember(userId, result.data);
       res.status(201).json(member);
     } catch (error) {
       res.status(500).json({ error: "Failed to create family member" });
     }
   });
 
-  app.put("/api/family-members/:id", async (req, res) => {
+  app.put("/api/family-members/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { color } = req.body;
       if (!color) {
         return res.status(400).json({ error: "Color is required" });
       }
       
-      const member = await storage.updateFamilyMember(req.params.id, { color });
+      const member = await storage.updateFamilyMember(req.params.id, userId, { color });
       res.json(member);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -46,9 +65,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/family-members/:id", async (req, res) => {
+  app.delete("/api/family-members/:id", isAuthenticated, async (req: any, res) => {
     try {
-      await storage.deleteFamilyMember(req.params.id);
+      const userId = req.user.claims.sub;
+      await storage.deleteFamilyMember(req.params.id, userId);
       res.status(204).send();
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -58,24 +78,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Events Routes
-  app.get("/api/events", async (_req, res) => {
+  // Events Routes (protected)
+  app.get("/api/events", isAuthenticated, async (req: any, res) => {
     try {
-      const events = await storage.getEvents();
+      const userId = req.user.claims.sub;
+      const events = await storage.getEvents(userId);
       res.json(events);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch events" });
     }
   });
 
-  app.post("/api/events", async (req, res) => {
+  app.post("/api/events", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const event = await storage.createEvent(result.data);
+      const event = await storage.createEvent(userId, result.data);
       res.status(201).json(event);
     } catch (error) {
       console.error("Error creating event:", error);
@@ -83,14 +105,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/events/:id", async (req, res) => {
+  app.put("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const result = insertEventSchema.partial().safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const event = await storage.updateEvent(req.params.id, result.data);
+      const event = await storage.updateEvent(req.params.id, userId, result.data);
       res.json(event);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -101,9 +124,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/events/:id", async (req, res) => {
+  app.delete("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
-      await storage.deleteEvent(req.params.id);
+      const userId = req.user.claims.sub;
+      await storage.deleteEvent(req.params.id, userId);
       res.status(204).send();
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -113,9 +137,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/events/:id/toggle-completion", async (req, res) => {
+  app.post("/api/events/:id/toggle-completion", isAuthenticated, async (req: any, res) => {
     try {
-      const event = await storage.toggleEventCompletion(req.params.id);
+      const userId = req.user.claims.sub;
+      const event = await storage.toggleEventCompletion(req.params.id, userId);
       res.json(event);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -125,18 +150,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Messages Routes
-  app.get("/api/events/:eventId/messages", async (req, res) => {
+  // Messages Routes (protected)
+  app.get("/api/events/:eventId/messages", isAuthenticated, async (req: any, res) => {
     try {
-      const messages = await storage.getMessages(req.params.eventId);
+      const userId = req.user.claims.sub;
+      const messages = await storage.getMessages(req.params.eventId, userId);
       res.json(messages);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch messages" });
     }
   });
 
-  app.post("/api/events/:eventId/messages", async (req, res) => {
+  app.post("/api/events/:eventId/messages", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const messageData = {
         ...req.body,
         eventId: req.params.eventId,
@@ -147,7 +174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const message = await storage.createMessage(result.data);
+      const message = await storage.createMessage(userId, result.data);
       res.status(201).json(message);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -157,9 +184,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/messages/:id", async (req, res) => {
+  app.delete("/api/messages/:id", isAuthenticated, async (req: any, res) => {
     try {
-      await storage.deleteMessage(req.params.id);
+      const userId = req.user.claims.sub;
+      await storage.deleteMessage(req.params.id, userId);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete message" });

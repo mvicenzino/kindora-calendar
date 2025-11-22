@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Calendar, Zap, Users, Heart } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut } from "lucide-react";
 import heroVideo from "@assets/generated_videos/chaotic_to_calm_family_transformation.mp4";
 import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  const { isAuthenticated } = useAuth();
 
   const features = [
     {
@@ -58,13 +60,36 @@ export default function Landing() {
             <img src={calendoraIcon} alt="Calendora" className="w-10 h-10" />
             <span className="text-xl font-bold text-white">Calendora</span>
           </div>
-          <Button
-            onClick={() => setLocation("/app")}
-            className="bg-white text-slate-900 hover:bg-white/90"
-            data-testid="button-launch-app"
-          >
-            Launch App
-          </Button>
+          <div className="flex items-center gap-3">
+            {isAuthenticated ? (
+              <>
+                <Button
+                  onClick={() => setLocation("/")}
+                  className="bg-white text-slate-900 hover:bg-white/90"
+                  data-testid="button-open-app"
+                >
+                  Open Calendar
+                </Button>
+                <Button
+                  onClick={() => (window.location.href = "/api/logout")}
+                  variant="outline"
+                  className="border-white text-white hover:bg-white/10"
+                  data-testid="button-logout"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={() => (window.location.href = "/api/login")}
+                className="bg-white text-slate-900 hover:bg-white/90"
+                data-testid="button-login"
+              >
+                Sign In
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -97,12 +122,18 @@ export default function Landing() {
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
-                  onClick={() => setLocation("/app")}
+                  onClick={() => {
+                    if (isAuthenticated) {
+                      setLocation("/");
+                    } else {
+                      window.location.href = "/api/login";
+                    }
+                  }}
                   size="lg"
                   className="bg-white text-slate-900 hover:bg-white/90 text-base font-semibold"
                   data-testid="button-get-started"
                 >
-                  Get Started Free
+                  {isAuthenticated ? "Go to Calendar" : "Get Started Free"}
                 </Button>
                 <Button
                   variant="outline"
@@ -190,18 +221,26 @@ export default function Landing() {
       <section className="px-4 md:px-6 py-16 md:py-24 border-t border-white/10">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Transform Your Family's Schedule?
+            {isAuthenticated ? "Welcome Back!" : "Ready to Transform Your Family's Schedule?"}
           </h2>
           <p className="text-lg text-white/70 mb-8">
-            Join families who have taken control of their schedules and strengthened their connections.
+            {isAuthenticated 
+              ? "Your calendar is ready for you. Manage events and family memories in one beautiful place."
+              : "Join families who have taken control of their schedules and strengthened their connections."}
           </p>
           <Button
-            onClick={() => setLocation("/app")}
+            onClick={() => {
+              if (isAuthenticated) {
+                setLocation("/");
+              } else {
+                window.location.href = "/api/login";
+              }
+            }}
             size="lg"
             className="bg-white text-slate-900 hover:bg-white/90 text-base font-semibold"
             data-testid="button-start-now"
           >
-            Start Now — It's Free
+            {isAuthenticated ? "Open Calendar" : "Start Now — It's Free"}
           </Button>
         </div>
       </section>

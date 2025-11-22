@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
@@ -15,6 +16,7 @@ import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
 
 export default function Home() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
@@ -22,6 +24,13 @@ export default function Home() {
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      window.location.href = "/api/login";
+    }
+  }, [isAuthenticated, isLoading]);
 
   // Fetch family members
   const { data: rawMembers = [] } = useQuery<FamilyMember[]>({
