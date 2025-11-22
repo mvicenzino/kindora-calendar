@@ -12,9 +12,10 @@ interface HeaderProps {
   onMemberColorChange?: (memberId: string, color: string) => void;
   onSearchClick?: () => void;
   onAddMember?: () => void;
+  onDeleteMember?: (memberId: string) => void;
 }
 
-export default function Header({ currentView, onViewChange, members = [], onMemberColorChange, onSearchClick, onAddMember }: HeaderProps) {
+export default function Header({ currentView, onViewChange, members = [], onMemberColorChange, onSearchClick, onAddMember, onDeleteMember }: HeaderProps) {
   const [, setLocation] = useLocation();
   
   const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
@@ -56,7 +57,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 <Search className="w-5 h-5" />
               </Button>
               {onMemberColorChange ? (
-                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} />
+                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
               ) : (
                 <Button
                   size="icon"
@@ -115,7 +116,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               <Search className="w-5 h-5" />
             </Button>
             {onMemberColorChange ? (
-              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} />
+              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
             ) : (
               <Button
                 size="icon"

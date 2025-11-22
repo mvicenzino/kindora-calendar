@@ -2,12 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UiFamilyMember } from "@shared/types";
-import { X, User, UserPlus } from 'lucide-react';
+import { X, User, UserPlus, Trash2 } from 'lucide-react';
 
 interface ProfileMenuProps {
   members: UiFamilyMember[];
   onMemberColorChange: (memberId: string, color: string) => void;
   onAddMember?: () => void;
+  onDeleteMember?: (memberId: string) => void;
 }
 
 const PRESET_COLORS = [
@@ -21,7 +22,7 @@ const PRESET_COLORS = [
   '#F97316', // Orange
 ];
 
-export default function ProfileMenu({ members, onMemberColorChange, onAddMember }: ProfileMenuProps) {
+export default function ProfileMenu({ members, onMemberColorChange, onAddMember, onDeleteMember }: ProfileMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -127,13 +128,28 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember 
                       </Avatar>
                       <span className="text-sm font-medium text-white">{member.name}</span>
                     </div>
-                    <button
-                      onClick={() => setEditingMemberId(member.id)}
-                      className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all opacity-0 group-hover:opacity-100"
-                      data-testid={`button-edit-color-${member.id}`}
-                    >
-                      Edit
-                    </button>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setEditingMemberId(member.id)}
+                        className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all"
+                        data-testid={`button-edit-color-${member.id}`}
+                      >
+                        Edit
+                      </button>
+                      {onDeleteMember && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remove ${member.name} from family?`)) {
+                              onDeleteMember(member.id);
+                            }
+                          }}
+                          className="text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-300 hover:text-red-100 hover:bg-red-500/30 transition-all"
+                          data-testid={`button-delete-member-${member.id}`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
                   </>
                 )}
               </div>

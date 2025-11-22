@@ -94,6 +94,17 @@ export default function Home() {
     },
   });
 
+  // Delete member mutation
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      await apiRequest('DELETE', `/api/family-members/${memberId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    },
+  });
+
   const [tasks] = useState(['Call plumber', 'Order cake', 'Family walk']);
 
   const handleEventClick = (event: any) => {
@@ -179,6 +190,10 @@ export default function Home() {
     await updateMemberColorMutation.mutateAsync({ memberId, color });
   };
 
+  const handleDeleteMember = async (memberId: string) => {
+    await deleteMemberMutation.mutateAsync(memberId);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
       <Header 
@@ -188,6 +203,7 @@ export default function Home() {
         onMemberColorChange={handleMemberColorChange}
         onSearchClick={() => setSearchOpen(true)}
         onAddMember={() => setMemberModalOpen(true)}
+        onDeleteMember={handleDeleteMember}
       />
       
       <SearchPanel
