@@ -1,4 +1,4 @@
-import { Calendar, Copy, Search, User, Image } from "lucide-react";
+import { Heart, Copy, Search, User, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import type { UiFamilyMember } from "@shared/types";
@@ -29,7 +29,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
         <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 gap-4">
           <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-2">
-              <Calendar className="w-6 h-6 text-white" data-testid="icon-logo" />
+              <Heart className="w-6 h-6 text-white fill-white" data-testid="icon-logo" />
               <span className="text-xl font-bold text-white">Calendora</span>
             </div>
             
