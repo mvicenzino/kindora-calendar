@@ -234,36 +234,32 @@ export default function EventModal({
                 </Label>
                 <div className="relative" ref={dropdownRef}>
                   <div className="bg-white/15 border border-white/40 rounded-2xl p-2 min-h-12 flex flex-wrap items-center gap-2">
-                    {selectedMemberIds.length === 0 ? (
-                      <span className="text-white/50 text-sm">Type to add family members...</span>
-                    ) : (
-                      selectedMemberIds.map(id => {
-                        const member = members.find(m => m.id === id);
-                        return member ? (
-                          <div
-                            key={id}
-                            className="flex items-center gap-2 bg-white/20 rounded-lg px-2 py-1"
-                          >
-                            <Avatar className="h-5 w-5">
-                              <AvatarFallback 
-                                className="text-xs text-white"
-                                style={{ backgroundColor: member.color }}
-                              >
-                                {member.name.split(' ').map(n => n[0]).join('')}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-white text-sm">{member.name}</span>
-                            <button
-                              onClick={() => removeMember(id)}
-                              className="text-white/70 hover:text-white ml-1"
-                              data-testid={`button-remove-member-${id}`}
+                    {selectedMemberIds.map(id => {
+                      const member = members.find(m => m.id === id);
+                      return member ? (
+                        <div
+                          key={id}
+                          className="flex items-center gap-2 bg-white/20 rounded-lg px-2 py-1"
+                        >
+                          <Avatar className="h-5 w-5">
+                            <AvatarFallback 
+                              className="text-xs text-white"
+                              style={{ backgroundColor: member.color }}
                             >
-                              ×
-                            </button>
-                          </div>
-                        ) : null;
-                      })
-                    )}
+                              {member.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-white text-sm">{member.name}</span>
+                          <button
+                            onClick={() => removeMember(id)}
+                            className="text-white/70 hover:text-white ml-1"
+                            data-testid={`button-remove-member-${id}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
                     <input
                       type="text"
                       value={memberSearch}
@@ -272,7 +268,7 @@ export default function EventModal({
                         setShowMemberDropdown(true);
                       }}
                       onFocus={() => setShowMemberDropdown(true)}
-                      placeholder={selectedMemberIds.length === 0 ? "Type to add family members..." : ""}
+                      placeholder="Type to add family members..."
                       className="flex-1 min-w-[150px] bg-transparent text-white placeholder:text-white/50 outline-none text-sm"
                       data-testid="input-member-search"
                     />
