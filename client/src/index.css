@@ -285,4 +285,33 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+
+  /* Modern scrollbar styling for flip card back side */
+  .flip-card-back::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .flip-card-back::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    margin: 0.5rem;
+  }
+
+  .flip-card-back::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .flip-card-back::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+    background-clip: padding-box;
+  }
+
+  /* Firefox scrollbar styling */
+  .flip-card-back {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+  }
 }

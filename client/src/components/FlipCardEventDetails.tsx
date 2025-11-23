@@ -206,11 +206,12 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
           {/* Back Side - Full Details */}
           <div 
-            className="absolute top-0 left-0 w-full rounded-3xl shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-6 space-y-6 max-h-[80vh] overflow-y-auto"
+            className="absolute top-0 left-0 w-full rounded-3xl shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-6 space-y-6 overflow-y-auto flip-card-back"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(-180deg)',
+              maxHeight: 'calc(100vh - 8rem)',
             }}
           >
               {/* Header */}
