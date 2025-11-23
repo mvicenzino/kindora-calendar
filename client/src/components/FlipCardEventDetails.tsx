@@ -206,18 +206,13 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
           {/* Back Side - Full Details */}
           <div 
-            className="absolute top-0 left-0 w-full rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A]"
+            className="absolute top-0 left-0 w-full rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-6 space-y-6 max-h-[80vh] overflow-y-auto"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(180deg)',
             }}
           >
-            {/* Counter-rotation wrapper to fix mirrored text */}
-            <div 
-              style={{ transform: 'rotateY(180deg)' }}
-              className="p-6 space-y-6 max-h-[80vh] overflow-y-auto"
-            >
               {/* Header */}
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-white">Event Details</h2>
@@ -356,7 +351,6 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   Close
                 </Button>
               </div>
-            </div>
           </div>
         </div>
       </div>
