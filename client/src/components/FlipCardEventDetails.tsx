@@ -110,7 +110,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-200" onClick={onClose}>
       <div 
-        className="relative w-full max-w-2xl"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-visible"
         style={{ perspective: '1200px' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -124,14 +124,14 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
         >
           {/* Front Side - Event Summary */}
           <div 
-            className="w-full rounded-3xl overflow-hidden shadow-2xl"
+            className="w-full h-full rounded-3xl overflow-hidden shadow-2xl"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
             }}
           >
             <div 
-              className="relative p-8 min-h-[400px] flex flex-col justify-between"
+              className="relative h-full p-8 flex flex-col justify-between"
               style={{ backgroundColor: event.color }}
             >
               {/* Photo Background (if exists) */}
@@ -207,12 +207,11 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
           {/* Back Side - Full Details */}
           <div 
-            className="absolute top-0 left-0 w-full rounded-3xl shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-6 space-y-6 overflow-y-auto flip-card-back"
+            className="absolute top-0 left-0 w-full h-full rounded-3xl shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-6 space-y-6 overflow-y-auto flip-card-back"
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(-180deg)',
-              maxHeight: 'calc(100vh - 12rem)',
             }}
           >
               {/* Header */}
