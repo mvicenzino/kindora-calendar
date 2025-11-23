@@ -167,13 +167,18 @@ export class MemStorage implements IStorage {
     
     const updatedEvent: Event = {
       ...existingEvent,
-      ...updateData,
       id,
       userId,
+      title: updateData.title !== undefined ? updateData.title : existingEvent.title,
       startTime: updateData.startTime ? new Date(updateData.startTime) : existingEvent.startTime,
       endTime: updateData.endTime ? new Date(updateData.endTime) : existingEvent.endTime,
+      memberIds: updateData.memberIds !== undefined ? updateData.memberIds : existingEvent.memberIds,
+      color: updateData.color !== undefined ? updateData.color : existingEvent.color,
       description: updateData.description !== undefined ? updateData.description : existingEvent.description,
       photoUrl: updateData.photoUrl !== undefined ? updateData.photoUrl : existingEvent.photoUrl,
+      completed: existingEvent.completed,
+      completedAt: existingEvent.completedAt,
+      createdAt: existingEvent.createdAt,
     };
     this.events.set(id, updatedEvent);
     return updatedEvent;
