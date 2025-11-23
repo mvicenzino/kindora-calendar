@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
 import { useAuth } from "@/hooks/useAuth";
@@ -190,8 +190,41 @@ export default function Landing() {
 
       {/* Footer */}
       <footer className="border-t border-white/10 px-4 md:px-6 py-8">
-        <div className="max-w-6xl mx-auto text-center text-white/60 text-sm">
-          <p>© 2025 Calendora. Bringing families closer, one calendar at a time.</p>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col items-center gap-4">
+            {/* Social Media Icons */}
+            <div className="flex items-center gap-4">
+              <a
+                href="#"
+                aria-label="Facebook"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
+                data-testid="link-facebook"
+              >
+                <Facebook className="w-5 h-5" />
+              </a>
+              <a
+                href="#"
+                aria-label="Instagram"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
+                data-testid="link-instagram"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
+              <a
+                href="#"
+                aria-label="X (Twitter)"
+                className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
+                data-testid="link-twitter"
+              >
+                <Twitter className="w-5 h-5" />
+              </a>
+            </div>
+            
+            {/* Copyright Text */}
+            <p className="text-white/60 text-sm text-center">
+              © 2025 Kindora Family. Bringing families closer, one calendar at a time.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
