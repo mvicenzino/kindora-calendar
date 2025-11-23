@@ -50,12 +50,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/family-members/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { color } = req.body;
-      if (!color) {
-        return res.status(400).json({ error: "Color is required" });
+      const result = insertFamilyMemberSchema.partial().safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
       }
       
-      const member = await storage.updateFamilyMember(req.params.id, userId, { color });
+      const member = await storage.updateFamilyMember(req.params.id, userId, result.data);
       res.json(member);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -215,11 +215,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ uploadURL });
   });
 
-  app.put("/api/events/:id/photo", async (req, res) => {
+  app.put("/api/events/:id/photo", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      
       // Allow null to delete photo
       if (req.body.photoURL === null) {
-        const event = await storage.updateEvent(req.params.id, { photoUrl: null });
+        const event = await storage.updateEvent(req.params.id, userId, { photoUrl: null });
         return res.json(event);
       }
 
@@ -230,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const objectStorageService = new ObjectStorageService();
       const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.photoURL);
       
-      const event = await storage.updateEvent(req.params.id, { photoUrl: objectPath });
+      const event = await storage.updateEvent(req.params.id, userId, { photoUrl: objectPath });
       res.json(event);
     } catch (error) {
       if (error instanceof NotFoundError) {

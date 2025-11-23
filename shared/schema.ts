@@ -66,6 +66,9 @@ export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
   id: true,
   userId: true,
   createdAt: true,
+}).extend({
+  name: z.string().min(1, "Name is required").trim(),
+  color: z.string().min(1, "Color is required"),
 });
 
 export const insertEventSchema = createInsertSchema(events).omit({
@@ -75,6 +78,8 @@ export const insertEventSchema = createInsertSchema(events).omit({
   completedAt: true,
   createdAt: true,
 }).extend({
+  title: z.string().min(1, "Title is required").trim(),
+  memberId: z.string().min(1, "Member is required"),
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
 });

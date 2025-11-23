@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
 import Home from "@/pages/Home";
 import Memories from "@/pages/Memories";
+import Onboarding from "@/pages/Onboarding";
+import EventWizard from "@/pages/EventWizard";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -30,6 +32,8 @@ function Router() {
         <>
           <Route path="/" component={Home} />
           <Route path="/memories" component={Memories} />
+          <Route path="/onboarding" component={Onboarding} />
+          <Route path="/onboarding/wizard" component={EventWizard} />
           <Route component={Home} />
         </>
       )}
