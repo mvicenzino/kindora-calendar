@@ -24,17 +24,13 @@ function Router() {
   return (
     <Switch>
       {!isAuthenticated ? (
-        <>
-          <Route path="/" component={Landing} />
-          <Route component={Landing} />
-        </>
+        <Route path="/" component={Landing} />
       ) : (
         <>
           <Route path="/" component={Home} />
           <Route path="/memories" component={Memories} />
           <Route path="/onboarding" component={Onboarding} />
           <Route path="/onboarding/wizard" component={EventWizard} />
-          <Route component={Home} />
         </>
       )}
     </Switch>
