@@ -33,13 +33,15 @@ export default function Home() {
   }, [isAuthenticated, isLoading]);
 
   // Fetch family members
-  const { data: rawMembers = [] } = useQuery<FamilyMember[]>({
+  const { data: rawMembers = [], isLoading: membersLoading } = useQuery<FamilyMember[]>({
     queryKey: ['/api/family-members'],
+    enabled: isAuthenticated,
   });
 
   // Fetch events
-  const { data: rawEvents = [] } = useQuery<Event[]>({
+  const { data: rawEvents = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events'],
+    enabled: isAuthenticated,
   });
 
   // Map to UI types
@@ -196,6 +198,18 @@ export default function Home() {
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
+
+  // Show loading state while authenticating or fetching initial data
+  if (isLoading || membersLoading || eventsLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg font-medium">Loading your calendar...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleMemberColorChange = async (memberId: string, color: string) => {
     await updateMemberColorMutation.mutateAsync({ memberId, color });
