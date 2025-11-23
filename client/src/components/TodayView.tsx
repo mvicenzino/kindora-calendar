@@ -48,7 +48,7 @@ export default function TodayView({ date, events, members = [], onEventClick, on
               <EventCard
                 key={event.id}
                 event={event}
-                member={event.members?.[0]}
+                members={event.members || []}
                 onClick={() => onEventClick(event)}
                 variant="full"
                 showTime={true}
