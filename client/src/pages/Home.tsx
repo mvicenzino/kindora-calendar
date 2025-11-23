@@ -227,6 +227,7 @@ export default function Home() {
           date={currentDate}
           events={todayEvents}
           tasks={tasks}
+          members={members}
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
