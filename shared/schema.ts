@@ -25,20 +25,38 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Family Members table (updated to belong to user)
-export const familyMembers = pgTable("family_members", {
+// Families table (shared calendar groups)
+export const families = pgTable("families", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  inviteCode: varchar("invite_code").unique().notNull(),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Family Memberships table (links users to families)
+export const familyMemberships = pgTable("family_memberships", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
+  familyId: varchar("family_id").notNull(),
+  role: varchar("role").notNull().default('member'), // 'owner' or 'member'
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+// Family Members table (now belongs to family instead of user)
+export const familyMembers = pgTable("family_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
   name: text("name").notNull(),
   color: text("color").notNull(),
   avatar: text("avatar"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Events table (updated to belong to user)
+// Events table (now belongs to family instead of user)
 export const events = pgTable("events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
+  familyId: varchar("family_id").notNull(),
   title: text("title").notNull(),
   description: text("description"),
   startTime: timestamp("start_time").notNull(),
@@ -51,10 +69,10 @@ export const events = pgTable("events", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Messages table (updated to belong to user)
+// Messages table (now belongs to family instead of user)
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
+  familyId: varchar("family_id").notNull(),
   eventId: varchar("event_id").notNull(),
   memberId: varchar("member_id").notNull(),
   message: text("message").notNull(),
@@ -62,9 +80,20 @@ export const messages = pgTable("messages", {
 });
 
 // Schemas and Types
+export const insertFamilySchema = createInsertSchema(families).omit({
+  id: true,
+  inviteCode: true,
+  createdAt: true,
+});
+
+export const insertFamilyMembershipSchema = createInsertSchema(familyMemberships).omit({
+  id: true,
+  joinedAt: true,
+});
+
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
   id: true,
-  userId: true,
+  familyId: true,
   createdAt: true,
 }).extend({
   name: z.string().min(1, "Name is required").trim(),
@@ -73,7 +102,7 @@ export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
 
 export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
-  userId: true,
+  familyId: true,
   completed: true,
   completedAt: true,
   createdAt: true,
@@ -86,13 +115,21 @@ export const insertEventSchema = createInsertSchema(events).omit({
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true,
-  userId: true,
+  familyId: true,
   createdAt: true,
 });
 
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+// Family types
+export type InsertFamily = z.infer<typeof insertFamilySchema>;
+export type Family = typeof families.$inferSelect;
+
+// Family Membership types
+export type InsertFamilyMembership = z.infer<typeof insertFamilyMembershipSchema>;
+export type FamilyMembership = typeof familyMemberships.$inferSelect;
 
 // Family Member types
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;

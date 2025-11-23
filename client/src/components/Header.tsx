@@ -1,4 +1,4 @@
-import { Copy, Search, User, Image, LogOut } from "lucide-react";
+import { Copy, Search, User, Image, LogOut, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import type { UiFamilyMember } from "@shared/types";
@@ -70,6 +70,16 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 data-testid="button-memories-mobile"
               >
                 <Image className="w-5 h-5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white border border-white/50"
+                aria-label="Family Settings"
+                onClick={() => setLocation('/family')}
+                data-testid="button-family-mobile"
+              >
+                <Users className="w-5 h-5" />
               </Button>
               <Button
                 size="icon"
@@ -157,6 +167,16 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               data-testid="button-memories-desktop"
             >
               <Image className="w-5 h-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white border border-white/50"
+              aria-label="Family Settings"
+              onClick={() => setLocation('/family')}
+              data-testid="button-family-desktop"
+            >
+              <Users className="w-5 h-5" />
             </Button>
             <Button
               size="icon"

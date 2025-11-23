@@ -21,6 +21,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Family Routes (protected)
+  app.get("/api/family", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const family = await storage.getUserFamily(userId);
+      res.json(family || null);
+    } catch (error) {
+      console.error("Error fetching family:", error);
+      res.status(500).json({ error: "Failed to fetch family" });
+    }
+  });
+
+  app.post("/api/family/join", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { inviteCode } = req.body;
+      
+      if (!inviteCode || typeof inviteCode !== 'string') {
+        return res.status(400).json({ error: "Invite code is required" });
+      }
+      
+      const membership = await storage.joinFamily(userId, inviteCode.toUpperCase());
+      const family = await storage.getUserFamily(userId);
+      res.json(family);
+    } catch (error: any) {
+      if (error instanceof NotFoundError || error.message?.includes("not found")) {
+        return res.status(404).json({ error: "Invalid invite code" });
+      }
+      console.error("Error joining family:", error);
+      res.status(500).json({ error: "Failed to join family" });
+    }
+  });
+
   // Family Members Routes (protected)
   app.get("/api/family-members", isAuthenticated, async (req: any, res) => {
     try {

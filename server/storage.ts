@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, familyMembers, events, messages, users } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, familyMembers, events, messages, users, families, familyMemberships } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and } from "drizzle-orm";
@@ -15,7 +15,11 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
 
-  // Family Members
+  // Family operations
+  createFamily(userId: string, family: InsertFamily): Promise<Family>;
+  getUserFamily(userId: string): Promise<Family | undefined>;
+  getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined>;
+  joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership>;
   getFamilyMembers(userId: string): Promise<FamilyMember[]>;
   getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined>;
   createFamilyMember(userId: string, member: InsertFamilyMember): Promise<FamilyMember>;
@@ -41,12 +45,33 @@ export class MemStorage implements IStorage {
   private events: Map<string, Event>;
   private messages: Map<string, Message>;
   private users: Map<string, User>;
+  private families: Map<string, Family>;
+  private familyMemberships: Map<string, FamilyMembership>;
 
   constructor() {
     this.familyMembers = new Map();
     this.events = new Map();
     this.messages = new Map();
     this.users = new Map();
+    this.families = new Map();
+    this.familyMemberships = new Map();
+  }
+  
+  private generateInviteCode(): string {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+  
+  private async ensureUserFamily(userId: string): Promise<string> {
+    const membership = Array.from(this.familyMemberships.values()).find(m => m.userId === userId);
+    if (membership) {
+      return membership.familyId;
+    }
+    
+    const user = this.users.get(userId);
+    const familyName = user?.firstName ? `${user.firstName}'s Family` : "My Family";
+    
+    const family = await this.createFamily(userId, { name: familyName, createdBy: userId });
+    return family.id;
   }
 
   // User operations
@@ -58,32 +83,135 @@ export class MemStorage implements IStorage {
     const id = user.id;
     const existingUser = this.users.get(id);
     const userData: User = {
-      ...existingUser,
-      ...user,
       id,
+      email: user.email ?? existingUser?.email ?? null,
+      firstName: user.firstName ?? existingUser?.firstName ?? null,
+      lastName: user.lastName ?? existingUser?.lastName ?? null,
+      profileImageUrl: user.profileImageUrl ?? existingUser?.profileImageUrl ?? null,
       createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
     this.users.set(id, userData);
+    
+    await this.ensureUserFamily(id);
+    
     return userData;
+  }
+
+  // Family operations
+  async createFamily(userId: string, familyData: InsertFamily): Promise<Family> {
+    let inviteCode = this.generateInviteCode();
+    while (Array.from(this.families.values()).some(f => f.inviteCode === inviteCode)) {
+      inviteCode = this.generateInviteCode();
+    }
+    
+    const id = randomUUID();
+    const family: Family = {
+      ...familyData,
+      id,
+      inviteCode,
+      createdAt: new Date(),
+    };
+    this.families.set(id, family);
+    
+    const membershipId = randomUUID();
+    const membership: FamilyMembership = {
+      id: membershipId,
+      userId,
+      familyId: id,
+      role: 'owner',
+      joinedAt: new Date(),
+    };
+    this.familyMemberships.set(membershipId, membership);
+    
+    return family;
+  }
+
+  async getUserFamily(userId: string): Promise<Family | undefined> {
+    const membership = Array.from(this.familyMemberships.values()).find(m => m.userId === userId);
+    if (!membership) {
+      return undefined;
+    }
+    return this.families.get(membership.familyId);
+  }
+
+  async getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined> {
+    return Array.from(this.families.values()).find(f => f.inviteCode === inviteCode);
+  }
+
+  async joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership> {
+    const family = await this.getFamilyByInviteCode(inviteCode);
+    if (!family) {
+      throw new NotFoundError(`Family with invite code ${inviteCode} not found`);
+    }
+    
+    const existingMembership = Array.from(this.familyMemberships.values()).find(m => m.userId === userId);
+    
+    if (existingMembership) {
+      if (existingMembership.familyId === family.id) {
+        return existingMembership;
+      }
+    }
+    
+    const id = randomUUID();
+    const membership: FamilyMembership = {
+      id,
+      userId,
+      familyId: family.id,
+      role: 'member',
+      joinedAt: new Date(),
+    };
+    this.familyMemberships.set(id, membership);
+    
+    if (existingMembership) {
+      const currentFamilyId = existingMembership.familyId;
+      const familyMemberCount = Array.from(this.familyMemberships.values())
+        .filter(m => m.familyId === currentFamilyId).length;
+      
+      this.familyMemberships.delete(existingMembership.id);
+      
+      if (familyMemberCount === 1) {
+        Array.from(this.events.entries())
+          .filter(([_, event]) => event.familyId === currentFamilyId)
+          .forEach(([eventId, _]) => {
+            Array.from(this.messages.entries())
+              .filter(([_, message]) => message.eventId === eventId)
+              .forEach(([messageId, _]) => this.messages.delete(messageId));
+            this.events.delete(eventId);
+          });
+        
+        Array.from(this.familyMembers.entries())
+          .filter(([_, member]) => member.familyId === currentFamilyId)
+          .forEach(([memberId, _]) => this.familyMembers.delete(memberId));
+        
+        this.families.delete(currentFamilyId);
+      }
+    }
+    
+    return membership;
   }
 
   // Family Members
   async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
-    return Array.from(this.familyMembers.values()).filter(m => m.userId === userId);
+    const familyId = await this.ensureUserFamily(userId);
+    return Array.from(this.familyMembers.values()).filter(m => m.familyId === familyId);
   }
 
   async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
+    const familyId = await this.ensureUserFamily(userId);
     const member = this.familyMembers.get(id);
-    return member && member.userId === userId ? member : undefined;
+    return member && member.familyId === familyId ? member : undefined;
   }
 
   async createFamilyMember(userId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
+    const familyId = await this.ensureUserFamily(userId);
     const id = randomUUID();
     const member: FamilyMember = { 
-      ...insertMember, 
       id, 
-      userId,
+      name: insertMember.name,
+      color: insertMember.color,
+      avatar: insertMember.avatar ?? null,
+      familyId,
       createdAt: new Date(),
     };
     this.familyMembers.set(id, member);
@@ -91,8 +219,9 @@ export class MemStorage implements IStorage {
   }
 
   async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+    const familyId = await this.ensureUserFamily(userId);
     const existingMember = this.familyMembers.get(id);
-    if (!existingMember || existingMember.userId !== userId) {
+    if (!existingMember || existingMember.familyId !== familyId) {
       throw new NotFoundError(`Family member with id ${id} not found`);
     }
     
@@ -100,22 +229,23 @@ export class MemStorage implements IStorage {
       ...existingMember,
       ...updates,
       id,
-      userId,
+      familyId,
     };
     this.familyMembers.set(id, updatedMember);
     return updatedMember;
   }
 
   async deleteFamilyMember(id: string, userId: string): Promise<void> {
+    const familyId = await this.ensureUserFamily(userId);
     const member = this.familyMembers.get(id);
-    if (!member || member.userId !== userId) {
+    if (!member || member.familyId !== familyId) {
       throw new NotFoundError(`Family member with id ${id} not found`);
     }
     
     this.familyMembers.delete(id);
     
     const eventsToUpdate = Array.from(this.events.entries())
-      .filter(([_, event]) => event.memberIds.includes(id) && event.userId === userId);
+      .filter(([_, event]) => event.memberIds.includes(id) && event.familyId === familyId);
     
     eventsToUpdate.forEach(([eventId, event]) => {
       const updatedMemberIds = event.memberIds.filter(memberId => memberId !== id);
@@ -123,7 +253,7 @@ export class MemStorage implements IStorage {
         this.events.delete(eventId);
         
         const messagesToDelete = Array.from(this.messages.entries())
-          .filter(([_, message]) => message.eventId === eventId && message.userId === userId)
+          .filter(([_, message]) => message.eventId === eventId && message.familyId === familyId)
           .map(([messageId, _]) => messageId);
         
         messagesToDelete.forEach(messageId => this.messages.delete(messageId));
@@ -135,20 +265,23 @@ export class MemStorage implements IStorage {
 
   // Events
   async getEvents(userId: string): Promise<Event[]> {
-    return Array.from(this.events.values()).filter(e => e.userId === userId);
+    const familyId = await this.ensureUserFamily(userId);
+    return Array.from(this.events.values()).filter(e => e.familyId === familyId);
   }
 
   async getEvent(id: string, userId: string): Promise<Event | undefined> {
+    const familyId = await this.ensureUserFamily(userId);
     const event = this.events.get(id);
-    return event && event.userId === userId ? event : undefined;
+    return event && event.familyId === familyId ? event : undefined;
   }
 
   async createEvent(userId: string, insertEvent: InsertEvent): Promise<Event> {
+    const familyId = await this.ensureUserFamily(userId);
     const id = randomUUID();
     const event: Event = {
       ...insertEvent,
       id,
-      userId,
+      familyId,
       description: insertEvent.description || null,
       photoUrl: insertEvent.photoUrl || null,
       completed: false,
@@ -160,15 +293,16 @@ export class MemStorage implements IStorage {
   }
 
   async updateEvent(id: string, userId: string, updateData: Partial<InsertEvent>): Promise<Event> {
+    const familyId = await this.ensureUserFamily(userId);
     const existingEvent = this.events.get(id);
-    if (!existingEvent || existingEvent.userId !== userId) {
+    if (!existingEvent || existingEvent.familyId !== familyId) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
     
     const updatedEvent: Event = {
       ...existingEvent,
       id,
-      userId,
+      familyId,
       title: updateData.title !== undefined ? updateData.title : existingEvent.title,
       startTime: updateData.startTime ? new Date(updateData.startTime) : existingEvent.startTime,
       endTime: updateData.endTime ? new Date(updateData.endTime) : existingEvent.endTime,
@@ -185,23 +319,25 @@ export class MemStorage implements IStorage {
   }
 
   async deleteEvent(id: string, userId: string): Promise<void> {
+    const familyId = await this.ensureUserFamily(userId);
     const event = this.events.get(id);
-    if (!event || event.userId !== userId) {
+    if (!event || event.familyId !== familyId) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
     
     this.events.delete(id);
     
     const messagesToDelete = Array.from(this.messages.entries())
-      .filter(([_, message]) => message.eventId === id && message.userId === userId)
+      .filter(([_, message]) => message.eventId === id && message.familyId === familyId)
       .map(([messageId, _]) => messageId);
     
     messagesToDelete.forEach(messageId => this.messages.delete(messageId));
   }
 
   async toggleEventCompletion(id: string, userId: string): Promise<Event> {
+    const familyId = await this.ensureUserFamily(userId);
     const event = this.events.get(id);
-    if (!event || event.userId !== userId) {
+    if (!event || event.familyId !== familyId) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
     
@@ -216,15 +352,17 @@ export class MemStorage implements IStorage {
 
   // Messages
   async getMessages(eventId: string, userId: string): Promise<Message[]> {
-    return Array.from(this.messages.values()).filter(m => m.eventId === eventId && m.userId === userId);
+    const familyId = await this.ensureUserFamily(userId);
+    return Array.from(this.messages.values()).filter(m => m.eventId === eventId && m.familyId === familyId);
   }
 
   async createMessage(userId: string, insertMessage: InsertMessage): Promise<Message> {
+    const familyId = await this.ensureUserFamily(userId);
     const id = randomUUID();
     const message: Message = {
       ...insertMessage,
       id,
-      userId,
+      familyId,
       createdAt: new Date(),
     };
     this.messages.set(id, message);
@@ -232,8 +370,9 @@ export class MemStorage implements IStorage {
   }
 
   async deleteMessage(id: string, userId: string): Promise<void> {
+    const familyId = await this.ensureUserFamily(userId);
     const message = this.messages.get(id);
-    if (!message || message.userId !== userId) {
+    if (!message || message.familyId !== familyId) {
       throw new NotFoundError(`Message with id ${id} not found`);
     }
     this.messages.delete(id);
@@ -249,6 +388,23 @@ class DrizzleStorage implements IStorage {
       throw new Error("DATABASE_URL is required for DrizzleStorage");
     }
     this.db = drizzle(process.env.DATABASE_URL);
+  }
+
+  private generateInviteCode(): string {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+
+  private async ensureUserFamily(userId: string): Promise<string> {
+    const membership = await this.db.select().from(familyMemberships).where(eq(familyMemberships.userId, userId)).limit(1);
+    if (membership[0]) {
+      return membership[0].familyId;
+    }
+    
+    const user = await this.getUser(userId);
+    const familyName = user?.firstName ? `${user.firstName}'s Family` : "My Family";
+    
+    const family = await this.createFamily(userId, { name: familyName, createdBy: userId });
+    return family.id;
   }
 
   // User operations
@@ -269,32 +425,120 @@ class DrizzleStorage implements IStorage {
         },
       })
       .returning();
+    
+    await this.ensureUserFamily(result[0].id);
+    
+    return result[0];
+  }
+
+  // Family operations
+  async createFamily(userId: string, familyData: InsertFamily): Promise<Family> {
+    let inviteCode = this.generateInviteCode();
+    let existingFamily = await this.db.select().from(families).where(eq(families.inviteCode, inviteCode)).limit(1);
+    
+    while (existingFamily[0]) {
+      inviteCode = this.generateInviteCode();
+      existingFamily = await this.db.select().from(families).where(eq(families.inviteCode, inviteCode)).limit(1);
+    }
+    
+    const familyResult = await this.db.insert(families).values({
+      ...familyData,
+      inviteCode,
+    }).returning();
+    
+    await this.db.insert(familyMemberships).values({
+      userId,
+      familyId: familyResult[0].id,
+      role: 'owner',
+    });
+    
+    return familyResult[0];
+  }
+
+  async getUserFamily(userId: string): Promise<Family | undefined> {
+    const membership = await this.db.select().from(familyMemberships).where(eq(familyMemberships.userId, userId)).limit(1);
+    if (!membership[0]) {
+      return undefined;
+    }
+    const familyResult = await this.db.select().from(families).where(eq(families.id, membership[0].familyId));
+    return familyResult[0];
+  }
+
+  async getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined> {
+    const result = await this.db.select().from(families).where(eq(families.inviteCode, inviteCode));
+    return result[0];
+  }
+
+  async joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership> {
+    const family = await this.getFamilyByInviteCode(inviteCode);
+    if (!family) {
+      throw new NotFoundError(`Family with invite code ${inviteCode} not found`);
+    }
+    
+    const existingMembership = await this.db.select().from(familyMemberships).where(eq(familyMemberships.userId, userId)).limit(1);
+    
+    if (existingMembership[0]) {
+      if (existingMembership[0].familyId === family.id) {
+        return existingMembership[0];
+      }
+    }
+    
+    const result = await this.db.insert(familyMemberships).values({
+      userId,
+      familyId: family.id,
+      role: 'member',
+    }).returning();
+    
+    if (existingMembership[0]) {
+      const currentFamilyId = existingMembership[0].familyId;
+      const familyMemberCount = await this.db.select().from(familyMemberships)
+        .where(eq(familyMemberships.familyId, currentFamilyId));
+      
+      await this.db.delete(familyMemberships).where(eq(familyMemberships.id, existingMembership[0].id));
+      
+      if (familyMemberCount.length === 1) {
+        const familyEvents = await this.db.select().from(events).where(eq(events.familyId, currentFamilyId));
+        for (const event of familyEvents) {
+          await this.db.delete(messages).where(eq(messages.eventId, event.id));
+        }
+        await this.db.delete(events).where(eq(events.familyId, currentFamilyId));
+        
+        await this.db.delete(familyMembers).where(eq(familyMembers.familyId, currentFamilyId));
+        
+        await this.db.delete(families).where(eq(families.id, currentFamilyId));
+      }
+    }
+    
     return result[0];
   }
 
   // Family Members
   async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
-    return await this.db.select().from(familyMembers).where(eq(familyMembers.userId, userId));
+    const familyId = await this.ensureUserFamily(userId);
+    return await this.db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId));
   }
 
   async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.select().from(familyMembers).where(
-      and(eq(familyMembers.id, id), eq(familyMembers.userId, userId))
+      and(eq(familyMembers.id, id), eq(familyMembers.familyId, familyId))
     );
     return result[0];
   }
 
   async createFamilyMember(userId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.insert(familyMembers).values({
       ...insertMember,
-      userId,
+      familyId,
     }).returning();
     return result[0];
   }
 
   async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.update(familyMembers).set(updates).where(
-      and(eq(familyMembers.id, id), eq(familyMembers.userId, userId))
+      and(eq(familyMembers.id, id), eq(familyMembers.familyId, familyId))
     ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Family member with id ${id} not found`);
@@ -303,8 +547,9 @@ class DrizzleStorage implements IStorage {
   }
 
   async deleteFamilyMember(id: string, userId: string): Promise<void> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.delete(familyMembers).where(
-      and(eq(familyMembers.id, id), eq(familyMembers.userId, userId))
+      and(eq(familyMembers.id, id), eq(familyMembers.familyId, familyId))
     ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Family member with id ${id} not found`);
@@ -313,27 +558,31 @@ class DrizzleStorage implements IStorage {
 
   // Events
   async getEvents(userId: string): Promise<Event[]> {
-    return await this.db.select().from(events).where(eq(events.userId, userId));
+    const familyId = await this.ensureUserFamily(userId);
+    return await this.db.select().from(events).where(eq(events.familyId, familyId));
   }
 
   async getEvent(id: string, userId: string): Promise<Event | undefined> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.select().from(events).where(
-      and(eq(events.id, id), eq(events.userId, userId))
+      and(eq(events.id, id), eq(events.familyId, familyId))
     );
     return result[0];
   }
 
   async createEvent(userId: string, insertEvent: InsertEvent): Promise<Event> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.insert(events).values({
       ...insertEvent,
-      userId,
+      familyId,
     }).returning();
     return result[0];
   }
 
   async updateEvent(id: string, userId: string, updateData: Partial<InsertEvent>): Promise<Event> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.update(events).set(updateData).where(
-      and(eq(events.id, id), eq(events.userId, userId))
+      and(eq(events.id, id), eq(events.familyId, familyId))
     ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Event with id ${id} not found`);
@@ -342,8 +591,9 @@ class DrizzleStorage implements IStorage {
   }
 
   async deleteEvent(id: string, userId: string): Promise<void> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.delete(events).where(
-      and(eq(events.id, id), eq(events.userId, userId))
+      and(eq(events.id, id), eq(events.familyId, familyId))
     ).returning();
     if (!result[0]) {
       throw new NotFoundError(`Event with id ${id} not found`);
@@ -361,30 +611,34 @@ class DrizzleStorage implements IStorage {
       completedAt: !event.completed ? new Date() : null,
     };
 
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.update(events).set(updatedEvent).where(
-      and(eq(events.id, id), eq(events.userId, userId))
+      and(eq(events.id, id), eq(events.familyId, familyId))
     ).returning();
     return result[0];
   }
 
   // Messages
   async getMessages(eventId: string, userId: string): Promise<Message[]> {
+    const familyId = await this.ensureUserFamily(userId);
     return await this.db.select().from(messages).where(
-      and(eq(messages.eventId, eventId), eq(messages.userId, userId))
+      and(eq(messages.eventId, eventId), eq(messages.familyId, familyId))
     );
   }
 
   async createMessage(userId: string, insertMessage: InsertMessage): Promise<Message> {
+    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.insert(messages).values({
       ...insertMessage,
-      userId,
+      familyId,
     }).returning();
     return result[0];
   }
 
   async deleteMessage(id: string, userId: string): Promise<void> {
+    const familyId = await this.ensureUserFamily(userId);
     await this.db.delete(messages).where(
-      and(eq(messages.id, id), eq(messages.userId, userId))
+      and(eq(messages.id, id), eq(messages.familyId, familyId))
     );
   }
 }
@@ -414,6 +668,23 @@ class DemoAwareStorage implements IStorage {
 
   async upsertUser(user: UpsertUser): Promise<User> {
     return this.getStorage(user.id).upsertUser(user);
+  }
+
+  // Family operations
+  async createFamily(userId: string, family: InsertFamily): Promise<Family> {
+    return this.getStorage(userId).createFamily(userId, family);
+  }
+
+  async getUserFamily(userId: string): Promise<Family | undefined> {
+    return this.getStorage(userId).getUserFamily(userId);
+  }
+
+  async getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined> {
+    return this.persistentStorage.getFamilyByInviteCode(inviteCode);
+  }
+
+  async joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership> {
+    return this.getStorage(userId).joinFamily(userId, inviteCode);
   }
 
   // Family Members
