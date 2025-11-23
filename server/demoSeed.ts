@@ -1,6 +1,15 @@
 import { type IStorage } from "./storage";
 import { addDays, subDays, setHours, setMinutes, startOfToday } from "date-fns";
 
+// Sample memory photos for demo events
+const DEMO_PHOTOS = {
+  soccerGame: "/attached_assets/stock_images/child_playing_soccer_29d1c0c9.jpg",
+  movieNight: "/attached_assets/stock_images/family_watching_movi_7b39a391.jpg",
+  pianoRecital: "/attached_assets/stock_images/child_playing_piano__e17f7106.jpg",
+  familyDinner: "/attached_assets/stock_images/family_dinner_table__181f0ecf.jpg",
+  beachDay: "/attached_assets/stock_images/family_beach_day_oce_a7a6744f.jpg",
+};
+
 /**
  * Seeds a demo account with sample family members and events
  * to give users a realistic preview of the application
@@ -44,7 +53,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         endTime: setMinutes(setHours(subDays(today, 3), 16), 0),
         memberIds: [daughter.id, mom.id, dad.id],
         color: daughter.color,
-        photoUrl: null,
+        photoUrl: DEMO_PHOTOS.soccerGame,
       },
       {
         title: "Family Movie Night",
@@ -53,7 +62,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         endTime: setMinutes(setHours(subDays(today, 5), 21), 30),
         memberIds: [mom.id, dad.id, daughter.id, son.id],
         color: mom.color,
-        photoUrl: null,
+        photoUrl: DEMO_PHOTOS.movieNight,
       },
       {
         title: "Lucas's Piano Recital",
@@ -62,7 +71,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         endTime: setMinutes(setHours(subDays(today, 7), 16), 30),
         memberIds: [son.id, mom.id, dad.id],
         color: son.color,
-        photoUrl: null,
+        photoUrl: DEMO_PHOTOS.pianoRecital,
       },
 
       // Today's events
@@ -111,7 +120,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
         memberIds: [mom.id, dad.id, daughter.id, son.id],
         color: mom.color,
-        photoUrl: null,
+        photoUrl: DEMO_PHOTOS.familyDinner,
       },
       {
         title: "Emma's Dance Class",
@@ -147,7 +156,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         endTime: setMinutes(setHours(addDays(today, 7), 16), 0),
         memberIds: [mom.id, dad.id, daughter.id, son.id],
         color: dad.color,
-        photoUrl: null,
+        photoUrl: DEMO_PHOTOS.beachDay,
       },
     ];
 
