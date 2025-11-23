@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
+import { useRef, useEffect, useState } from "react";
 import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
 
 interface HeaderProps {
@@ -17,6 +18,9 @@ interface HeaderProps {
 
 export default function Header({ currentView, onViewChange, members = [], onMemberColorChange, onSearchClick, onAddMember, onDeleteMember }: HeaderProps) {
   const [, setLocation] = useLocation();
+  const containerRef = useRef<HTMLElement>(null);
+  const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   
   const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
     { value: 'day', label: 'Day' },
@@ -24,6 +28,27 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
     { value: 'month', label: 'Month' },
     { value: 'timeline', label: 'Timeline' },
   ];
+
+  useEffect(() => {
+    const updateIndicator = () => {
+      const activeButton = buttonsRef.current.get(currentView);
+      const container = containerRef.current;
+      
+      if (activeButton && container) {
+        const containerRect = container.getBoundingClientRect();
+        const buttonRect = activeButton.getBoundingClientRect();
+        
+        setIndicatorStyle({
+          left: buttonRect.left - containerRect.left,
+          width: buttonRect.width,
+        });
+      }
+    };
+
+    updateIndicator();
+    window.addEventListener('resize', updateIndicator);
+    return () => window.removeEventListener('resize', updateIndicator);
+  }, [currentView]);
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -82,30 +107,38 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             </div>
           </div>
           
-          <nav className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
+          <nav ref={containerRef} className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
             <div
-              className="absolute inset-y-1 bg-white/25 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-white/30 z-0"
+              className="absolute bg-white/25 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-white/30 z-0"
               style={{
-                left: `${views.findIndex(v => v.value === currentView) * (100 / views.length)}%`,
-                width: `calc(${100 / views.length}% - 0.25rem)`,
-                marginLeft: '0.125rem',
+                left: `${indicatorStyle.left}px`,
+                width: `${indicatorStyle.width}px`,
+                top: '4px',
+                bottom: '4px',
               }}
             />
             {views.map((view) => (
               <button
                 key={view.value}
+                ref={(el) => {
+                  if (el) {
+                    buttonsRef.current.set(view.value, el);
+                  } else {
+                    buttonsRef.current.delete(view.value);
+                  }
+                }}
                 onClick={() => onViewChange(view.value)}
                 data-testid={`button-view-${view.value}`}
                 aria-pressed={currentView === view.value}
                 aria-label={`Switch to ${view.label} view`}
                 className={`
-                  relative z-10 flex-1 md:flex-none px-3 md:px-4 py-2 rounded-full text-sm font-medium 
+                  relative z-10 flex-1 md:min-w-[80px] px-3 md:px-4 py-2 rounded-full text-sm font-medium 
                   flex items-center justify-center
-                  transition-all duration-300 ease-out
+                  transition-colors duration-300 ease-out
                   focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
                   ${currentView === view.value
                     ? 'text-white'
-                    : 'text-white/60 hover:text-white/90 hover:scale-[1.02] active:scale-95'
+                    : 'text-white/60 hover:text-white/90'
                   }
                 `}
               >
