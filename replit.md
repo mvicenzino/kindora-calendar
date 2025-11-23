@@ -6,20 +6,6 @@ A modern family calendar web application featuring a distinctive "liquid glass" 
 
 The application uses a full-stack TypeScript architecture with React on the frontend and Express on the backend, featuring real-time calendar views, event management, and family member coordination.
 
-## Recent Changes (November 23, 2025)
-
-### Landing Page Redesign ✨
-Completely redesigned the guest landing page with a modern, conversion-focused approach:
-- **Hero logo showcase**: Large Calendora logo (24-32px) with gradient glow effect (purple/teal blur)
-- **Simplified layout**: Removed video background, streamlined to essential elements
-- **Clear CTAs**: Prominent "Try Demo Now" button with animated arrow, secondary "Sign In" button
-- **Minimal features**: Reduced to 3 key benefits (One Calendar, Instant Updates, Color-Coded)
-- **Modern aesthetics**: Dark gradient background (slate-900 via purple-900/20), glassmorphism effects
-- **Bottom conversion**: Final CTA section with gradient card
-- **Mobile-responsive**: Optimized for all screen sizes
-
-File modified: `client/src/pages/Landing.tsx`
-
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
