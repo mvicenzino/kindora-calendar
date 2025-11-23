@@ -56,7 +56,13 @@ export default function TodayView({ date, events, members = [], onEventClick, on
             ))}
           </div>
         ) : (
-          <div className="backdrop-blur-xl bg-white/5 border border-white/20 rounded-3xl p-8 md:p-12" data-testid="empty-state">
+          <div className="relative backdrop-blur-xl bg-white/5 border border-white/20 rounded-3xl p-8 md:p-12 overflow-hidden" data-testid="empty-state">
+            {/* Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-teal-500/10 to-pink-500/10" />
+            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
+            
+            {/* Content */}
+            <div className="relative z-10">
             {!hasMembers ? (
               <div className="text-center space-y-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500/20 to-teal-500/20 border-2 border-white/30 mb-2">
@@ -112,6 +118,7 @@ export default function TodayView({ date, events, members = [], onEventClick, on
                 </div>
               </div>
             )}
+            </div>
           </div>
         )}
 
