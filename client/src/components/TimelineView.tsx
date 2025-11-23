@@ -72,7 +72,7 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
                 <EventCard
                   key={event.id}
                   event={event}
-                  member={event.members?.[0]}
+                  members={event.members || []}
                   onClick={() => onEventClick(event)}
                   variant="full"
                   showTime={true}

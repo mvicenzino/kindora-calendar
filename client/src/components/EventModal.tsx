@@ -21,7 +21,7 @@ interface Event {
   description?: string;
   startTime: Date;
   endTime: Date;
-  memberId: string;
+  memberIds: string[];
 }
 
 interface EventModalProps {
@@ -61,8 +61,9 @@ export default function EventModal({
     if (event) {
       setTitle(event.title || "");
       setDescription(event.description || "");
-      setMemberId(event.memberId || members[0]?.id || "");
-      setSelectedMemberIds(event.memberId ? [event.memberId] : []);
+      const eventMemberIds = event.memberIds || [];
+      setSelectedMemberIds(eventMemberIds);
+      setMemberId(eventMemberIds[0] || members[0]?.id || "");
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
@@ -139,7 +140,7 @@ export default function EventModal({
       description,
       startTime: startDateTime,
       endTime: endDateTime,
-      memberId,
+      memberIds: selectedMemberIds,
     });
     onClose();
   };
@@ -392,7 +393,7 @@ export default function EventModal({
               </Button>
               <Button
                 onClick={handleSave}
-                disabled={!title || !memberId}
+                disabled={!title || selectedMemberIds.length === 0}
                 data-testid="button-save-event"
                 className="bg-purple-600 hover:bg-purple-700 text-white border border-white/50 rounded-lg disabled:opacity-50"
               >

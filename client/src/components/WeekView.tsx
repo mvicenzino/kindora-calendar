@@ -122,7 +122,7 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
                     <EventCard
                       key={event.id}
                       event={event}
-                      member={event.members?.[0]}
+                      members={event.members || []}
                       onClick={() => onEventClick(event)}
                       variant="grid"
                       showTime={true}

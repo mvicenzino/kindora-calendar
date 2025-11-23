@@ -46,7 +46,7 @@ export default function Home() {
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
   const events = useMemo(() => rawEvents.map(e => ({
     ...mapEventFromDb(e),
-    members: members.filter(m => m.id === e.memberId)
+    members: members.filter(m => e.memberIds.includes(m.id))
   })), [rawEvents, members]);
 
   // Create event mutation
@@ -132,10 +132,12 @@ export default function Home() {
     description?: string;
     startTime: Date;
     endTime: Date;
-    memberId: string;
+    memberIds: string[];
   }) => {
-    const member = members.find(m => m.id === eventData.memberId);
-    if (!member) return;
+    if (eventData.memberIds.length === 0) return;
+    
+    const firstMember = members.find(m => m.id === eventData.memberIds[0]);
+    if (!firstMember) return;
 
     if (eventData.id) {
       // Update existing event
@@ -146,8 +148,8 @@ export default function Home() {
           description: eventData.description || undefined,
           startTime: eventData.startTime,
           endTime: eventData.endTime,
-          memberId: eventData.memberId,
-          color: member.color,
+          memberIds: eventData.memberIds,
+          color: firstMember.color,
         },
       });
     } else {
@@ -157,8 +159,8 @@ export default function Home() {
         description: eventData.description || undefined,
         startTime: eventData.startTime,
         endTime: eventData.endTime,
-        memberId: eventData.memberId,
-        color: member.color,
+        memberIds: eventData.memberIds,
+        color: firstMember.color,
       });
     }
   };

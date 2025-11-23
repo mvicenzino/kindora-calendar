@@ -3,11 +3,13 @@ import { Check, Trash2, Clock, Image as ImageIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
 interface EventCardProps {
   event: UiEvent;
   member?: UiFamilyMember;
+  members?: UiFamilyMember[];
   onClick?: () => void;
   variant?: 'full' | 'compact' | 'grid';
   showTime?: boolean;
@@ -18,6 +20,7 @@ interface EventCardProps {
 export default function EventCard({ 
   event, 
   member,
+  members = [],
   onClick, 
   variant = 'full',
   showTime = true,
@@ -184,16 +187,42 @@ export default function EventCard({
           </p>
         )}
 
-        {/* Bottom Row: Member Avatar */}
-        <div className="flex justify-end">
-          {member && (
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white border-2 border-white/30"
+        {/* Bottom Row: Member Avatars */}
+        <div className="flex justify-end items-center">
+          {members.length > 0 ? (
+            <div className="flex items-center -space-x-2">
+              {members.map((m, index) => (
+                <Avatar
+                  key={m.id}
+                  className="w-8 h-8 border-2 border-white/50"
+                  style={{ 
+                    backgroundColor: m.color,
+                    zIndex: members.length - index 
+                  }}
+                  data-testid={`avatar-member-${m.id}`}
+                >
+                  <AvatarFallback 
+                    className="text-white text-xs font-semibold"
+                    style={{ backgroundColor: m.color }}
+                  >
+                    {m.initials || m.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+          ) : member && (
+            <Avatar
+              className="w-8 h-8 border-2 border-white/50"
               style={{ backgroundColor: member.color }}
               data-testid={`avatar-member-${member.id}`}
             >
-              {member.initials || member.name.charAt(0).toUpperCase()}
-            </div>
+              <AvatarFallback 
+                className="text-white text-xs font-semibold"
+                style={{ backgroundColor: member.color }}
+              >
+                {member.initials || member.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
           )}
         </div>
       </div>
