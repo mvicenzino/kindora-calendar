@@ -4,10 +4,20 @@ import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twi
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+
+  const handleSocialClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    toast({
+      title: "Socials Coming Soon!",
+      description: "We're excited to connect with you. Follow us soon for updates and family calendar tips!",
+    });
+  };
 
   const features = [
     {
@@ -196,6 +206,7 @@ export default function Landing() {
             <div className="flex items-center gap-4">
               <a
                 href="#"
+                onClick={handleSocialClick}
                 aria-label="Facebook"
                 className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
                 data-testid="link-facebook"
@@ -204,6 +215,7 @@ export default function Landing() {
               </a>
               <a
                 href="#"
+                onClick={handleSocialClick}
                 aria-label="Instagram"
                 className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
                 data-testid="link-instagram"
@@ -212,6 +224,7 @@ export default function Landing() {
               </a>
               <a
                 href="#"
+                onClick={handleSocialClick}
                 aria-label="X (Twitter)"
                 className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
                 data-testid="link-twitter"
