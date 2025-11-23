@@ -82,15 +82,24 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             </div>
           </div>
           
-          <nav className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
+          <nav className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto shadow-inner">
+            {/* Active pill indicator with blue gradient and reflection */}
             <div
-              className="absolute inset-y-1 bg-white/25 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-white/30"
+              className="absolute inset-y-1 rounded-full shadow-lg transition-all duration-300 ease-out overflow-hidden"
               style={{
                 left: `${views.findIndex(v => v.value === currentView) * (100 / views.length)}%`,
                 width: `calc(${100 / views.length}% - 0.25rem)`,
                 marginLeft: '0.125rem',
               }}
-            />
+            >
+              {/* Main gradient background */}
+              <div className="absolute inset-0 bg-gradient-to-b from-blue-500/90 to-blue-600/95 backdrop-blur-sm" />
+              {/* Top reflection */}
+              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent" />
+              {/* Border glow */}
+              <div className="absolute inset-0 rounded-full ring-1 ring-inset ring-blue-400/30" />
+            </div>
+            
             {views.map((view) => (
               <button
                 key={view.value}
@@ -101,9 +110,9 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 className={`
                   relative z-10 flex-1 md:flex-none px-3 md:px-4 py-2 rounded-full text-sm font-medium 
                   transition-all duration-300 ease-out
-                  focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-blue-400/50 focus-visible:outline-none
                   ${currentView === view.value
-                    ? 'text-white scale-105'
+                    ? 'text-white font-semibold scale-105 drop-shadow-sm'
                     : 'text-white/60 hover:text-white/90 hover:scale-[1.02] active:scale-95'
                   }
                 `}
