@@ -213,7 +213,11 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               transform: 'rotateY(180deg)',
             }}
           >
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+            {/* Counter-rotation wrapper to fix mirrored text */}
+            <div 
+              style={{ transform: 'rotateY(180deg)' }}
+              className="p-6 space-y-6 max-h-[80vh] overflow-y-auto"
+            >
               {/* Header */}
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Event Details</h2>
