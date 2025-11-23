@@ -164,7 +164,7 @@ export async function setupAuth(app: Express) {
           console.error("Demo login error:", err);
           return res.redirect("/api/login");
         }
-        res.redirect("/");
+        res.redirect("/demo-welcome");
       });
     } catch (error) {
       console.error("Demo login error:", error);

@@ -9,6 +9,7 @@ import Home from "@/pages/Home";
 import Memories from "@/pages/Memories";
 import Onboarding from "@/pages/Onboarding";
 import EventWizard from "@/pages/EventWizard";
+import DemoWelcome from "@/pages/DemoWelcome";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -27,6 +28,7 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
+          <Route path="/demo-welcome" component={DemoWelcome} />
           <Route path="/" component={Home} />
           <Route path="/memories" component={Memories} />
           <Route path="/onboarding" component={Onboarding} />
