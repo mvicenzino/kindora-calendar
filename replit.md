@@ -6,6 +6,15 @@ A modern family calendar web application featuring a distinctive "liquid glass" 
 
 The application uses a full-stack TypeScript architecture with React on the frontend and Express on the backend, featuring real-time calendar views, event management, and family member coordination.
 
+### Demo Mode
+
+The application includes a fully-functional demo mode that allows users to experience the app without signing in:
+
+- **Sample Data Seeding**: Each demo session is pre-populated with 4 family members (Sarah, Michael, Emma, Lucas) and 12 realistic events spanning past memories, today's activities, and upcoming plans
+- **Full Functionality**: Demo users can create, edit, and delete events and family members just like real users
+- **Non-Persistent Storage**: Demo data is stored in-memory only and does not persist to the database. Each demo session is isolated and temporary
+- **Session Isolation**: Each demo login creates a unique user ID (`demo-${timestamp}-${random}`), ensuring complete data isolation between different demo sessions
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -60,10 +69,12 @@ Preferred communication style: Simple, everyday language.
 **Data Layer Strategy**
 - **Drizzle ORM** for type-safe database operations
 - Database-agnostic schema definitions (currently configured for PostgreSQL)
-- **Dual Storage Implementation**:
+- **Multi-Tier Storage Implementation**:
   - `IStorage` interface defining data operations contract
-  - `MemStorage` class providing in-memory storage (current default)
-  - Architecture allows swapping to PostgreSQL without API changes
+  - `DemoAwareStorage` wrapper routing demo users to in-memory storage, real users to database
+  - `MemStorage` class providing non-persistent in-memory storage for demo users
+  - `DrizzleStorage` class providing persistent PostgreSQL storage for authenticated users
+  - Demo user detection via userId prefix (`demo-`)
 - Schema validation using Zod with drizzle-zod integration
 
 **Key Architectural Decisions**
