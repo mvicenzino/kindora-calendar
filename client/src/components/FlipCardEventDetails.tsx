@@ -108,10 +108,11 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-200" onClick={onClose}>
       <div 
         className="relative w-full max-w-2xl"
         style={{ perspective: '1200px' }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Flip Card Container */}
         <div 
