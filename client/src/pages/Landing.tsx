@@ -221,9 +221,14 @@ export default function Landing() {
             </div>
             
             {/* Copyright Text */}
-            <p className="text-white/60 text-sm text-center">
-              © 2025 Kindora Family. Bringing families closer, one calendar at a time.
-            </p>
+            <div className="text-center space-y-2">
+              <p className="text-white/60 text-sm">
+                © 2025 Kindora Family. Bringing families closer, one calendar at a time.
+              </p>
+              <p className="text-white/60 text-sm">
+                Visit <a href="https://kindora.ai" target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-white underline decoration-white/40 hover:decoration-white transition-colors" data-testid="link-kindora-ai">Kindora.ai</a> for instant coaching guidance for your kiddos.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
