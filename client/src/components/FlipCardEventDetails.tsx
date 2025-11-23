@@ -212,7 +212,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
               transform: 'rotateY(-180deg)',
-              maxHeight: 'calc(100vh - 8rem)',
+              maxHeight: 'calc(100vh - 12rem)',
             }}
           >
               {/* Header */}
