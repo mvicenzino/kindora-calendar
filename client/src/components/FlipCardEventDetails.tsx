@@ -219,26 +219,26 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               className="p-6 space-y-6 max-h-[80vh] overflow-y-auto"
             >
               {/* Header */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold text-white">Event Details</h2>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
                   <button
                     onClick={handleFlip}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+                    className="w-11 h-11 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
                     data-testid="button-flip-back"
                   >
                     <RotateCcw className="w-5 h-5" />
                   </button>
                   <button
                     onClick={onEdit}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+                    className="w-11 h-11 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
                     data-testid="button-edit-event"
                   >
                     <Edit2 className="w-5 h-5" />
                   </button>
                   <button
                     onClick={onClose}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+                    className="w-11 h-11 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
                     data-testid="button-close-back"
                   >
                     <X className="w-5 h-5" />
@@ -247,13 +247,13 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               </div>
 
               {/* Event Title Card with Members */}
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5">
                 <div className="flex items-center gap-4">
-                  <div className="flex -space-x-2">
+                  <div className="flex -space-x-2 flex-shrink-0">
                     {event.members?.slice(0, 3).map((member) => (
-                      <Avatar key={member.id} className="h-12 w-12 border-2 border-white/30">
+                      <Avatar key={member.id} className="h-11 w-11 border-2 border-white/40">
                         <AvatarFallback
-                          className="text-white font-semibold"
+                          className="text-white font-semibold text-sm"
                           style={{ backgroundColor: member.color }}
                         >
                           {member.initials}
@@ -261,69 +261,69 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                       </Avatar>
                     ))}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-white">{event.title}</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl font-bold text-white mb-1">{event.title}</h3>
                     <p className="text-sm text-white/70">
-                      Assigned to {memberNames}
+                      {memberNames}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Photo Section */}
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                {event.photoUrl ? (
+              {event.photoUrl ? (
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 overflow-hidden">
                   <div className="relative">
                     <img
                       src={event.photoUrl}
                       alt={event.title}
-                      className="w-full rounded-lg object-cover max-h-96"
+                      className="w-full rounded-xl object-cover max-h-80"
                       data-testid="event-photo"
                     />
                     <button
                       onClick={handleDeletePhoto}
-                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500/90 border border-white/30 flex items-center justify-center text-white hover:bg-red-600 transition-all"
+                      className="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-500/95 border border-white/40 flex items-center justify-center text-white hover:bg-red-600 transition-all shadow-lg"
                       data-testid="button-delete-photo"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <Upload className="w-12 h-12 text-white/30 mx-auto mb-3" />
-                    <p className="text-white/70 mb-4">Add a photo to create a memory</p>
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        data-testid="input-photo-upload"
-                      />
-                      <span className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all">
-                        <Upload className="w-4 h-4" />
-                        {uploading ? 'Uploading...' : 'Upload Photo'}
-                      </span>
-                    </label>
-                  </div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-center">
+                  <Upload className="w-10 h-10 text-white/40 mx-auto mb-3" />
+                  <p className="text-white/70 mb-4 text-sm">Add a photo to create a memory</p>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      data-testid="input-photo-upload"
+                    />
+                    <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all font-medium text-sm shadow-lg">
+                      <Upload className="w-4 h-4" />
+                      {uploading ? 'Uploading...' : 'Upload Photo'}
+                    </span>
+                  </label>
+                </div>
+              )}
 
               {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 text-white/70 mb-2">
+                  <div className="flex items-center gap-2 text-white/60 mb-2">
                     <Calendar className="w-4 h-4" />
-                    <span className="text-sm font-medium">Date</span>
+                    <span className="text-xs font-medium uppercase tracking-wide">Date</span>
                   </div>
-                  <p className="text-white font-semibold">{format(event.startTime, 'MMMM d, yyyy')}</p>
+                  <p className="text-white font-semibold text-base">{format(event.startTime, 'MMM d, yyyy')}</p>
                 </div>
                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 text-white/70 mb-2">
+                  <div className="flex items-center gap-2 text-white/60 mb-2">
                     <Clock className="w-4 h-4" />
-                    <span className="text-sm font-medium">Time</span>
+                    <span className="text-xs font-medium uppercase tracking-wide">Time</span>
                   </div>
-                  <p className="text-white font-semibold">
+                  <p className="text-white font-semibold text-base">
                     {format(event.startTime, 'h:mm a')} - {format(event.endTime, 'h:mm a')}
                   </p>
                 </div>
@@ -331,17 +331,17 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
               {/* Description */}
               {event.description && (
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                  <h4 className="text-sm font-medium text-white/70 mb-2">Description</h4>
-                  <p className="text-white">{event.description}</p>
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5">
+                  <h4 className="text-xs font-medium text-white/60 mb-3 uppercase tracking-wide">Description</h4>
+                  <p className="text-white/95 leading-relaxed">{event.description}</p>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <Button
                   onClick={onEdit}
-                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white"
+                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white shadow-lg"
                   data-testid="button-edit-bottom"
                 >
                   <Edit2 className="w-4 h-4 mr-2" />
@@ -350,7 +350,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                 <Button
                   onClick={onClose}
                   variant="outline"
-                  className="flex-1 border-white/30 text-white hover:bg-white/10"
+                  className="flex-1 border-white/40 text-white hover:bg-white/10 bg-white/5"
                   data-testid="button-close-bottom"
                 >
                   Close
