@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { seedDemoAccount } from "./demoSeed";
 
 const getOidcConfig = memoize(
   async () => {
@@ -149,6 +150,9 @@ export async function setupAuth(app: Express) {
 
       // Upsert demo user to database
       await upsertUser(demoClaims);
+
+      // Seed demo account with sample data
+      await seedDemoAccount(storage, demoUserId);
 
       // Create demo session
       const demoUser = {
