@@ -84,7 +84,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
           
           <nav className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
             <div
-              className="absolute inset-y-1 bg-white/25 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-white/30"
+              className="absolute inset-y-1 bg-white/25 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-white/30 z-0"
               style={{
                 left: `${views.findIndex(v => v.value === currentView) * (100 / views.length)}%`,
                 width: `calc(${100 / views.length}% - 0.25rem)`,
