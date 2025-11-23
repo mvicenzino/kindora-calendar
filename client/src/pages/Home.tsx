@@ -7,7 +7,7 @@ import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
 import TimelineView from "@/components/TimelineView";
 import EventModal from "@/components/EventModal";
-import EventDetailsDialog from "@/components/EventDetailsDialog";
+import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -271,7 +271,7 @@ export default function Home() {
 
       {/* Event Details Dialog */}
       {selectedEvent && (
-        <EventDetailsDialog
+        <FlipCardEventDetails
           isOpen={eventDetailsOpen}
           onClose={() => {
             setEventDetailsOpen(false);
