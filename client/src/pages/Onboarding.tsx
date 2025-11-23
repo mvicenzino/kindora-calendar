@@ -31,8 +31,7 @@ const PRESET_COLORS = [
 export default function Onboarding() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [step, setStep] = useState<'welcome' | 'family' | 'complete'>('welcome');
-  const [familyModalOpen, setFamilyModalOpen] = useState(false);
+  const [familyModalOpen, setFamilyModalOpen] = useState(true); // Auto-open modal
   const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
 
   // Fetch family members from server
@@ -86,21 +85,16 @@ export default function Onboarding() {
   };
 
   const handleContinue = () => {
-    if (step === 'welcome') {
-      setStep('family');
-      setFamilyModalOpen(true);
-    } else if (step === 'family') {
-      // Verify members exist in database
-      if (members.length === 0) {
-        toast({
-          title: "Add at least one member",
-          description: "Add a family member to continue with onboarding",
-          variant: "destructive",
-        });
-        return;
-      }
-      setLocation('/onboarding/wizard');
+    // Verify members exist in database
+    if (members.length === 0) {
+      toast({
+        title: "Add at least one member",
+        description: "Add a family member to continue with onboarding",
+        variant: "destructive",
+      });
+      return;
     }
+    setLocation('/onboarding/wizard');
   };
 
   const handleSkip = () => {
@@ -115,130 +109,95 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center p-4">
       <Card className="max-w-2xl w-full backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-12">
-        {step === 'welcome' && (
-          <div className="text-center space-y-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
-              <Sparkles className="w-10 h-10 text-white" />
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
+              <Users className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white">
-              Welcome to Calendora!
-            </h1>
-            <p className="text-lg text-white/80 max-w-md mx-auto">
-              Let's set up your family calendar in just a few steps. You'll be organized in no time!
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              Add Your Family Members
+            </h2>
+            <p className="text-white/70">
+              Each person gets a unique color for easy identification
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+          </div>
+
+          {membersLoading ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-8 h-8 text-white mx-auto animate-spin" />
+              <p className="text-white/70 mt-2">Loading members...</p>
+            </div>
+          ) : membersError ? (
+            <Alert className="mb-6 bg-red-500/10 border-red-500/30">
+              <AlertCircle className="h-4 w-4 text-red-400" />
+              <AlertDescription className="text-red-200 space-y-2">
+                <p>Failed to load family members.</p>
+                <Button
+                  onClick={() => refetchMembers()}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500/50 text-red-300 hover:bg-red-500/10"
+                  data-testid="button-retry-members"
+                >
+                  Try Again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : members.length > 0 ? (
+            <div className="space-y-3 mb-6">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/20"
+                  data-testid={`member-${member.id}`}
+                >
+                  <div
+                    className="w-10 h-10 rounded-full border-2"
+                    style={{ backgroundColor: member.color, borderColor: member.color }}
+                  />
+                  <span className="text-white font-medium">{member.name}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Alert className="mb-6 bg-yellow-500/10 border-yellow-500/30">
+              <AlertCircle className="h-4 w-4 text-yellow-500" />
+              <AlertDescription className="text-yellow-200">
+                Add at least one family member to get started with your calendar
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex flex-col gap-3">
+            <Button
+              onClick={() => setFamilyModalOpen(true)}
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/30"
+              data-testid="button-add-member"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Add Another Member
+            </Button>
+            
+            <div className="flex gap-3">
               <Button
                 onClick={handleContinue}
-                size="lg"
-                className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
-                data-testid="button-get-started"
+                className="flex-1 bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
+                disabled={members.length === 0 || membersLoading}
+                data-testid="button-continue"
               >
-                Get Started
+                Continue
               </Button>
               <Button
                 onClick={handleSkip}
                 variant="outline"
-                size="lg"
                 className="border-white/50 text-white hover:bg-white/10 bg-white/5"
-                data-testid="button-skip"
+                data-testid="button-skip-family"
               >
-                Skip Setup
+                Skip
               </Button>
             </div>
           </div>
-        )}
-
-        {step === 'family' && (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
-                <Users className="w-8 h-8 text-white" />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-                Add Your Family Members
-              </h2>
-              <p className="text-white/70">
-                Each person gets a unique color for easy identification
-              </p>
-            </div>
-
-            {membersLoading ? (
-              <div className="text-center py-8">
-                <Loader2 className="w-8 h-8 text-white mx-auto animate-spin" />
-                <p className="text-white/70 mt-2">Loading members...</p>
-              </div>
-            ) : membersError ? (
-              <Alert className="mb-6 bg-red-500/10 border-red-500/30">
-                <AlertCircle className="h-4 w-4 text-red-400" />
-                <AlertDescription className="text-red-200 space-y-2">
-                  <p>Failed to load family members.</p>
-                  <Button
-                    onClick={() => refetchMembers()}
-                    variant="outline"
-                    size="sm"
-                    className="border-red-500/50 text-red-300 hover:bg-red-500/10"
-                    data-testid="button-retry-members"
-                  >
-                    Try Again
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : members.length > 0 ? (
-              <div className="space-y-3 mb-6">
-                {members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/20"
-                    data-testid={`member-${member.id}`}
-                  >
-                    <div
-                      className="w-10 h-10 rounded-full border-2"
-                      style={{ backgroundColor: member.color, borderColor: member.color }}
-                    />
-                    <span className="text-white font-medium">{member.name}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Alert className="mb-6 bg-yellow-500/10 border-yellow-500/30">
-                <AlertCircle className="h-4 w-4 text-yellow-500" />
-                <AlertDescription className="text-yellow-200">
-                  Add at least one family member to get started with your calendar
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex flex-col gap-3">
-              <Button
-                onClick={() => setFamilyModalOpen(true)}
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/30"
-                data-testid="button-add-member"
-              >
-                <Users className="w-4 h-4 mr-2" />
-                Add Another Member
-              </Button>
-              
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleContinue}
-                  className="flex-1 bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
-                  disabled={members.length === 0 || membersLoading}
-                  data-testid="button-continue"
-                >
-                  Continue
-                </Button>
-                <Button
-                  onClick={handleSkip}
-                  variant="outline"
-                  className="border-white/50 text-white hover:bg-white/10 bg-white/5"
-                  data-testid="button-skip-family"
-                >
-                  Skip
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        </div>
       </Card>
 
       {/* Add Family Member Modal */}
