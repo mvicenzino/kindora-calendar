@@ -384,12 +384,100 @@ class DrizzleStorage implements IStorage {
   }
 }
 
+// Demo-aware storage wrapper that uses in-memory storage for demo users
+class DemoAwareStorage implements IStorage {
+  private persistentStorage: IStorage;
+  private demoStorage: MemStorage;
+
+  constructor(persistentStorage: IStorage) {
+    this.persistentStorage = persistentStorage;
+    this.demoStorage = new MemStorage();
+  }
+
+  private isDemoUser(userId: string): boolean {
+    return userId.startsWith("demo-");
+  }
+
+  private getStorage(userId: string): IStorage {
+    return this.isDemoUser(userId) ? this.demoStorage : this.persistentStorage;
+  }
+
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    return this.getStorage(id).getUser(id);
+  }
+
+  async upsertUser(user: UpsertUser): Promise<User> {
+    return this.getStorage(user.id).upsertUser(user);
+  }
+
+  // Family Members
+  async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
+    return this.getStorage(userId).getFamilyMembers(userId);
+  }
+
+  async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
+    return this.getStorage(userId).getFamilyMember(id, userId);
+  }
+
+  async createFamilyMember(userId: string, member: InsertFamilyMember): Promise<FamilyMember> {
+    return this.getStorage(userId).createFamilyMember(userId, member);
+  }
+
+  async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+    return this.getStorage(userId).updateFamilyMember(id, userId, updates);
+  }
+
+  async deleteFamilyMember(id: string, userId: string): Promise<void> {
+    return this.getStorage(userId).deleteFamilyMember(id, userId);
+  }
+
+  // Events
+  async getEvents(userId: string): Promise<Event[]> {
+    return this.getStorage(userId).getEvents(userId);
+  }
+
+  async getEvent(id: string, userId: string): Promise<Event | undefined> {
+    return this.getStorage(userId).getEvent(id, userId);
+  }
+
+  async createEvent(userId: string, event: InsertEvent): Promise<Event> {
+    return this.getStorage(userId).createEvent(userId, event);
+  }
+
+  async updateEvent(id: string, userId: string, event: Partial<InsertEvent>): Promise<Event> {
+    return this.getStorage(userId).updateEvent(id, userId, event);
+  }
+
+  async deleteEvent(id: string, userId: string): Promise<void> {
+    return this.getStorage(userId).deleteEvent(id, userId);
+  }
+
+  async toggleEventCompletion(id: string, userId: string): Promise<Event> {
+    return this.getStorage(userId).toggleEventCompletion(id, userId);
+  }
+
+  // Messages
+  async getMessages(eventId: string, userId: string): Promise<Message[]> {
+    return this.getStorage(userId).getMessages(eventId, userId);
+  }
+
+  async createMessage(userId: string, message: InsertMessage): Promise<Message> {
+    return this.getStorage(userId).createMessage(userId, message);
+  }
+
+  async deleteMessage(id: string, userId: string): Promise<void> {
+    return this.getStorage(userId).deleteMessage(id, userId);
+  }
+}
+
 // Initialize storage
 let storage: IStorage;
 
 try {
   if (process.env.DATABASE_URL) {
-    storage = new DrizzleStorage();
+    const persistentStorage = new DrizzleStorage();
+    storage = new DemoAwareStorage(persistentStorage);
   } else {
     storage = new MemStorage();
   }

@@ -39,7 +39,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       // Past events (memories with photos)
       {
         title: "Emma's Soccer Game",
-        description: "Great game! Emma scored two goals and her team won 3-1. So proud! 🎉",
+        description: "Great game! Emma scored two goals and her team won 3-1. So proud!",
         startTime: setMinutes(setHours(subDays(today, 3), 14), 0),
         endTime: setMinutes(setHours(subDays(today, 3), 16), 0),
         memberIds: [daughter.id, mom.id, dad.id],
@@ -57,7 +57,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       },
       {
         title: "Lucas's Piano Recital",
-        description: "First recital! He played beautifully and didn't forget a single note. 🎹",
+        description: "First recital! He played beautifully and didn't forget a single note.",
         startTime: setMinutes(setHours(subDays(today, 7), 15), 0),
         endTime: setMinutes(setHours(subDays(today, 7), 16), 30),
         memberIds: [son.id, mom.id, dad.id],
@@ -124,7 +124,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       },
       {
         title: "Date Night",
-        description: "Dinner and a movie - first date night in weeks! 💕",
+        description: "Dinner and a movie - first date night in weeks!",
         startTime: setMinutes(setHours(addDays(today, 5), 19), 0),
         endTime: setMinutes(setHours(addDays(today, 5), 23), 0),
         memberIds: [mom.id, dad.id],
