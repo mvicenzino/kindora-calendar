@@ -114,18 +114,22 @@ export class MemStorage implements IStorage {
     
     this.familyMembers.delete(id);
     
-    const eventsToDelete = Array.from(this.events.entries())
-      .filter(([_, event]) => event.memberId === id && event.userId === userId)
-      .map(([eventId, _]) => eventId);
+    const eventsToUpdate = Array.from(this.events.entries())
+      .filter(([_, event]) => event.memberIds.includes(id) && event.userId === userId);
     
-    eventsToDelete.forEach(eventId => {
-      this.events.delete(eventId);
-      
-      const messagesToDelete = Array.from(this.messages.entries())
-        .filter(([_, message]) => message.eventId === eventId && message.userId === userId)
-        .map(([messageId, _]) => messageId);
-      
-      messagesToDelete.forEach(messageId => this.messages.delete(messageId));
+    eventsToUpdate.forEach(([eventId, event]) => {
+      const updatedMemberIds = event.memberIds.filter(memberId => memberId !== id);
+      if (updatedMemberIds.length === 0) {
+        this.events.delete(eventId);
+        
+        const messagesToDelete = Array.from(this.messages.entries())
+          .filter(([_, message]) => message.eventId === eventId && message.userId === userId)
+          .map(([messageId, _]) => messageId);
+        
+        messagesToDelete.forEach(messageId => this.messages.delete(messageId));
+      } else {
+        this.events.set(eventId, { ...event, memberIds: updatedMemberIds });
+      }
     });
   }
 

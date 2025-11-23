@@ -43,7 +43,7 @@ export const events = pgTable("events", {
   description: text("description"),
   startTime: timestamp("start_time").notNull(),
   endTime: timestamp("end_time").notNull(),
-  memberId: varchar("member_id").notNull(),
+  memberIds: text("member_ids").array().notNull(),
   color: text("color").notNull(),
   photoUrl: text("photo_url"),
   completed: boolean("completed").notNull().default(false),
@@ -79,7 +79,7 @@ export const insertEventSchema = createInsertSchema(events).omit({
   createdAt: true,
 }).extend({
   title: z.string().min(1, "Title is required").trim(),
-  memberId: z.string().min(1, "Member is required"),
+  memberIds: z.array(z.string()).min(1, "At least one family member is required"),
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
 });
