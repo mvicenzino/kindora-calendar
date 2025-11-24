@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-import calendoraIcon from "@assets/generated_images/transparent_background_calendar_icon.png";
+import calendoraIcon from "@assets/generated_images/warm_gradient_calendar_icon.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,7 +48,7 @@ export default function Landing() {
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 mix-blend-normal" style={{backgroundColor: 'transparent'}} />
+            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 rounded-lg" />
             <span className="text-xl app-title">
               <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
             </span>
