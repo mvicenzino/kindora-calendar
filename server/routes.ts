@@ -74,8 +74,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : req.headers.origin || 'http://localhost:5000';
 
       const joinUrl = `${appUrl}/#/family-settings`;
-      const fromEmail = "mvicenzino@gmail.com";
       const subject = `Join ${family.name} on Kindora Family Calendar`;
+      
+      // Check email service configuration
+      const resendApiKey = process.env.RESEND_API_KEY;
+      const sendgridApiKey = process.env.SENDGRID_API_KEY;
+      
+      // Validate configuration based on selected provider
+      if (resendApiKey && !process.env.EMAIL_FROM_ADDRESS) {
+        return res.status(400).json({ 
+          error: "EMAIL_FROM_ADDRESS is required when using Resend. Set it to an email from your verified domain (e.g., 'invites@yourdomain.com'). Resend does not support Gmail or unverified domains.",
+          provider: "resend",
+          setup: "Go to Replit Secrets and add EMAIL_FROM_ADDRESS with a verified domain email"
+        });
+      }
+      
+      const fromEmail = process.env.EMAIL_FROM_ADDRESS || "mvicenzino@gmail.com";
       
       // HTML email template
       const htmlBody = `
@@ -159,10 +173,6 @@ How to Join:
 Visit Kindora Family Calendar: ${joinUrl}
       `.trim();
 
-      // Try to send email with configured service
-      const resendApiKey = process.env.RESEND_API_KEY;
-      const sendgridApiKey = process.env.SENDGRID_API_KEY;
-      
       if (resendApiKey) {
         // Send with Resend
         const response = await fetch('https://api.resend.com/emails', {
@@ -181,9 +191,31 @@ Visit Kindora Family Calendar: ${joinUrl}
         });
 
         if (!response.ok) {
-          const error = await response.text();
-          console.error('Resend API error:', error);
-          throw new Error('Failed to send email via Resend');
+          const errorText = await response.text();
+          let errorDetails;
+          try {
+            errorDetails = JSON.parse(errorText);
+          } catch {
+            errorDetails = { message: errorText };
+          }
+          
+          console.error('Resend API error:', response.status, errorDetails);
+          
+          // Provide helpful error messages based on Resend's response
+          if (response.status === 422) {
+            return res.status(400).json({
+              error: "Email sending failed: Invalid sender email or unverified domain",
+              details: errorDetails.message || "The sender email must be from a domain verified in your Resend account",
+              provider: "resend",
+              fix: `Verify your domain in Resend, then set EMAIL_FROM_ADDRESS to an email from that domain (e.g., invites@yourdomain.com)`
+            });
+          }
+          
+          return res.status(500).json({
+            error: "Failed to send email via Resend",
+            details: errorDetails.message || errorText,
+            provider: "resend"
+          });
         }
 
         const result = await response.json();
@@ -191,7 +223,8 @@ Visit Kindora Family Calendar: ${joinUrl}
         
         return res.json({ 
           success: true,
-          message: "Invitation email sent successfully"
+          message: "Invitation email sent successfully",
+          provider: "resend"
         });
       } else if (sendgridApiKey) {
         // Send with SendGrid
@@ -213,28 +246,55 @@ Visit Kindora Family Calendar: ${joinUrl}
         });
 
         if (!response.ok) {
-          const error = await response.text();
-          console.error('SendGrid API error:', error);
-          throw new Error('Failed to send email via SendGrid');
+          const errorText = await response.text();
+          let errorDetails;
+          try {
+            errorDetails = JSON.parse(errorText);
+          } catch {
+            errorDetails = { message: errorText };
+          }
+          
+          console.error('SendGrid API error:', response.status, errorDetails);
+          
+          // Provide specific error guidance based on SendGrid's response
+          const errorMessage = errorDetails.errors?.[0]?.message || errorDetails.message || errorText;
+          
+          if (response.status === 400 || response.status === 403) {
+            return res.status(400).json({
+              error: "Email sending failed: Sender verification or permission issue",
+              details: errorMessage,
+              provider: "sendgrid",
+              fix: "1. Verify your sender email (mvicenzino@gmail.com) in SendGrid dashboard. 2. Check that your API key has 'Mail Send' permissions."
+            });
+          }
+          
+          return res.status(500).json({
+            error: "Failed to send email via SendGrid",
+            details: errorMessage,
+            provider: "sendgrid",
+            fix: "Check SendGrid dashboard for sender verification and API key status"
+          });
         }
 
         console.log('Email sent via SendGrid');
         
         return res.json({ 
           success: true,
-          message: "Invitation email sent successfully"
+          message: "Invitation email sent successfully",
+          provider: "sendgrid"
         });
       } else {
         // No email service configured
         console.log('Email would be sent:', { to: email, from: fromEmail, subject, joinUrl, inviteCode: family.inviteCode });
         
         return res.status(501).json({ 
-          error: "Email service not configured. Please set RESEND_API_KEY or SENDGRID_API_KEY in your environment variables.",
+          error: "Email service not configured. Set RESEND_API_KEY or SENDGRID_API_KEY, and optionally EMAIL_FROM_ADDRESS (required for Resend - must be a verified domain like 'invites@yourdomain.com').",
           details: {
             to: email,
             from: fromEmail,
             inviteCode: family.inviteCode,
-            joinUrl: joinUrl
+            joinUrl: joinUrl,
+            note: "For Resend: EMAIL_FROM_ADDRESS must be from a verified domain. For SendGrid: any email works if verified in SendGrid."
           }
         });
       }

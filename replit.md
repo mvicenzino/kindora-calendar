@@ -160,17 +160,26 @@ Two primary entities with clean separation of concerns:
 **Email Service Setup Required**
 The email invite feature requires an email service API key. To enable:
 
-1. Choose an email service:
-   - **Resend** (recommended) - Use Replit's Resend integration or set `RESEND_API_KEY`
-   - **SendGrid** - Set `SENDGRID_API_KEY`
-   - **Other** - Set `EMAIL_SERVICE_API_KEY`
+1. **Choose an email service:**
+   - **Resend** (recommended for simplicity)
+     - Set `RESEND_API_KEY` in environment variables
+     - Set `EMAIL_FROM_ADDRESS` to an email from your verified domain (e.g., `invites@yourdomain.com`)
+     - Note: Resend requires domain verification. You cannot use Gmail/personal emails.
+   
+   - **SendGrid** (works with any verified sender)
+     - Set `SENDGRID_API_KEY` in environment variables
+     - Optionally set `EMAIL_FROM_ADDRESS` (defaults to `mvicenzino@gmail.com`)
+     - Verify your sender email in SendGrid dashboard
 
-2. Configure via Replit Secrets or environment variables
+2. **Environment Variables:**
+   - `RESEND_API_KEY` or `SENDGRID_API_KEY` - Your email service API key
+   - `EMAIL_FROM_ADDRESS` - Sender email address (required for Resend, optional for SendGrid)
 
-3. Email template includes:
-   - Welcome message to Kindora Family
-   - Family name and invite code
-   - Direct link to join: `https://your-app.repl.co/#/family-settings`
-   - Instructions for entering the code
+3. **Email template includes:**
+   - Welcome message to Kindora Family with gradient header
+   - Family name and large invite code display
+   - Step-by-step join instructions
+   - Direct link button to Family Settings: `https://your-app.repl.co/#/family-settings`
+   - Both HTML and plain text versions
 
-**Current Status**: Email UI is functional, but actual email sending requires API key configuration. Without configuration, the endpoint returns a 501 error with invite details for debugging.
+**Current Status**: Email UI is functional. Email sending works when API keys are configured. Without configuration, the endpoint returns a 501 error with detailed setup instructions and preview of what would be sent.
