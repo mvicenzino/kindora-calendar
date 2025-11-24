@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-import calendoraIcon from "@assets/generated_images/warm_gradient_calendar_icon.png";
+import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
