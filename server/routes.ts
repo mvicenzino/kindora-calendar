@@ -109,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             .container { 
               max-width: 600px; 
-              margin: 40px auto; 
+              margin: 20px auto; 
               background: white;
               border-radius: 12px;
               overflow: hidden;
@@ -118,51 +118,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .header { 
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
               color: white; 
-              padding: 40px 30px; 
+              padding: 30px 30px; 
               text-align: center;
             }
             .header h1 { 
-              margin: 0 0 10px 0; 
-              font-size: 28px; 
+              margin: 0 0 8px 0; 
+              font-size: 26px; 
               font-weight: 600;
             }
             .header p { 
               margin: 0; 
-              font-size: 16px; 
+              font-size: 15px; 
               opacity: 0.95;
             }
             .content { 
-              padding: 40px 30px;
+              padding: 30px 30px;
               background: white;
             }
             .greeting { 
-              font-size: 18px; 
+              font-size: 17px; 
               color: #1a1a1a; 
-              margin: 0 0 20px 0;
+              margin: 0 0 15px 0;
             }
             .message { 
               color: #4a4a4a; 
-              margin: 0 0 30px 0; 
-              font-size: 16px;
+              margin: 0 0 20px 0; 
+              font-size: 15px;
             }
             .invite-code { 
               background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%); 
               border: 2px solid #667eea; 
-              padding: 30px; 
+              padding: 24px; 
               text-align: center; 
-              margin: 30px 0; 
+              margin: 20px 0; 
               border-radius: 12px;
             }
             .code-label { 
-              margin: 0 0 15px 0; 
-              font-size: 14px; 
+              margin: 0 0 12px 0; 
+              font-size: 13px; 
               color: #667eea; 
               font-weight: 600;
               text-transform: uppercase;
               letter-spacing: 1px;
             }
             .code { 
-              font-size: 36px; 
+              font-size: 32px; 
               font-weight: 700; 
               letter-spacing: 6px; 
               color: #667eea; 
@@ -173,12 +173,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               display: inline-block; 
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
               color: white !important; 
-              padding: 16px 40px; 
+              padding: 14px 36px; 
               text-decoration: none; 
               border-radius: 8px; 
-              margin: 30px 0; 
+              margin: 20px 0 0 0; 
               font-weight: 600;
-              font-size: 16px;
+              font-size: 15px;
               box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
             }
             .button:hover { 
@@ -186,41 +186,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             .steps { 
               background: #fafbff; 
-              padding: 30px; 
+              padding: 24px; 
               border-radius: 12px; 
-              margin: 30px 0;
+              margin: 20px 0;
               border: 1px solid #e8ecf4;
             }
             .steps h3 { 
-              margin: 0 0 20px 0; 
+              margin: 0 0 16px 0; 
               color: #1a1a1a; 
-              font-size: 18px;
+              font-size: 17px;
               font-weight: 600;
             }
             .step { 
-              margin: 20px 0; 
+              margin: 14px 0; 
               padding-left: 35px; 
               position: relative;
               color: #4a4a4a;
-              font-size: 15px;
+              font-size: 14px;
+              line-height: 1.5;
             }
             .step-number { 
               position: absolute; 
-              left: 0; 
+              left: 0;
+              top: 0;
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
               color: white; 
               width: 24px; 
               height: 24px; 
               border-radius: 50%; 
-              display: inline-flex; 
+              display: flex; 
               align-items: center; 
               justify-content: center; 
               font-size: 13px; 
               font-weight: 600;
+              line-height: 1;
             }
             .footer { 
               background: #fafbff; 
-              padding: 25px 30px; 
+              padding: 20px 30px; 
               text-align: center;
               border-top: 1px solid #e8ecf4;
             }
