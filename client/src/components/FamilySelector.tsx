@@ -57,7 +57,9 @@ export default function FamilySelector() {
         className="w-[200px] bg-white/10 border-white/30 text-white hover-elevate"
         data-testid="select-family"
       >
-        <SelectValue placeholder="Select family" />
+        <SelectValue>
+          {activeFamily?.name || "Select family"}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {families.map((family) => (

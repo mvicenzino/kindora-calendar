@@ -8,12 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Calendar, Clock, Users, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  color: string;
-}
+import type { UiFamilyMember } from "@shared/types";
 
 interface Event {
   id?: string;
@@ -30,7 +25,7 @@ interface EventModalProps {
   onSave: (event: Event) => void;
   onDelete?: (eventId: string) => void;
   event?: Event;
-  members: FamilyMember[];
+  members: UiFamilyMember[];
   selectedDate?: Date;
 }
 
@@ -56,9 +51,36 @@ export default function EventModal({
   const [memberSearch, setMemberSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Update form state when event prop changes
+  // Reset form when modal closes
   useEffect(() => {
+    if (!isOpen) {
+      setTitle("");
+      setDescription("");
+      setMemberId("");
+      setSelectedMemberIds([]);
+      setMemberSearch("");
+      setShowMemberDropdown(false);
+    }
+  }, [isOpen]);
+
+  // Update form state when event prop changes or modal opens
+  useEffect(() => {
+    console.log('[EventModal Main] useEffect triggered:', {
+      isOpen,
+      hasEvent: !!event,
+      membersCount: members.length,
+      membersList: members.map(m => m.name),
+      selectedDate: selectedDate?.toISOString()
+    });
+    
+    if (!isOpen) {
+      console.log('[EventModal Main] Modal closed, skipping');
+      return;
+    }
+    
     if (event) {
+      console.log('[EventModal Main] Editing existing event:', event.title);
+      // Editing existing event
       setTitle(event.title || "");
       setDescription(event.description || "");
       const eventMemberIds = event.memberIds || [];
@@ -69,20 +91,25 @@ export default function EventModal({
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
     } else {
-      // Reset form for new event
+      console.log('[EventModal Main] Creating new event');
+      // New event - set defaults
       setTitle("");
       setDescription("");
-      const defaultMemberId = members[0]?.id || "";
-      setMemberId(defaultMemberId);
-      setSelectedMemberIds(defaultMemberId ? [defaultMemberId] : []);
       setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
       setStartTime('08:00');
       setEndTime('09:00');
       setIsSometimeToday(false);
+      
+      // Auto-select first member if available
+      if (members.length > 0) {
+        console.log('[EventModal Main] ✅ Auto-selecting first member:', members[0].name, members[0].id);
+        setMemberId(members[0].id);
+        setSelectedMemberIds([members[0].id]);
+      } else {
+        console.warn('[EventModal Main] ❌ No members available for auto-selection!');
+      }
     }
-    setMemberSearch("");
-    setShowMemberDropdown(false);
-  }, [event, members, selectedDate]);
+  }, [event, selectedDate, isOpen, members]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -182,13 +209,16 @@ export default function EventModal({
             <div className="space-y-4 md:space-y-5">
             {/* Event Title */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-white">Event Title</Label>
+              <Label className="text-sm font-medium text-white">
+                Event Title <span className="text-red-400">*</span>
+              </Label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Team meeting, Soccer practice..."
                 data-testid="input-event-title"
                 className="bg-white/15 border border-white/40 rounded-2xl text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/50 h-12"
+                autoFocus
               />
             </div>
 
@@ -232,7 +262,7 @@ export default function EventModal({
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-white flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  Family Members
+                  Family Members <span className="text-red-400">*</span>
                 </Label>
                 <div className="relative" ref={dropdownRef}>
                   <div className="bg-white/15 border border-white/40 rounded-2xl p-2 min-h-12 flex flex-wrap items-center gap-2">
@@ -390,9 +420,10 @@ export default function EventModal({
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={!title || selectedMemberIds.length === 0}
+                  disabled={!title.trim() || selectedMemberIds.length === 0}
                   data-testid="button-save-event"
                   className="bg-purple-600 hover:bg-purple-700 text-white border border-white/50 rounded-lg disabled:opacity-50"
+                  title={!title.trim() ? 'Please enter an event title' : selectedMemberIds.length === 0 ? 'Please select at least one family member' : ''}
                 >
                   {event?.id ? 'Update Event' : 'Create Event'}
                 </Button>
