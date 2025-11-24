@@ -202,6 +202,16 @@ Visit Kindora Family Calendar: ${joinUrl}
           console.error('Resend API error:', response.status, errorDetails);
           
           // Provide helpful error messages based on Resend's response
+          if (response.status === 403) {
+            // Test sender restriction
+            return res.status(400).json({
+              error: "Test sender restriction: You can only send emails to mvicenzino@gmail.com",
+              details: "The test sender (onboarding@resend.dev) only allows sending to your verified email. To send to others, verify your own domain in Resend.",
+              provider: "resend",
+              fix: "Either: 1) Send test emails to mvicenzino@gmail.com, OR 2) Verify your domain at resend.com/domains and update EMAIL_FROM_ADDRESS"
+            });
+          }
+          
           if (response.status === 422) {
             return res.status(400).json({
               error: "Email sending failed: Invalid sender email or unverified domain",
