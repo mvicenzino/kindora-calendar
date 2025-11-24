@@ -176,7 +176,7 @@ The email invite feature requires an email service API key. To enable:
    - `EMAIL_FROM_ADDRESS` - Sender email address (required for Resend, optional for SendGrid)
 
 3. **Email template includes:**
-   - Welcome message to Kindora Family with gradient header
+   - Welcome message to Kindora Calendar with gradient header
    - Family name and large invite code display
    - Step-by-step join instructions
    - Direct link button to Family Settings: `https://your-app.repl.co/#/family-settings`

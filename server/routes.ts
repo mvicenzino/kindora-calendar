@@ -74,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : req.headers.origin || 'http://localhost:5000';
 
       const joinUrl = `${appUrl}/#/family-settings`;
-      const subject = `Join ${family.name} on Kindora Family Calendar`;
+      const subject = `Join ${family.name} on Kindora Calendar`;
       
       // Check email service configuration
       const resendApiKey = process.env.RESEND_API_KEY;
@@ -243,7 +243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🗓️ Kindora Family Calendar</h1>
+              <h1>🗓️ Kindora Calendar</h1>
               <p>You've been invited to join a shared family calendar!</p>
             </div>
             <div class="content">
@@ -259,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <h3>How to Join:</h3>
                 <div class="step">
                   <span class="step-number">1</span>
-                  Click the button below to visit Kindora Family Calendar
+                  Click the button below to visit Kindora Calendar
                 </div>
                 <div class="step">
                   <span class="step-number">2</span>
@@ -281,7 +281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             </div>
             <div class="footer">
               <a href="${joinUrl}" class="footer-link">${joinUrl}</a>
-              <p class="footer-text">This invitation was sent from Kindora Family Calendar</p>
+              <p class="footer-text">This invitation was sent from Kindora Calendar</p>
             </div>
           </div>
         </body>
@@ -289,7 +289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `;
 
       const textBody = `
-You've been invited to join ${family.name} on Kindora Family Calendar!
+You've been invited to join ${family.name} on Kindora Calendar!
 
 Your Invite Code: ${family.inviteCode}
 
@@ -300,7 +300,7 @@ How to Join:
 4. Enter your invite code: ${family.inviteCode}
 5. Start sharing events and memories!
 
-Visit Kindora Family Calendar: ${joinUrl}
+Visit Kindora Calendar: ${joinUrl}
       `.trim();
 
       if (resendApiKey) {

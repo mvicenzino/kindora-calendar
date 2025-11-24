@@ -204,7 +204,7 @@ export default function FamilySettings() {
                 </Button>
               </div>
               <p className="text-sm text-white/60 mt-2">
-                They'll receive a welcome email with a link to join Kindora Family and your invite code
+                They'll receive a welcome email with a link to join Kindora Calendar and your invite code
               </p>
             </div>
           </CardContent>
