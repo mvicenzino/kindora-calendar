@@ -56,8 +56,8 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
         <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 gap-4">
           <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
-              <img src={calendoraIcon} alt="Calendora" className="w-10 h-10" data-testid="icon-logo" />
-              <span className="text-xl font-bold text-white">Calendora</span>
+              <img src={calendoraIcon} alt="Kindora Family Calendar" className="w-10 h-10" data-testid="icon-logo" />
+              <span className="text-xl font-bold text-white">Kindora Family Calendar</span>
             </div>
             
             <div className="flex items-center gap-2 md:hidden">
