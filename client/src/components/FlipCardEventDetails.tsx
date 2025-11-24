@@ -110,25 +110,14 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in duration-200" onClick={onClose}>
       <div 
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-visible"
-        style={{ perspective: '1200px' }}
+        className="relative w-full max-w-2xl max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Flip Card Container */}
-        <div 
-          className={`relative w-full transition-transform duration-700 ease-out`}
-          style={{
-            transformStyle: 'preserve-3d',
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-          }}
-        >
+        {/* Simple transition between front and back - no 3D transforms */}
+        <div className="relative w-full">
           {/* Front Side - Event Summary */}
           <div 
-            className="w-full h-full rounded-3xl overflow-hidden shadow-2xl"
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-            }}
+            className={`w-full rounded-3xl overflow-hidden shadow-2xl transition-opacity duration-300 ${isFlipped ? 'opacity-0 pointer-events-none absolute inset-0' : 'opacity-100'}`}
           >
             <div 
               className="relative h-full p-8 flex flex-col justify-between"
@@ -207,49 +196,44 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
           {/* Back Side - Full Details */}
           <div 
-            className="absolute top-0 left-0 w-full h-full rounded-3xl shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-6 space-y-6 overflow-y-auto flip-card-back"
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(-180deg)',
-            }}
+            className={`w-full rounded-3xl shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto max-h-[90vh] transition-opacity duration-300 ${isFlipped ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'}`}
           >
               {/* Header */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <h2 className="text-2xl font-bold text-white">Event Details</h2>
-                <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-xl md:text-2xl font-bold text-white">Event Details</h2>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={handleFlip}
-                    className="w-11 h-11 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
+                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
                     data-testid="button-flip-back"
                   >
-                    <RotateCcw className="w-5 h-5" />
+                    <RotateCcw className="w-4 h-4" />
                   </button>
                   <button
                     onClick={onEdit}
-                    className="w-11 h-11 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
+                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
                     data-testid="button-edit-event"
                   >
-                    <Edit2 className="w-5 h-5" />
+                    <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={onClose}
-                    className="w-11 h-11 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
+                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
                     data-testid="button-close-back"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               {/* Event Title Card with Members */}
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5">
-                <div className="flex items-center gap-4">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+                <div className="flex items-center gap-3">
                   <div className="flex -space-x-2 flex-shrink-0">
                     {event.members?.slice(0, 3).map((member) => (
-                      <Avatar key={member.id} className="h-11 w-11 border-2 border-white/40">
+                      <Avatar key={member.id} className="h-10 w-10 border-2 border-white/40">
                         <AvatarFallback
-                          className="text-white font-semibold text-sm"
+                          className="text-white font-semibold text-xs"
                           style={{ backgroundColor: member.color }}
                         >
                           {member.initials}
@@ -258,8 +242,8 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                     ))}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-xl font-bold text-white mb-1">{event.title}</h3>
-                    <p className="text-sm text-white/70">
+                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 truncate">{event.title}</h3>
+                    <p className="text-xs md:text-sm text-white/70 truncate">
                       {memberNames}
                     </p>
                   </div>
@@ -306,20 +290,20 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               )}
 
               {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 text-white/60 mb-2">
+              <div className="grid grid-cols-2 gap-2 md:gap-3">
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 md:p-4">
+                  <div className="flex items-center gap-2 text-white/60 mb-1 md:mb-2">
                     <Calendar className="w-4 h-4" />
                     <span className="text-xs font-medium uppercase tracking-wide">Date</span>
                   </div>
-                  <p className="text-white font-semibold text-base">{format(event.startTime, 'MMM d, yyyy')}</p>
+                  <p className="text-white font-semibold text-sm md:text-base">{format(event.startTime, 'MMM d, yyyy')}</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 text-white/60 mb-2">
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 md:p-4">
+                  <div className="flex items-center gap-2 text-white/60 mb-1 md:mb-2">
                     <Clock className="w-4 h-4" />
                     <span className="text-xs font-medium uppercase tracking-wide">Time</span>
                   </div>
-                  <p className="text-white font-semibold text-base">
+                  <p className="text-white font-semibold text-sm md:text-base">
                     {format(event.startTime, 'h:mm a')} - {format(event.endTime, 'h:mm a')}
                   </p>
                 </div>
@@ -327,14 +311,14 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
               {/* Description */}
               {event.description && (
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-5">
-                  <h4 className="text-xs font-medium text-white/60 mb-3 uppercase tracking-wide">Description</h4>
-                  <p className="text-white/95 leading-relaxed">{event.description}</p>
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+                  <h4 className="text-xs font-medium text-white/60 mb-2 uppercase tracking-wide">Description</h4>
+                  <p className="text-white/95 leading-relaxed text-sm md:text-base">{event.description}</p>
                 </div>
               )}
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-2">
                 <Button
                   onClick={onEdit}
                   className="flex-1 bg-purple-500 hover:bg-purple-600 text-white shadow-lg"
