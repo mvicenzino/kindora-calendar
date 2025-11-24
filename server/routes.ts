@@ -68,48 +68,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Family not found" });
       }
 
-      // Get the app URL (use environment variable or request origin)
+      // Get the app URL
       const appUrl = process.env.REPL_SLUG 
         ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
         : req.headers.origin || 'http://localhost:5000';
 
-      // TODO: Implement email sending with your preferred service
-      // For now, log the invite details (you'll need to configure an email service)
-      const inviteDetails = {
-        to: email,
-        familyName: family.name,
-        inviteCode: family.inviteCode,
-        appUrl: appUrl,
-        joinUrl: `${appUrl}/#/family-settings`,
-      };
+      const joinUrl = `${appUrl}/#/family-settings`;
+      const fromEmail = "mvicenzino@gmail.com";
+      const subject = `Join ${family.name} on Kindora Family Calendar`;
+      
+      // HTML email template
+      const htmlBody = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #4A5A6A 0%, #6A7A8A 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .invite-code { background: white; border: 2px solid #4A5A6A; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
+            .code { font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #4A5A6A; font-family: monospace; }
+            .button { display: inline-block; background: #4A5A6A; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
+            .steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .step { margin: 15px 0; padding-left: 25px; position: relative; }
+            .step-number { position: absolute; left: 0; background: #4A5A6A; color: white; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🗓️ Kindora Family Calendar</h1>
+              <p>You've been invited to join a shared family calendar!</p>
+            </div>
+            <div class="content">
+              <p>Hi there!</p>
+              <p><strong>${family.name}</strong> has invited you to join their family calendar on Kindora. Share events, memories, and stay connected with your loved ones.</p>
+              
+              <div class="invite-code">
+                <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Your Invite Code:</p>
+                <div class="code">${family.inviteCode}</div>
+              </div>
 
-      console.log('Email invite would be sent:', inviteDetails);
+              <div class="steps">
+                <h3 style="margin-top: 0;">How to Join:</h3>
+                <div class="step">
+                  <span class="step-number">1</span>
+                  Click the button below to visit Kindora Family Calendar
+                </div>
+                <div class="step">
+                  <span class="step-number">2</span>
+                  Sign in or create an account
+                </div>
+                <div class="step">
+                  <span class="step-number">3</span>
+                  Go to Family Settings and enter the invite code: <strong>${family.inviteCode}</strong>
+                </div>
+                <div class="step">
+                  <span class="step-number">4</span>
+                  Start sharing events and memories!
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${joinUrl}" class="button">Join ${family.name}'s Calendar</a>
+              </div>
+
+              <p style="margin-top: 30px; font-size: 14px; color: #666;">
+                Direct link: <a href="${joinUrl}">${joinUrl}</a>
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      const textBody = `
+You've been invited to join ${family.name} on Kindora Family Calendar!
+
+Your Invite Code: ${family.inviteCode}
+
+How to Join:
+1. Visit: ${joinUrl}
+2. Sign in or create an account
+3. Go to Family Settings
+4. Enter your invite code: ${family.inviteCode}
+5. Start sharing events and memories!
+
+Visit Kindora Family Calendar: ${joinUrl}
+      `.trim();
+
+      // Try to send email with configured service
+      const resendApiKey = process.env.RESEND_API_KEY;
+      const sendgridApiKey = process.env.SENDGRID_API_KEY;
       
-      // Check if email service is configured
-      const emailConfigured = process.env.EMAIL_SERVICE_API_KEY || 
-                             process.env.SENDGRID_API_KEY || 
-                             process.env.RESEND_API_KEY;
-      
-      if (!emailConfigured) {
+      if (resendApiKey) {
+        // Send with Resend
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: email,
+            subject: subject,
+            html: htmlBody,
+            text: textBody
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          console.error('Resend API error:', error);
+          throw new Error('Failed to send email via Resend');
+        }
+
+        const result = await response.json();
+        console.log('Email sent via Resend:', result);
+        
+        return res.json({ 
+          success: true,
+          message: "Invitation email sent successfully"
+        });
+      } else if (sendgridApiKey) {
+        // Send with SendGrid
+        const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${sendgridApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email }] }],
+            from: { email: fromEmail },
+            subject: subject,
+            content: [
+              { type: 'text/plain', value: textBody },
+              { type: 'text/html', value: htmlBody }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          console.error('SendGrid API error:', error);
+          throw new Error('Failed to send email via SendGrid');
+        }
+
+        console.log('Email sent via SendGrid');
+        
+        return res.json({ 
+          success: true,
+          message: "Invitation email sent successfully"
+        });
+      } else {
+        // No email service configured
+        console.log('Email would be sent:', { to: email, from: fromEmail, subject, joinUrl, inviteCode: family.inviteCode });
+        
         return res.status(501).json({ 
-          error: "Email service not configured. Please set up an email service API key in environment variables.",
-          details: inviteDetails 
+          error: "Email service not configured. Please set RESEND_API_KEY or SENDGRID_API_KEY in your environment variables.",
+          details: {
+            to: email,
+            from: fromEmail,
+            inviteCode: family.inviteCode,
+            joinUrl: joinUrl
+          }
         });
       }
-
-      // When email service is configured, send the actual email here
-      // Example template:
-      // Subject: Join ${family.name} on Kindora Family Calendar
-      // Body: Welcome! You've been invited to join ${family.name}'s shared family calendar...
-      
-      res.json({ 
-        success: true,
-        message: "Invitation email sent",
-        preview: inviteDetails // Remove in production
-      });
     } catch (error: any) {
       console.error("Error sending invite:", error);
-      res.status(500).json({ error: "Failed to send invitation" });
+      res.status(500).json({ error: error.message || "Failed to send invitation" });
     }
   });
 
