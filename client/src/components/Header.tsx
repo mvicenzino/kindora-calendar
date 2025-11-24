@@ -1,6 +1,7 @@
 import { Copy, Search, User, Image, LogOut, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
+import FamilySelector from "@/components/FamilySelector";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
 import { useRef, useEffect, useState } from "react";
@@ -60,6 +61,10 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               <span className="text-xl app-title">
                 <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
               </span>
+            </div>
+            
+            <div className="hidden md:block">
+              <FamilySelector />
             </div>
             
             <div className="flex items-center gap-2 md:hidden">

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,7 @@ interface Family {
 
 export default function FamilySettings() {
   const [, navigate] = useLocation();
+  const { activeFamilyId } = useActiveFamily();
   const { toast } = useToast();
   const [joinCode, setJoinCode] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -27,7 +29,8 @@ export default function FamilySettings() {
 
   // Fetch current family
   const { data: family, isLoading } = useQuery<Family>({
-    queryKey: ['/api/family'],
+    queryKey: ['/api/family', activeFamilyId],
+    enabled: !!activeFamilyId,
   });
 
   // Join family mutation
@@ -37,6 +40,8 @@ export default function FamilySettings() {
       return await res.json();
     },
     onSuccess: () => {
+      // Invalidate all family-related queries using query key prefixes
+      queryClient.invalidateQueries({ queryKey: ['/api/families'] });
       queryClient.invalidateQueries({ queryKey: ['/api/family'] });
       queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });

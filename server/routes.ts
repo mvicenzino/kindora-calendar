@@ -5,6 +5,25 @@ import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema } from
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
+// Helper function to get familyId from request or fallback to user's first family
+async function getFamilyId(req: any, userId: string): Promise<string | null> {
+  // Try to get from query parameter (GET requests)
+  let familyId = req.query.familyId as string | undefined;
+  
+  // Try to get from request body (POST/PATCH/DELETE requests)
+  if (!familyId && req.body && req.body.familyId) {
+    familyId = req.body.familyId as string;
+  }
+  
+  // Fallback to user's first family if not provided
+  if (!familyId) {
+    const family = await storage.getUserFamily(userId);
+    familyId = family?.id || null;
+  }
+  
+  return familyId;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
@@ -29,6 +48,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(family || null);
     } catch (error) {
       console.error("Error fetching family:", error);
+      res.status(500).json({ error: "Failed to fetch family" });
+    }
+  });
+
+  // Get all families user belongs to
+  app.get("/api/families", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const families = await storage.getUserFamilies(userId);
+      res.json(families);
+    } catch (error) {
+      console.error("Error fetching families:", error);
+      res.status(500).json({ error: "Failed to fetch families" });
+    }
+  });
+
+  // Get specific family by ID
+  app.get("/api/family/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.params.id;
+      
+      // Verify user is a member of this family
+      const userFamilies = await storage.getUserFamilies(userId);
+      const isMember = userFamilies.some(f => f.id === familyId);
+      
+      if (!isMember) {
+        return res.status(403).json({ error: "Access denied to this family" });
+      }
+      
+      const family = await storage.getFamilyById(familyId);
+      if (!family) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+      
+      res.json(family);
+    } catch (error) {
+      console.error("Error fetching family by ID:", error);
       res.status(500).json({ error: "Failed to fetch family" });
     }
   });
@@ -835,7 +892,11 @@ Visit Kindora Calendar: ${joinUrl}
   app.get("/api/family-members", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const members = await storage.getFamilyMembers(userId);
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      const members = await storage.getFamilyMembers(familyId);
       res.json(members);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch family members" });
@@ -845,12 +906,16 @@ Visit Kindora Calendar: ${joinUrl}
   app.post("/api/family-members", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
       const result = insertFamilyMemberSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const member = await storage.createFamilyMember(userId, result.data);
+      const member = await storage.createFamilyMember(familyId, result.data);
       res.status(201).json(member);
     } catch (error) {
       res.status(500).json({ error: "Failed to create family member" });
@@ -860,12 +925,16 @@ Visit Kindora Calendar: ${joinUrl}
   app.put("/api/family-members/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
       const result = insertFamilyMemberSchema.partial().safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const member = await storage.updateFamilyMember(req.params.id, userId, result.data);
+      const member = await storage.updateFamilyMember(req.params.id, familyId, result.data);
       res.json(member);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -878,7 +947,11 @@ Visit Kindora Calendar: ${joinUrl}
   app.delete("/api/family-members/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      await storage.deleteFamilyMember(req.params.id, userId);
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      await storage.deleteFamilyMember(req.params.id, familyId);
       res.status(204).send();
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -892,7 +965,11 @@ Visit Kindora Calendar: ${joinUrl}
   app.get("/api/events", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const events = await storage.getEvents(userId);
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      const events = await storage.getEvents(familyId);
       res.json(events);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch events" });
@@ -902,12 +979,16 @@ Visit Kindora Calendar: ${joinUrl}
   app.post("/api/events", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const event = await storage.createEvent(userId, result.data);
+      const event = await storage.createEvent(familyId, result.data);
       res.status(201).json(event);
     } catch (error) {
       console.error("Error creating event:", error);
@@ -918,12 +999,16 @@ Visit Kindora Calendar: ${joinUrl}
   app.put("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
       const result = insertEventSchema.partial().safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
       
-      const event = await storage.updateEvent(req.params.id, userId, result.data);
+      const event = await storage.updateEvent(req.params.id, familyId, result.data);
       res.json(event);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -937,7 +1022,11 @@ Visit Kindora Calendar: ${joinUrl}
   app.delete("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      await storage.deleteEvent(req.params.id, userId);
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      await storage.deleteEvent(req.params.id, familyId);
       res.status(204).send();
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -950,7 +1039,11 @@ Visit Kindora Calendar: ${joinUrl}
   app.post("/api/events/:id/toggle-completion", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const event = await storage.toggleEventCompletion(req.params.id, userId);
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      const event = await storage.toggleEventCompletion(req.params.id, familyId);
       res.json(event);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -964,7 +1057,11 @@ Visit Kindora Calendar: ${joinUrl}
   app.get("/api/events/:eventId/messages", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const messages = await storage.getMessages(req.params.eventId, userId);
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      const messages = await storage.getMessages(req.params.eventId, familyId);
       res.json(messages);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch messages" });
@@ -974,6 +1071,10 @@ Visit Kindora Calendar: ${joinUrl}
   app.post("/api/events/:eventId/messages", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
       const messageData = {
         ...req.body,
         eventId: req.params.eventId,
@@ -984,7 +1085,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: result.error.message });
       }
       
-      const message = await storage.createMessage(userId, result.data);
+      const message = await storage.createMessage(familyId, result.data);
       res.status(201).json(message);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -997,7 +1098,11 @@ Visit Kindora Calendar: ${joinUrl}
   app.delete("/api/messages/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      await storage.deleteMessage(req.params.id, userId);
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      await storage.deleteMessage(req.params.id, familyId);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete message" });
@@ -1028,10 +1133,14 @@ Visit Kindora Calendar: ${joinUrl}
   app.put("/api/events/:id/photo", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
       
       // Allow null to delete photo
       if (req.body.photoURL === null) {
-        const event = await storage.updateEvent(req.params.id, userId, { photoUrl: null });
+        const event = await storage.updateEvent(req.params.id, familyId, { photoUrl: null });
         return res.json(event);
       }
 
@@ -1042,7 +1151,7 @@ Visit Kindora Calendar: ${joinUrl}
       const objectStorageService = new ObjectStorageService();
       const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.photoURL);
       
-      const event = await storage.updateEvent(req.params.id, userId, { photoUrl: objectPath });
+      const event = await storage.updateEvent(req.params.id, familyId, { photoUrl: objectPath });
       res.json(event);
     } catch (error) {
       if (error instanceof NotFoundError) {

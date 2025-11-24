@@ -3,20 +3,24 @@ import { useLocation } from "wouter";
 import { format, parseISO, startOfMonth } from "date-fns";
 import { X, Image } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import type { Event, FamilyMember } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb } from "@shared/types";
 import { useMemo } from "react";
 
 export default function Memories() {
   const [, setLocation] = useLocation();
+  const { activeFamilyId } = useActiveFamily();
 
   // Fetch events with photos
   const { data: rawEvents = [] } = useQuery<Event[]>({
-    queryKey: ['/api/events'],
+    queryKey: ['/api/events', activeFamilyId],
+    enabled: !!activeFamilyId,
   });
 
   const { data: rawMembers = [] } = useQuery<FamilyMember[]>({
-    queryKey: ['/api/family-members'],
+    queryKey: ['/api/family-members', activeFamilyId],
+    enabled: !!activeFamilyId,
   });
 
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);

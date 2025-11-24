@@ -1,7 +1,7 @@
 import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, familyMembers, events, messages, users, families, familyMemberships } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -18,26 +18,28 @@ export interface IStorage {
   // Family operations
   createFamily(userId: string, family: InsertFamily): Promise<Family>;
   getUserFamily(userId: string): Promise<Family | undefined>;
+  getUserFamilies(userId: string): Promise<Family[]>;
+  getFamilyById(familyId: string): Promise<Family | undefined>;
   getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined>;
   joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership>;
-  getFamilyMembers(userId: string): Promise<FamilyMember[]>;
-  getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined>;
-  createFamilyMember(userId: string, member: InsertFamilyMember): Promise<FamilyMember>;
-  updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember>;
-  deleteFamilyMember(id: string, userId: string): Promise<void>;
+  getFamilyMembers(familyId: string): Promise<FamilyMember[]>;
+  getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined>;
+  createFamilyMember(familyId: string, member: InsertFamilyMember): Promise<FamilyMember>;
+  updateFamilyMember(id: string, familyId: string, updates: Partial<FamilyMember>): Promise<FamilyMember>;
+  deleteFamilyMember(id: string, familyId: string): Promise<void>;
 
   // Events
-  getEvents(userId: string): Promise<Event[]>;
-  getEvent(id: string, userId: string): Promise<Event | undefined>;
-  createEvent(userId: string, event: InsertEvent): Promise<Event>;
-  updateEvent(id: string, userId: string, event: Partial<InsertEvent>): Promise<Event>;
-  deleteEvent(id: string, userId: string): Promise<void>;
-  toggleEventCompletion(id: string, userId: string): Promise<Event>;
+  getEvents(familyId: string): Promise<Event[]>;
+  getEvent(id: string, familyId: string): Promise<Event | undefined>;
+  createEvent(familyId: string, event: InsertEvent): Promise<Event>;
+  updateEvent(id: string, familyId: string, event: Partial<InsertEvent>): Promise<Event>;
+  deleteEvent(id: string, familyId: string): Promise<void>;
+  toggleEventCompletion(id: string, familyId: string): Promise<Event>;
 
   // Messages
-  getMessages(eventId: string, userId: string): Promise<Message[]>;
-  createMessage(userId: string, message: InsertMessage): Promise<Message>;
-  deleteMessage(id: string, userId: string): Promise<void>;
+  getMessages(eventId: string, familyId: string): Promise<Message[]>;
+  createMessage(familyId: string, message: InsertMessage): Promise<Message>;
+  deleteMessage(id: string, familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -145,14 +147,15 @@ export class MemStorage implements IStorage {
       throw new NotFoundError(`Family with invite code ${inviteCode} not found`);
     }
     
-    const existingMembership = Array.from(this.familyMemberships.values()).find(m => m.userId === userId);
+    // Check if user is already a member of this family
+    const existingMembership = Array.from(this.familyMemberships.values())
+      .find(m => m.userId === userId && m.familyId === family.id);
     
     if (existingMembership) {
-      if (existingMembership.familyId === family.id) {
-        return existingMembership;
-      }
+      return existingMembership;
     }
     
+    // Create new membership (user can belong to multiple families now)
     const id = randomUUID();
     const membership: FamilyMembership = {
       id,
@@ -163,48 +166,32 @@ export class MemStorage implements IStorage {
     };
     this.familyMemberships.set(id, membership);
     
-    if (existingMembership) {
-      const currentFamilyId = existingMembership.familyId;
-      const familyMemberCount = Array.from(this.familyMemberships.values())
-        .filter(m => m.familyId === currentFamilyId).length;
-      
-      this.familyMemberships.delete(existingMembership.id);
-      
-      if (familyMemberCount === 1) {
-        Array.from(this.events.entries())
-          .filter(([_, event]) => event.familyId === currentFamilyId)
-          .forEach(([eventId, _]) => {
-            Array.from(this.messages.entries())
-              .filter(([_, message]) => message.eventId === eventId)
-              .forEach(([messageId, _]) => this.messages.delete(messageId));
-            this.events.delete(eventId);
-          });
-        
-        Array.from(this.familyMembers.entries())
-          .filter(([_, member]) => member.familyId === currentFamilyId)
-          .forEach(([memberId, _]) => this.familyMembers.delete(memberId));
-        
-        this.families.delete(currentFamilyId);
-      }
-    }
-    
     return membership;
   }
 
+  async getUserFamilies(userId: string): Promise<Family[]> {
+    const memberships = Array.from(this.familyMemberships.values())
+      .filter(m => m.userId === userId);
+    const familyIds = memberships.map(m => m.familyId);
+    return Array.from(this.families.values())
+      .filter(f => familyIds.includes(f.id));
+  }
+
+  async getFamilyById(familyId: string): Promise<Family | undefined> {
+    return this.families.get(familyId);
+  }
+
   // Family Members
-  async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getFamilyMembers(familyId: string): Promise<FamilyMember[]> {
     return Array.from(this.familyMembers.values()).filter(m => m.familyId === familyId);
   }
 
-  async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined> {
     const member = this.familyMembers.get(id);
     return member && member.familyId === familyId ? member : undefined;
   }
 
-  async createFamilyMember(userId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
-    const familyId = await this.ensureUserFamily(userId);
+  async createFamilyMember(familyId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
     const id = randomUUID();
     const member: FamilyMember = { 
       id, 
@@ -218,8 +205,7 @@ export class MemStorage implements IStorage {
     return member;
   }
 
-  async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
-    const familyId = await this.ensureUserFamily(userId);
+  async updateFamilyMember(id: string, familyId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
     const existingMember = this.familyMembers.get(id);
     if (!existingMember || existingMember.familyId !== familyId) {
       throw new NotFoundError(`Family member with id ${id} not found`);
@@ -235,8 +221,7 @@ export class MemStorage implements IStorage {
     return updatedMember;
   }
 
-  async deleteFamilyMember(id: string, userId: string): Promise<void> {
-    const familyId = await this.ensureUserFamily(userId);
+  async deleteFamilyMember(id: string, familyId: string): Promise<void> {
     const member = this.familyMembers.get(id);
     if (!member || member.familyId !== familyId) {
       throw new NotFoundError(`Family member with id ${id} not found`);
@@ -264,19 +249,16 @@ export class MemStorage implements IStorage {
   }
 
   // Events
-  async getEvents(userId: string): Promise<Event[]> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getEvents(familyId: string): Promise<Event[]> {
     return Array.from(this.events.values()).filter(e => e.familyId === familyId);
   }
 
-  async getEvent(id: string, userId: string): Promise<Event | undefined> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getEvent(id: string, familyId: string): Promise<Event | undefined> {
     const event = this.events.get(id);
     return event && event.familyId === familyId ? event : undefined;
   }
 
-  async createEvent(userId: string, insertEvent: InsertEvent): Promise<Event> {
-    const familyId = await this.ensureUserFamily(userId);
+  async createEvent(familyId: string, insertEvent: InsertEvent): Promise<Event> {
     const id = randomUUID();
     const event: Event = {
       ...insertEvent,
@@ -292,8 +274,7 @@ export class MemStorage implements IStorage {
     return event;
   }
 
-  async updateEvent(id: string, userId: string, updateData: Partial<InsertEvent>): Promise<Event> {
-    const familyId = await this.ensureUserFamily(userId);
+  async updateEvent(id: string, familyId: string, updateData: Partial<InsertEvent>): Promise<Event> {
     const existingEvent = this.events.get(id);
     if (!existingEvent || existingEvent.familyId !== familyId) {
       throw new NotFoundError(`Event with id ${id} not found`);
@@ -318,8 +299,7 @@ export class MemStorage implements IStorage {
     return updatedEvent;
   }
 
-  async deleteEvent(id: string, userId: string): Promise<void> {
-    const familyId = await this.ensureUserFamily(userId);
+  async deleteEvent(id: string, familyId: string): Promise<void> {
     const event = this.events.get(id);
     if (!event || event.familyId !== familyId) {
       throw new NotFoundError(`Event with id ${id} not found`);
@@ -334,8 +314,7 @@ export class MemStorage implements IStorage {
     messagesToDelete.forEach(messageId => this.messages.delete(messageId));
   }
 
-  async toggleEventCompletion(id: string, userId: string): Promise<Event> {
-    const familyId = await this.ensureUserFamily(userId);
+  async toggleEventCompletion(id: string, familyId: string): Promise<Event> {
     const event = this.events.get(id);
     if (!event || event.familyId !== familyId) {
       throw new NotFoundError(`Event with id ${id} not found`);
@@ -351,13 +330,11 @@ export class MemStorage implements IStorage {
   }
 
   // Messages
-  async getMessages(eventId: string, userId: string): Promise<Message[]> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getMessages(eventId: string, familyId: string): Promise<Message[]> {
     return Array.from(this.messages.values()).filter(m => m.eventId === eventId && m.familyId === familyId);
   }
 
-  async createMessage(userId: string, insertMessage: InsertMessage): Promise<Message> {
-    const familyId = await this.ensureUserFamily(userId);
+  async createMessage(familyId: string, insertMessage: InsertMessage): Promise<Message> {
     const id = randomUUID();
     const message: Message = {
       ...insertMessage,
@@ -369,8 +346,7 @@ export class MemStorage implements IStorage {
     return message;
   }
 
-  async deleteMessage(id: string, userId: string): Promise<void> {
-    const familyId = await this.ensureUserFamily(userId);
+  async deleteMessage(id: string, familyId: string): Promise<void> {
     const message = this.messages.get(id);
     if (!message || message.familyId !== familyId) {
       throw new NotFoundError(`Message with id ${id} not found`);
@@ -496,59 +472,57 @@ class DrizzleStorage implements IStorage {
       throw new NotFoundError(`Family with invite code ${inviteCode} not found`);
     }
     
-    const existingMembership = await this.db.select().from(familyMemberships).where(eq(familyMemberships.userId, userId)).limit(1);
+    // Check if user is already a member of this family
+    const existingMembership = await this.db.select().from(familyMemberships).where(
+      and(eq(familyMemberships.userId, userId), eq(familyMemberships.familyId, family.id))
+    ).limit(1);
     
     if (existingMembership[0]) {
-      if (existingMembership[0].familyId === family.id) {
-        return existingMembership[0];
-      }
+      return existingMembership[0];
     }
     
+    // Create new membership (user can belong to multiple families now)
     const result = await this.db.insert(familyMemberships).values({
       userId,
       familyId: family.id,
       role: 'member',
     }).returning();
     
-    if (existingMembership[0]) {
-      const currentFamilyId = existingMembership[0].familyId;
-      const familyMemberCount = await this.db.select().from(familyMemberships)
-        .where(eq(familyMemberships.familyId, currentFamilyId));
-      
-      await this.db.delete(familyMemberships).where(eq(familyMemberships.id, existingMembership[0].id));
-      
-      if (familyMemberCount.length === 1) {
-        const familyEvents = await this.db.select().from(events).where(eq(events.familyId, currentFamilyId));
-        for (const event of familyEvents) {
-          await this.db.delete(messages).where(eq(messages.eventId, event.id));
-        }
-        await this.db.delete(events).where(eq(events.familyId, currentFamilyId));
-        
-        await this.db.delete(familyMembers).where(eq(familyMembers.familyId, currentFamilyId));
-        
-        await this.db.delete(families).where(eq(families.id, currentFamilyId));
-      }
+    return result[0];
+  }
+
+  async getUserFamilies(userId: string): Promise<Family[]> {
+    const memberships = await this.db.select().from(familyMemberships)
+      .where(eq(familyMemberships.userId, userId));
+    const familyIds = memberships.map(m => m.familyId);
+    
+    if (familyIds.length === 0) {
+      return [];
     }
     
+    const familiesResult = await this.db.select().from(families)
+      .where(inArray(families.id, familyIds));
+    return familiesResult;
+  }
+
+  async getFamilyById(familyId: string): Promise<Family | undefined> {
+    const result = await this.db.select().from(families).where(eq(families.id, familyId));
     return result[0];
   }
 
   // Family Members
-  async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getFamilyMembers(familyId: string): Promise<FamilyMember[]> {
     return await this.db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId));
   }
 
-  async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined> {
     const result = await this.db.select().from(familyMembers).where(
       and(eq(familyMembers.id, id), eq(familyMembers.familyId, familyId))
     );
     return result[0];
   }
 
-  async createFamilyMember(userId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
-    const familyId = await this.ensureUserFamily(userId);
+  async createFamilyMember(familyId: string, insertMember: InsertFamilyMember): Promise<FamilyMember> {
     const result = await this.db.insert(familyMembers).values({
       ...insertMember,
       familyId,
@@ -556,8 +530,7 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
-    const familyId = await this.ensureUserFamily(userId);
+  async updateFamilyMember(id: string, familyId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
     const result = await this.db.update(familyMembers).set(updates).where(
       and(eq(familyMembers.id, id), eq(familyMembers.familyId, familyId))
     ).returning();
@@ -567,8 +540,7 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async deleteFamilyMember(id: string, userId: string): Promise<void> {
-    const familyId = await this.ensureUserFamily(userId);
+  async deleteFamilyMember(id: string, familyId: string): Promise<void> {
     const result = await this.db.delete(familyMembers).where(
       and(eq(familyMembers.id, id), eq(familyMembers.familyId, familyId))
     ).returning();
@@ -578,21 +550,18 @@ class DrizzleStorage implements IStorage {
   }
 
   // Events
-  async getEvents(userId: string): Promise<Event[]> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getEvents(familyId: string): Promise<Event[]> {
     return await this.db.select().from(events).where(eq(events.familyId, familyId));
   }
 
-  async getEvent(id: string, userId: string): Promise<Event | undefined> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getEvent(id: string, familyId: string): Promise<Event | undefined> {
     const result = await this.db.select().from(events).where(
       and(eq(events.id, id), eq(events.familyId, familyId))
     );
     return result[0];
   }
 
-  async createEvent(userId: string, insertEvent: InsertEvent): Promise<Event> {
-    const familyId = await this.ensureUserFamily(userId);
+  async createEvent(familyId: string, insertEvent: InsertEvent): Promise<Event> {
     const result = await this.db.insert(events).values({
       ...insertEvent,
       familyId,
@@ -600,8 +569,7 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async updateEvent(id: string, userId: string, updateData: Partial<InsertEvent>): Promise<Event> {
-    const familyId = await this.ensureUserFamily(userId);
+  async updateEvent(id: string, familyId: string, updateData: Partial<InsertEvent>): Promise<Event> {
     const result = await this.db.update(events).set(updateData).where(
       and(eq(events.id, id), eq(events.familyId, familyId))
     ).returning();
@@ -611,8 +579,7 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async deleteEvent(id: string, userId: string): Promise<void> {
-    const familyId = await this.ensureUserFamily(userId);
+  async deleteEvent(id: string, familyId: string): Promise<void> {
     const result = await this.db.delete(events).where(
       and(eq(events.id, id), eq(events.familyId, familyId))
     ).returning();
@@ -621,8 +588,8 @@ class DrizzleStorage implements IStorage {
     }
   }
 
-  async toggleEventCompletion(id: string, userId: string): Promise<Event> {
-    const event = await this.getEvent(id, userId);
+  async toggleEventCompletion(id: string, familyId: string): Promise<Event> {
+    const event = await this.getEvent(id, familyId);
     if (!event) {
       throw new NotFoundError(`Event with id ${id} not found`);
     }
@@ -632,7 +599,6 @@ class DrizzleStorage implements IStorage {
       completedAt: !event.completed ? new Date() : null,
     };
 
-    const familyId = await this.ensureUserFamily(userId);
     const result = await this.db.update(events).set(updatedEvent).where(
       and(eq(events.id, id), eq(events.familyId, familyId))
     ).returning();
@@ -640,15 +606,13 @@ class DrizzleStorage implements IStorage {
   }
 
   // Messages
-  async getMessages(eventId: string, userId: string): Promise<Message[]> {
-    const familyId = await this.ensureUserFamily(userId);
+  async getMessages(eventId: string, familyId: string): Promise<Message[]> {
     return await this.db.select().from(messages).where(
       and(eq(messages.eventId, eventId), eq(messages.familyId, familyId))
     );
   }
 
-  async createMessage(userId: string, insertMessage: InsertMessage): Promise<Message> {
-    const familyId = await this.ensureUserFamily(userId);
+  async createMessage(familyId: string, insertMessage: InsertMessage): Promise<Message> {
     const result = await this.db.insert(messages).values({
       ...insertMessage,
       familyId,
@@ -656,8 +620,7 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async deleteMessage(id: string, userId: string): Promise<void> {
-    const familyId = await this.ensureUserFamily(userId);
+  async deleteMessage(id: string, familyId: string): Promise<void> {
     await this.db.delete(messages).where(
       and(eq(messages.id, id), eq(messages.familyId, familyId))
     );
@@ -682,6 +645,16 @@ class DemoAwareStorage implements IStorage {
     return this.isDemoUser(userId) ? this.demoStorage : this.persistentStorage;
   }
 
+  private async getStorageForFamily(familyId: string): Promise<IStorage> {
+    // Check demo storage first
+    const demoFamily = await this.demoStorage.getFamilyById(familyId);
+    if (demoFamily) {
+      return this.demoStorage;
+    }
+    // Default to persistent storage
+    return this.persistentStorage;
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     return this.getStorage(id).getUser(id);
@@ -700,7 +673,21 @@ class DemoAwareStorage implements IStorage {
     return this.getStorage(userId).getUserFamily(userId);
   }
 
+  async getUserFamilies(userId: string): Promise<Family[]> {
+    return this.getStorage(userId).getUserFamilies(userId);
+  }
+
+  async getFamilyById(familyId: string): Promise<Family | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getFamilyById(familyId);
+  }
+
   async getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined> {
+    // Check demo storage first
+    const demoFamily = await this.demoStorage.getFamilyByInviteCode(inviteCode);
+    if (demoFamily) {
+      return demoFamily;
+    }
     return this.persistentStorage.getFamilyByInviteCode(inviteCode);
   }
 
@@ -709,62 +696,76 @@ class DemoAwareStorage implements IStorage {
   }
 
   // Family Members
-  async getFamilyMembers(userId: string): Promise<FamilyMember[]> {
-    return this.getStorage(userId).getFamilyMembers(userId);
+  async getFamilyMembers(familyId: string): Promise<FamilyMember[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getFamilyMembers(familyId);
   }
 
-  async getFamilyMember(id: string, userId: string): Promise<FamilyMember | undefined> {
-    return this.getStorage(userId).getFamilyMember(id, userId);
+  async getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getFamilyMember(id, familyId);
   }
 
-  async createFamilyMember(userId: string, member: InsertFamilyMember): Promise<FamilyMember> {
-    return this.getStorage(userId).createFamilyMember(userId, member);
+  async createFamilyMember(familyId: string, member: InsertFamilyMember): Promise<FamilyMember> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createFamilyMember(familyId, member);
   }
 
-  async updateFamilyMember(id: string, userId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
-    return this.getStorage(userId).updateFamilyMember(id, userId, updates);
+  async updateFamilyMember(id: string, familyId: string, updates: Partial<FamilyMember>): Promise<FamilyMember> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateFamilyMember(id, familyId, updates);
   }
 
-  async deleteFamilyMember(id: string, userId: string): Promise<void> {
-    return this.getStorage(userId).deleteFamilyMember(id, userId);
+  async deleteFamilyMember(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteFamilyMember(id, familyId);
   }
 
   // Events
-  async getEvents(userId: string): Promise<Event[]> {
-    return this.getStorage(userId).getEvents(userId);
+  async getEvents(familyId: string): Promise<Event[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getEvents(familyId);
   }
 
-  async getEvent(id: string, userId: string): Promise<Event | undefined> {
-    return this.getStorage(userId).getEvent(id, userId);
+  async getEvent(id: string, familyId: string): Promise<Event | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getEvent(id, familyId);
   }
 
-  async createEvent(userId: string, event: InsertEvent): Promise<Event> {
-    return this.getStorage(userId).createEvent(userId, event);
+  async createEvent(familyId: string, event: InsertEvent): Promise<Event> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createEvent(familyId, event);
   }
 
-  async updateEvent(id: string, userId: string, event: Partial<InsertEvent>): Promise<Event> {
-    return this.getStorage(userId).updateEvent(id, userId, event);
+  async updateEvent(id: string, familyId: string, event: Partial<InsertEvent>): Promise<Event> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateEvent(id, familyId, event);
   }
 
-  async deleteEvent(id: string, userId: string): Promise<void> {
-    return this.getStorage(userId).deleteEvent(id, userId);
+  async deleteEvent(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteEvent(id, familyId);
   }
 
-  async toggleEventCompletion(id: string, userId: string): Promise<Event> {
-    return this.getStorage(userId).toggleEventCompletion(id, userId);
+  async toggleEventCompletion(id: string, familyId: string): Promise<Event> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.toggleEventCompletion(id, familyId);
   }
 
   // Messages
-  async getMessages(eventId: string, userId: string): Promise<Message[]> {
-    return this.getStorage(userId).getMessages(eventId, userId);
+  async getMessages(eventId: string, familyId: string): Promise<Message[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getMessages(eventId, familyId);
   }
 
-  async createMessage(userId: string, message: InsertMessage): Promise<Message> {
-    return this.getStorage(userId).createMessage(userId, message);
+  async createMessage(familyId: string, message: InsertMessage): Promise<Message> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createMessage(familyId, message);
   }
 
-  async deleteMessage(id: string, userId: string): Promise<void> {
-    return this.getStorage(userId).deleteMessage(id, userId);
+  async deleteMessage(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteMessage(id, familyId);
   }
 }
 

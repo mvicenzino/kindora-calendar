@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import Header from "@/components/Header";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
@@ -18,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { activeFamilyId, isLoadingFamily } = useActiveFamily();
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
@@ -75,14 +77,14 @@ export default function Home() {
 
   // Fetch family members
   const { data: rawMembers = [], isLoading: membersLoading } = useQuery<FamilyMember[]>({
-    queryKey: ['/api/family-members'],
-    enabled: isAuthenticated,
+    queryKey: ['/api/family-members', activeFamilyId],
+    enabled: isAuthenticated && !!activeFamilyId,
   });
 
   // Fetch events
   const { data: rawEvents = [], isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ['/api/events'],
-    enabled: isAuthenticated,
+    queryKey: ['/api/events', activeFamilyId],
+    enabled: isAuthenticated && !!activeFamilyId,
   });
 
   // Map to UI types
@@ -95,65 +97,65 @@ export default function Home() {
   // Create event mutation
   const createEventMutation = useMutation({
     mutationFn: async (event: InsertEvent) => {
-      const res = await apiRequest('POST', '/api/events', event);
+      const res = await apiRequest('POST', '/api/events', { ...event, familyId: activeFamilyId });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
     },
   });
 
   // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEvent> }) => {
-      const res = await apiRequest('PUT', `/api/events/${id}`, data);
+      const res = await apiRequest('PUT', `/api/events/${id}`, { ...data, familyId: activeFamilyId });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
     },
   });
 
   // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiRequest('DELETE', `/api/events/${id}`);
+      await apiRequest('DELETE', `/api/events/${id}`, { familyId: activeFamilyId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
     },
   });
 
   // Create member mutation
   const createMemberMutation = useMutation({
     mutationFn: async (member: { name: string; color: string }) => {
-      const res = await apiRequest('POST', '/api/family-members', member);
+      const res = await apiRequest('POST', '/api/family-members', { ...member, familyId: activeFamilyId });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members', activeFamilyId] });
     },
   });
 
   // Update member color mutation
   const updateMemberColorMutation = useMutation({
     mutationFn: async ({ memberId, color }: { memberId: string; color: string }) => {
-      const res = await apiRequest('PUT', `/api/family-members/${memberId}`, { color });
+      const res = await apiRequest('PUT', `/api/family-members/${memberId}`, { color, familyId: activeFamilyId });
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members', activeFamilyId] });
     },
   });
 
   // Delete member mutation
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      await apiRequest('DELETE', `/api/family-members/${memberId}`);
+      await apiRequest('DELETE', `/api/family-members/${memberId}`, { familyId: activeFamilyId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
     },
   });
 
@@ -247,8 +249,8 @@ export default function Home() {
 
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
 
-  // Show loading state while authenticating or fetching initial data
-  if (isLoading || membersLoading || eventsLoading) {
+  // Show loading state while authenticating, hydrating family, or fetching initial data
+  if (isLoading || isLoadingFamily || membersLoading || eventsLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center">
         <div className="text-center">
