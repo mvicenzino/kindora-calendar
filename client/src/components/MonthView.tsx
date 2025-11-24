@@ -10,10 +10,11 @@ interface MonthViewProps {
   onEventClick: (event: UiEvent) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
   onAddEvent?: () => void;
+  onAddEventForDate?: (date: Date) => void;
   onDateChange?: (date: Date) => void;
 }
 
-export default function MonthView({ date, events, members, onEventClick, onViewChange, onAddEvent, onDateChange }: MonthViewProps) {
+export default function MonthView({ date, events, members, onEventClick, onViewChange, onAddEvent, onAddEventForDate, onDateChange }: MonthViewProps) {
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
   const calendarStart = startOfWeek(monthStart);
@@ -99,8 +100,12 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                 <button
                   key={day.toISOString()}
                   onClick={() => {
-                    onDateChange?.(day);
-                    onViewChange?.('day');
+                    if (onAddEventForDate) {
+                      onAddEventForDate(day);
+                    } else {
+                      onDateChange?.(day);
+                      onViewChange?.('day');
+                    }
                   }}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
                   style={hasEvents && eventColor ? { backgroundColor: eventColor, opacity: 0.25 } : undefined}

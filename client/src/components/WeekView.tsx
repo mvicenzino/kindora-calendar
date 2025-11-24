@@ -10,11 +10,12 @@ interface WeekViewProps {
   onEventClick: (event: UiEvent) => void;
   onViewChange?: (view: 'day' | 'week' | 'month') => void;
   onAddEvent?: () => void;
+  onAddEventForDate?: (date: Date) => void;
   onDateChange?: (date: Date) => void;
   onWeekChange?: (date: Date) => void;
 }
 
-export default function WeekView({ date, events, members, onEventClick, onViewChange, onAddEvent, onDateChange, onWeekChange }: WeekViewProps) {
+export default function WeekView({ date, events, members, onEventClick, onViewChange, onAddEvent, onAddEventForDate, onDateChange, onWeekChange }: WeekViewProps) {
   const weekStart = startOfWeek(date);
   const weekEnd = endOfWeek(date);
   const daysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
@@ -30,8 +31,12 @@ export default function WeekView({ date, events, members, onEventClick, onViewCh
   };
 
   const handleDayClick = (day: Date) => {
-    onDateChange?.(day);
-    onViewChange?.('day');
+    if (onAddEventForDate) {
+      onAddEventForDate(day);
+    } else {
+      onDateChange?.(day);
+      onViewChange?.('day');
+    }
   };
 
   // Group events by day

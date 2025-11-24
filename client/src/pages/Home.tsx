@@ -24,6 +24,7 @@ export default function Home() {
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [eventModalDate, setEventModalDate] = useState<Date | undefined>();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -173,6 +174,13 @@ export default function Home() {
 
   const handleAddEvent = () => {
     setSelectedEventId(undefined);
+    setEventModalDate(undefined);
+    setEventModalOpen(true);
+  };
+
+  const handleAddEventForDate = (date: Date) => {
+    setSelectedEventId(undefined);
+    setEventModalDate(date);
     setEventModalOpen(true);
   };
 
@@ -258,6 +266,7 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
+          onAddEventForDate={handleAddEventForDate}
           onDateChange={handleDateChange}
           onWeekChange={handleWeekChange}
         />
@@ -271,6 +280,7 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
+          onAddEventForDate={handleAddEventForDate}
           onDateChange={handleDateChange}
         />
       )}
@@ -302,6 +312,7 @@ export default function Home() {
         onClose={() => {
           setEventModalOpen(false);
           setSelectedEventId(undefined);
+          setEventModalDate(undefined);
         }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
@@ -312,6 +323,7 @@ export default function Home() {
           endTime: new Date(selectedEvent.endTime)
         } : undefined}
         members={members}
+        selectedDate={eventModalDate}
       />
 
       <MemberModal
