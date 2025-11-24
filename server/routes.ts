@@ -214,12 +214,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               width: 24px; 
               height: 24px; 
               border-radius: 50%; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
+              display: inline-block;
+              text-align: center;
+              line-height: 24px;
               font-size: 13px; 
               font-weight: 600;
-              line-height: 1;
             }
             .footer { 
               background: #fafbff; 
