@@ -152,10 +152,16 @@ Two primary entities with clean separation of concerns:
 
 ### Email Service Configuration
 
-**Email Invite Feature**
-- Family Settings page includes email invite functionality
-- Users can send formatted invitation emails with invite codes
-- Backend endpoint: `POST /api/family/send-invite`
+**Email Invite Features**
+1. **Invite Your Family Members** (`POST /api/family/send-invite`)
+   - Users can send their own family's invite code via email
+   - Accessible from "Your Family" section in Family Settings
+
+2. **Forward Invite Codes to Caregivers** (`POST /api/family/forward-invite`)
+   - Users can forward ANY invite code to caregivers, healthcare workers, or family helpers
+   - Useful for adult children managing aging parents' calendars
+   - Accessible from "Join a Different Family" section in Family Settings
+   - Accepts email, invite code, and optional family name
 
 **Email Service Setup Required**
 The email invite feature requires an email service API key. To enable:
