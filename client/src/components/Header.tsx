@@ -4,7 +4,7 @@ import ProfileMenu from "@/components/ProfileMenu";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
 import { useRef, useEffect, useState } from "react";
-import calendoraIcon from "@assets/generated_images/warm_orange_calendar_app_icon.png";
+import calendoraIcon from "@assets/generated_images/transparent_background_calendar_icon.png";
 
 interface HeaderProps {
   currentView: 'day' | 'week' | 'month' | 'timeline';
@@ -56,7 +56,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
         <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 gap-4">
           <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto justify-between md:justify-start">
             <div className="flex items-center gap-3">
-              <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10" data-testid="icon-logo" />
+              <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 mix-blend-normal" style={{backgroundColor: 'transparent'}} data-testid="icon-logo" />
               <span className="text-xl app-title">
                 <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
               </span>
