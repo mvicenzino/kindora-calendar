@@ -14,9 +14,11 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
+  const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
   const [eventModalOpen, setEventModalOpen] = useState(false);
@@ -30,6 +32,44 @@ export default function Home() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       window.location.href = "/api/login";
+    }
+  }, [isAuthenticated, isLoading]);
+
+  // Auto-join family if there's a pending invite code
+  const joinFamilyMutation = useMutation({
+    mutationFn: async (inviteCode: string) => {
+      const res = await apiRequest('POST', '/api/family/join', { inviteCode });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/family'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({
+        title: "Welcome to the family! 🎉",
+        description: "You've successfully joined the calendar. Start sharing events and memories!",
+      });
+      localStorage.removeItem('pendingInviteCode');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Couldn't join family",
+        description: error.message || "The invite code may be invalid. Please try again.",
+        variant: "destructive",
+      });
+      localStorage.removeItem('pendingInviteCode');
+    },
+  });
+
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const pendingInvite = localStorage.getItem('pendingInviteCode');
+      if (pendingInvite) {
+        // Auto-join after a short delay to ensure everything is loaded
+        setTimeout(() => {
+          joinFamilyMutation.mutate(pendingInvite);
+        }, 500);
+      }
     }
   }, [isAuthenticated, isLoading]);
 

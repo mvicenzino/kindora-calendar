@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
         : req.headers.origin || 'http://localhost:5000';
 
-      const joinUrl = `${appUrl}/#/family-settings`;
+      const joinUrl = `${appUrl}/?invite=${family.inviteCode}`;
       const subject = `Join ${family.name} on Kindora Calendar`;
       
       // Check email service configuration

@@ -5,11 +5,21 @@ import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
+
+  // Check for invite code in URL and store it
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteCode = urlParams.get('invite');
+    if (inviteCode) {
+      localStorage.setItem('pendingInviteCode', inviteCode);
+    }
+  }, []);
 
   const handleSocialClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
