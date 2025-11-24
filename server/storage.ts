@@ -414,17 +414,38 @@ class DrizzleStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const result = await this.db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
+    // First check if user exists by email (to handle email uniqueness constraint)
+    let existingUser;
+    if (userData.email) {
+      const emailCheck = await this.db.select().from(users).where(eq(users.email, userData.email)).limit(1);
+      existingUser = emailCheck[0];
+    }
+    
+    let result;
+    if (existingUser && existingUser.id !== userData.id) {
+      // User exists with same email but different ID - update the existing user
+      result = await this.db
+        .update(users)
+        .set({
           ...userData,
           updatedAt: new Date(),
-        },
-      })
-      .returning();
+        })
+        .where(eq(users.id, existingUser.id))
+        .returning();
+    } else {
+      // Normal upsert by ID
+      result = await this.db
+        .insert(users)
+        .values(userData)
+        .onConflictDoUpdate({
+          target: users.id,
+          set: {
+            ...userData,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+    }
     
     await this.ensureUserFamily(result[0].id);
     
