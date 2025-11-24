@@ -314,4 +314,11 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
   }
+
+  /* Family-friendly app title font */
+  .app-title {
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
 }
