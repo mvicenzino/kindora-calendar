@@ -22,6 +22,8 @@ export default function FamilySettings() {
   const { toast } = useToast();
   const [joinCode, setJoinCode] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [forwardEmail, setForwardEmail] = useState("");
+  const [forwardInviteCode, setForwardInviteCode] = useState("");
 
   // Fetch current family
   const { data: family, isLoading } = useQuery<Family>({
@@ -75,6 +77,29 @@ export default function FamilySettings() {
     },
   });
 
+  // Forward invite code to someone else (e.g., caregiver, healthcare worker)
+  const forwardInviteMutation = useMutation({
+    mutationFn: async ({ email, inviteCode, familyName }: { email: string; inviteCode: string; familyName?: string }) => {
+      const res = await apiRequest('POST', '/api/family/forward-invite', { email, inviteCode, familyName });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invitation sent!",
+        description: "The invite has been forwarded successfully.",
+      });
+      setForwardEmail("");
+      setForwardInviteCode("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send invitation",
+        description: error.message || "Please check your email configuration",
+        variant: "destructive",
+      });
+    },
+  });
+
   const copyInviteCode = () => {
     if (family?.inviteCode) {
       navigator.clipboard.writeText(family.inviteCode);
@@ -101,6 +126,30 @@ export default function FamilySettings() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleForwardInvite = () => {
+    if (!forwardEmail.trim() || !forwardEmail.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!forwardInviteCode.trim()) {
+      toast({
+        title: "Missing invite code",
+        description: "Please enter the invite code to forward",
+        variant: "destructive",
+      });
+      return;
+    }
+    forwardInviteMutation.mutate({
+      email: forwardEmail.trim(),
+      inviteCode: forwardInviteCode.trim().toUpperCase(),
+      familyName: undefined // We don't know the family name for other families
+    });
   };
 
   if (isLoading) {
@@ -218,7 +267,7 @@ export default function FamilySettings() {
               Join a Different Family
             </CardTitle>
             <CardDescription className="text-white/70">
-              Enter an invite code to join another family's calendar
+              Join another family's calendar or invite caregivers to access it
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -248,6 +297,49 @@ export default function FamilySettings() {
                 <strong className="text-white/80">Note:</strong> When you join another family, you'll switch to their calendar. 
                 If you're the only person in your current family, it will be removed. Otherwise, you'll just leave it.
               </p>
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+              <Label className="text-white/90 text-sm flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Send Invite Code to Someone
+              </Label>
+              <p className="text-sm text-white/60 mt-1 mb-3">
+                Forward an invite code to caregivers, healthcare workers, or family helpers
+              </p>
+              <div className="space-y-2">
+                <Input
+                  value={forwardInviteCode}
+                  onChange={(e) => setForwardInviteCode(e.target.value)}
+                  placeholder="Enter invite code"
+                  className="bg-white/5 border-white/20 text-white"
+                  data-testid="input-forward-invite-code"
+                />
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={forwardEmail}
+                    onChange={(e) => setForwardEmail(e.target.value)}
+                    placeholder="caregiver@example.com"
+                    className="bg-white/5 border-white/20 text-white"
+                    data-testid="input-forward-email"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleForwardInvite();
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleForwardInvite}
+                    disabled={!forwardEmail.trim() || !forwardInviteCode.trim() || forwardInviteMutation.isPending}
+                    className="bg-teal-500 hover:bg-teal-600 text-white flex-shrink-0"
+                    data-testid="button-forward-invite"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    {forwardInviteMutation.isPending ? "Sending..." : "Send"}
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
