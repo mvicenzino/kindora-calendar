@@ -121,7 +121,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
           
           <nav ref={containerRef} className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
             <div
-              className="absolute bg-white/25 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-white/30 z-0"
+              className="absolute bg-orange-300/30 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-orange-300/40 z-0"
               style={{
                 left: `${indicatorStyle.left}px`,
                 width: `${indicatorStyle.width}px`,
