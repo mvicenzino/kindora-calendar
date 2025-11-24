@@ -2,9 +2,16 @@
 
 ## Overview
 
-A modern family calendar web application featuring a distinctive "liquid glass" UI design aesthetic. The application allows families to create, manage, and share events across family members with an elegant, tactile interface inspired by modern OS design languages (macOS, iOS, Windows 11 Fluent Design).
+A modern calendar application for families and caregivers, featuring a distinctive "liquid glass" UI design aesthetic. The application enables families, trusted caregivers, and healthcare providers to coordinate schedules, medical appointments, and care needs with an elegant, tactile interface inspired by modern OS design languages (macOS, iOS, Windows 11 Fluent Design).
 
-The application uses a full-stack TypeScript architecture with React on the frontend and Express on the backend, featuring real-time calendar views, event management, and family member coordination.
+**Key Use Cases:**
+- **Family Coordination**: Manage busy family schedules with shared events and member profiles
+- **Aging Parent Care**: Adult children can coordinate care for aging parents with health aides, visiting nurses, and social workers
+- **Trusted Provider Access**: Share calendars with caregivers without requiring them to join the family unit
+- **Medical Management**: Track doctor appointments, medication schedules, and healthcare needs
+- **Financial Reminders**: Never miss bill payments, insurance renewals, or financial deadlines
+
+The application uses a full-stack TypeScript architecture with React on the frontend and Express on the backend, featuring real-time calendar views, event management, and flexible access controls for both family members and trusted providers.
 
 ### Demo Mode
 

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -134,11 +134,11 @@ export default function Landing() {
               </div>
               
               <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight mb-6 bg-gradient-to-r from-white via-purple-100 to-teal-100 bg-clip-text text-transparent">
-                Your Family's Perfect Calendar
+                Keep Everyone Connected & Coordinated
               </h1>
               
               <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-                Calendora brings order, connection, and peace to your busy family life. One app. One calendar. Everyone's on the same page.
+                For families, caregivers, and trusted providers. One calendar that keeps everyone on the same page—from daily schedules to medical appointments.
               </p>
 
               <div className="flex flex-wrap gap-6 text-sm text-white/80">
@@ -206,6 +206,69 @@ export default function Landing() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* Caregiving Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-900/10 via-transparent to-blue-900/10" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-200 via-white to-blue-200 bg-clip-text text-transparent mb-4">
+              Supporting Aging Parents & Loved Ones
+            </h2>
+            <p className="text-lg text-white/70 max-w-3xl mx-auto">
+              Share calendars with trusted caregivers, health aides, and family coordinators. Everyone stays informed about medical appointments, medication schedules, and daily care needs.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg group-hover:shadow-orange-500/50 transition-shadow w-fit mb-4">
+                <HeartHandshake className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Trusted Access</h3>
+              <p className="text-white/70 leading-relaxed text-sm">
+                Invite health aides, nurses, or social workers to view schedules without joining the family
+              </p>
+            </div>
+
+            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:shadow-blue-500/50 transition-shadow w-fit mb-4">
+                <CalendarCheck className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Medical Coordination</h3>
+              <p className="text-white/70 leading-relaxed text-sm">
+                Track doctor appointments, physical therapy sessions, and medication schedules in one place
+              </p>
+            </div>
+
+            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg group-hover:shadow-teal-500/50 transition-shadow w-fit mb-4">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Bill Reminders</h3>
+              <p className="text-white/70 leading-relaxed text-sm">
+                Never miss important deadlines for bills, insurance renewals, or financial obligations
+              </p>
+            </div>
+
+            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg group-hover:shadow-purple-500/50 transition-shadow w-fit mb-4">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Peace of Mind</h3>
+              <p className="text-white/70 leading-relaxed text-sm">
+                Adult children can monitor care from anywhere, ensuring parents never miss critical appointments
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 p-6 bg-gradient-to-r from-orange-500/10 to-blue-500/10 border border-white/10 rounded-2xl">
+            <p className="text-white/80 text-center text-base leading-relaxed">
+              <strong className="text-white">Perfect for families managing aging parents:</strong> Send calendar invites to home health aides, visiting nurses, or any trusted provider. They see what they need to know—nothing more, nothing less.
+            </p>
           </div>
         </div>
       </section>
