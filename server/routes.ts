@@ -97,17 +97,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
         <html>
         <head>
           <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #4A5A6A 0%, #6A7A8A 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .invite-code { background: white; border: 2px solid #4A5A6A; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; }
-            .code { font-size: 32px; font-weight: bold; letter-spacing: 4px; color: #4A5A6A; font-family: monospace; }
-            .button { display: inline-block; background: #4A5A6A; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; font-weight: bold; }
-            .steps { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .step { margin: 15px 0; padding-left: 25px; position: relative; }
-            .step-number { position: absolute; left: 0; background: #4A5A6A; color: white; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; }
+            body { 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+              line-height: 1.6; 
+              color: #1a1a1a; 
+              background-color: #f5f5f5;
+              margin: 0;
+              padding: 0;
+            }
+            .container { 
+              max-width: 600px; 
+              margin: 40px auto; 
+              background: white;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            .header { 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+              color: white; 
+              padding: 40px 30px; 
+              text-align: center;
+            }
+            .header h1 { 
+              margin: 0 0 10px 0; 
+              font-size: 28px; 
+              font-weight: 600;
+            }
+            .header p { 
+              margin: 0; 
+              font-size: 16px; 
+              opacity: 0.95;
+            }
+            .content { 
+              padding: 40px 30px;
+              background: white;
+            }
+            .greeting { 
+              font-size: 18px; 
+              color: #1a1a1a; 
+              margin: 0 0 20px 0;
+            }
+            .message { 
+              color: #4a4a4a; 
+              margin: 0 0 30px 0; 
+              font-size: 16px;
+            }
+            .invite-code { 
+              background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%); 
+              border: 2px solid #667eea; 
+              padding: 30px; 
+              text-align: center; 
+              margin: 30px 0; 
+              border-radius: 12px;
+            }
+            .code-label { 
+              margin: 0 0 15px 0; 
+              font-size: 14px; 
+              color: #667eea; 
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .code { 
+              font-size: 36px; 
+              font-weight: 700; 
+              letter-spacing: 6px; 
+              color: #667eea; 
+              font-family: 'Courier New', monospace;
+              margin: 0;
+            }
+            .button { 
+              display: inline-block; 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+              color: white !important; 
+              padding: 16px 40px; 
+              text-decoration: none; 
+              border-radius: 8px; 
+              margin: 30px 0; 
+              font-weight: 600;
+              font-size: 16px;
+              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            }
+            .button:hover { 
+              box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+            }
+            .steps { 
+              background: #fafbff; 
+              padding: 30px; 
+              border-radius: 12px; 
+              margin: 30px 0;
+              border: 1px solid #e8ecf4;
+            }
+            .steps h3 { 
+              margin: 0 0 20px 0; 
+              color: #1a1a1a; 
+              font-size: 18px;
+              font-weight: 600;
+            }
+            .step { 
+              margin: 20px 0; 
+              padding-left: 35px; 
+              position: relative;
+              color: #4a4a4a;
+              font-size: 15px;
+            }
+            .step-number { 
+              position: absolute; 
+              left: 0; 
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+              color: white; 
+              width: 24px; 
+              height: 24px; 
+              border-radius: 50%; 
+              display: inline-flex; 
+              align-items: center; 
+              justify-content: center; 
+              font-size: 13px; 
+              font-weight: 600;
+            }
+            .footer { 
+              background: #fafbff; 
+              padding: 25px 30px; 
+              text-align: center;
+              border-top: 1px solid #e8ecf4;
+            }
+            .footer-link { 
+              color: #667eea !important; 
+              text-decoration: none; 
+              font-size: 14px;
+              word-break: break-all;
+            }
+            .footer-text { 
+              color: #888; 
+              font-size: 13px; 
+              margin: 10px 0 0 0;
+            }
           </style>
         </head>
         <body>
@@ -117,16 +244,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <p>You've been invited to join a shared family calendar!</p>
             </div>
             <div class="content">
-              <p>Hi there!</p>
-              <p><strong>${family.name}</strong> has invited you to join their family calendar on Kindora. Share events, memories, and stay connected with your loved ones.</p>
+              <p class="greeting">Hi there!</p>
+              <p class="message"><strong>${family.name}</strong> has invited you to join their family calendar on Kindora. Share events, memories, and stay connected with your loved ones.</p>
               
               <div class="invite-code">
-                <p style="margin: 0 0 10px 0; font-size: 14px; color: #666;">Your Invite Code:</p>
-                <div class="code">${family.inviteCode}</div>
+                <p class="code-label">Your Invite Code</p>
+                <p class="code">${family.inviteCode}</p>
               </div>
 
               <div class="steps">
-                <h3 style="margin-top: 0;">How to Join:</h3>
+                <h3>How to Join:</h3>
                 <div class="step">
                   <span class="step-number">1</span>
                   Click the button below to visit Kindora Family Calendar
@@ -137,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 </div>
                 <div class="step">
                   <span class="step-number">3</span>
-                  Go to Family Settings and enter the invite code: <strong>${family.inviteCode}</strong>
+                  Go to Family Settings and enter code: <strong>${family.inviteCode}</strong>
                 </div>
                 <div class="step">
                   <span class="step-number">4</span>
@@ -148,10 +275,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <div style="text-align: center;">
                 <a href="${joinUrl}" class="button">Join ${family.name}'s Calendar</a>
               </div>
-
-              <p style="margin-top: 30px; font-size: 14px; color: #666;">
-                Direct link: <a href="${joinUrl}">${joinUrl}</a>
-              </p>
+            </div>
+            <div class="footer">
+              <a href="${joinUrl}" class="footer-link">${joinUrl}</a>
+              <p class="footer-text">This invitation was sent from Kindora Family Calendar</p>
             </div>
           </div>
         </body>
