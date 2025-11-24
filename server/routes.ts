@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               </div>
 
               <div style="text-align: center;">
-                <a href="${joinUrl}" class="button">Join ${family.name}'s Calendar</a>
+                <a href="${joinUrl}" class="button">Join ${family.name} Calendar</a>
               </div>
             </div>
             <div class="footer">
