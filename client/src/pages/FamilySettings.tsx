@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, ArrowLeft, UserPlus } from "lucide-react";
+import { Copy, Users, ArrowLeft, UserPlus, Mail, Send } from "lucide-react";
 
 interface Family {
   id: string;
@@ -21,6 +21,7 @@ export default function FamilySettings() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [joinCode, setJoinCode] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
 
   // Fetch current family
   const { data: family, isLoading } = useQuery<Family>({
@@ -52,6 +53,28 @@ export default function FamilySettings() {
     },
   });
 
+  // Send invite email mutation
+  const sendInviteMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest('POST', '/api/family/send-invite', { email });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Invitation sent!",
+        description: "The invite email has been sent successfully.",
+      });
+      setInviteEmail("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send invitation",
+        description: error.message || "Please check your email configuration",
+        variant: "destructive",
+      });
+    },
+  });
+
   const copyInviteCode = () => {
     if (family?.inviteCode) {
       navigator.clipboard.writeText(family.inviteCode);
@@ -65,6 +88,18 @@ export default function FamilySettings() {
   const handleJoinFamily = () => {
     if (joinCode.trim()) {
       joinFamilyMutation.mutate(joinCode.trim());
+    }
+  };
+
+  const handleSendInvite = () => {
+    if (inviteEmail.trim() && inviteEmail.includes('@')) {
+      sendInviteMutation.mutate(inviteEmail.trim());
+    } else {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
     }
   };
 
@@ -136,6 +171,40 @@ export default function FamilySettings() {
               </div>
               <p className="text-sm text-white/60 mt-2">
                 Share this code with your wife or family members so they can join your shared calendar
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-white/10">
+              <Label className="text-white/90 text-sm flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                Send Invite by Email
+              </Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="friend@example.com"
+                  className="bg-white/5 border-white/20 text-white"
+                  data-testid="input-invite-email"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSendInvite();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleSendInvite}
+                  disabled={!inviteEmail.trim() || sendInviteMutation.isPending}
+                  className="bg-blue-500 hover:bg-blue-600 text-white flex-shrink-0"
+                  data-testid="button-send-invite"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {sendInviteMutation.isPending ? "Sending..." : "Send"}
+                </Button>
+              </div>
+              <p className="text-sm text-white/60 mt-2">
+                They'll receive a welcome email with a link to join Kindora Family and your invite code
               </p>
             </div>
           </CardContent>

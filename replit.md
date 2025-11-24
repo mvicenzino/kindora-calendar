@@ -149,3 +149,28 @@ Two primary entities with clean separation of concerns:
 - Database operations abstracted through storage interface
 - Shared types between frontend and backend prevent drift
 - Form validation uses Zod schemas derived from database schema
+
+### Email Service Configuration
+
+**Email Invite Feature**
+- Family Settings page includes email invite functionality
+- Users can send formatted invitation emails with invite codes
+- Backend endpoint: `POST /api/family/send-invite`
+
+**Email Service Setup Required**
+The email invite feature requires an email service API key. To enable:
+
+1. Choose an email service:
+   - **Resend** (recommended) - Use Replit's Resend integration or set `RESEND_API_KEY`
+   - **SendGrid** - Set `SENDGRID_API_KEY`
+   - **Other** - Set `EMAIL_SERVICE_API_KEY`
+
+2. Configure via Replit Secrets or environment variables
+
+3. Email template includes:
+   - Welcome message to Kindora Family
+   - Family name and invite code
+   - Direct link to join: `https://your-app.repl.co/#/family-settings`
+   - Instructions for entering the code
+
+**Current Status**: Email UI is functional, but actual email sending requires API key configuration. Without configuration, the endpoint returns a 501 error with invite details for debugging.

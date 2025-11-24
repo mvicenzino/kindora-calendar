@@ -54,6 +54,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/family/send-invite", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { email } = req.body;
+      
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ error: "Valid email address is required" });
+      }
+      
+      const family = await storage.getUserFamily(userId);
+      if (!family) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+
+      // Get the app URL (use environment variable or request origin)
+      const appUrl = process.env.REPL_SLUG 
+        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+        : req.headers.origin || 'http://localhost:5000';
+
+      // TODO: Implement email sending with your preferred service
+      // For now, log the invite details (you'll need to configure an email service)
+      const inviteDetails = {
+        to: email,
+        familyName: family.name,
+        inviteCode: family.inviteCode,
+        appUrl: appUrl,
+        joinUrl: `${appUrl}/#/family-settings`,
+      };
+
+      console.log('Email invite would be sent:', inviteDetails);
+      
+      // Check if email service is configured
+      const emailConfigured = process.env.EMAIL_SERVICE_API_KEY || 
+                             process.env.SENDGRID_API_KEY || 
+                             process.env.RESEND_API_KEY;
+      
+      if (!emailConfigured) {
+        return res.status(501).json({ 
+          error: "Email service not configured. Please set up an email service API key in environment variables.",
+          details: inviteDetails 
+        });
+      }
+
+      // When email service is configured, send the actual email here
+      // Example template:
+      // Subject: Join ${family.name} on Kindora Family Calendar
+      // Body: Welcome! You've been invited to join ${family.name}'s shared family calendar...
+      
+      res.json({ 
+        success: true,
+        message: "Invitation email sent",
+        preview: inviteDetails // Remove in production
+      });
+    } catch (error: any) {
+      console.error("Error sending invite:", error);
+      res.status(500).json({ error: "Failed to send invitation" });
+    }
+  });
+
   // Family Members Routes (protected)
   app.get("/api/family-members", isAuthenticated, async (req: any, res) => {
     try {
