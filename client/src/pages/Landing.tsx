@@ -48,8 +48,8 @@ export default function Landing() {
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <img src={calendoraIcon} alt="Kindora Family Calendar" className="w-10 h-10" />
-            <span className="text-xl font-bold text-white">Kindora Family Calendar</span>
+            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10" />
+            <span className="text-xl font-bold text-white">Kindora Calendar</span>
           </div>
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
