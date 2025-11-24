@@ -150,34 +150,36 @@ export default function EventModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl">
+      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl max-h-[90vh] flex flex-col">
         <DialogTitle className="sr-only">
           {event?.id ? 'Edit Event' : 'Create New Event'}
         </DialogTitle>
         <DialogDescription className="sr-only">
           {event?.id ? 'Edit your event details' : 'Create a new calendar event'}
         </DialogDescription>
-        {/* Dark background container */}
-        <div className="bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] p-8 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">
-              {event?.id ? 'Edit Event' : 'Create New Event'}
-            </h2>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-full border border-white/50 flex items-center justify-center text-white hover:bg-white/10 transition-all"
-              data-testid="button-close-modal"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        {/* Dark background container with scrollable content */}
+        <div className="bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex flex-col flex-1 overflow-hidden">
+          {/* Scrollable form content */}
+          <div className="flex-1 overflow-y-auto px-6 md:px-8 pt-6 md:pt-8 pb-4 space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl md:text-2xl font-bold text-white">
+                {event?.id ? 'Edit Event' : 'Create New Event'}
+              </h2>
+              <button
+                onClick={onClose}
+                className="w-9 h-9 rounded-full border border-white/50 flex items-center justify-center text-white hover:bg-white/10 transition-all flex-shrink-0"
+                data-testid="button-close-modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-          {/* Divider */}
-          <div className="h-px bg-white/20" />
+            {/* Divider */}
+            <div className="h-px bg-white/20" />
 
-          {/* Form content */}
-          <div className="space-y-5">
+            {/* Form content */}
+            <div className="space-y-4 md:space-y-5">
             {/* Event Title */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-white">Event Title</Label>
@@ -356,45 +358,45 @@ export default function EventModal({
                 </div>
               </div>
             )}
+            </div>
           </div>
 
-          {/* Divider */}
-          <div className="h-px bg-white/20" />
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between gap-3">
-            {event?.id && onDelete && (
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  onDelete(event.id!);
-                  onClose();
-                }}
-                data-testid="button-delete-event"
-                className="bg-red-600 hover:bg-red-700 text-white border border-white/50 rounded-lg"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            )}
-            
-            <div className="flex gap-3 ml-auto">
-              <Button
-                variant="ghost"
-                onClick={onClose}
-                data-testid="button-cancel"
-                className="text-white border border-white/50 rounded-lg hover:bg-white/10"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={!title || selectedMemberIds.length === 0}
-                data-testid="button-save-event"
-                className="bg-purple-600 hover:bg-purple-700 text-white border border-white/50 rounded-lg disabled:opacity-50"
-              >
-                {event?.id ? 'Update Event' : 'Create Event'}
-              </Button>
+          {/* Sticky Footer with Action Buttons */}
+          <div className="border-t border-white/20 px-6 md:px-8 py-4 bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex-shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              {event?.id && onDelete && (
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    onDelete(event.id!);
+                    onClose();
+                  }}
+                  data-testid="button-delete-event"
+                  className="bg-red-600 hover:bg-red-700 text-white border border-white/50 rounded-lg"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+              )}
+              
+              <div className="flex gap-3 ml-auto">
+                <Button
+                  variant="ghost"
+                  onClick={onClose}
+                  data-testid="button-cancel"
+                  className="text-white border border-white/50 rounded-lg hover:bg-white/10"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={!title || selectedMemberIds.length === 0}
+                  data-testid="button-save-event"
+                  className="bg-purple-600 hover:bg-purple-700 text-white border border-white/50 rounded-lg disabled:opacity-50"
+                >
+                  {event?.id ? 'Update Event' : 'Create Event'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
