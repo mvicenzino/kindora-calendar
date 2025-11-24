@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, ArrowRight } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
+import calendoraIcon from "@assets/generated_images/warm_orange_calendar_app_icon.png";
 
 export default function DemoWelcome() {
   const [, setLocation] = useLocation();

@@ -4,7 +4,7 @@ import ProfileMenu from "@/components/ProfileMenu";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
 import { useRef, useEffect, useState } from "react";
-import calendoraIcon from "@assets/IMG_3242_1763835484659.jpeg";
+import calendoraIcon from "@assets/generated_images/warm_orange_calendar_app_icon.png";
 
 interface HeaderProps {
   currentView: 'day' | 'week' | 'month' | 'timeline';
