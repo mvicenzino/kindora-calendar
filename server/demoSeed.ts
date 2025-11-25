@@ -16,26 +16,30 @@ const DEMO_PHOTOS = {
  */
 export async function seedDemoAccount(storage: IStorage, userId: string): Promise<void> {
   try {
+    // Get the user's family ID (created automatically when user is upserted)
+    const families = await storage.getUserFamilies(userId);
+    const familyId = families[0].id;
+
     // Create sample family members
-    const mom = await storage.createFamilyMember(userId, {
+    const mom = await storage.createFamilyMember(familyId, {
       name: "Sarah",
       color: "#E879F9", // Purple
       avatar: null,
     });
 
-    const dad = await storage.createFamilyMember(userId, {
+    const dad = await storage.createFamilyMember(familyId, {
       name: "Michael",
       color: "#2DD4BF", // Teal
       avatar: null,
     });
 
-    const daughter = await storage.createFamilyMember(userId, {
+    const daughter = await storage.createFamilyMember(familyId, {
       name: "Emma",
       color: "#F472B6", // Pink
       avatar: null,
     });
 
-    const son = await storage.createFamilyMember(userId, {
+    const son = await storage.createFamilyMember(familyId, {
       name: "Lucas",
       color: "#60A5FA", // Blue
       avatar: null,
@@ -162,7 +166,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
 
     // Create all events
     for (const event of sampleEvents) {
-      await storage.createEvent(userId, event);
+      await storage.createEvent(familyId, event);
     }
 
     console.log(`✅ Demo account seeded with ${sampleEvents.length} events and 4 family members`);
