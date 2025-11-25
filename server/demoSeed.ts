@@ -18,6 +18,9 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
   try {
     // Get the user's family ID (created automatically when user is upserted)
     const families = await storage.getUserFamilies(userId);
+    if (families.length === 0) {
+      throw new Error(`No families found for user ${userId}`);
+    }
     const familyId = families[0].id;
 
     // Create sample family members

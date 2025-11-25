@@ -14,7 +14,7 @@ export default function Memories() {
 
   // Fetch events with photos
   const { data: rawEvents = [] } = useQuery<Event[]>({
-    queryKey: ['/api/events', activeFamilyId],
+    queryKey: ['/api/events?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
   });
 

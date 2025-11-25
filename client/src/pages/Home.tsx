@@ -83,7 +83,7 @@ export default function Home() {
 
   // Fetch events
   const { data: rawEvents = [], isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ['/api/events', activeFamilyId],
+    queryKey: ['/api/events?familyId=' + activeFamilyId],
     enabled: isAuthenticated && !!activeFamilyId,
   });
 
@@ -101,7 +101,7 @@ export default function Home() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
     },
   });
 
@@ -112,7 +112,7 @@ export default function Home() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
     },
   });
 
@@ -122,7 +122,7 @@ export default function Home() {
       await apiRequest('DELETE', `/api/events/${id}`, { familyId: activeFamilyId });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
     },
   });
 
@@ -155,7 +155,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/family-members', activeFamilyId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/events', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
     },
   });
 
