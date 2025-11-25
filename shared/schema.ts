@@ -39,7 +39,7 @@ export const familyMemberships = pgTable("family_memberships", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
   familyId: varchar("family_id").notNull(),
-  role: varchar("role").notNull().default('member'), // 'owner' or 'member'
+  role: varchar("role").notNull().default('member'), // 'owner', 'member', or 'caregiver'
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
@@ -89,6 +89,8 @@ export const insertFamilySchema = createInsertSchema(families).omit({
 export const insertFamilyMembershipSchema = createInsertSchema(familyMemberships).omit({
   id: true,
   joinedAt: true,
+}).extend({
+  role: z.enum(['owner', 'member', 'caregiver']).default('member'),
 });
 
 export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({
@@ -142,3 +144,54 @@ export type Event = typeof events.$inferSelect;
 // Message types
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+// Role constants and utilities
+export const FAMILY_ROLES = {
+  OWNER: 'owner',
+  MEMBER: 'member',
+  CAREGIVER: 'caregiver',
+} as const;
+
+export type FamilyRole = typeof FAMILY_ROLES[keyof typeof FAMILY_ROLES];
+
+export const ROLE_PERMISSIONS = {
+  [FAMILY_ROLES.OWNER]: {
+    canCreateEvents: true,
+    canEditEvents: true,
+    canDeleteEvents: true,
+    canCompleteEvents: true,
+    canCreateMembers: true,
+    canEditMembers: true,
+    canDeleteMembers: true,
+    canManageFamily: true,
+    canInviteMembers: true,
+    canViewMessages: true,
+    canSendMessages: true,
+  },
+  [FAMILY_ROLES.MEMBER]: {
+    canCreateEvents: true,
+    canEditEvents: true,
+    canDeleteEvents: true,
+    canCompleteEvents: true,
+    canCreateMembers: true,
+    canEditMembers: true,
+    canDeleteMembers: true,
+    canManageFamily: false,
+    canInviteMembers: true,
+    canViewMessages: true,
+    canSendMessages: true,
+  },
+  [FAMILY_ROLES.CAREGIVER]: {
+    canCreateEvents: false,
+    canEditEvents: false,
+    canDeleteEvents: false,
+    canCompleteEvents: true,
+    canCreateMembers: false,
+    canEditMembers: false,
+    canDeleteMembers: false,
+    canManageFamily: false,
+    canInviteMembers: false,
+    canViewMessages: true,
+    canSendMessages: true,
+  },
+} as const;

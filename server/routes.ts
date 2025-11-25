@@ -4,11 +4,13 @@ import { storage, NotFoundError } from "./storage";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
+import type { FamilyRole } from "@shared/schema";
 
 // Helper function to get familyId from request or fallback to user's first family
 async function getFamilyId(req: any, userId: string): Promise<string | null> {
   // Try to get from query parameter (GET requests)
-  let familyId = req.query.familyId as string | undefined;
+  let familyId: string | null | undefined = req.query.familyId as string | undefined;
   
   // Try to get from request body (POST/PATCH/DELETE requests)
   if (!familyId && req.body && req.body.familyId) {
@@ -18,10 +20,10 @@ async function getFamilyId(req: any, userId: string): Promise<string | null> {
   // Fallback to user's first family if not provided
   if (!familyId) {
     const family = await storage.getUserFamily(userId);
-    familyId = family?.id || null;
+    familyId = family?.id ?? null;
   }
   
-  return familyId;
+  return familyId ?? null;
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -93,13 +95,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/family/join", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { inviteCode } = req.body;
+      const { inviteCode, role } = req.body;
       
       if (!inviteCode || typeof inviteCode !== 'string') {
         return res.status(400).json({ error: "Invite code is required" });
       }
       
-      const membership = await storage.joinFamily(userId, inviteCode.toUpperCase());
+      // Validate role if provided
+      const validRoles = ['member', 'caregiver'];
+      const memberRole = role && validRoles.includes(role) ? role : 'member';
+      
+      const membership = await storage.joinFamily(userId, inviteCode.toUpperCase(), memberRole);
       const family = await storage.getUserFamily(userId);
       res.json(family);
     } catch (error: any) {
@@ -108,6 +114,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error joining family:", error);
       res.status(500).json({ error: "Failed to join family" });
+    }
+  });
+  
+  // Get user's role in a family
+  app.get("/api/family/:familyId/role", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.params.familyId;
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(404).json({ error: "You are not a member of this family" });
+      }
+      
+      res.json({ role });
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      res.status(500).json({ error: "Failed to fetch user role" });
     }
   });
 
@@ -503,7 +527,7 @@ Visit Kindora Calendar: ${joinUrl}
   // Forward any invite code to someone (e.g., caregiver, healthcare worker)
   app.post("/api/family/forward-invite", isAuthenticated, async (req: any, res) => {
     try {
-      const { email, inviteCode, familyName } = req.body;
+      const { email, inviteCode, familyName, role } = req.body;
       
       if (!email || typeof email !== 'string' || !email.includes('@')) {
         return res.status(400).json({ error: "Valid email address is required" });
@@ -515,14 +539,18 @@ Visit Kindora Calendar: ${joinUrl}
 
       // Optional family name for better email personalization
       const displayFamilyName = familyName || "a family";
+      
+      // Support role selection (member or caregiver)
+      const selectedRole = role === 'caregiver' ? 'caregiver' : 'member';
 
       // Get the app URL
       const appUrl = process.env.REPL_SLUG 
         ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
         : req.headers.origin || 'http://localhost:5000';
 
-      const joinUrl = `${appUrl}/?invite=${inviteCode}`;
-      const subject = `Invitation to ${displayFamilyName}'s Calendar on Kindora`;
+      const joinUrl = `${appUrl}/?invite=${inviteCode}&role=${selectedRole}`;
+      const roleLabel = selectedRole === 'caregiver' ? 'as a Caregiver' : 'as a Family Member';
+      const subject = `Invitation to ${displayFamilyName}'s Calendar on Kindora ${roleLabel}`;
       
       // Check email service configuration
       const resendApiKey = process.env.RESEND_API_KEY;
@@ -932,6 +960,18 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      
+      // Check permissions
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canCreateMembers')) {
+        return res.status(403).json({ error: "You don't have permission to create family members" });
+      }
+      
       const result = insertFamilyMemberSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
@@ -940,6 +980,9 @@ Visit Kindora Calendar: ${joinUrl}
       const member = await storage.createFamilyMember(familyId, result.data);
       res.status(201).json(member);
     } catch (error) {
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
+      }
       res.status(500).json({ error: "Failed to create family member" });
     }
   });
@@ -951,6 +994,18 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      
+      // Check permissions
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canEditMembers')) {
+        return res.status(403).json({ error: "You don't have permission to edit family members" });
+      }
+      
       const result = insertFamilyMemberSchema.partial().safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
@@ -961,6 +1016,9 @@ Visit Kindora Calendar: ${joinUrl}
     } catch (error) {
       if (error instanceof NotFoundError) {
         return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
       }
       res.status(500).json({ error: "Failed to update family member" });
     }
@@ -973,11 +1031,26 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      
+      // Check permissions
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canDeleteMembers')) {
+        return res.status(403).json({ error: "You don't have permission to delete family members" });
+      }
+      
       await storage.deleteFamilyMember(req.params.id, familyId);
       res.status(204).send();
     } catch (error) {
       if (error instanceof NotFoundError) {
         return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
       }
       res.status(500).json({ error: "Failed to delete family member" });
     }
@@ -1005,6 +1078,18 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      
+      // Check permissions
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canCreateEvents')) {
+        return res.status(403).json({ error: "You don't have permission to create events" });
+      }
+      
       const result = insertEventSchema.safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
@@ -1013,6 +1098,9 @@ Visit Kindora Calendar: ${joinUrl}
       const event = await storage.createEvent(familyId, result.data);
       res.status(201).json(event);
     } catch (error) {
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
+      }
       console.error("Error creating event:", error);
       res.status(500).json({ error: "Failed to create event", details: String(error) });
     }
@@ -1025,6 +1113,18 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      
+      // Check permissions
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canEditEvents')) {
+        return res.status(403).json({ error: "You don't have permission to edit events" });
+      }
+      
       const result = insertEventSchema.partial().safeParse(req.body);
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
@@ -1035,6 +1135,9 @@ Visit Kindora Calendar: ${joinUrl}
     } catch (error) {
       if (error instanceof NotFoundError) {
         return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
       }
       console.error("Error updating event:", error);
       res.status(500).json({ error: "Failed to update event", details: String(error) });
@@ -1048,11 +1151,26 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      
+      // Check permissions
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canDeleteEvents')) {
+        return res.status(403).json({ error: "You don't have permission to delete events" });
+      }
+      
       await storage.deleteEvent(req.params.id, familyId);
       res.status(204).send();
     } catch (error) {
       if (error instanceof NotFoundError) {
         return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
       }
       res.status(500).json({ error: "Failed to delete event" });
     }

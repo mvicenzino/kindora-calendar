@@ -21,7 +21,8 @@ export interface IStorage {
   getUserFamilies(userId: string): Promise<Family[]>;
   getFamilyById(familyId: string): Promise<Family | undefined>;
   getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined>;
-  joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership>;
+  joinFamily(userId: string, inviteCode: string, role?: string): Promise<FamilyMembership>;
+  getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined>;
   getFamilyMembers(familyId: string): Promise<FamilyMember[]>;
   getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined>;
   createFamilyMember(familyId: string, member: InsertFamilyMember): Promise<FamilyMember>;
@@ -141,7 +142,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.families.values()).find(f => f.inviteCode === inviteCode);
   }
 
-  async joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership> {
+  async joinFamily(userId: string, inviteCode: string, role: string = 'member'): Promise<FamilyMembership> {
     const family = await this.getFamilyByInviteCode(inviteCode);
     if (!family) {
       throw new NotFoundError(`Family with invite code ${inviteCode} not found`);
@@ -161,12 +162,17 @@ export class MemStorage implements IStorage {
       id,
       userId,
       familyId: family.id,
-      role: 'member',
+      role,
       joinedAt: new Date(),
     };
     this.familyMemberships.set(id, membership);
     
     return membership;
+  }
+  
+  async getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined> {
+    return Array.from(this.familyMemberships.values())
+      .find(m => m.userId === userId && m.familyId === familyId);
   }
 
   async getUserFamilies(userId: string): Promise<Family[]> {
@@ -466,7 +472,7 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership> {
+  async joinFamily(userId: string, inviteCode: string, role: string = 'member'): Promise<FamilyMembership> {
     const family = await this.getFamilyByInviteCode(inviteCode);
     if (!family) {
       throw new NotFoundError(`Family with invite code ${inviteCode} not found`);
@@ -485,16 +491,23 @@ class DrizzleStorage implements IStorage {
     const result = await this.db.insert(familyMemberships).values({
       userId,
       familyId: family.id,
-      role: 'member',
+      role,
     }).returning();
     
+    return result[0];
+  }
+  
+  async getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined> {
+    const result = await this.db.select().from(familyMemberships).where(
+      and(eq(familyMemberships.userId, userId), eq(familyMemberships.familyId, familyId))
+    ).limit(1);
     return result[0];
   }
 
   async getUserFamilies(userId: string): Promise<Family[]> {
     const memberships = await this.db.select().from(familyMemberships)
       .where(eq(familyMemberships.userId, userId));
-    const familyIds = memberships.map(m => m.familyId);
+    const familyIds = memberships.map((m: FamilyMembership) => m.familyId);
     
     if (familyIds.length === 0) {
       return [];
@@ -691,8 +704,13 @@ class DemoAwareStorage implements IStorage {
     return this.persistentStorage.getFamilyByInviteCode(inviteCode);
   }
 
-  async joinFamily(userId: string, inviteCode: string): Promise<FamilyMembership> {
-    return this.getStorage(userId).joinFamily(userId, inviteCode);
+  async joinFamily(userId: string, inviteCode: string, role?: string): Promise<FamilyMembership> {
+    return this.getStorage(userId).joinFamily(userId, inviteCode, role);
+  }
+  
+  async getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getUserFamilyMembership(userId, familyId);
   }
 
   // Family Members

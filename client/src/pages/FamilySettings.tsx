@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Copy, Users, ArrowLeft, UserPlus, Mail, Send } from "lucide-react";
 
 interface Family {
@@ -26,6 +27,7 @@ export default function FamilySettings() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [forwardEmail, setForwardEmail] = useState("");
   const [forwardInviteCode, setForwardInviteCode] = useState("");
+  const [forwardRole, setForwardRole] = useState<"member" | "caregiver">("caregiver");
 
   // Fetch current family
   const { data: family, isLoading } = useQuery<Family>({
@@ -84,8 +86,8 @@ export default function FamilySettings() {
 
   // Forward invite code to someone else (e.g., caregiver, healthcare worker)
   const forwardInviteMutation = useMutation({
-    mutationFn: async ({ email, inviteCode, familyName }: { email: string; inviteCode: string; familyName?: string }) => {
-      const res = await apiRequest('POST', '/api/family/forward-invite', { email, inviteCode, familyName });
+    mutationFn: async ({ email, inviteCode, familyName, role }: { email: string; inviteCode: string; familyName?: string; role?: string }) => {
+      const res = await apiRequest('POST', '/api/family/forward-invite', { email, inviteCode, familyName, role });
       return await res.json();
     },
     onSuccess: () => {
@@ -153,7 +155,8 @@ export default function FamilySettings() {
     forwardInviteMutation.mutate({
       email: forwardEmail.trim(),
       inviteCode: forwardInviteCode.trim().toUpperCase(),
-      familyName: undefined // We don't know the family name for other families
+      familyName: undefined, // We don't know the family name for other families
+      role: forwardRole
     });
   };
 
@@ -320,6 +323,32 @@ export default function FamilySettings() {
                   className="bg-white/5 border-white/20 text-white"
                   data-testid="input-forward-invite-code"
                 />
+                <div>
+                  <Label className="text-white/90 text-sm mb-1 block">
+                    Invite as
+                  </Label>
+                  <Select value={forwardRole} onValueChange={(val: "member" | "caregiver") => setForwardRole(val)}>
+                    <SelectTrigger 
+                      className="bg-white/5 border-white/20 text-white"
+                      data-testid="select-forward-role"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="member" data-testid="option-member">
+                        Family Member (full access)
+                      </SelectItem>
+                      <SelectItem value="caregiver" data-testid="option-caregiver">
+                        Caregiver (view-only, can mark tasks done)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-white/50 mt-1">
+                    {forwardRole === "caregiver" 
+                      ? "Caregivers can view events and mark tasks complete but cannot delete items"
+                      : "Family members have full access to create, edit, and delete events"}
+                  </p>
+                </div>
                 <div className="flex gap-2">
                   <Input
                     type="email"
