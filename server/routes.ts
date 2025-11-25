@@ -903,6 +903,28 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // Get family members for a specific family (used by client with familyId in URL)
+  app.get("/api/family-members/:familyId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requestedFamilyId = req.params.familyId;
+      
+      // Verify user has access to this family
+      const userFamilies = await storage.getUserFamilies(userId);
+      const hasAccess = userFamilies.some(f => f.id === requestedFamilyId);
+      
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Access denied to this family" });
+      }
+      
+      const members = await storage.getFamilyMembers(requestedFamilyId);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching family members:", error);
+      res.status(500).json({ error: "Failed to fetch family members" });
+    }
+  });
+
   app.post("/api/family-members", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

@@ -88,17 +88,7 @@ export default function Home() {
   });
 
   // Map to UI types
-  const members = useMemo(() => {
-    const mapped = rawMembers.map(mapFamilyMemberFromDb);
-    console.log('[Home] Members mapped:', {
-      activeFamilyId,
-      rawMembersCount: rawMembers.length,
-      rawMembers: rawMembers.map(m => ({id: m.id, name: m.name})),
-      mappedCount: mapped.length,
-      mapped: mapped.map(m => ({id: m.id, name: m.name}))
-    });
-    return mapped;
-  }, [rawMembers, activeFamilyId]);
+  const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
   const events = useMemo(() => rawEvents.map(e => ({
     ...mapEventFromDb(e),
     members: members.filter(m => e.memberIds.includes(m.id))

@@ -65,21 +65,9 @@ export default function EventModal({
 
   // Update form state when event prop changes or modal opens
   useEffect(() => {
-    console.log('[EventModal Main] useEffect triggered:', {
-      isOpen,
-      hasEvent: !!event,
-      membersCount: members.length,
-      membersList: members.map(m => m.name),
-      selectedDate: selectedDate?.toISOString()
-    });
-    
-    if (!isOpen) {
-      console.log('[EventModal Main] Modal closed, skipping');
-      return;
-    }
+    if (!isOpen) return;
     
     if (event) {
-      console.log('[EventModal Main] Editing existing event:', event.title);
       // Editing existing event
       setTitle(event.title || "");
       setDescription(event.description || "");
@@ -91,7 +79,6 @@ export default function EventModal({
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
     } else {
-      console.log('[EventModal Main] Creating new event');
       // New event - set defaults
       setTitle("");
       setDescription("");
@@ -102,11 +89,8 @@ export default function EventModal({
       
       // Auto-select first member if available
       if (members.length > 0) {
-        console.log('[EventModal Main] ✅ Auto-selecting first member:', members[0].name, members[0].id);
         setMemberId(members[0].id);
         setSelectedMemberIds([members[0].id]);
-      } else {
-        console.warn('[EventModal Main] ❌ No members available for auto-selection!');
       }
     }
   }, [event, selectedDate, isOpen, members]);
