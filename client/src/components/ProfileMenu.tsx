@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import type { UiFamilyMember } from "@shared/types";
 import { X, User, UserPlus, Trash2 } from 'lucide-react';
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface ProfileMenuProps {
   members: UiFamilyMember[];
@@ -26,6 +27,8 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
   const [isOpen, setIsOpen] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const isReadOnly = roleLoading || isCaregiver;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -75,7 +78,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                 key={member.id}
                 className="flex items-center justify-between p-3 rounded-lg hover:bg-white/10 transition-all group"
               >
-                {editingMemberId === member.id ? (
+                {editingMemberId === member.id && !isReadOnly ? (
                   // Color picker mode
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
@@ -128,26 +131,30 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                       </Avatar>
                       <span className="text-sm font-medium text-white">{member.name}</span>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => setEditingMemberId(member.id)}
-                        className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all"
-                        data-testid={`button-edit-color-${member.id}`}
-                      >
-                        Edit
-                      </button>
-                      {onDeleteMember && (
-                        <button
-                          onClick={() => {
-                            if (confirm(`Remove ${member.name} from family?`)) {
-                              onDeleteMember(member.id);
-                            }
-                          }}
-                          className="text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-300 hover:text-red-100 hover:bg-red-500/30 transition-all"
-                          data-testid={`button-delete-member-${member.id}`}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                    <div className={`flex items-center gap-1 ${!isReadOnly ? 'opacity-0 group-hover:opacity-100' : 'opacity-0'} transition-opacity`}>
+                      {!isReadOnly && (
+                        <>
+                          <button
+                            onClick={() => setEditingMemberId(member.id)}
+                            className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all"
+                            data-testid={`button-edit-color-${member.id}`}
+                          >
+                            Edit
+                          </button>
+                          {onDeleteMember && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remove ${member.name} from family?`)) {
+                                  onDeleteMember(member.id);
+                                }
+                              }}
+                              className="text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-300 hover:text-red-100 hover:bg-red-500/30 transition-all"
+                              data-testid={`button-delete-member-${member.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </>
                       )}
                     </div>
                   </>
@@ -163,7 +170,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
           )}
 
           {/* Add Member Button */}
-          {onAddMember && (
+          {onAddMember && !isReadOnly && (
             <button
               onClick={() => {
                 onAddMember();

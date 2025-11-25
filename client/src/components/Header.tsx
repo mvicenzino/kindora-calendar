@@ -1,10 +1,12 @@
-import { Copy, Search, User, Image, LogOut, Users } from "lucide-react";
+import { Copy, Search, User, Image, LogOut, Users, Shield, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
 import { useRef, useEffect, useState } from "react";
+import { useUserRole } from "@/hooks/useUserRole";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 
 interface HeaderProps {
@@ -22,6 +24,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
   const containerRef = useRef<HTMLElement>(null);
   const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
+  const { role, isCaregiver, isOwner } = useUserRole();
   
   const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
     { value: 'day', label: 'Day' },
@@ -195,6 +198,22 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             >
               <Search className="w-5 h-5" />
             </Button>
+            {role && (
+              <Badge 
+                variant="outline"
+                className="text-xs px-2 backdrop-blur-md border-white/20"
+                style={{
+                  backgroundColor: isCaregiver ? '#14B8A620' : isOwner ? '#F59E0B20' : '#3B82F620',
+                  borderColor: isCaregiver ? '#14B8A640' : isOwner ? '#F59E0B40' : '#3B82F640',
+                  color: isCaregiver ? '#14B8A6' : isOwner ? '#F59E0B' : '#3B82F6',
+                }}
+                data-testid="badge-user-role"
+              >
+                {isCaregiver && <Heart className="w-3 h-3 mr-1" />}
+                {isOwner && <Shield className="w-3 h-3 mr-1" />}
+                {isCaregiver ? 'Caregiver' : isOwner ? 'Owner' : 'Member'}
+              </Badge>
+            )}
             {onMemberColorChange ? (
               <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
             ) : (

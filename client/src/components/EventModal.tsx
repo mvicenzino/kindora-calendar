@@ -9,6 +9,7 @@ import { Calendar, Clock, Users, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
 import type { UiFamilyMember } from "@shared/types";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Event {
   id?: string;
@@ -38,6 +39,8 @@ export default function EventModal({
   members,
   selectedDate,
 }: EventModalProps) {
+  const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const isReadOnly = roleLoading || isCaregiver;
   const defaultDate = selectedDate || new Date();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -203,6 +206,7 @@ export default function EventModal({
                 data-testid="input-event-title"
                 className="bg-white/15 border border-white/40 rounded-2xl text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/50 h-12"
                 autoFocus
+                disabled={isReadOnly}
               />
             </div>
 
@@ -216,6 +220,7 @@ export default function EventModal({
                 data-testid="input-event-description"
                 className="bg-white/15 border border-white/40 rounded-2xl text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/50 resize-none"
                 rows={3}
+                disabled={isReadOnly}
               />
             </div>
 
@@ -229,14 +234,16 @@ export default function EventModal({
                 </Label>
                 <button
                   onClick={() => {
+                    if (isReadOnly) return;
                     const input = document.createElement('input');
                     input.type = 'date';
                     input.value = startDate;
                     input.onchange = (e: any) => setStartDate(e.target.value);
                     input.click();
                   }}
-                  className="w-full bg-white/15 border border-white/40 rounded-2xl text-white px-4 py-3 text-center hover:bg-white/20 transition-all cursor-pointer"
+                  className="w-full bg-white/15 border border-white/40 rounded-2xl text-white px-4 py-3 text-center hover:bg-white/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-event-date"
+                  disabled={isReadOnly}
                 >
                   {displayDate}
                 </button>
@@ -266,13 +273,15 @@ export default function EventModal({
                             </AvatarFallback>
                           </Avatar>
                           <span className="text-white text-sm">{member.name}</span>
-                          <button
-                            onClick={() => removeMember(id)}
-                            className="text-white/70 hover:text-white ml-1"
-                            data-testid={`button-remove-member-${id}`}
-                          >
-                            ×
-                          </button>
+                          {!isReadOnly && (
+                            <button
+                              onClick={() => removeMember(id)}
+                              className="text-white/70 hover:text-white ml-1"
+                              data-testid={`button-remove-member-${id}`}
+                            >
+                              ×
+                            </button>
+                          )}
                         </div>
                       ) : null;
                     })}
@@ -287,11 +296,12 @@ export default function EventModal({
                       placeholder="Type to add family members..."
                       className="flex-1 min-w-[150px] bg-transparent text-white placeholder:text-white/50 outline-none text-sm"
                       data-testid="input-member-search"
+                      disabled={isReadOnly}
                     />
                   </div>
 
                   {/* Dropdown menu */}
-                  {showMemberDropdown && filteredMembers.length > 0 && (
+                  {showMemberDropdown && filteredMembers.length > 0 && !isReadOnly && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-gradient-to-br from-[#4A5A6A] to-[#5A6A7A] border border-white/40 rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto">
                       {filteredMembers.map(member => (
                         <button
@@ -337,6 +347,7 @@ export default function EventModal({
                 checked={isSometimeToday}
                 onCheckedChange={setIsSometimeToday}
                 data-testid="switch-sometime-today"
+                disabled={isReadOnly}
               />
             </div>
 
@@ -354,6 +365,7 @@ export default function EventModal({
                     onChange={(e) => setStartTime(e.target.value)}
                     data-testid="input-start-time"
                     className="bg-white/15 border border-white/40 rounded-2xl text-white focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
+                    disabled={isReadOnly}
                   />
                 </div>
 
@@ -368,6 +380,7 @@ export default function EventModal({
                     onChange={(e) => setEndTime(e.target.value)}
                     data-testid="input-end-time"
                     className="bg-white/15 border border-white/40 rounded-2xl text-white focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
+                    disabled={isReadOnly}
                   />
                 </div>
               </div>
@@ -378,7 +391,7 @@ export default function EventModal({
           {/* Sticky Footer with Action Buttons */}
           <div className="border-t border-white/20 px-6 md:px-8 py-4 bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
-              {event?.id && onDelete && (
+              {event?.id && onDelete && !isReadOnly && (
                 <Button
                   variant="destructive"
                   onClick={() => {
@@ -404,10 +417,10 @@ export default function EventModal({
                 </Button>
                 <Button
                   onClick={handleSave}
-                  disabled={!title.trim() || selectedMemberIds.length === 0}
+                  disabled={!title.trim() || selectedMemberIds.length === 0 || isReadOnly}
                   data-testid="button-save-event"
                   className="bg-purple-600 hover:bg-purple-700 text-white border border-white/50 rounded-lg disabled:opacity-50"
-                  title={!title.trim() ? 'Please enter an event title' : selectedMemberIds.length === 0 ? 'Please select at least one family member' : ''}
+                  title={isReadOnly ? 'You cannot create or edit events' : !title.trim() ? 'Please enter an event title' : selectedMemberIds.length === 0 ? 'Please select at least one family member' : ''}
                 >
                   {event?.id ? 'Update Event' : 'Create Event'}
                 </Button>
