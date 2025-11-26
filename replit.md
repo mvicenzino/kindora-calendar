@@ -24,6 +24,28 @@ The application includes a fully-functional demo mode that allows users to exper
 
 ## Recent Changes (November 26, 2025)
 
+### Role Badge Display in ProfileMenu
+**Added visual role indicators** to help users understand access levels within their family calendar.
+
+**Implementation**:
+- **New API Endpoint**: `GET /api/family/:familyId/members` returns all family memberships with user information
+  - Security: Validates requester is a member of the family before returning data
+  - Returns user details (name, email) along with role assignment
+  
+- **ProfileMenu UI Enhancement**: Two distinct sections for clarity
+  - **User Accounts Section**: Shows all account holders with role badges
+    - Owner: Shield icon with default variant (full permissions)
+    - Member: Users icon with secondary variant (create/edit/delete events)
+    - Caregiver: Heart icon with outline variant (view and complete events only)
+  - **Calendar Members Section**: Shows family member profiles (calendar people)
+  - Clear visual separation between account holders and calendar members
+  
+- **Storage Layer**: Added `getFamilyMembershipsWithUsers()` method across all storage implementations
+  - Joins family memberships with user data
+  - Implemented in MemStorage, DrizzleStorage, and DemoAwareStorage
+
+**User Benefit**: Makes it immediately clear who has what level of access to the family calendar, helping family coordinators understand permission levels at a glance.
+
 ### Caregiver Permission Enforcement - FlipCardEventDetails Component
 **Fixed critical security gap** where caregivers could edit events and manage photos through the FlipCardEventDetails component (the read-only event details view).
 
