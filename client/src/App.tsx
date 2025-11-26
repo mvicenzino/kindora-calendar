@@ -12,6 +12,7 @@ import Onboarding from "@/pages/Onboarding";
 import EventWizard from "@/pages/EventWizard";
 import DemoWelcome from "@/pages/DemoWelcome";
 import FamilySettings from "@/pages/FamilySettings";
+import CaregiverDashboard from "@/pages/CaregiverDashboard";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -32,6 +33,7 @@ function Router() {
         <>
           <Route path="/demo-welcome" component={DemoWelcome} />
           <Route path="/" component={Home} />
+          <Route path="/care" component={CaregiverDashboard} />
           <Route path="/memories" component={Memories} />
           <Route path="/family" component={FamilySettings} />
           <Route path="/onboarding" component={Onboarding} />
