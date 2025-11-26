@@ -23,6 +23,12 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   const { isCaregiver, isLoading: roleLoading } = useUserRole();
   const isReadOnly = roleLoading || isCaregiver;
 
+  // Defensive wrapper for onEdit to prevent programmatic invocation by caregivers
+  const handleEdit = () => {
+    if (isReadOnly) return;
+    onEdit();
+  };
+
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
       const uploadRes = await apiRequest('POST', '/api/objects/upload');
@@ -78,6 +84,8 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   });
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return;
+    
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -99,6 +107,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   };
 
   const handleDeletePhoto = () => {
+    if (isReadOnly) return;
     deletePhotoMutation.mutate();
   };
 
@@ -214,7 +223,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   </button>
                   {!isReadOnly && (
                     <button
-                      onClick={onEdit}
+                      onClick={handleEdit}
                       className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
                       data-testid="button-edit-event"
                     >
@@ -328,7 +337,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-2">
                 {!isReadOnly && (
                   <Button
-                    onClick={onEdit}
+                    onClick={handleEdit}
                     className="flex-1 bg-purple-500 hover:bg-purple-600 text-white shadow-lg"
                     data-testid="button-edit-bottom"
                   >

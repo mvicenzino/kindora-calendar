@@ -22,6 +22,30 @@ The application includes a fully-functional demo mode that allows users to exper
 - **Non-Persistent Storage**: Demo data is stored in-memory only and does not persist to the database. Each demo session is isolated and temporary
 - **Session Isolation**: Each demo login creates a unique user ID (`demo-${timestamp}-${random}`), ensuring complete data isolation between different demo sessions
 
+## Recent Changes (November 26, 2025)
+
+### Caregiver Permission Enforcement - FlipCardEventDetails Component
+**Fixed critical security gap** where caregivers could edit events and manage photos through the FlipCardEventDetails component (the read-only event details view).
+
+**Implementation (Defense-in-Depth Approach)**:
+1. **UI Layer**: All edit buttons and photo management controls conditionally hidden when `isReadOnly = roleLoading || isCaregiver`
+   - Edit Event button (header) - hidden for caregivers
+   - Edit Event button (bottom) - hidden for caregivers  
+   - Photo upload section - hidden for caregivers
+   - Photo delete button - hidden for caregivers
+
+2. **Client Runtime Layer**: All mutation handlers have defensive `isReadOnly` guards:
+   - `handleEdit()` - returns early if isReadOnly
+   - `handleFileSelect()` - returns early if isReadOnly
+   - `handleDeletePhoto()` - returns early if isReadOnly
+
+3. **Backend Layer**: Photo update endpoint (`PUT /api/events/:id/photo`) now validates permissions:
+   - Checks user's family membership via `getUserFamilyRole(storage, userId, familyId)`
+   - Enforces `canEditEvents` permission before allowing photo uploads or deletions
+   - Returns 403 Forbidden for caregivers attempting to modify event photos
+
+**Security**: Multiple independent layers ensure caregivers cannot edit events through any attack vector (UI, programmatic client-side calls, or direct API requests). Backend permission validation is the authoritative security boundary.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

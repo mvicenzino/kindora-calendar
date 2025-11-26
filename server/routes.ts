@@ -1278,6 +1278,17 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found for user" });
       }
       
+      // Check if user has permission to edit events
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canEditEvents')) {
+        return res.status(403).json({ error: "You don't have permission to edit event photos" });
+      }
+      
       // Allow null to delete photo
       if (req.body.photoURL === null) {
         const event = await storage.updateEvent(req.params.id, familyId, { photoUrl: null });
