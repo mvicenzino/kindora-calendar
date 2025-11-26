@@ -20,7 +20,16 @@ The backend is an **Express.js** application with TypeScript, providing a REST A
 
 ### Data Storage Solutions
 
-The database schema includes `Family Members` and `Events` tables, linked by foreign keys, with color inheritance from members to events for visual consistency. **Drizzle Kit** manages PostgreSQL migrations, with schema definitions in `/shared/schema.ts`. The system supports in-memory storage for demos and is configured for PostgreSQL for persistent data.
+The database schema includes `Family Members`, `Events`, and `Event Notes` tables, linked by foreign keys. Event notes support threading via `parentNoteId` for replies, with `authorUserId` tracking who wrote each note. **Drizzle Kit** manages PostgreSQL migrations, with schema definitions in `/shared/schema.ts`. The system supports in-memory storage for demos and is configured for PostgreSQL for persistent data.
+
+### Event Notes Feature
+
+The application includes a threaded notes system for events:
+- **Schema**: `eventNotes` table with `parentNoteId` for threading, `authorUserId` for author tracking
+- **API Routes**: GET/POST/DELETE endpoints at `/api/events/:eventId/notes`
+- **Frontend**: `EventNotesSection` component integrated into both `FlipCardEventDetails` and `EventDetailsDialog`
+- **Features**: Add notes, reply to notes (threaded), delete own notes, view author info with timestamps
+- **Demo Data**: Sample notes in both family and eldercare calendars showcasing coordination between family members and caregivers
 
 ## External Dependencies
 

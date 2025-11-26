@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Edit2, X, Upload, Trash2, RotateCcw } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import EventNotesSection from "./EventNotesSection";
 import type { UiEvent } from "@shared/types";
+import type { User } from "@shared/schema";
 
 interface FlipCardEventDetailsProps {
   isOpen: boolean;
@@ -24,6 +26,10 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   const { isCaregiver, isLoading: roleLoading } = useUserRole();
   const { activeFamilyId } = useActiveFamily();
   const isReadOnly = roleLoading || isCaregiver;
+
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ['/api/auth/user'],
+  });
 
   // Defensive wrapper for onEdit to prevent programmatic invocation by caregivers
   const handleEdit = () => {
@@ -333,6 +339,15 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   <h4 className="text-xs font-medium text-white/60 mb-2 uppercase tracking-wide">Description</h4>
                   <p className="text-white/95 leading-relaxed text-sm md:text-base">{event.description}</p>
                 </div>
+              )}
+
+              {/* Notes Section */}
+              {event.id && activeFamilyId && (
+                <EventNotesSection
+                  eventId={event.id}
+                  familyId={activeFamilyId}
+                  currentUserId={currentUser?.id}
+                />
               )}
 
               {/* Action Buttons */}
