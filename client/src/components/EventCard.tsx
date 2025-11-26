@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Check, Trash2, Clock, Image as ImageIcon } from "lucide-react";
+import { Check, Trash2, Clock, Image as ImageIcon, MessageSquare } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -149,13 +149,24 @@ export default function EventCard({
           </button>
         </div>
 
-        {/* Title */}
-        <h3 
-          className={`font-semibold text-white mb-2 ${variant === 'grid' ? 'text-base' : 'text-xl'}`}
-          data-testid={`text-title-${event.id}`}
-        >
-          {event.title}
-        </h3>
+        {/* Title with Notes Indicator */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 
+            className={`font-semibold text-white ${variant === 'grid' ? 'text-base' : 'text-xl'}`}
+            data-testid={`text-title-${event.id}`}
+          >
+            {event.title}
+          </h3>
+          {(event.noteCount ?? 0) > 0 && (
+            <span 
+              className="flex items-center gap-0.5 text-white/80 flex-shrink-0"
+              data-testid={`notes-indicator-${event.id}`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-sm">{event.noteCount}</span>
+            </span>
+          )}
+        </div>
 
         {/* Time/Description */}
         {showTime && (

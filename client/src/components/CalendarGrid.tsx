@@ -10,6 +10,7 @@ import {
   isSameDay
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { MessageSquare } from "lucide-react";
 
 interface Event {
   id: string;
@@ -18,6 +19,7 @@ interface Event {
   endTime: Date;
   color: string;
   memberId: string;
+  noteCount?: number;
 }
 
 interface CalendarGridProps {
@@ -98,14 +100,23 @@ export default function CalendarGrid({
                       onEventClick(event);
                     }}
                     data-testid={`event-badge-${event.id}`}
-                    className="text-xs truncate backdrop-blur-md cursor-pointer hover-elevate active-elevate-2"
+                    className="text-xs backdrop-blur-md cursor-pointer hover-elevate active-elevate-2 flex items-center gap-1"
                     style={{ 
                       backgroundColor: `${event.color}30`,
                       color: event.color,
                       borderColor: `${event.color}50`
                     }}
                   >
-                    {event.title}
+                    <span className="truncate flex-1">{event.title}</span>
+                    {(event.noteCount ?? 0) > 0 && (
+                      <span 
+                        className="flex items-center gap-0.5 flex-shrink-0 opacity-80"
+                        data-testid={`notes-indicator-${event.id}`}
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                        <span className="text-[10px]">{event.noteCount}</span>
+                      </span>
+                    )}
                   </Badge>
                 ))}
                 {dayEvents.length > 3 && (

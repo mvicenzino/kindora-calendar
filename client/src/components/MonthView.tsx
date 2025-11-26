@@ -1,5 +1,5 @@
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, isAfter, addMonths, subMonths, isToday } from "date-fns";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
@@ -158,9 +158,20 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                         </p>
                       </div>
                     </div>
-                    <span className="text-sm text-white/80">
-                      {format(event.startTime, 'h:mm a')}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {(event.noteCount ?? 0) > 0 && (
+                        <span 
+                          className="flex items-center gap-0.5 text-white/70"
+                          data-testid={`notes-indicator-${event.id}`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span className="text-xs">{event.noteCount}</span>
+                        </span>
+                      )}
+                      <span className="text-sm text-white/80">
+                        {format(event.startTime, 'h:mm a')}
+                      </span>
+                    </div>
                   </button>
                 </div>
               ))}
