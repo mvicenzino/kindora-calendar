@@ -118,6 +118,15 @@ export const medicationLogs = pgTable("medication_logs", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Family Messages table - global conversation thread for family members and caregivers
+export const familyMessages = pgTable("family_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  authorUserId: varchar("author_user_id").notNull(), // The logged-in user who sent the message
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -191,6 +200,14 @@ export const insertMedicationLogSchema = createInsertSchema(medicationLogs).omit
   scheduledTime: z.coerce.date().optional(),
 });
 
+export const insertFamilyMessageSchema = createInsertSchema(familyMessages).omit({
+  id: true,
+  familyId: true,
+  createdAt: true,
+}).extend({
+  content: z.string().min(1, "Message content is required").trim(),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -226,6 +243,10 @@ export type Medication = typeof medications.$inferSelect;
 // Medication Log types
 export type InsertMedicationLog = z.infer<typeof insertMedicationLogSchema>;
 export type MedicationLog = typeof medicationLogs.$inferSelect;
+
+// Family Message types
+export type InsertFamilyMessage = z.infer<typeof insertFamilyMessageSchema>;
+export type FamilyMessage = typeof familyMessages.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {

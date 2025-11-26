@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
-import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema } from "@shared/schema";
+import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
@@ -1703,6 +1703,125 @@ Visit Kindora Calendar: ${joinUrl}
     } catch (error) {
       console.error("Error logging medication:", error);
       res.status(500).json({ error: "Failed to log medication" });
+    }
+  });
+
+  // Family Messages Routes (global conversation thread)
+  app.get("/api/family-messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const messages = await storage.getFamilyMessages(familyId);
+      
+      // Enrich messages with author info
+      const enrichedMessages = await Promise.all(messages.map(async (message) => {
+        const author = await storage.getUser(message.authorUserId);
+        const membership = await storage.getUserFamilyMembership(message.authorUserId, familyId);
+        return {
+          ...message,
+          author: author ? {
+            id: author.id,
+            firstName: author.firstName,
+            lastName: author.lastName,
+            profileImageUrl: author.profileImageUrl,
+            role: membership?.role || 'member',
+          } : null,
+        };
+      }));
+      
+      res.json(enrichedMessages);
+    } catch (error) {
+      console.error("Error fetching family messages:", error);
+      res.status(500).json({ error: "Failed to fetch family messages" });
+    }
+  });
+
+  app.post("/api/family-messages", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // All family members (including caregivers) can send messages
+      const messageData = {
+        ...req.body,
+        authorUserId: userId,
+      };
+      
+      const result = insertFamilyMessageSchema.safeParse(messageData);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+      
+      const message = await storage.createFamilyMessage(familyId, result.data);
+      
+      // Enrich with author info
+      const author = await storage.getUser(userId);
+      const membership = await storage.getUserFamilyMembership(userId, familyId);
+      const enrichedMessage = {
+        ...message,
+        author: author ? {
+          id: author.id,
+          firstName: author.firstName,
+          lastName: author.lastName,
+          profileImageUrl: author.profileImageUrl,
+          role: membership?.role || 'member',
+        } : null,
+      };
+      
+      res.status(201).json(enrichedMessage);
+    } catch (error) {
+      console.error("Error creating family message:", error);
+      res.status(500).json({ error: "Failed to create family message" });
+    }
+  });
+
+  app.delete("/api/family-messages/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and message authors can delete messages
+      const messages = await storage.getFamilyMessages(familyId);
+      const message = messages.find(m => m.id === req.params.id);
+      
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+      
+      if (message.authorUserId !== userId && role !== 'owner') {
+        return res.status(403).json({ error: "You can only delete your own messages" });
+      }
+      
+      await storage.deleteFamilyMessage(req.params.id, familyId);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting family message:", error);
+      res.status(500).json({ error: "Failed to delete family message" });
     }
   });
 

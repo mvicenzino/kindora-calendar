@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
@@ -60,6 +60,11 @@ export interface IStorage {
   getMedicationLogs(medicationId: string, familyId: string): Promise<MedicationLog[]>;
   getTodaysMedicationLogs(familyId: string): Promise<MedicationLog[]>;
   createMedicationLog(familyId: string, log: InsertMedicationLog): Promise<MedicationLog>;
+
+  // Family Messages (global conversation thread)
+  getFamilyMessages(familyId: string): Promise<FamilyMessage[]>;
+  createFamilyMessage(familyId: string, message: InsertFamilyMessage): Promise<FamilyMessage>;
+  deleteFamilyMessage(id: string, familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -72,6 +77,7 @@ export class MemStorage implements IStorage {
   private eventNotesMap: Map<string, EventNote>;
   private medicationsMap: Map<string, Medication>;
   private medicationLogsMap: Map<string, MedicationLog>;
+  private familyMessagesMap: Map<string, FamilyMessage>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -83,6 +89,7 @@ export class MemStorage implements IStorage {
     this.eventNotesMap = new Map();
     this.medicationsMap = new Map();
     this.medicationLogsMap = new Map();
+    this.familyMessagesMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -522,6 +529,33 @@ export class MemStorage implements IStorage {
     this.medicationLogsMap.set(id, log);
     return log;
   }
+
+  // Family Messages
+  async getFamilyMessages(familyId: string): Promise<FamilyMessage[]> {
+    return Array.from(this.familyMessagesMap.values())
+      .filter(m => m.familyId === familyId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async createFamilyMessage(familyId: string, insertMessage: InsertFamilyMessage): Promise<FamilyMessage> {
+    const id = randomUUID();
+    const message: FamilyMessage = {
+      ...insertMessage,
+      id,
+      familyId,
+      createdAt: new Date(),
+    };
+    this.familyMessagesMap.set(id, message);
+    return message;
+  }
+
+  async deleteFamilyMessage(id: string, familyId: string): Promise<void> {
+    const message = this.familyMessagesMap.get(id);
+    if (!message || message.familyId !== familyId) {
+      throw new NotFoundError(`Family message with id ${id} not found`);
+    }
+    this.familyMessagesMap.delete(id);
+  }
 }
 
 // DrizzleStorage implementation
@@ -917,6 +951,27 @@ class DrizzleStorage implements IStorage {
     }).returning();
     return result[0];
   }
+
+  // Family Messages
+  async getFamilyMessages(familyId: string): Promise<FamilyMessage[]> {
+    return await this.db.select().from(familyMessages)
+      .where(eq(familyMessages.familyId, familyId))
+      .orderBy(familyMessages.createdAt);
+  }
+
+  async createFamilyMessage(familyId: string, insertMessage: InsertFamilyMessage): Promise<FamilyMessage> {
+    const result = await this.db.insert(familyMessages).values({
+      ...insertMessage,
+      familyId,
+    }).returning();
+    return result[0];
+  }
+
+  async deleteFamilyMessage(id: string, familyId: string): Promise<void> {
+    await this.db.delete(familyMessages).where(
+      and(eq(familyMessages.id, id), eq(familyMessages.familyId, familyId))
+    );
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -1131,6 +1186,22 @@ class DemoAwareStorage implements IStorage {
   async createMedicationLog(familyId: string, log: InsertMedicationLog): Promise<MedicationLog> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.createMedicationLog(familyId, log);
+  }
+
+  // Family Messages
+  async getFamilyMessages(familyId: string): Promise<FamilyMessage[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getFamilyMessages(familyId);
+  }
+
+  async createFamilyMessage(familyId: string, message: InsertFamilyMessage): Promise<FamilyMessage> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createFamilyMessage(familyId, message);
+  }
+
+  async deleteFamilyMessage(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteFamilyMessage(id, familyId);
   }
 }
 
