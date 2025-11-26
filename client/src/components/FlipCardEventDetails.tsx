@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Edit2, X, Upload, Trash2, RotateCcw } from "lucide-react";
+import { Calendar, Clock, Edit2, X, Upload, Trash2, RotateCcw, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import EventNotesSection from "./EventNotesSection";
+import NotesModal from "./NotesModal";
 import type { UiEvent } from "@shared/types";
 import type { User } from "@shared/schema";
 
@@ -22,6 +23,7 @@ interface FlipCardEventDetailsProps {
 export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }: FlipCardEventDetailsProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
   const { toast } = useToast();
   const { isCaregiver, isLoading: roleLoading } = useUserRole();
   const { activeFamilyId } = useActiveFamily();
@@ -123,8 +125,6 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
     setIsFlipped(!isFlipped);
   };
 
-  const memberNames = event.members?.map(m => m.name).join(', ') || '';
-
   if (!isOpen) return null;
 
   return (
@@ -193,22 +193,37 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                 )}
               </div>
 
-              {/* Bottom: Members */}
-              <div className="relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-3">
-                    {event.members?.slice(0, 4).map((member) => (
-                      <Avatar key={member.id} className="h-12 w-12 border-3 border-white">
-                        <AvatarFallback
-                          className="text-white font-semibold"
-                          style={{ backgroundColor: member.color }}
-                        >
-                          {member.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                  </div>
-                  <p className="text-white font-medium">{memberNames}</p>
+              {/* Bottom: Notes on left, Members on right */}
+              <div className="relative z-10 flex items-center justify-between">
+                {/* Notes indicator - lower left */}
+                {(event.noteCount ?? 0) > 0 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setNotesModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm border border-white/40 text-white hover:bg-white/30 transition-all"
+                    data-testid={`notes-indicator-front-${event.id}`}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="text-sm font-medium">{event.noteCount}</span>
+                  </button>
+                )}
+                {/* Spacer if no notes */}
+                {(event.noteCount ?? 0) === 0 && <div />}
+                
+                {/* Member avatars - lower right */}
+                <div className="flex -space-x-3">
+                  {event.members?.slice(0, 4).map((member) => (
+                    <Avatar key={member.id} className="h-12 w-12 border-3 border-white">
+                      <AvatarFallback
+                        className="text-white font-semibold"
+                        style={{ backgroundColor: member.color }}
+                      >
+                        {member.initials}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
                 </div>
               </div>
             </div>
@@ -250,9 +265,28 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
               {/* Event Title Card with Members */}
               <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                <div className="flex items-center gap-3">
+                <h3 className="text-lg md:text-xl font-bold text-white mb-3 truncate">{event.title}</h3>
+                <div className="flex items-center justify-between">
+                  {/* Notes indicator - lower left */}
+                  {(event.noteCount ?? 0) > 0 ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNotesModalOpen(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 border border-white/30 text-white hover:bg-white/25 transition-all"
+                      data-testid={`notes-indicator-back-${event.id}`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span className="text-sm font-medium">{event.noteCount}</span>
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                  
+                  {/* Member avatars - lower right */}
                   <div className="flex -space-x-2 flex-shrink-0">
-                    {event.members?.slice(0, 3).map((member) => (
+                    {event.members?.slice(0, 4).map((member) => (
                       <Avatar key={member.id} className="h-10 w-10 border-2 border-white/40">
                         <AvatarFallback
                           className="text-white font-semibold text-xs"
@@ -262,12 +296,6 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                         </AvatarFallback>
                       </Avatar>
                     ))}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg md:text-xl font-bold text-white mb-1 truncate">{event.title}</h3>
-                    <p className="text-xs md:text-sm text-white/70 truncate">
-                      {memberNames}
-                    </p>
                   </div>
                 </div>
               </div>
@@ -374,6 +402,18 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
           </div>
         </div>
       </div>
+      
+      {/* Notes Modal */}
+      {activeFamilyId && event.id && (
+        <NotesModal
+          open={notesModalOpen}
+          onOpenChange={setNotesModalOpen}
+          eventId={event.id}
+          eventTitle={event.title}
+          familyId={activeFamilyId}
+          currentUserId={currentUser?.id}
+        />
+      )}
     </div>
   );
 }
