@@ -1085,7 +1085,16 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found for user" });
       }
       const events = await storage.getEvents(familyId);
-      res.json(events);
+      
+      // Add note counts to each event
+      const eventsWithNoteCounts = await Promise.all(
+        events.map(async (event) => {
+          const notes = await storage.getEventNotes(event.id, familyId);
+          return { ...event, noteCount: notes.length };
+        })
+      );
+      
+      res.json(eventsWithNoteCounts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch events" });
     }

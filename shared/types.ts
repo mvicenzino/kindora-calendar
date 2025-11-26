@@ -13,6 +13,7 @@ export interface UiEvent extends Omit<DBEvent, 'description' | 'photoUrl' | 'com
   startTime: Date;
   endTime: Date;
   members?: UiFamilyMember[];
+  noteCount?: number;
 }
 
 /**
