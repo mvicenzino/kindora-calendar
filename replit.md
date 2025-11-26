@@ -31,6 +31,27 @@ The application includes a threaded notes system for events:
 - **Features**: Add notes, reply to notes (threaded), delete own notes, view author info with timestamps
 - **Demo Data**: Sample notes in both family and eldercare calendars showcasing coordination between family members and caregivers
 
+### Global Family Messaging
+
+A real-time messaging system for family coordination:
+
+- **Route**: `/messages` - Family Messages page
+- **Schema**: `familyMessages` table with `familyId`, `authorUserId`, `content`, `createdAt`, and `parentMessageId` for threading support
+- **API Routes**: 
+  - GET `/api/family-messages?familyId=X` - Fetch all messages for a family
+  - POST `/api/family-messages` - Send a new message
+  - DELETE `/api/family-messages/:id?familyId=X` - Delete own messages
+- **Frontend Components**: `Messages.tsx` with Messenger-style UI featuring:
+  - Liquid glass design consistent with app theme
+  - Date dividers for message grouping
+  - Author avatars with role badges (owner, member, caregiver)
+  - Real-time-like polling (10 second refresh)
+  - Own message highlighting (blue bubbles)
+  - Delete functionality for own messages
+- **Role-Based Permissions**: All family roles (owner, member, caregiver) can view and send messages
+- **Navigation**: Message icon in header (both mobile and desktop)
+- **Demo Data**: Sample conversations in both family calendars showing coordination
+
 ### Caregiver Dashboard & Medication Tracking
 
 A dedicated caregiver portal with care-focused views and medication management:
