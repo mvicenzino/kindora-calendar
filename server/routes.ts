@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
-import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema } from "@shared/schema";
+import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
@@ -1397,6 +1397,312 @@ Visit Kindora Calendar: ${joinUrl}
       }
       console.error("Error deleting event note:", error);
       res.status(500).json({ error: "Failed to delete event note" });
+    }
+  });
+
+  // Medication Routes (protected) - Medication tracking for caregivers
+  // Get all medications for a family
+  app.get("/api/medications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const medications = await storage.getMedications(familyId);
+      
+      // Enrich with member information
+      const familyMembers = await storage.getFamilyMembers(familyId);
+      const enrichedMedications = medications.map(med => {
+        const member = familyMembers.find(m => m.id === med.memberId);
+        return {
+          ...med,
+          member: member ? { id: member.id, name: member.name, color: member.color } : null,
+        };
+      });
+      
+      res.json(enrichedMedications);
+    } catch (error) {
+      console.error("Error fetching medications:", error);
+      res.status(500).json({ error: "Failed to fetch medications" });
+    }
+  });
+
+  // Get medications for a specific family member
+  app.get("/api/members/:memberId/medications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const medications = await storage.getMedicationsByMember(req.params.memberId, familyId);
+      res.json(medications);
+    } catch (error) {
+      console.error("Error fetching member medications:", error);
+      res.status(500).json({ error: "Failed to fetch member medications" });
+    }
+  });
+
+  // Get a single medication
+  app.get("/api/medications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const medication = await storage.getMedication(req.params.id, familyId);
+      if (!medication) {
+        return res.status(404).json({ error: "Medication not found" });
+      }
+      
+      res.json(medication);
+    } catch (error) {
+      console.error("Error fetching medication:", error);
+      res.status(500).json({ error: "Failed to fetch medication" });
+    }
+  });
+
+  // Create a medication (owners and members only)
+  app.post("/api/medications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can create medications
+      if (role === 'caregiver') {
+        return res.status(403).json({ error: "Caregivers cannot create medications" });
+      }
+      
+      const result = insertMedicationSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+      
+      const medication = await storage.createMedication(familyId, result.data);
+      res.status(201).json(medication);
+    } catch (error) {
+      console.error("Error creating medication:", error);
+      res.status(500).json({ error: "Failed to create medication" });
+    }
+  });
+
+  // Update a medication (owners and members only)
+  app.patch("/api/medications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can update medications
+      if (role === 'caregiver') {
+        return res.status(403).json({ error: "Caregivers cannot update medications" });
+      }
+      
+      const medication = await storage.updateMedication(req.params.id, familyId, req.body);
+      res.json(medication);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      console.error("Error updating medication:", error);
+      res.status(500).json({ error: "Failed to update medication" });
+    }
+  });
+
+  // Delete a medication (owners and members only)
+  app.delete("/api/medications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can delete medications
+      if (role === 'caregiver') {
+        return res.status(403).json({ error: "Caregivers cannot delete medications" });
+      }
+      
+      await storage.deleteMedication(req.params.id, familyId);
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      console.error("Error deleting medication:", error);
+      res.status(500).json({ error: "Failed to delete medication" });
+    }
+  });
+
+  // Medication Logs Routes
+  // Get logs for a medication
+  app.get("/api/medications/:medicationId/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const logs = await storage.getMedicationLogs(req.params.medicationId, familyId);
+      
+      // Enrich with administered by user info
+      const enrichedLogs = await Promise.all(logs.map(async (log) => {
+        const user = await storage.getUser(log.administeredBy);
+        return {
+          ...log,
+          administeredByUser: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            profileImageUrl: user.profileImageUrl,
+          } : null,
+        };
+      }));
+      
+      res.json(enrichedLogs);
+    } catch (error) {
+      console.error("Error fetching medication logs:", error);
+      res.status(500).json({ error: "Failed to fetch medication logs" });
+    }
+  });
+
+  // Get today's medication logs for the family
+  app.get("/api/medication-logs/today", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const logs = await storage.getTodaysMedicationLogs(familyId);
+      
+      // Enrich with medication and user info
+      const medications = await storage.getMedications(familyId);
+      const enrichedLogs = await Promise.all(logs.map(async (log) => {
+        const medication = medications.find(m => m.id === log.medicationId);
+        const user = await storage.getUser(log.administeredBy);
+        return {
+          ...log,
+          medication: medication ? { id: medication.id, name: medication.name, dosage: medication.dosage } : null,
+          administeredByUser: user ? {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            profileImageUrl: user.profileImageUrl,
+          } : null,
+        };
+      }));
+      
+      res.json(enrichedLogs);
+    } catch (error) {
+      console.error("Error fetching today's medication logs:", error);
+      res.status(500).json({ error: "Failed to fetch today's medication logs" });
+    }
+  });
+
+  // Log a medication dose (all roles can log)
+  app.post("/api/medications/:medicationId/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Verify the medication exists
+      const medication = await storage.getMedication(req.params.medicationId, familyId);
+      if (!medication) {
+        return res.status(404).json({ error: "Medication not found" });
+      }
+      
+      const logData = {
+        ...req.body,
+        medicationId: req.params.medicationId,
+        administeredBy: userId,
+        administeredAt: req.body.administeredAt || new Date(),
+      };
+      
+      const result = insertMedicationLogSchema.safeParse(logData);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+      
+      const log = await storage.createMedicationLog(familyId, result.data);
+      
+      // Enrich response
+      const user = await storage.getUser(log.administeredBy);
+      const enrichedLog = {
+        ...log,
+        medication: { id: medication.id, name: medication.name, dosage: medication.dosage },
+        administeredByUser: user ? {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          profileImageUrl: user.profileImageUrl,
+        } : null,
+      };
+      
+      res.status(201).json(enrichedLog);
+    } catch (error) {
+      console.error("Error logging medication:", error);
+      res.status(500).json({ error: "Failed to log medication" });
     }
   });
 
