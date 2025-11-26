@@ -4,13 +4,12 @@ import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { format, isToday, isYesterday, formatDistanceToNow, parseISO } from "date-fns";
+import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { 
   Send, 
   MessageCircle,
@@ -65,16 +64,48 @@ function shouldShowDateDivider(currentMsg: FamilyMessage, prevMsg: FamilyMessage
   return currentDate.toDateString() !== prevDate.toDateString();
 }
 
-function getRoleBadgeVariant(role: string): "default" | "secondary" | "outline" {
+function getInitials(firstName: string, lastName: string): string {
+  return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+}
+
+function getAvatarGradient(role: string): string {
   switch (role) {
-    case 'owner': return 'default';
-    case 'caregiver': return 'secondary';
-    default: return 'outline';
+    case 'owner':
+      return 'from-blue-500 to-indigo-600';
+    case 'member':
+      return 'from-purple-500 to-pink-500';
+    case 'caregiver':
+      return 'from-emerald-500 to-teal-600';
+    default:
+      return 'from-gray-500 to-gray-600';
   }
 }
 
-function getInitials(firstName: string, lastName: string): string {
-  return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
+function getMessageBubbleStyle(role: string): string {
+  switch (role) {
+    case 'caregiver':
+      return 'bg-emerald-500/20 border border-emerald-500/30 text-white';
+    default:
+      return 'bg-white/15 text-white';
+  }
+}
+
+function getRoleLabel(role: string): string {
+  switch (role) {
+    case 'owner': return 'Family Admin';
+    case 'member': return 'Family';
+    case 'caregiver': return 'Caregiver';
+    default: return role;
+  }
+}
+
+function getRoleLabelColor(role: string): string {
+  switch (role) {
+    case 'owner': return 'text-blue-300';
+    case 'member': return 'text-purple-300';
+    case 'caregiver': return 'text-emerald-300';
+    default: return 'text-white/60';
+  }
 }
 
 export default function Messages() {
@@ -219,66 +250,92 @@ export default function Messages() {
                 ) : (
                   sortedMessages.map((message, index) => {
                     const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
+                    const nextMessage = index < sortedMessages.length - 1 ? sortedMessages[index + 1] : null;
                     const isOwnMessage = message.authorUserId === user?.id;
                     const showDateDivider = shouldShowDateDivider(message, prevMessage);
-                    const showAvatar = !prevMessage || prevMessage.authorUserId !== message.authorUserId || showDateDivider;
+                    const isFirstInGroup = !prevMessage || prevMessage.authorUserId !== message.authorUserId || showDateDivider;
+                    const isLastInGroup = !nextMessage || nextMessage.authorUserId !== message.authorUserId || shouldShowDateDivider(nextMessage, message);
+                    const authorRole = message.author?.role || 'member';
+                    const isCaregiver = authorRole === 'caregiver';
 
                     return (
                       <div key={message.id}>
                         {showDateDivider && (
-                          <div className="flex items-center justify-center my-4">
-                            <div className="bg-white/10 px-3 py-1 rounded-full text-white/60 text-xs">
+                          <div className="flex items-center justify-center my-6">
+                            <div className="bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-white/70 text-xs font-medium shadow-sm">
                               {formatDateDivider(message.createdAt)}
                             </div>
                           </div>
                         )}
                         <div 
-                          className={`flex gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                          className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'} ${isFirstInGroup ? 'mt-4' : 'mt-0.5'}`}
                           data-testid={`message-${message.id}`}
                         >
-                          {!isOwnMessage && showAvatar && message.author && (
-                            <Avatar className="h-8 w-8 mt-1">
-                              {message.author.profileImageUrl && (
-                                <AvatarImage src={message.author.profileImageUrl} />
+                          {/* Avatar column - only show for others' messages */}
+                          {!isOwnMessage && (
+                            <div className="flex-shrink-0 w-9">
+                              {isLastInGroup && message.author ? (
+                                <Avatar className="h-9 w-9 ring-2 ring-white/20 shadow-lg">
+                                  {message.author.profileImageUrl && (
+                                    <AvatarImage src={message.author.profileImageUrl} />
+                                  )}
+                                  <AvatarFallback className={`bg-gradient-to-br ${getAvatarGradient(authorRole)} text-white text-xs font-semibold`}>
+                                    {getInitials(message.author.firstName, message.author.lastName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ) : (
+                                <div className="w-9" />
                               )}
-                              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xs">
-                                {getInitials(message.author.firstName, message.author.lastName)}
-                              </AvatarFallback>
-                            </Avatar>
+                            </div>
                           )}
-                          {!isOwnMessage && !showAvatar && (
-                            <div className="w-8" />
-                          )}
-                          <div className={`max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'} flex flex-col`}>
-                            {showAvatar && message.author && !isOwnMessage && (
-                              <div className="flex items-center gap-2 mb-1 px-1">
-                                <span className="text-white/80 text-sm font-medium">
-                                  {message.author.firstName} {message.author.lastName}
+
+                          {/* Message content */}
+                          <div className={`max-w-[75%] flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                            {/* Author name and role - only for first message in group from others */}
+                            {isFirstInGroup && message.author && !isOwnMessage && (
+                              <div className="flex items-center gap-2 mb-1.5 px-2">
+                                <span className="text-white/90 text-sm font-semibold">
+                                  {message.author.firstName}
                                 </span>
-                                <Badge 
-                                  variant={getRoleBadgeVariant(message.author.role)} 
-                                  className="text-xs py-0 px-1.5 h-4"
-                                >
-                                  {message.author.role}
-                                </Badge>
+                                <span className={`text-xs font-medium ${getRoleLabelColor(authorRole)}`}>
+                                  {getRoleLabel(authorRole)}
+                                </span>
                               </div>
                             )}
-                            <div className={`group relative rounded-2xl px-4 py-2.5 ${
+
+                            {/* Message bubble */}
+                            <div className={`group relative px-4 py-2.5 shadow-md ${
                               isOwnMessage 
-                                ? 'bg-blue-500 text-white rounded-br-md' 
-                                : 'bg-white/15 text-white rounded-bl-md'
+                                ? `bg-gradient-to-br from-blue-500 to-blue-600 text-white ${
+                                    isFirstInGroup && isLastInGroup ? 'rounded-2xl rounded-br-lg' :
+                                    isFirstInGroup ? 'rounded-2xl rounded-br-md' :
+                                    isLastInGroup ? 'rounded-2xl rounded-tr-md rounded-br-lg' :
+                                    'rounded-2xl rounded-r-md'
+                                  }`
+                                : `${getMessageBubbleStyle(authorRole)} ${
+                                    isFirstInGroup && isLastInGroup ? 'rounded-2xl rounded-bl-lg' :
+                                    isFirstInGroup ? 'rounded-2xl rounded-bl-md' :
+                                    isLastInGroup ? 'rounded-2xl rounded-tl-md rounded-bl-lg' :
+                                    'rounded-2xl rounded-l-md'
+                                  }`
                             }`}>
-                              <p className="text-sm whitespace-pre-wrap break-words" data-testid={`text-message-content-${message.id}`}>
+                              <p className="text-sm whitespace-pre-wrap break-words leading-relaxed" data-testid={`text-message-content-${message.id}`}>
                                 {message.content}
                               </p>
-                              <div className={`text-xs mt-1 ${isOwnMessage ? 'text-blue-100' : 'text-white/50'}`}>
+                              
+                              {/* Timestamp - show on last message of group or on hover */}
+                              <div className={`text-[10px] mt-1.5 transition-opacity ${
+                                isLastInGroup ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                              } ${isOwnMessage ? 'text-blue-100' : isCaregiver ? 'text-emerald-200/70' : 'text-white/50'}`}>
                                 {formatMessageTime(message.createdAt)}
                               </div>
+
+                              {/* Delete button for own messages */}
                               {canDeleteMessage(message) && (
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/80 hover:bg-red-500 text-white rounded-full"
+                                  className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity bg-red-500/90 hover:bg-red-600 text-white rounded-full shadow-lg"
                                   onClick={() => deleteMessageMutation.mutate(message.id)}
                                   data-testid={`button-delete-message-${message.id}`}
                                 >
