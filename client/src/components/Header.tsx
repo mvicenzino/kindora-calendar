@@ -1,4 +1,4 @@
-import { Search, User, Image } from "lucide-react";
+import { Search, User, Image, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
@@ -69,6 +69,16 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             
             {/* Mobile navigation buttons */}
             <div className="flex items-center gap-2 md:hidden">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white border border-white/50"
+                aria-label="Messages"
+                onClick={() => setLocation('/messages')}
+                data-testid="button-messages-mobile"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </Button>
               <Button
                 size="icon"
                 variant="ghost"
@@ -147,6 +157,16 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
 
           {/* Desktop navigation buttons */}
           <div className="hidden md:flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white border border-white/50"
+              aria-label="Messages"
+              onClick={() => setLocation('/messages')}
+              data-testid="button-messages-desktop"
+            >
+              <MessageCircle className="w-5 h-5" />
+            </Button>
             <Button
               size="icon"
               variant="ghost"
