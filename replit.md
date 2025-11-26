@@ -31,6 +31,25 @@ The application includes a threaded notes system for events:
 - **Features**: Add notes, reply to notes (threaded), delete own notes, view author info with timestamps
 - **Demo Data**: Sample notes in both family and eldercare calendars showcasing coordination between family members and caregivers
 
+### Caregiver Dashboard & Medication Tracking
+
+A dedicated caregiver portal with care-focused views and medication management:
+
+- **Route**: `/care` - Caregiver Dashboard page
+- **Schema**: `medications` table (name, dosage, frequency, scheduledTimes, instructions, memberId) and `medicationLogs` table (medicationId, administeredBy, scheduledTime, administeredAt, status, notes)
+- **API Routes**: 
+  - GET/POST `/api/medications` - List and create medications (owners/members only for create)
+  - GET/PUT/DELETE `/api/medications/:id` - Medication CRUD (owners/members only for modify)
+  - GET/POST `/api/medications/:id/logs` - View and log medication doses
+  - GET `/api/medication-logs/today` - Today's medication log history
+- **Frontend Components**: `CaregiverDashboard.tsx` with liquid glass design, featuring:
+  - Today's Care summary with event count, medical appointments, pending/given meds
+  - Medication Schedule card with dose logging buttons (Given, Skipped, Refused)
+  - Today's Schedule showing all events for the selected family
+  - Recent Activity feed showing medication log history
+- **Role-Based Permissions**: Caregivers can view medications and log doses; owners/members can create, edit, and delete medications
+- **Demo Data**: 5 sample medications for Dorothy (Mom's Care Calendar): Lisinopril, Metoprolol, Vitamin D3, Trazodone, Baby Aspirin with realistic dosages and schedules
+
 ## External Dependencies
 
 ### Third-Party UI Libraries

@@ -124,7 +124,7 @@ export default function CaregiverDashboard() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/medication-logs/today', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/medication-logs/today?familyId=' + activeFamilyId] });
       toast({
         title: "Medication logged",
         description: "The dose has been recorded successfully.",
