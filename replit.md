@@ -24,6 +24,20 @@ The application includes a fully-functional demo mode that allows users to exper
 
 ## Recent Changes (November 26, 2025)
 
+### Photo Upload Cache Invalidation Fix
+**Fixed bug where uploaded photos weren't displaying** after successful upload.
+
+**Root Cause**: Query key mismatch between event fetching and cache invalidation
+- Events query used: `['/api/events?familyId=' + activeFamilyId]`
+- Photo upload invalidation used: `['/api/events']` (didn't match!)
+
+**Solution**: Updated all photo-related mutations to use the correct family-scoped query key:
+- `FlipCardEventDetails.tsx` - upload and delete photo mutations
+- `EventDetailsDialog.tsx` - upload and delete photo mutations
+- `EventCard.tsx` - toggle completion and delete event mutations
+
+Now when a photo is uploaded, the events cache is properly invalidated and the new photo URL is fetched and displayed.
+
 ### Role Badge Display in ProfileMenu
 **Added visual role indicators** to help users understand access levels within their family calendar.
 

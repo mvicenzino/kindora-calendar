@@ -3,6 +3,7 @@ import { Check, Trash2, Clock, Image as ImageIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
@@ -28,13 +29,14 @@ export default function EventCard({
   className = ''
 }: EventCardProps) {
   const { toast } = useToast();
+  const { activeFamilyId } = useActiveFamily();
 
   const toggleCompletionMutation = useMutation({
     mutationFn: async () => {
       return await apiRequest('POST', `/api/events/${event.id}/toggle-completion`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
       toast({
         title: event.completed ? "Event marked incomplete" : "Event completed!",
         duration: 2000,
@@ -54,7 +56,7 @@ export default function EventCard({
       return await apiRequest('DELETE', `/api/events/${event.id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
       toast({
         title: "Event deleted",
         duration: 2000,

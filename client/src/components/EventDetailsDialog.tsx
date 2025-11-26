@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import type { UiEvent } from "@shared/types";
 
 interface EventDetailsDialogProps {
@@ -19,6 +20,7 @@ interface EventDetailsDialogProps {
 export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: EventDetailsDialogProps) {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { activeFamilyId } = useActiveFamily();
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -46,7 +48,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
       return await updateRes.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
       toast({
         title: "Photo added",
         description: "Your memory has been saved to this event.",
@@ -69,7 +71,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
       toast({
         title: "Photo removed",
         description: "The photo has been removed from this event.",

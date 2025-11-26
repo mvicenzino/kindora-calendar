@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import type { UiEvent } from "@shared/types";
 
 interface FlipCardEventDetailsProps {
@@ -21,6 +22,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const { activeFamilyId } = useActiveFamily();
   const isReadOnly = roleLoading || isCaregiver;
 
   // Defensive wrapper for onEdit to prevent programmatic invocation by caregivers
@@ -52,7 +54,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
       return await updateRes.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
       toast({
         title: "Photo added",
         description: "Your memory has been saved to this event.",
@@ -75,7 +77,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
       toast({
         title: "Photo removed",
         description: "The photo has been removed from this event.",
