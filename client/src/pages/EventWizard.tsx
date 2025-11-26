@@ -26,15 +26,27 @@ export default function EventWizard() {
     queryKey: ['/api/family-members'],
   });
 
-  // Form for creating event with validation (schema already extended in shared/schema.ts)
+  // Helper to get current time rounded to nearest 15 min
+  const getDefaultTimes = () => {
+    const now = new Date();
+    const minutes = now.getMinutes();
+    const roundedMinutes = Math.ceil(minutes / 15) * 15;
+    now.setMinutes(roundedMinutes, 0, 0);
+    const endDate = new Date(now.getTime() + 60 * 60 * 1000);
+    return { start: now, end: endDate };
+  };
+
+  const defaultTimes = getDefaultTimes();
+
+  // Form for creating event with validation
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
     defaultValues: {
       title: "",
       description: "",
-      memberId: "",
-      startTime: new Date(),
-      endTime: new Date(Date.now() + 60 * 60 * 1000), // 1 hour later
+      memberIds: [],
+      startTime: defaultTimes.start,
+      endTime: defaultTimes.end,
       color: "",
     },
   });
@@ -51,7 +63,17 @@ export default function EventWizard() {
   });
 
   const handleCreateEvent = async (data: InsertEvent) => {
-    const member = members.find(m => m.id === data.memberId);
+    const memberIds = data.memberIds || [];
+    if (memberIds.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select a family member",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const member = members.find(m => m.id === memberIds[0]);
     if (!member) {
       toast({
         title: "Error",
@@ -67,7 +89,7 @@ export default function EventWizard() {
         description: data.description || null,
         startTime: data.startTime,
         endTime: data.endTime,
-        memberId: member.id,
+        memberIds: memberIds,
         color: member.color,
       });
 
@@ -233,7 +255,11 @@ export default function EventWizard() {
                         className="bg-white/10 border-white/20 text-white placeholder:text-white/50 resize-none"
                         rows={3}
                         data-testid="input-event-description"
-                        {...field}
+                        value={field.value || ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
                       />
                     </FormControl>
                     <FormMessage className="text-red-400" />
@@ -243,12 +269,15 @@ export default function EventWizard() {
 
               <FormField
                 control={form.control}
-                name="memberId"
+                name="memberIds"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-white">Assign To</FormLabel>
                     <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select 
+                        value={field.value?.[0] || ""} 
+                        onValueChange={(value) => field.onChange([value])}
+                      >
                         <SelectTrigger 
                           className="bg-white/10 border-white/20 text-white"
                           data-testid="select-member"
