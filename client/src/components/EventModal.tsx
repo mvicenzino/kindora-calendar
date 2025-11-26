@@ -30,6 +30,20 @@ interface EventModalProps {
   selectedDate?: Date;
 }
 
+function getDefaultTimes() {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const roundedMinutes = Math.ceil(minutes / 15) * 15;
+  now.setMinutes(roundedMinutes, 0, 0);
+  
+  const endDate = new Date(now.getTime() + 60 * 60 * 1000);
+  
+  return {
+    start: format(now, 'HH:mm'),
+    end: format(endDate, 'HH:mm'),
+  };
+}
+
 export default function EventModal({
   isOpen,
   onClose,
@@ -42,13 +56,14 @@ export default function EventModal({
   const { isCaregiver, isLoading: roleLoading } = useUserRole();
   const isReadOnly = roleLoading || isCaregiver;
   const defaultDate = selectedDate || new Date();
+  const defaultTimes = getDefaultTimes();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [memberId, setMemberId] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
-  const [startTime, setStartTime] = useState('08:00');
-  const [endTime, setEndTime] = useState('09:00');
+  const [startTime, setStartTime] = useState(defaultTimes.start);
+  const [endTime, setEndTime] = useState(defaultTimes.end);
   const [isSometimeToday, setIsSometimeToday] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
@@ -82,12 +97,13 @@ export default function EventModal({
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
     } else {
-      // New event - set defaults
+      // New event - set defaults with current time rounded to nearest 15 min
+      const times = getDefaultTimes();
       setTitle("");
       setDescription("");
       setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-      setStartTime('08:00');
-      setEndTime('09:00');
+      setStartTime(times.start);
+      setEndTime(times.end);
       setIsSometimeToday(false);
       
       // Auto-select first member if available
