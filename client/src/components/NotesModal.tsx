@@ -187,10 +187,15 @@ export default function NotesModal({
                 
                 {canDelete && (
                   <Button
+                    type="button"
                     size="icon"
                     variant="ghost"
-                    onClick={() => deleteNoteMutation.mutate(note.id)}
-                    className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      deleteNoteMutation.mutate(note.id);
+                    }}
+                    className="h-6 w-6 text-muted-foreground"
                     disabled={deleteNoteMutation.isPending}
                     data-testid={`button-delete-note-${note.id}`}
                   >
@@ -206,7 +211,12 @@ export default function NotesModal({
               <div className="flex items-center gap-3 mt-2">
                 {!isReply && (
                   <button
-                    onClick={() => setReplyingTo(replyingTo === note.id ? null : note.id)}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setReplyingTo(replyingTo === note.id ? null : note.id);
+                    }}
                     className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     data-testid={`button-reply-note-${note.id}`}
                   >
@@ -217,7 +227,12 @@ export default function NotesModal({
                 
                 {hasReplies && !isReply && (
                   <button
-                    onClick={() => toggleThread(note.id)}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleThread(note.id);
+                    }}
                     className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
                     data-testid={`button-toggle-replies-${note.id}`}
                   >
@@ -250,8 +265,13 @@ export default function NotesModal({
                 data-testid={`input-reply-${note.id}`}
               />
               <Button
+                type="button"
                 size="icon"
-                onClick={() => handleSubmitReply(note.id)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSubmitReply(note.id);
+                }}
                 disabled={!replyContent.trim() || createNoteMutation.isPending}
                 className="h-[60px] w-10"
                 data-testid={`button-submit-reply-${note.id}`}
@@ -297,8 +317,13 @@ export default function NotesModal({
                   data-testid="input-new-note-modal"
                 />
                 <Button
+                  type="button"
                   size="icon"
-                  onClick={handleSubmitNote}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSubmitNote();
+                  }}
                   disabled={!newNote.trim() || createNoteMutation.isPending}
                   className="h-[70px] w-10"
                   data-testid="button-submit-note-modal"
