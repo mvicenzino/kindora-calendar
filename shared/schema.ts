@@ -90,6 +90,34 @@ export const eventNotes = pgTable("event_notes", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Medications table - tracks medications for care recipients
+export const medications = pgTable("medications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  memberId: varchar("member_id").notNull(), // The family member (care recipient) this medication is for
+  name: text("name").notNull(),
+  dosage: text("dosage").notNull(), // e.g., "10mg", "2 tablets"
+  frequency: text("frequency").notNull(), // e.g., "twice daily", "every 8 hours"
+  instructions: text("instructions"), // Special instructions like "take with food"
+  scheduledTimes: text("scheduled_times").array(), // Array of times like ["08:00", "20:00"]
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Medication Logs table - tracks when medications were administered
+export const medicationLogs = pgTable("medication_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  medicationId: varchar("medication_id").notNull(),
+  familyId: varchar("family_id").notNull(),
+  administeredBy: varchar("administered_by").notNull(), // User ID who logged the dose
+  scheduledTime: timestamp("scheduled_time"), // When it was supposed to be given
+  administeredAt: timestamp("administered_at").notNull(), // When it was actually given
+  status: varchar("status").notNull().default("given"), // 'given', 'skipped', 'refused'
+  notes: text("notes"), // Optional notes about the dose
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -140,6 +168,29 @@ export const insertEventNoteSchema = createInsertSchema(eventNotes).omit({
   content: z.string().min(1, "Note content is required").trim(),
 });
 
+export const insertMedicationSchema = createInsertSchema(medications).omit({
+  id: true,
+  familyId: true,
+  isActive: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  name: z.string().min(1, "Medication name is required").trim(),
+  dosage: z.string().min(1, "Dosage is required").trim(),
+  frequency: z.string().min(1, "Frequency is required").trim(),
+  scheduledTimes: z.array(z.string()).optional(),
+});
+
+export const insertMedicationLogSchema = createInsertSchema(medicationLogs).omit({
+  id: true,
+  familyId: true,
+  createdAt: true,
+}).extend({
+  status: z.enum(['given', 'skipped', 'refused']).default('given'),
+  administeredAt: z.coerce.date(),
+  scheduledTime: z.coerce.date().optional(),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -168,6 +219,14 @@ export type Message = typeof messages.$inferSelect;
 export type InsertEventNote = z.infer<typeof insertEventNoteSchema>;
 export type EventNote = typeof eventNotes.$inferSelect;
 
+// Medication types
+export type InsertMedication = z.infer<typeof insertMedicationSchema>;
+export type Medication = typeof medications.$inferSelect;
+
+// Medication Log types
+export type InsertMedicationLog = z.infer<typeof insertMedicationLogSchema>;
+export type MedicationLog = typeof medicationLogs.$inferSelect;
+
 // Role constants and utilities
 export const FAMILY_ROLES = {
   OWNER: 'owner',
@@ -190,6 +249,9 @@ export const ROLE_PERMISSIONS = {
     canInviteMembers: true,
     canViewMessages: true,
     canSendMessages: true,
+    canManageMedications: true,
+    canLogMedications: true,
+    canViewMedications: true,
   },
   [FAMILY_ROLES.MEMBER]: {
     canCreateEvents: true,
@@ -203,6 +265,9 @@ export const ROLE_PERMISSIONS = {
     canInviteMembers: true,
     canViewMessages: true,
     canSendMessages: true,
+    canManageMedications: true,
+    canLogMedications: true,
+    canViewMedications: true,
   },
   [FAMILY_ROLES.CAREGIVER]: {
     canCreateEvents: false,
@@ -216,5 +281,8 @@ export const ROLE_PERMISSIONS = {
     canInviteMembers: false,
     canViewMessages: true,
     canSendMessages: true,
+    canManageMedications: false,
+    canLogMedications: true,
+    canViewMedications: true,
   },
 } as const;

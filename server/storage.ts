@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, familyMembers, events, messages, users, families, familyMemberships, eventNotes } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
@@ -47,6 +47,19 @@ export interface IStorage {
   getEventNotes(eventId: string, familyId: string): Promise<EventNote[]>;
   createEventNote(familyId: string, note: InsertEventNote): Promise<EventNote>;
   deleteEventNote(id: string, familyId: string): Promise<void>;
+
+  // Medications
+  getMedications(familyId: string): Promise<Medication[]>;
+  getMedicationsByMember(memberId: string, familyId: string): Promise<Medication[]>;
+  getMedication(id: string, familyId: string): Promise<Medication | undefined>;
+  createMedication(familyId: string, medication: InsertMedication): Promise<Medication>;
+  updateMedication(id: string, familyId: string, updates: Partial<Medication>): Promise<Medication>;
+  deleteMedication(id: string, familyId: string): Promise<void>;
+
+  // Medication Logs
+  getMedicationLogs(medicationId: string, familyId: string): Promise<MedicationLog[]>;
+  getTodaysMedicationLogs(familyId: string): Promise<MedicationLog[]>;
+  createMedicationLog(familyId: string, log: InsertMedicationLog): Promise<MedicationLog>;
 }
 
 export class MemStorage implements IStorage {
@@ -57,6 +70,8 @@ export class MemStorage implements IStorage {
   private families: Map<string, Family>;
   private familyMemberships: Map<string, FamilyMembership>;
   private eventNotesMap: Map<string, EventNote>;
+  private medicationsMap: Map<string, Medication>;
+  private medicationLogsMap: Map<string, MedicationLog>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -66,6 +81,8 @@ export class MemStorage implements IStorage {
     this.families = new Map();
     this.familyMemberships = new Map();
     this.eventNotesMap = new Map();
+    this.medicationsMap = new Map();
+    this.medicationLogsMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -413,6 +430,98 @@ export class MemStorage implements IStorage {
       .filter(n => n.parentNoteId === id);
     replies.forEach(reply => this.eventNotesMap.delete(reply.id));
   }
+
+  // Medications
+  async getMedications(familyId: string): Promise<Medication[]> {
+    return Array.from(this.medicationsMap.values())
+      .filter(m => m.familyId === familyId && m.isActive);
+  }
+
+  async getMedicationsByMember(memberId: string, familyId: string): Promise<Medication[]> {
+    return Array.from(this.medicationsMap.values())
+      .filter(m => m.memberId === memberId && m.familyId === familyId && m.isActive);
+  }
+
+  async getMedication(id: string, familyId: string): Promise<Medication | undefined> {
+    const med = this.medicationsMap.get(id);
+    return med && med.familyId === familyId ? med : undefined;
+  }
+
+  async createMedication(familyId: string, insertMedication: InsertMedication): Promise<Medication> {
+    const id = randomUUID();
+    const medication: Medication = {
+      ...insertMedication,
+      id,
+      familyId,
+      instructions: insertMedication.instructions || null,
+      scheduledTimes: insertMedication.scheduledTimes || null,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.medicationsMap.set(id, medication);
+    return medication;
+  }
+
+  async updateMedication(id: string, familyId: string, updates: Partial<Medication>): Promise<Medication> {
+    const existing = this.medicationsMap.get(id);
+    if (!existing || existing.familyId !== familyId) {
+      throw new NotFoundError(`Medication with id ${id} not found`);
+    }
+    const updated: Medication = {
+      ...existing,
+      ...updates,
+      id,
+      familyId,
+      updatedAt: new Date(),
+    };
+    this.medicationsMap.set(id, updated);
+    return updated;
+  }
+
+  async deleteMedication(id: string, familyId: string): Promise<void> {
+    const med = this.medicationsMap.get(id);
+    if (!med || med.familyId !== familyId) {
+      throw new NotFoundError(`Medication with id ${id} not found`);
+    }
+    // Soft delete by setting isActive to false
+    this.medicationsMap.set(id, { ...med, isActive: false, updatedAt: new Date() });
+  }
+
+  // Medication Logs
+  async getMedicationLogs(medicationId: string, familyId: string): Promise<MedicationLog[]> {
+    return Array.from(this.medicationLogsMap.values())
+      .filter(l => l.medicationId === medicationId && l.familyId === familyId)
+      .sort((a, b) => new Date(b.administeredAt).getTime() - new Date(a.administeredAt).getTime());
+  }
+
+  async getTodaysMedicationLogs(familyId: string): Promise<MedicationLog[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return Array.from(this.medicationLogsMap.values())
+      .filter(l => {
+        const logDate = new Date(l.administeredAt);
+        return l.familyId === familyId && logDate >= today && logDate < tomorrow;
+      })
+      .sort((a, b) => new Date(b.administeredAt).getTime() - new Date(a.administeredAt).getTime());
+  }
+
+  async createMedicationLog(familyId: string, insertLog: InsertMedicationLog): Promise<MedicationLog> {
+    const id = randomUUID();
+    const log: MedicationLog = {
+      ...insertLog,
+      id,
+      familyId,
+      scheduledTime: insertLog.scheduledTime || null,
+      notes: insertLog.notes || null,
+      createdAt: new Date(),
+    };
+    this.medicationLogsMap.set(id, log);
+    return log;
+  }
 }
 
 // DrizzleStorage implementation
@@ -734,6 +843,80 @@ class DrizzleStorage implements IStorage {
       and(eq(eventNotes.id, id), eq(eventNotes.familyId, familyId))
     );
   }
+
+  // Medications
+  async getMedications(familyId: string): Promise<Medication[]> {
+    return await this.db.select().from(medications)
+      .where(and(eq(medications.familyId, familyId), eq(medications.isActive, true)));
+  }
+
+  async getMedicationsByMember(memberId: string, familyId: string): Promise<Medication[]> {
+    return await this.db.select().from(medications)
+      .where(and(
+        eq(medications.memberId, memberId),
+        eq(medications.familyId, familyId),
+        eq(medications.isActive, true)
+      ));
+  }
+
+  async getMedication(id: string, familyId: string): Promise<Medication | undefined> {
+    const result = await this.db.select().from(medications)
+      .where(and(eq(medications.id, id), eq(medications.familyId, familyId)));
+    return result[0];
+  }
+
+  async createMedication(familyId: string, insertMedication: InsertMedication): Promise<Medication> {
+    const result = await this.db.insert(medications).values({
+      ...insertMedication,
+      familyId,
+    }).returning();
+    return result[0];
+  }
+
+  async updateMedication(id: string, familyId: string, updates: Partial<Medication>): Promise<Medication> {
+    const result = await this.db.update(medications)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(eq(medications.id, id), eq(medications.familyId, familyId)))
+      .returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Medication with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async deleteMedication(id: string, familyId: string): Promise<void> {
+    // Soft delete
+    await this.db.update(medications)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(eq(medications.id, id), eq(medications.familyId, familyId)));
+  }
+
+  // Medication Logs
+  async getMedicationLogs(medicationId: string, familyId: string): Promise<MedicationLog[]> {
+    return await this.db.select().from(medicationLogs)
+      .where(and(
+        eq(medicationLogs.medicationId, medicationId),
+        eq(medicationLogs.familyId, familyId)
+      ))
+      .orderBy(desc(medicationLogs.administeredAt));
+  }
+
+  async getTodaysMedicationLogs(familyId: string): Promise<MedicationLog[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return await this.db.select().from(medicationLogs)
+      .where(eq(medicationLogs.familyId, familyId))
+      .orderBy(desc(medicationLogs.administeredAt));
+  }
+
+  async createMedicationLog(familyId: string, insertLog: InsertMedicationLog): Promise<MedicationLog> {
+    const result = await this.db.insert(medicationLogs).values({
+      ...insertLog,
+      familyId,
+    }).returning();
+    return result[0];
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -901,6 +1084,53 @@ class DemoAwareStorage implements IStorage {
   async deleteEventNote(id: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteEventNote(id, familyId);
+  }
+
+  // Medications
+  async getMedications(familyId: string): Promise<Medication[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getMedications(familyId);
+  }
+
+  async getMedicationsByMember(memberId: string, familyId: string): Promise<Medication[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getMedicationsByMember(memberId, familyId);
+  }
+
+  async getMedication(id: string, familyId: string): Promise<Medication | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getMedication(id, familyId);
+  }
+
+  async createMedication(familyId: string, medication: InsertMedication): Promise<Medication> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createMedication(familyId, medication);
+  }
+
+  async updateMedication(id: string, familyId: string, updates: Partial<Medication>): Promise<Medication> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateMedication(id, familyId, updates);
+  }
+
+  async deleteMedication(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteMedication(id, familyId);
+  }
+
+  // Medication Logs
+  async getMedicationLogs(medicationId: string, familyId: string): Promise<MedicationLog[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getMedicationLogs(medicationId, familyId);
+  }
+
+  async getTodaysMedicationLogs(familyId: string): Promise<MedicationLog[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getTodaysMedicationLogs(familyId);
+  }
+
+  async createMedicationLog(familyId: string, log: InsertMedicationLog): Promise<MedicationLog> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createMedicationLog(familyId, log);
   }
 }
 
