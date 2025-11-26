@@ -73,12 +73,12 @@ export default function CaregiverDashboard() {
   });
 
   const { data: medications = [] } = useQuery<MedicationWithMember[]>({
-    queryKey: ['/api/medications', activeFamilyId],
+    queryKey: ['/api/medications?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
   });
 
   const { data: todayLogs = [] } = useQuery<MedicationLog[]>({
-    queryKey: ['/api/medication-logs/today', activeFamilyId],
+    queryKey: ['/api/medication-logs/today?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
   });
 
