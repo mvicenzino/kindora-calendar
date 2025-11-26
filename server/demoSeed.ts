@@ -66,6 +66,13 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       avatar: null,
     });
 
+    // Add a caregiver to the family calendar - babysitter
+    const babysitter = await storage.createFamilyMember(familyId, {
+      name: "Jenny (Babysitter)",
+      color: "#F97316", // Orange - trusted caregiver
+      avatar: null,
+    });
+
     // Family events - mix of memories and upcoming activities
     const familyEvents = [
       // Past memories with photos
@@ -95,6 +102,16 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         memberIds: [son.id, mom.id, dad.id, daughter.id],
         color: son.color,
         photoUrl: FAMILY_PHOTOS.pianoRecital,
+      },
+      {
+        title: "Jenny Babysat - Anniversary Dinner",
+        description: "Jenny took the kids to the park and made dinner. Kids loved it! We had a wonderful anniversary dinner.",
+        startTime: setMinutes(setHours(subDays(today, 10), 17), 0),
+        endTime: setMinutes(setHours(subDays(today, 10), 22), 0),
+        memberIds: [babysitter.id, daughter.id, son.id],
+        color: babysitter.color,
+        photoUrl: null,
+        completed: true,
       },
 
       // Today's events
@@ -165,12 +182,12 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         photoUrl: null,
       },
       {
-        title: "Date Night",
-        description: "Babysitter confirmed! Trying that new Italian place downtown",
-        startTime: setMinutes(setHours(addDays(today, 5), 19), 0),
+        title: "Date Night - Jenny Babysitting",
+        description: "Jenny watching the kids! She'll do homework help and bedtime routine. Trying that new Italian place downtown.",
+        startTime: setMinutes(setHours(addDays(today, 5), 18), 0),
         endTime: setMinutes(setHours(addDays(today, 5), 23), 0),
-        memberIds: [mom.id, dad.id],
-        color: mom.color,
+        memberIds: [mom.id, dad.id, babysitter.id, daughter.id, son.id],
+        color: babysitter.color,
         photoUrl: null,
       },
       {
@@ -190,6 +207,15 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         memberIds: [mom.id, dad.id, daughter.id, son.id],
         color: dad.color,
         photoUrl: FAMILY_PHOTOS.beachDay,
+      },
+      {
+        title: "Jenny - After School Pickup",
+        description: "Jenny picking up both kids. Mom at work meeting. Snacks in pantry, homework before screen time!",
+        startTime: setMinutes(setHours(addDays(today, 8), 15), 0),
+        endTime: setMinutes(setHours(addDays(today, 8), 18), 0),
+        memberIds: [babysitter.id, daughter.id, son.id],
+        color: babysitter.color,
+        photoUrl: null,
       },
     ];
 
@@ -412,8 +438,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     }
 
     console.log(`✅ Demo account seeded:`);
-    console.log(`   📅 Anderson Family: ${familyEvents.length} events, 4 members`);
-    console.log(`   🏥 Mom's Care Calendar: ${careEvents.length} events, 5 members`);
+    console.log(`   📅 Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
+    console.log(`   🏥 Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
   } catch (error) {
