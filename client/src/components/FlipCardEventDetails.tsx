@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import type { UiEvent } from "@shared/types";
 
 interface FlipCardEventDetailsProps {
@@ -19,6 +20,8 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   const [isFlipped, setIsFlipped] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const isReadOnly = roleLoading || isCaregiver;
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -209,13 +212,15 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   >
                     <RotateCcw className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={onEdit}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
-                    data-testid="button-edit-event"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      onClick={onEdit}
+                      className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
+                      data-testid="button-edit-event"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={onClose}
                     className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
@@ -260,16 +265,18 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                       className="w-full rounded-xl object-cover max-h-80"
                       data-testid="event-photo"
                     />
-                    <button
-                      onClick={handleDeletePhoto}
-                      className="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-500/95 border border-white/40 flex items-center justify-center text-white hover:bg-red-600 transition-all shadow-lg"
-                      data-testid="button-delete-photo"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {!isReadOnly && (
+                      <button
+                        onClick={handleDeletePhoto}
+                        className="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-500/95 border border-white/40 flex items-center justify-center text-white hover:bg-red-600 transition-all shadow-lg"
+                        data-testid="button-delete-photo"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
-              ) : (
+              ) : !isReadOnly ? (
                 <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-center">
                   <Upload className="w-10 h-10 text-white/40 mx-auto mb-3" />
                   <p className="text-white/70 mb-4 text-sm">Add a photo to create a memory</p>
@@ -287,7 +294,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                     </span>
                   </label>
                 </div>
-              )}
+              ) : null}
 
               {/* Date & Time */}
               <div className="grid grid-cols-2 gap-2 md:gap-3">
@@ -319,18 +326,20 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-2 md:gap-3 pt-2">
-                <Button
-                  onClick={onEdit}
-                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white shadow-lg"
-                  data-testid="button-edit-bottom"
-                >
-                  <Edit2 className="w-4 h-4 mr-2" />
-                  Edit Event
-                </Button>
+                {!isReadOnly && (
+                  <Button
+                    onClick={onEdit}
+                    className="flex-1 bg-purple-500 hover:bg-purple-600 text-white shadow-lg"
+                    data-testid="button-edit-bottom"
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Edit Event
+                  </Button>
+                )}
                 <Button
                   onClick={onClose}
                   variant="outline"
-                  className="flex-1 border-white/40 text-white hover:bg-white/10 bg-white/5"
+                  className={`${!isReadOnly ? 'flex-1' : 'w-full'} border-white/40 text-white hover:bg-white/10 bg-white/5`}
                   data-testid="button-close-bottom"
                 >
                   Close
