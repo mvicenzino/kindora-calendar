@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Edit2, X, Upload, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import EventNotesSection from "./EventNotesSection";
 import type { UiEvent } from "@shared/types";
+import type { User } from "@shared/schema";
 
 interface EventDetailsDialogProps {
   isOpen: boolean;
@@ -21,6 +23,10 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { activeFamilyId } = useActiveFamily();
+
+  const { data: currentUser } = useQuery<User>({
+    queryKey: ['/api/auth/user'],
+  });
 
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -108,13 +114,13 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A]">
+      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] max-h-[90vh] flex flex-col">
         <DialogTitle className="sr-only">Event Details</DialogTitle>
         <DialogDescription className="sr-only">
-          View event details, photo memories, date and time
+          View event details, photo memories, date and time, and notes
         </DialogDescription>
         
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* Header */}
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-white">Event Details</h2>
@@ -225,6 +231,15 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
               </p>
             </div>
           </div>
+
+          {/* Notes Section */}
+          {event.id && activeFamilyId && (
+            <EventNotesSection
+              eventId={event.id}
+              familyId={activeFamilyId}
+              currentUserId={currentUser?.id}
+            />
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-3">

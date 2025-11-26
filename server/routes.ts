@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
-import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema } from "@shared/schema";
+import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
@@ -1266,6 +1266,128 @@ Visit Kindora Calendar: ${joinUrl}
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: "Failed to delete message" });
+    }
+  });
+
+  // Event Notes Routes (protected) - Threaded notes for family members and caregivers
+  app.get("/api/events/:eventId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      // Verify user is a member of this family
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const notes = await storage.getEventNotes(req.params.eventId, familyId);
+      
+      // Enrich notes with author information
+      const enrichedNotes = await Promise.all(notes.map(async (note) => {
+        const author = await storage.getUser(note.authorUserId);
+        return {
+          ...note,
+          author: author ? {
+            id: author.id,
+            firstName: author.firstName,
+            lastName: author.lastName,
+            profileImageUrl: author.profileImageUrl,
+          } : null,
+        };
+      }));
+      
+      res.json(enrichedNotes);
+    } catch (error) {
+      console.error("Error fetching event notes:", error);
+      res.status(500).json({ error: "Failed to fetch event notes" });
+    }
+  });
+
+  app.post("/api/events/:eventId/notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      // Verify user is a member of this family
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const noteData = {
+        ...req.body,
+        eventId: req.params.eventId,
+        authorUserId: userId,
+      };
+      
+      const result = insertEventNoteSchema.safeParse(noteData);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+      
+      const note = await storage.createEventNote(familyId, result.data);
+      
+      // Enrich with author information
+      const author = await storage.getUser(note.authorUserId);
+      const enrichedNote = {
+        ...note,
+        author: author ? {
+          id: author.id,
+          firstName: author.firstName,
+          lastName: author.lastName,
+          profileImageUrl: author.profileImageUrl,
+        } : null,
+      };
+      
+      res.status(201).json(enrichedNote);
+    } catch (error) {
+      console.error("Error creating event note:", error);
+      res.status(500).json({ error: "Failed to create event note" });
+    }
+  });
+
+  app.delete("/api/events/:eventId/notes/:noteId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      // Verify user is a member of this family
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only allow owner/member to delete notes, or the note author
+      const notes = await storage.getEventNotes(req.params.eventId, familyId);
+      const noteToDelete = notes.find(n => n.id === req.params.noteId);
+      
+      if (!noteToDelete) {
+        return res.status(404).json({ error: "Note not found" });
+      }
+      
+      // Allow deletion if user is the author or has owner/member role
+      if (noteToDelete.authorUserId !== userId && role === 'caregiver') {
+        return res.status(403).json({ error: "You can only delete your own notes" });
+      }
+      
+      await storage.deleteEventNote(req.params.noteId, familyId);
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      console.error("Error deleting event note:", error);
+      res.status(500).json({ error: "Failed to delete event note" });
     }
   });
 

@@ -219,9 +219,50 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       },
     ];
 
-    // Create all family events
+    // Create all family events and store IDs for adding notes
+    const createdFamilyEvents: Array<{ id: string; title: string }> = [];
     for (const event of familyEvents) {
-      await storage.createEvent(familyId, event);
+      const created = await storage.createEvent(familyId, event);
+      createdFamilyEvents.push({ id: created.id, title: created.title });
+    }
+
+    // Add demo notes to key family events
+    const soccerEvent = createdFamilyEvents.find(e => e.title.includes("Soccer Championship"));
+    const babysittingEvent = createdFamilyEvents.find(e => e.title.includes("Date Night"));
+    const basketballEvent = createdFamilyEvents.find(e => e.title.includes("Basketball Tournament"));
+
+    if (soccerEvent) {
+      const note1 = await storage.createEventNote(familyId, {
+        eventId: soccerEvent.id,
+        authorUserId: userId,
+        content: "Emma was amazing today! She was so calm under pressure. We should celebrate with her favorite dinner this weekend.",
+        parentNoteId: null,
+      });
+      
+      await storage.createEventNote(familyId, {
+        eventId: soccerEvent.id,
+        authorUserId: userId,
+        content: "Coach mentioned she might be team captain next season!",
+        parentNoteId: note1.id,
+      });
+    }
+
+    if (babysittingEvent) {
+      await storage.createEventNote(familyId, {
+        eventId: babysittingEvent.id,
+        authorUserId: userId,
+        content: "Jenny, the kids can have one hour of screen time after homework is done. Lucas needs to practice spelling words before bed. Thank you!",
+        parentNoteId: null,
+      });
+    }
+
+    if (basketballEvent) {
+      await storage.createEventNote(familyId, {
+        eventId: basketballEvent.id,
+        authorUserId: userId,
+        content: "Don't forget to pack the cooler with sports drinks and snacks. We need to be there by 8:30am for warmups.",
+        parentNoteId: null,
+      });
     }
 
     // ============================================
@@ -432,9 +473,57 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       },
     ];
 
-    // Create all care events
+    // Create all care events and store IDs for adding notes
+    const createdCareEvents: Array<{ id: string; title: string }> = [];
     for (const event of careEvents) {
-      await storage.createEvent(careFamilyId, event);
+      const created = await storage.createEvent(careFamilyId, event);
+      createdCareEvents.push({ id: created.id, title: created.title });
+    }
+
+    // Add demo notes to key care events - showing caregiver communication
+    const ptEvent = createdCareEvents.find(e => e.title === "Physical Therapy Session");
+    const medicationEvent = createdCareEvents.find(e => e.title === "Morning Medication");
+    const extendedCareEvent = createdCareEvents.find(e => e.title === "Maria - Extended Care Day");
+
+    if (ptEvent) {
+      const ptNote1 = await storage.createEventNote(careFamilyId, {
+        eventId: ptEvent.id,
+        authorUserId: userId,
+        content: "James mentioned Mom's balance has really improved! She's almost ready to try outdoor walking with supervision.",
+        parentNoteId: null,
+      });
+      
+      await storage.createEventNote(careFamilyId, {
+        eventId: ptEvent.id,
+        authorUserId: userId,
+        content: "David, can you join the next session? James wants to show both of us the exercises we can help Mom with at home.",
+        parentNoteId: ptNote1.id,
+      });
+    }
+
+    if (medicationEvent) {
+      await storage.createEventNote(careFamilyId, {
+        eventId: medicationEvent.id,
+        authorUserId: userId,
+        content: "Maria, please make sure Mom takes the heart medication with food, not on an empty stomach. Dr. Patel emphasized this during the last visit.",
+        parentNoteId: null,
+      });
+    }
+
+    if (extendedCareEvent) {
+      const careNote1 = await storage.createEventNote(careFamilyId, {
+        eventId: extendedCareEvent.id,
+        authorUserId: userId,
+        content: "Maria, thank you so much for covering the extended hours! Lunch is prepped in the fridge. Mom likes her afternoon tea around 3pm.",
+        parentNoteId: null,
+      });
+      
+      await storage.createEventNote(careFamilyId, {
+        eventId: extendedCareEvent.id,
+        authorUserId: userId,
+        content: "Also, Mom mentioned she'd like to call David around 2pm. His number is on the fridge. Thank you!",
+        parentNoteId: careNote1.id,
+      });
     }
 
     console.log(`✅ Demo account seeded:`);

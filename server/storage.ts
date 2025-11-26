@@ -1,7 +1,7 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, familyMembers, events, messages, users, families, familyMemberships } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, familyMembers, events, messages, users, families, familyMemberships, eventNotes } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, isNull, desc } from "drizzle-orm";
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -42,6 +42,11 @@ export interface IStorage {
   getMessages(eventId: string, familyId: string): Promise<Message[]>;
   createMessage(familyId: string, message: InsertMessage): Promise<Message>;
   deleteMessage(id: string, familyId: string): Promise<void>;
+
+  // Event Notes
+  getEventNotes(eventId: string, familyId: string): Promise<EventNote[]>;
+  createEventNote(familyId: string, note: InsertEventNote): Promise<EventNote>;
+  deleteEventNote(id: string, familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -51,6 +56,7 @@ export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private families: Map<string, Family>;
   private familyMemberships: Map<string, FamilyMembership>;
+  private eventNotesMap: Map<string, EventNote>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -59,6 +65,7 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.families = new Map();
     this.familyMemberships = new Map();
+    this.eventNotesMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -373,6 +380,39 @@ export class MemStorage implements IStorage {
     }
     this.messages.delete(id);
   }
+
+  // Event Notes
+  async getEventNotes(eventId: string, familyId: string): Promise<EventNote[]> {
+    return Array.from(this.eventNotesMap.values())
+      .filter(n => n.eventId === eventId && n.familyId === familyId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async createEventNote(familyId: string, insertNote: InsertEventNote): Promise<EventNote> {
+    const id = randomUUID();
+    const note: EventNote = {
+      ...insertNote,
+      id,
+      familyId,
+      parentNoteId: insertNote.parentNoteId || null,
+      createdAt: new Date(),
+    };
+    this.eventNotesMap.set(id, note);
+    return note;
+  }
+
+  async deleteEventNote(id: string, familyId: string): Promise<void> {
+    const note = this.eventNotesMap.get(id);
+    if (!note || note.familyId !== familyId) {
+      throw new NotFoundError(`Event note with id ${id} not found`);
+    }
+    this.eventNotesMap.delete(id);
+    
+    // Also delete all replies to this note
+    const replies = Array.from(this.eventNotesMap.values())
+      .filter(n => n.parentNoteId === id);
+    replies.forEach(reply => this.eventNotesMap.delete(reply.id));
+  }
 }
 
 // DrizzleStorage implementation
@@ -668,6 +708,32 @@ class DrizzleStorage implements IStorage {
       and(eq(messages.id, id), eq(messages.familyId, familyId))
     );
   }
+
+  // Event Notes
+  async getEventNotes(eventId: string, familyId: string): Promise<EventNote[]> {
+    return await this.db.select().from(eventNotes)
+      .where(and(eq(eventNotes.eventId, eventId), eq(eventNotes.familyId, familyId)))
+      .orderBy(eventNotes.createdAt);
+  }
+
+  async createEventNote(familyId: string, insertNote: InsertEventNote): Promise<EventNote> {
+    const result = await this.db.insert(eventNotes).values({
+      ...insertNote,
+      familyId,
+    }).returning();
+    return result[0];
+  }
+
+  async deleteEventNote(id: string, familyId: string): Promise<void> {
+    // First delete all replies to this note
+    await this.db.delete(eventNotes).where(
+      and(eq(eventNotes.parentNoteId, id), eq(eventNotes.familyId, familyId))
+    );
+    // Then delete the note itself
+    await this.db.delete(eventNotes).where(
+      and(eq(eventNotes.id, id), eq(eventNotes.familyId, familyId))
+    );
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -819,6 +885,22 @@ class DemoAwareStorage implements IStorage {
   async deleteMessage(id: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteMessage(id, familyId);
+  }
+
+  // Event Notes
+  async getEventNotes(eventId: string, familyId: string): Promise<EventNote[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getEventNotes(eventId, familyId);
+  }
+
+  async createEventNote(familyId: string, note: InsertEventNote): Promise<EventNote> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createEventNote(familyId, note);
+  }
+
+  async deleteEventNote(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteEventNote(id, familyId);
   }
 }
 

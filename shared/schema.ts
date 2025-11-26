@@ -79,6 +79,17 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Event Notes table - threaded notes for family members and caregivers
+export const eventNotes = pgTable("event_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  eventId: varchar("event_id").notNull(),
+  authorUserId: varchar("author_user_id").notNull(), // The logged-in user who wrote the note
+  parentNoteId: varchar("parent_note_id"), // For threaded replies, null if top-level note
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -121,6 +132,14 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   createdAt: true,
 });
 
+export const insertEventNoteSchema = createInsertSchema(eventNotes).omit({
+  id: true,
+  familyId: true,
+  createdAt: true,
+}).extend({
+  content: z.string().min(1, "Note content is required").trim(),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -144,6 +163,10 @@ export type Event = typeof events.$inferSelect;
 // Message types
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+// Event Note types
+export type InsertEventNote = z.infer<typeof insertEventNoteSchema>;
+export type EventNote = typeof eventNotes.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {
