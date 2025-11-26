@@ -1,4 +1,4 @@
-import { Copy, Search, User, Image, LogOut, Users } from "lucide-react";
+import { Search, User, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
@@ -67,6 +67,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               <FamilySelector />
             </div>
             
+            {/* Mobile navigation buttons */}
             <div className="flex items-center gap-2 md:hidden">
               <Button
                 size="icon"
@@ -77,16 +78,6 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 data-testid="button-memories-mobile"
               >
                 <Image className="w-5 h-5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50"
-                aria-label="Family Settings"
-                onClick={() => setLocation('/family')}
-                data-testid="button-family-mobile"
-              >
-                <Users className="w-5 h-5" />
               </Button>
               <Button
                 size="icon"
@@ -111,16 +102,6 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                   <User className="w-5 h-5" />
                 </Button>
               )}
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50"
-                aria-label="Sign out"
-                onClick={() => (window.location.href = "/api/logout")}
-                data-testid="button-logout-mobile"
-              >
-                <LogOut className="w-5 h-5" />
-              </Button>
             </div>
           </div>
           
@@ -164,6 +145,7 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             ))}
           </nav>
 
+          {/* Desktop navigation buttons */}
           <div className="hidden md:flex items-center gap-2">
             <Button
               size="icon"
@@ -174,16 +156,6 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
               data-testid="button-memories-desktop"
             >
               <Image className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/50"
-              aria-label="Family Settings"
-              onClick={() => setLocation('/family')}
-              data-testid="button-family-desktop"
-            >
-              <Users className="w-5 h-5" />
             </Button>
             <Button
               size="icon"
@@ -208,16 +180,6 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 <User className="w-5 h-5" />
               </Button>
             )}
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/50"
-              aria-label="Sign out"
-              onClick={() => (window.location.href = "/api/logout")}
-              data-testid="button-logout-desktop"
-            >
-              <LogOut className="w-5 h-5" />
-            </Button>
           </div>
         </div>
       </div>
