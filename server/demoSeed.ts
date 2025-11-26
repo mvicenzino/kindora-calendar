@@ -603,96 +603,329 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     }
 
     // ============================================
-    // FAMILY MESSAGES for both calendars
+    // FAMILY MESSAGES - Impressive Threaded Conversations
     // ============================================
 
-    // Family 1: Your Family messages - casual family coordination
-    const familyMessageSeed = [
-      {
-        authorUserId: userId,
-        content: "Don't forget - Emma has soccer practice at 3pm today! Can someone pick her up after?",
-        createdAt: subDays(today, 2),
-      },
-      {
-        authorUserId: userId,
-        content: "I can pick her up! I'll be done with work by 4:30.",
-        createdAt: subDays(today, 2),
-        parentMessageId: null,
-      },
-      {
-        authorUserId: userId,
-        content: "Perfect, thanks! I'll handle Lucas's piano lesson then.",
-        createdAt: subDays(today, 2),
-      },
-      {
-        authorUserId: userId,
-        content: "Reminder: Family movie night this Friday! Kids can each pick one movie option for voting.",
-        createdAt: subDays(today, 1),
-      },
-      {
-        authorUserId: userId,
-        content: "Lucas wants to watch the new animated space movie. Emma says she wants a mystery!",
-        createdAt: subDays(today, 1),
-      },
-      {
-        authorUserId: userId,
-        content: "How about we do space movie first, then mystery next week? Compromise!",
-        createdAt: subDays(today, 1),
-      },
-    ];
+    // Helper to create timestamps at specific hours on specific days
+    const msgTime = (daysAgo: number, hour: number, minute: number = 0) => 
+      setMinutes(setHours(subDays(today, daysAgo), hour), minute);
 
-    for (const msg of familyMessageSeed) {
-      await storage.createFamilyMessage(familyId, msg);
-    }
+    // ========================================
+    // FAMILY 1: Your Family - Kids & Activities
+    // Rich threaded conversations showing real family coordination
+    // ========================================
 
-    // Family 2: Mom's Care Calendar messages - care coordination
-    const careMessageSeed = [
-      {
-        authorUserId: userId,
-        content: "Hi everyone! Just a heads up - Mom mentioned she's been having some trouble sleeping. Maria, could you keep an eye on her energy levels during your visit tomorrow?",
-        createdAt: subDays(today, 3),
-      },
-      {
-        authorUserId: userId,
-        content: "Will do! I noticed she was a bit tired during PT yesterday. I'll check if she's been taking her Trazodone properly.",
-        createdAt: subDays(today, 3),
-      },
-      {
-        authorUserId: userId,
-        content: "Thanks Maria! Dr. Johnson said we can adjust the sleep medication if needed at the next appointment.",
-        createdAt: subDays(today, 2),
-      },
-      {
-        authorUserId: userId,
-        content: "Update: Mom seemed much more energetic today! She even wanted to go for a short walk in the garden. I think the new routine is helping.",
-        createdAt: subDays(today, 1),
-      },
-      {
-        authorUserId: userId,
-        content: "That's wonderful news! I'll bring her favorite flowers when I visit this weekend.",
-        createdAt: subDays(today, 1),
-      },
-      {
-        authorUserId: userId,
-        content: "Just a reminder - Mom has her cardiologist appointment Thursday at 2pm. Who can take her? I'm stuck at work.",
-        createdAt: today,
-      },
-      {
-        authorUserId: userId,
-        content: "I can take her! I'll pick her up at 1:30 to give us plenty of time.",
-        createdAt: today,
-      },
-    ];
+    // THREAD 1: Emergency pickup coordination (5 days ago)
+    const f1_thread1_root = await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Help! Just got called into an emergency meeting at 3pm. Can anyone grab the kids from school today?",
+      createdAt: msgTime(5, 14, 12),
+    });
 
-    for (const msg of careMessageSeed) {
-      await storage.createFamilyMessage(careFamilyId, msg);
-    }
+    const f1_t1_reply1 = await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "I'm wrapping up a client call but should be free by 3:15. I can head straight there!",
+      createdAt: msgTime(5, 14, 18),
+      parentMessageId: f1_thread1_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "You're a lifesaver! Emma has Math Club until 3:45 so just Lucas needs the early pickup. Emma can wait.",
+      createdAt: msgTime(5, 14, 22),
+      parentMessageId: f1_t1_reply1.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Got Lucas! We're getting frozen yogurt as a treat. I'll swing back for Emma at 3:45.",
+      createdAt: msgTime(5, 15, 28),
+      parentMessageId: f1_thread1_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Thank you SO much! Meeting ran until 4:30. You saved me today!",
+      createdAt: msgTime(5, 16, 45),
+      parentMessageId: f1_thread1_root.id,
+    });
+
+    // THREAD 2: Planning Lucas's birthday (3 days ago)
+    const f1_thread2_root = await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Lucas's birthday is coming up in 2 weeks! He wants a dinosaur-themed party. Should we do it at home or book a venue?",
+      createdAt: msgTime(3, 20, 15),
+    });
+
+    const f1_t2_reply1 = await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Home could work! The backyard is big enough for 10-12 kids. We could do a 'fossil dig' in the sandbox!",
+      createdAt: msgTime(3, 20, 32),
+      parentMessageId: f1_thread2_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "I love the fossil dig idea! I can make dinosaur-shaped cookies. What about games?",
+      createdAt: msgTime(3, 20, 45),
+      parentMessageId: f1_t2_reply1.id,
+    });
+
+    const f1_t2_reply2 = await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Found a party supply store that has inflatable T-Rex costumes for rent! The kids would go crazy!",
+      createdAt: msgTime(3, 21, 5),
+      parentMessageId: f1_thread2_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "OMG yes! Can you imagine Lucas's face? Let's book it. I'll handle the cake from that bakery he loves.",
+      createdAt: msgTime(3, 21, 12),
+      parentMessageId: f1_t2_reply2.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Jenny, would you be available to help out at the party? We could really use an extra set of hands!",
+      createdAt: msgTime(3, 21, 18),
+      parentMessageId: f1_thread2_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "I'd love to help! I can run the fossil dig station and keep the little ones organized.",
+      createdAt: msgTime(2, 9, 30),
+      parentMessageId: f1_thread2_root.id,
+    });
+
+    // THREAD 3: Emma's school project (2 days ago)
+    const f1_thread3_root = await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Emma just told me she has a solar system project due FRIDAY and needs supplies. Poster board, styrofoam balls, paint... Classic Emma timing!",
+      createdAt: msgTime(2, 19, 0),
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "I can stop by the craft store tomorrow morning before work. Text me the full list?",
+      createdAt: msgTime(2, 19, 8),
+      parentMessageId: f1_thread3_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Just sent it! Don't forget the glow-in-the-dark paint - apparently Saturn NEEDS to glow.",
+      createdAt: msgTime(2, 19, 15),
+      parentMessageId: f1_thread3_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Got everything! They even had a solar system kit that comes with pre-sized planets. Emma is going to crush this project!",
+      createdAt: msgTime(1, 10, 45),
+      parentMessageId: f1_thread3_root.id,
+    });
+
+    // THREAD 4: Today's coordination
+    const f1_thread4_root = await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Quick check-in: Who has the kids this afternoon? My schedule is chaos.",
+      createdAt: msgTime(0, 8, 30),
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "I've got Lucas's soccer practice covered. Picking him up at 3 and practice is until 5.",
+      createdAt: msgTime(0, 8, 35),
+      parentMessageId: f1_thread4_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Perfect! I'll work from home so I can be here when Emma finishes her project. She said she just needs help with the Saturn rings.",
+      createdAt: msgTime(0, 8, 42),
+      parentMessageId: f1_thread4_root.id,
+    });
+
+    await storage.createFamilyMessage(familyId, {
+      authorUserId: userId,
+      content: "Team effort! Don't forget we're doing dinner at Grandma Dorothy's on Sunday - she's excited to see the kids.",
+      createdAt: msgTime(0, 8, 50),
+      parentMessageId: f1_thread4_root.id,
+    });
+
+    // ========================================
+    // FAMILY 2: Mom's Care Calendar - Eldercare
+    // Professional yet warm caregiving coordination
+    // ========================================
+
+    // THREAD 1: Sleep concerns - multi-day professional coordination (4 days ago)
+    const c1_thread1_root = await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Team update: Mom mentioned she's been having trouble sleeping again. She said she's been waking up around 2am and can't get back to sleep. Anyone else noticing changes in her energy levels?",
+      createdAt: msgTime(4, 9, 0),
+    });
+
+    const c1_t1_reply1 = await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "I noticed that during yesterday's PT session. She seemed more fatigued than usual by the end. Her balance was still good but I could tell she was working harder.",
+      createdAt: msgTime(4, 10, 15),
+      parentMessageId: c1_thread1_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "James, that's really helpful context. I wonder if we should check if her evening medication timing is off.",
+      createdAt: msgTime(4, 10, 30),
+      parentMessageId: c1_t1_reply1.id,
+    });
+
+    const c1_t1_reply2 = await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "I checked the med log - she's been taking the Trazodone consistently at 9pm. Maybe it's the timing? I've read it works better if taken 30-45 min before intended sleep.",
+      createdAt: msgTime(4, 11, 0),
+      parentMessageId: c1_thread1_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Great catch Maria! Let's try 9:30pm instead and see if that helps. I'll update the care notes.",
+      createdAt: msgTime(4, 11, 15),
+      parentMessageId: c1_t1_reply2.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "I called to check on her last night around 8pm and she sounded more relaxed than usual. She said Maria made her favorite chamomile tea. Small things make such a difference!",
+      createdAt: msgTime(3, 8, 30),
+      parentMessageId: c1_thread1_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Update: Mom slept through the night last night! First time in a week. The adjusted timing seems to be working. I'll keep monitoring.",
+      createdAt: msgTime(2, 7, 45),
+      parentMessageId: c1_thread1_root.id,
+    });
+
+    // THREAD 2: Celebrating PT milestone (2 days ago)
+    const c1_thread2_root = await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Everyone! Huge milestone today - Mom walked to the mailbox and back completely independently! No walker, just me spotting her. She was SO proud of herself!",
+      createdAt: msgTime(2, 15, 30),
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "That's AMAZING! All those balance exercises are paying off. I'm so proud of her dedication.",
+      createdAt: msgTime(2, 15, 45),
+      parentMessageId: c1_thread2_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Way to go Dorothy! I'm bringing extra flowers this weekend to celebrate. She's worked so hard for this!",
+      createdAt: msgTime(2, 16, 0),
+      parentMessageId: c1_thread2_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "She told me she wants to walk to the garden next. Small goals leading to big victories! This team effort is really making a difference.",
+      createdAt: msgTime(2, 16, 20),
+      parentMessageId: c1_thread2_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "I showed her the messages and she got a little teary. She said 'I have the best team.' We really do work well together!",
+      createdAt: msgTime(2, 18, 0),
+      parentMessageId: c1_thread2_root.id,
+    });
+
+    // THREAD 3: Upcoming cardiology appointment coordination (yesterday)
+    const c1_thread3_root = await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Reminder: Mom's cardiologist appointment is Thursday at 2pm with Dr. Patel. Who can take her? I have a work conflict I can't move.",
+      createdAt: msgTime(1, 9, 0),
+    });
+
+    const c1_t3_reply1 = await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "I can take her! I'll pick her up at 1:15 to give us plenty of time. Should I bring the blood pressure log from the past month?",
+      createdAt: msgTime(1, 9, 30),
+      parentMessageId: c1_thread3_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Yes please! I've been tracking it on the fridge chart. There's also a list of questions I wanted to ask - it's in the blue folder on her kitchen table.",
+      createdAt: msgTime(1, 9, 45),
+      parentMessageId: c1_t3_reply1.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "I'll compile my PT progress notes too. Dr. Patel should know about her improved mobility - it might affect her medication needs.",
+      createdAt: msgTime(1, 10, 15),
+      parentMessageId: c1_thread3_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "This is why I love this group - we come prepared! David, can you send a quick summary after the appointment? I'll be in meetings but want to know how it goes.",
+      createdAt: msgTime(1, 10, 30),
+      parentMessageId: c1_thread3_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Absolutely! I'll do a full recap. Also planning to take her to her favorite café after for a treat. She's been talking about their apple strudel all week!",
+      createdAt: msgTime(1, 10, 45),
+      parentMessageId: c1_thread3_root.id,
+    });
+
+    // THREAD 4: Today - Weekend planning and family visit
+    const c1_thread4_root = await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Sunday family dinner planning! The grandkids are SO excited to see Dorothy. What should I bring? I'm thinking her favorite apple pie plus something for the kids.",
+      createdAt: msgTime(0, 8, 0),
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Apple pie is perfect! Mom's been asking about Emma's solar system project - maybe she could bring it to show Grandma?",
+      createdAt: msgTime(0, 8, 15),
+      parentMessageId: c1_thread4_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "Great idea! Emma would love that. Lucas wants to play cards with Grandma again - she taught him Go Fish last time and he's been practicing!",
+      createdAt: msgTime(0, 8, 25),
+      parentMessageId: c1_thread4_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "I'll make sure Dorothy is well-rested on Sunday morning. These family visits really lift her spirits - she talks about them all week!",
+      createdAt: msgTime(0, 9, 0),
+      parentMessageId: c1_thread4_root.id,
+    });
+
+    await storage.createFamilyMessage(careFamilyId, {
+      authorUserId: userId,
+      content: "This is what it's all about. Three generations together, good food, and lots of love. Can't wait!",
+      createdAt: msgTime(0, 9, 15),
+      parentMessageId: c1_thread4_root.id,
+    });
 
     console.log(`Demo account seeded:`);
     console.log(`   Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
     console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
     console.log(`   Medications: ${medications.length} meds tracked for Dorothy`);
-    console.log(`   Family Messages: ${familyMessageSeed.length + careMessageSeed.length} messages for coordination`);
+    console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
   } catch (error) {

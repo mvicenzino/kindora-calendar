@@ -77,7 +77,21 @@ export async function setupAuth(app: Express) {
   ) => {
     const user = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
+    const claims = tokens.claims();
+    if (claims) {
+      await upsertUser(claims);
+      
+      // Seed demo account if this is a demo user (for testing)
+      const userId = String(claims["sub"]);
+      if (userId.startsWith("demo-")) {
+        try {
+          await seedDemoAccount(storage, userId);
+        } catch (error) {
+          console.log("Demo seeding (may already be seeded):", error);
+        }
+      }
+    }
+    
     verified(null, user);
   };
 

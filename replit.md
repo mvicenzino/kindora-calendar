@@ -33,13 +33,13 @@ The application includes a threaded notes system for events:
 
 ### Global Family Messaging
 
-A real-time messaging system for family coordination:
+A real-time messaging system for family coordination with threading support:
 
 - **Route**: `/messages` - Family Messages page
-- **Schema**: `familyMessages` table with `familyId`, `authorUserId`, `content`, `createdAt`, and `parentMessageId` for threading support
+- **Schema**: `familyMessages` table with `familyId`, `authorUserId`, `content`, `parentMessageId` (for threading), and `createdAt`
 - **API Routes**: 
   - GET `/api/family-messages?familyId=X` - Fetch all messages for a family
-  - POST `/api/family-messages` - Send a new message
+  - POST `/api/family-messages` - Send a new message (with optional parentMessageId for replies)
   - DELETE `/api/family-messages/:id?familyId=X` - Delete own messages
 - **Frontend Components**: `Messages.tsx` with Messenger-style UI featuring:
   - Liquid glass design consistent with app theme
@@ -50,7 +50,17 @@ A real-time messaging system for family coordination:
   - Delete functionality for own messages
 - **Role-Based Permissions**: All family roles (owner, member, caregiver) can view and send messages
 - **Navigation**: Message icon in header (both mobile and desktop)
-- **Demo Data**: Sample conversations in both family calendars showing coordination
+- **Demo Data**: 37 threaded messages across 8 conversation threads showcasing realistic family coordination:
+  - **Your Family Calendar** (4 threads):
+    1. Emergency pickup coordination - scrambling to cover when a meeting runs late
+    2. Lucas's dinosaur birthday party planning - fossil dig, T-Rex costumes, bakery cake
+    3. Emma's solar system school project - craft store runs and Saturn's glowing rings
+    4. Daily afternoon schedule coordination - soccer practice, homework help
+  - **Mom's Care Calendar** (4 threads):
+    1. Sleep concerns - multi-day professional coordination adjusting medication timing
+    2. PT milestone celebration - walking to mailbox independently
+    3. Cardiology appointment prep - blood pressure logs, care handoff notes
+    4. Sunday family dinner planning - three generations together
 
 ### Caregiver Dashboard & Medication Tracking
 

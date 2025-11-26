@@ -124,6 +124,7 @@ export const familyMessages = pgTable("family_messages", {
   familyId: varchar("family_id").notNull(),
   authorUserId: varchar("author_user_id").notNull(), // The logged-in user who sent the message
   content: text("content").notNull(),
+  parentMessageId: varchar("parent_message_id"), // For threading - references parent message id
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

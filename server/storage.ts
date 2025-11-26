@@ -63,7 +63,7 @@ export interface IStorage {
 
   // Family Messages (global conversation thread)
   getFamilyMessages(familyId: string): Promise<FamilyMessage[]>;
-  createFamilyMessage(familyId: string, message: InsertFamilyMessage): Promise<FamilyMessage>;
+  createFamilyMessage(familyId: string, message: InsertFamilyMessage & { createdAt?: Date }): Promise<FamilyMessage>;
   deleteFamilyMessage(id: string, familyId: string): Promise<void>;
 }
 
@@ -537,13 +537,15 @@ export class MemStorage implements IStorage {
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }
 
-  async createFamilyMessage(familyId: string, insertMessage: InsertFamilyMessage): Promise<FamilyMessage> {
+  async createFamilyMessage(familyId: string, insertMessage: InsertFamilyMessage & { createdAt?: Date }): Promise<FamilyMessage> {
     const id = randomUUID();
     const message: FamilyMessage = {
-      ...insertMessage,
       id,
       familyId,
-      createdAt: new Date(),
+      authorUserId: insertMessage.authorUserId,
+      content: insertMessage.content,
+      parentMessageId: insertMessage.parentMessageId ?? null,
+      createdAt: insertMessage.createdAt || new Date(),
     };
     this.familyMessagesMap.set(id, message);
     return message;
@@ -959,7 +961,7 @@ class DrizzleStorage implements IStorage {
       .orderBy(familyMessages.createdAt);
   }
 
-  async createFamilyMessage(familyId: string, insertMessage: InsertFamilyMessage): Promise<FamilyMessage> {
+  async createFamilyMessage(familyId: string, insertMessage: InsertFamilyMessage & { createdAt?: Date }): Promise<FamilyMessage> {
     const result = await this.db.insert(familyMessages).values({
       ...insertMessage,
       familyId,
@@ -1194,7 +1196,7 @@ class DemoAwareStorage implements IStorage {
     return storage.getFamilyMessages(familyId);
   }
 
-  async createFamilyMessage(familyId: string, message: InsertFamilyMessage): Promise<FamilyMessage> {
+  async createFamilyMessage(familyId: string, message: InsertFamilyMessage & { createdAt?: Date }): Promise<FamilyMessage> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.createFamilyMessage(familyId, message);
   }
