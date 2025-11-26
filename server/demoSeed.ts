@@ -602,10 +602,97 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       });
     }
 
-    console.log(`✅ Demo account seeded:`);
-    console.log(`   📅 Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
-    console.log(`   🏥 Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
-    console.log(`   💊 Medications: ${medications.length} meds tracked for Dorothy`);
+    // ============================================
+    // FAMILY MESSAGES for both calendars
+    // ============================================
+
+    // Family 1: Your Family messages - casual family coordination
+    const familyMessageSeed = [
+      {
+        authorUserId: userId,
+        content: "Don't forget - Emma has soccer practice at 3pm today! Can someone pick her up after?",
+        createdAt: subDays(today, 2),
+      },
+      {
+        authorUserId: userId,
+        content: "I can pick her up! I'll be done with work by 4:30.",
+        createdAt: subDays(today, 2),
+        parentMessageId: null,
+      },
+      {
+        authorUserId: userId,
+        content: "Perfect, thanks! I'll handle Lucas's piano lesson then.",
+        createdAt: subDays(today, 2),
+      },
+      {
+        authorUserId: userId,
+        content: "Reminder: Family movie night this Friday! Kids can each pick one movie option for voting.",
+        createdAt: subDays(today, 1),
+      },
+      {
+        authorUserId: userId,
+        content: "Lucas wants to watch the new animated space movie. Emma says she wants a mystery!",
+        createdAt: subDays(today, 1),
+      },
+      {
+        authorUserId: userId,
+        content: "How about we do space movie first, then mystery next week? Compromise!",
+        createdAt: subDays(today, 1),
+      },
+    ];
+
+    for (const msg of familyMessageSeed) {
+      await storage.createFamilyMessage(familyId, msg);
+    }
+
+    // Family 2: Mom's Care Calendar messages - care coordination
+    const careMessageSeed = [
+      {
+        authorUserId: userId,
+        content: "Hi everyone! Just a heads up - Mom mentioned she's been having some trouble sleeping. Maria, could you keep an eye on her energy levels during your visit tomorrow?",
+        createdAt: subDays(today, 3),
+      },
+      {
+        authorUserId: userId,
+        content: "Will do! I noticed she was a bit tired during PT yesterday. I'll check if she's been taking her Trazodone properly.",
+        createdAt: subDays(today, 3),
+      },
+      {
+        authorUserId: userId,
+        content: "Thanks Maria! Dr. Johnson said we can adjust the sleep medication if needed at the next appointment.",
+        createdAt: subDays(today, 2),
+      },
+      {
+        authorUserId: userId,
+        content: "Update: Mom seemed much more energetic today! She even wanted to go for a short walk in the garden. I think the new routine is helping.",
+        createdAt: subDays(today, 1),
+      },
+      {
+        authorUserId: userId,
+        content: "That's wonderful news! I'll bring her favorite flowers when I visit this weekend.",
+        createdAt: subDays(today, 1),
+      },
+      {
+        authorUserId: userId,
+        content: "Just a reminder - Mom has her cardiologist appointment Thursday at 2pm. Who can take her? I'm stuck at work.",
+        createdAt: today,
+      },
+      {
+        authorUserId: userId,
+        content: "I can take her! I'll pick her up at 1:30 to give us plenty of time.",
+        createdAt: today,
+      },
+    ];
+
+    for (const msg of careMessageSeed) {
+      await storage.createFamilyMessage(careFamilyId, msg);
+    }
+
+    console.log(`Demo account seeded:`);
+    console.log(`   Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
+    console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
+    console.log(`   Medications: ${medications.length} meds tracked for Dorothy`);
+    console.log(`   Family Messages: ${familyMessageSeed.length + careMessageSeed.length} messages for coordination`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
   } catch (error) {
