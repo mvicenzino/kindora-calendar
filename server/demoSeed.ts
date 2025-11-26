@@ -526,9 +526,86 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       });
     }
 
+    // ============================================
+    // MEDICATIONS for Mom's Care Calendar
+    // ============================================
+    
+    // Create medications for Dorothy (Mom)
+    const medications = [
+      {
+        memberId: grandma.id,
+        name: "Lisinopril",
+        dosage: "10mg",
+        frequency: "Once daily",
+        scheduledTimes: ["08:00"],
+        instructions: "Take with breakfast. Monitor blood pressure weekly.",
+        isActive: true,
+      },
+      {
+        memberId: grandma.id,
+        name: "Metoprolol",
+        dosage: "25mg",
+        frequency: "Twice daily",
+        scheduledTimes: ["08:00", "18:00"],
+        instructions: "Heart medication - must take with food, not on empty stomach.",
+        isActive: true,
+      },
+      {
+        memberId: grandma.id,
+        name: "Vitamin D3",
+        dosage: "2000 IU",
+        frequency: "Once daily",
+        scheduledTimes: ["08:00"],
+        instructions: "Take with breakfast for better absorption.",
+        isActive: true,
+      },
+      {
+        memberId: grandma.id,
+        name: "Trazodone",
+        dosage: "50mg",
+        frequency: "As needed",
+        scheduledTimes: ["21:00"],
+        instructions: "Sleep aid - take 30 minutes before bed if having trouble sleeping.",
+        isActive: true,
+      },
+      {
+        memberId: grandma.id,
+        name: "Baby Aspirin",
+        dosage: "81mg",
+        frequency: "Once daily",
+        scheduledTimes: ["12:00"],
+        instructions: "Take with lunch. Heart health maintenance.",
+        isActive: true,
+      },
+    ];
+
+    // Create all medications
+    const createdMedications: Array<{ id: string; name: string }> = [];
+    for (const med of medications) {
+      const created = await storage.createMedication(careFamilyId, med);
+      createdMedications.push({ id: created.id, name: created.name });
+    }
+
+    // Log some sample medication administrations for today's morning meds
+    const morningMeds = createdMedications.filter(m => 
+      m.name === "Lisinopril" || m.name === "Metoprolol" || m.name === "Vitamin D3"
+    );
+    
+    for (const med of morningMeds) {
+      await storage.createMedicationLog(careFamilyId, {
+        medicationId: med.id,
+        administeredBy: userId, // Demo user gave meds this morning
+        scheduledTime: setMinutes(setHours(today, 8), 0),
+        administeredAt: setMinutes(setHours(today, 8), 15), // Gave 15 min after scheduled
+        status: "given",
+        notes: med.name === "Metoprolol" ? "Given with oatmeal as instructed" : undefined,
+      });
+    }
+
     console.log(`✅ Demo account seeded:`);
     console.log(`   📅 Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
     console.log(`   🏥 Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
+    console.log(`   💊 Medications: ${medications.length} meds tracked for Dorothy`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
   } catch (error) {
