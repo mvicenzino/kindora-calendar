@@ -528,7 +528,7 @@ class DrizzleStorage implements IStorage {
       .innerJoin(users, eq(familyMemberships.userId, users.id))
       .where(eq(familyMemberships.familyId, familyId));
     
-    return result.map(row => ({
+    return result.map((row: { membership: FamilyMembership; user: User }) => ({
       ...row.membership,
       user: row.user
     }));
