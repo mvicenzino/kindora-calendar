@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import { Check, Trash2, Clock, Image as ImageIcon, MessageSquare } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import NotesModal from "@/components/NotesModal";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
 interface EventCardProps {
@@ -30,6 +33,8 @@ export default function EventCard({
 }: EventCardProps) {
   const { toast } = useToast();
   const { activeFamilyId } = useActiveFamily();
+  const { user } = useAuth();
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
 
   const toggleCompletionMutation = useMutation({
     mutationFn: async () => {
@@ -191,15 +196,19 @@ export default function EventCard({
 
         {/* Bottom Row: Notes Indicator (left) and Member Avatars (right) */}
         <div className="flex justify-between items-center gap-2">
-          {/* Notes Indicator - Lower Left */}
+          {/* Notes Indicator - Lower Left (Clickable) */}
           {(event.noteCount ?? 0) > 0 ? (
-            <span 
-              className="flex items-center gap-1 text-white/80"
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setNotesModalOpen(true);
+              }}
+              className="flex items-center gap-1 text-white/80 hover:text-white hover:bg-white/20 rounded-full px-2 py-1 transition-all"
               data-testid={`notes-indicator-${event.id}`}
             >
               <MessageSquare className="w-4 h-4" />
               <span className="text-sm font-medium">{event.noteCount}</span>
-            </span>
+            </button>
           ) : (
             <div />
           )}
@@ -242,6 +251,16 @@ export default function EventCard({
           )}
         </div>
       </div>
+
+      {/* Notes Modal */}
+      <NotesModal
+        open={notesModalOpen}
+        onOpenChange={setNotesModalOpen}
+        eventId={event.id}
+        eventTitle={event.title}
+        familyId={activeFamilyId || ''}
+        currentUserId={user?.id}
+      />
     </div>
   );
 }
