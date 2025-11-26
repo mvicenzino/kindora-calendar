@@ -23,6 +23,7 @@ export interface IStorage {
   getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined>;
   joinFamily(userId: string, inviteCode: string, role?: string): Promise<FamilyMembership>;
   getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined>;
+  getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>>;
   getFamilyMembers(familyId: string): Promise<FamilyMember[]>;
   getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined>;
   createFamilyMember(familyId: string, member: InsertFamilyMember): Promise<FamilyMember>;
@@ -173,6 +174,19 @@ export class MemStorage implements IStorage {
   async getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined> {
     return Array.from(this.familyMemberships.values())
       .find(m => m.userId === userId && m.familyId === familyId);
+  }
+
+  async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
+    const memberships = Array.from(this.familyMemberships.values())
+      .filter(m => m.familyId === familyId);
+    
+    return memberships.map(membership => {
+      const user = this.users.get(membership.userId);
+      if (!user) {
+        throw new Error(`User ${membership.userId} not found`);
+      }
+      return { ...membership, user };
+    });
   }
 
   async getUserFamilies(userId: string): Promise<Family[]> {
@@ -504,6 +518,22 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
+  async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
+    const result = await this.db
+      .select({
+        membership: familyMemberships,
+        user: users
+      })
+      .from(familyMemberships)
+      .innerJoin(users, eq(familyMemberships.userId, users.id))
+      .where(eq(familyMemberships.familyId, familyId));
+    
+    return result.map(row => ({
+      ...row.membership,
+      user: row.user
+    }));
+  }
+
   async getUserFamilies(userId: string): Promise<Family[]> {
     const memberships = await this.db.select().from(familyMemberships)
       .where(eq(familyMemberships.userId, userId));
@@ -711,6 +741,11 @@ class DemoAwareStorage implements IStorage {
   async getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.getUserFamilyMembership(userId, familyId);
+  }
+
+  async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getFamilyMembershipsWithUsers(familyId);
   }
 
   // Family Members

@@ -135,6 +135,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all members (users with roles) for a family
+  app.get("/api/family/:familyId/members", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.params.familyId;
+      
+      // Verify user is a member of this family
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const membershipsWithUsers = await storage.getFamilyMembershipsWithUsers(familyId);
+      res.json(membershipsWithUsers);
+    } catch (error) {
+      console.error("Error fetching family members:", error);
+      res.status(500).json({ error: "Failed to fetch family members" });
+    }
+  });
+
   app.post("/api/family/send-invite", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
