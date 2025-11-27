@@ -329,6 +329,9 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // Add family members and caregivers to Mom's Care Calendar
     await storage.addUserToFamily(davidId, careFamilyId, "member");
     await storage.addUserToFamily(mayaId, careFamilyId, "caregiver");
+    
+    // Set Maya's hourly rate for time tracking demo
+    await storage.setCaregiverPayRate(careFamilyId, mayaId, "28.00", "USD");
 
     // Family members in the care calendar
     const grandma = await storage.createFamilyMember(careFamilyId, {
