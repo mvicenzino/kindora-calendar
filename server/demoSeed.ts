@@ -81,15 +81,6 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       profileImageUrl: null,
     });
     
-    // James - Physical therapist for Mom
-    const jamesId = `${userId}-james`;
-    await storage.upsertUser({
-      id: jamesId,
-      email: "james@demo.kindora.app",
-      firstName: "James",
-      lastName: "Wilson",
-      profileImageUrl: null,
-    });
     
     // ============================================
     // FAMILY 1: "Your Family" - Kids & Activities
@@ -338,7 +329,6 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // Add family members and caregivers to Mom's Care Calendar
     await storage.addUserToFamily(davidId, careFamilyId, "member");
     await storage.addUserToFamily(mayaId, careFamilyId, "caregiver");
-    await storage.addUserToFamily(jamesId, careFamilyId, "caregiver");
 
     // Family members in the care calendar
     const grandma = await storage.createFamilyMember(careFamilyId, {
@@ -365,22 +355,16 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       avatar: null,
     });
 
-    const physicalTherapist = await storage.createFamilyMember(careFamilyId, {
-      name: "James (PT)",
-      color: "#8B5CF6", // Purple - physical therapist
-      avatar: null,
-    });
-
     // Eldercare events - showing caregiver coordination
     const careEvents = [
       // Past events with memories
       {
         title: "Physical Therapy Session",
-        description: "Great progress today! Mom walked 50 feet with the walker. James said her strength is improving.",
+        description: "Great progress today! Mom walked 50 feet with the walker. Maya supervised the exercises.",
         startTime: setMinutes(setHours(subDays(today, 2), 10), 0),
         endTime: setMinutes(setHours(subDays(today, 2), 11), 0),
-        memberIds: [grandma.id, physicalTherapist.id],
-        color: physicalTherapist.color,
+        memberIds: [grandma.id, nurseAide.id],
+        color: nurseAide.color,
         photoUrl: CARE_PHOTOS.physicalTherapy,
         completed: true,
       },
@@ -455,12 +439,12 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
 
       // Upcoming care appointments
       {
-        title: "Physical Therapy - James",
+        title: "Exercise Session with Maya",
         description: "Working on balance exercises and stair climbing. Goal: independent outdoor walking",
         startTime: setMinutes(setHours(addDays(today, 1), 10), 0),
         endTime: setMinutes(setHours(addDays(today, 1), 11), 0),
-        memberIds: [grandma.id, physicalTherapist.id],
-        color: physicalTherapist.color,
+        memberIds: [grandma.id, nurseAide.id],
+        color: nurseAide.color,
         photoUrl: null,
       },
       {
@@ -509,12 +493,12 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         photoUrl: null,
       },
       {
-        title: "Physical Therapy - James",
+        title: "Exercise Session with Maya",
         description: "Continuing balance work. If weather is nice, will practice outdoor walking.",
         startTime: setMinutes(setHours(addDays(today, 4), 10), 0),
         endTime: setMinutes(setHours(addDays(today, 4), 11), 0),
-        memberIds: [grandma.id, physicalTherapist.id],
-        color: physicalTherapist.color,
+        memberIds: [grandma.id, nurseAide.id],
+        color: nurseAide.color,
         photoUrl: null,
       },
       {
@@ -553,14 +537,14 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       const ptNote1 = await storage.createEventNote(careFamilyId, {
         eventId: ptEvent.id,
         authorUserId: userId,
-        content: "James mentioned Mom's balance has really improved! She's almost ready to try outdoor walking with supervision.",
+        content: "Maya mentioned Mom's balance has really improved! She's almost ready to try outdoor walking with supervision.",
         parentNoteId: null,
       });
       
       await storage.createEventNote(careFamilyId, {
         eventId: ptEvent.id,
         authorUserId: userId,
-        content: "David, can you join the next session? James wants to show both of us the exercises we can help Mom with at home.",
+        content: "David, can you join the next session? Maya wants to show both of us the exercises we can help Mom with at home.",
         parentNoteId: ptNote1.id,
       });
     }
@@ -837,15 +821,15 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     const c1_t1_reply1 = await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: jamesId, // James (PT - caregiver)
-      content: "I noticed that during yesterday's PT session. She seemed more fatigued than usual by the end. Her balance was still good but I could tell she was working harder.",
+      authorUserId: mayaId, // Maya (Home Aide - caregiver)
+      content: "I noticed that during yesterday's exercise session. She seemed more fatigued than usual by the end. Her balance was still good but I could tell she was working harder.",
       createdAt: msgTime(4, 10, 15),
       parentMessageId: c1_thread1_root.id,
     });
 
     await storage.createFamilyMessage(careFamilyId, {
       authorUserId: userId, // Sarah
-      content: "James, that's really helpful context. I wonder if we should check if her evening medication timing is off.",
+      content: "Maya, that's really helpful context. I wonder if we should check if her evening medication timing is off.",
       createdAt: msgTime(4, 10, 30),
       parentMessageId: c1_t1_reply1.id,
     });
@@ -879,9 +863,9 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     // THREAD 2: Celebrating PT milestone (2 days ago)
-    // James (PT) shares exciting news, everyone celebrates
+    // Maya shares exciting news, everyone celebrates
     const c1_thread2_root = await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: jamesId, // James (PT - caregiver)
+      authorUserId: mayaId, // Maya (Home Aide - caregiver)
       content: "Everyone! Huge milestone today - Marilyn walked to the mailbox and back completely independently! No walker, just me spotting her. She was SO proud of herself!",
       createdAt: msgTime(2, 15, 30),
     });
@@ -901,7 +885,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: jamesId, // James (PT - caregiver)
+      authorUserId: mayaId, // Maya (Home Aide - caregiver)
       content: "She told me she wants to walk to the garden next. Small goals leading to big victories! This team effort is really making a difference.",
       createdAt: msgTime(2, 16, 20),
       parentMessageId: c1_thread2_root.id,
@@ -937,8 +921,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: jamesId, // James (PT - caregiver)
-      content: "I'll compile my PT progress notes too. Dr. Patel should know about her improved mobility - it might affect her medication needs.",
+      authorUserId: mayaId, // Maya (Home Aide - caregiver)
+      content: "I'll compile my care notes too. Dr. Patel should know about her improved mobility - it might affect her medication needs.",
       createdAt: msgTime(1, 10, 15),
       parentMessageId: c1_thread3_root.id,
     });
