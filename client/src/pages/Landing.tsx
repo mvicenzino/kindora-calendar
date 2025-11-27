@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -246,11 +246,11 @@ export default function Landing() {
 
             <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
               <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg group-hover:shadow-teal-500/50 transition-shadow w-fit mb-4">
-                <Clock className="w-6 h-6 text-white" />
+                <DollarSign className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Bill Reminders</h3>
+              <h3 className="text-lg font-bold text-white mb-2">Caregiver Time Tracking</h3>
               <p className="text-white/70 leading-relaxed text-sm">
-                Never miss important deadlines for bills, insurance renewals, or financial obligations
+                Caregivers can log hours and track pay. Families see a clear record of care provided.
               </p>
             </div>
 
@@ -266,9 +266,20 @@ export default function Landing() {
           </div>
 
           <div className="mt-10 p-6 bg-gradient-to-r from-orange-500/10 to-blue-500/10 border border-white/10 rounded-2xl">
-            <p className="text-white/80 text-center text-base leading-relaxed">
-              <strong className="text-white">Perfect for families managing aging parents:</strong> Send calendar invites to home health aides, visiting nurses, or any trusted provider. They see what they need to know—nothing more, nothing less.
-            </p>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="text-center md:text-left">
+                <p className="text-white font-semibold mb-2">For Families</p>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  Invite caregivers to your calendar. Control what they see. Get peace of mind knowing care is coordinated.
+                </p>
+              </div>
+              <div className="text-center md:text-left">
+                <p className="text-white font-semibold mb-2">For Caregivers</p>
+                <p className="text-white/70 text-sm leading-relaxed">
+                  See your schedule, log medications, track your hours, and calculate your pay—all in one dashboard.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
