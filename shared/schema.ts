@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, index, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -128,6 +128,30 @@ export const familyMessages = pgTable("family_messages", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Caregiver Pay Rates table - stores hourly rate per caregiver per family
+export const caregiverPayRates = pgTable("caregiver_pay_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  caregiverUserId: varchar("caregiver_user_id").notNull(), // The caregiver user
+  hourlyRate: numeric("hourly_rate", { precision: 10, scale: 2 }).notNull(), // e.g., 28.50
+  currency: varchar("currency").notNull().default("USD"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Caregiver Time Entries table - tracks hours worked by caregivers
+export const caregiverTimeEntries = pgTable("caregiver_time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  caregiverUserId: varchar("caregiver_user_id").notNull(),
+  hoursWorked: numeric("hours_worked", { precision: 5, scale: 2 }).notNull(), // e.g., 4.5 hours
+  entryDate: timestamp("entry_date").notNull(), // The date of work
+  notes: text("notes"), // Optional description of work done
+  hourlyRateAtTime: numeric("hourly_rate_at_time", { precision: 10, scale: 2 }).notNull(), // Rate when logged
+  calculatedPay: numeric("calculated_pay", { precision: 10, scale: 2 }).notNull(), // hours * rate
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -209,6 +233,28 @@ export const insertFamilyMessageSchema = createInsertSchema(familyMessages).omit
   content: z.string().min(1, "Message content is required").trim(),
 });
 
+export const insertCaregiverPayRateSchema = createInsertSchema(caregiverPayRates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  hourlyRate: z.string().or(z.number()).transform(val => String(val)),
+  currency: z.string().default("USD"),
+});
+
+export const insertCaregiverTimeEntrySchema = createInsertSchema(caregiverTimeEntries).omit({
+  id: true,
+  familyId: true,
+  caregiverUserId: true,
+  hourlyRateAtTime: true,
+  calculatedPay: true,
+  createdAt: true,
+}).extend({
+  hoursWorked: z.string().or(z.number()).transform(val => String(val)),
+  entryDate: z.coerce.date(),
+  notes: z.string().optional(),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -248,6 +294,14 @@ export type MedicationLog = typeof medicationLogs.$inferSelect;
 // Family Message types
 export type InsertFamilyMessage = z.infer<typeof insertFamilyMessageSchema>;
 export type FamilyMessage = typeof familyMessages.$inferSelect;
+
+// Caregiver Pay Rate types
+export type InsertCaregiverPayRate = z.infer<typeof insertCaregiverPayRateSchema>;
+export type CaregiverPayRate = typeof caregiverPayRates.$inferSelect;
+
+// Caregiver Time Entry types
+export type InsertCaregiverTimeEntry = z.infer<typeof insertCaregiverTimeEntrySchema>;
+export type CaregiverTimeEntry = typeof caregiverTimeEntries.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {
