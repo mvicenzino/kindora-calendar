@@ -157,7 +157,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
           </div>
 
           {/* Tab Content */}
-          <div className="p-4 max-h-80 overflow-y-auto">
+          <div className="p-4 max-h-64 overflow-y-auto">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-3">
@@ -352,26 +352,20 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                   </div>
                   <ChevronRight className="w-4 h-4 text-white/40" />
                 </button>
-
-                <div className="border-t border-white/10 pt-2 mt-2">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-red-500/10 transition-all text-left group"
-                    data-testid="button-logout"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-                        <LogOut className="w-4 h-4 text-red-400" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-red-400">Sign Out</div>
-                        <div className="text-xs text-white/50">Log out of your account</div>
-                      </div>
-                    </div>
-                  </button>
-                </div>
               </div>
             )}
+          </div>
+
+          {/* Quick Logout - Always visible at bottom */}
+          <div className="border-t border-white/10 p-3">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 transition-all"
+              data-testid="button-quick-logout"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Sign Out</span>
+            </button>
           </div>
         </div>
       )}
