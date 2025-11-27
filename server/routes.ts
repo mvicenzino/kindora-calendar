@@ -1096,7 +1096,8 @@ Visit Kindora Calendar: ${joinUrl}
       
       res.json(eventsWithNoteCounts);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch events" });
+      console.error("Error fetching events:", error);
+      res.status(500).json({ error: "Failed to fetch events", details: String(error) });
     }
   });
 
