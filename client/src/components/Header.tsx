@@ -1,4 +1,4 @@
-import { Search, User, Image, MessageCircle, Menu, Home } from "lucide-react";
+import { Search, User, Image, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
@@ -6,13 +6,6 @@ import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
 import { useRef, useEffect, useState } from "react";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 
 interface HeaderProps {
   currentView: 'day' | 'week' | 'month' | 'timeline';
