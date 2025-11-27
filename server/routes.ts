@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
-import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema } from "@shared/schema";
+import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
@@ -1822,6 +1822,167 @@ Visit Kindora Calendar: ${joinUrl}
     } catch (error) {
       console.error("Error deleting family message:", error);
       res.status(500).json({ error: "Failed to delete family message" });
+    }
+  });
+
+  // Caregiver Time Tracking Routes
+  
+  // Get caregiver's pay rate
+  app.get("/api/caregiver/pay-rate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only caregivers can get their own pay rate
+      if (role !== 'caregiver') {
+        return res.status(403).json({ error: "Only caregivers can access pay rates" });
+      }
+      
+      const payRate = await storage.getCaregiverPayRate(userId, familyId);
+      res.json(payRate || null);
+    } catch (error) {
+      console.error("Error fetching pay rate:", error);
+      res.status(500).json({ error: "Failed to fetch pay rate" });
+    }
+  });
+
+  // Set caregiver's pay rate (owners only, or caregiver setting their own)
+  app.put("/api/caregiver/pay-rate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const { hourlyRate, currency, caregiverUserId } = req.body;
+      
+      if (!hourlyRate || isNaN(parseFloat(hourlyRate))) {
+        return res.status(400).json({ error: "Valid hourly rate is required" });
+      }
+      
+      // Determine target caregiver
+      let targetUserId = userId;
+      if (caregiverUserId && role === 'owner') {
+        // Owners can set rates for any caregiver
+        targetUserId = caregiverUserId;
+      } else if (role !== 'caregiver' && role !== 'owner') {
+        return res.status(403).json({ error: "Only caregivers or owners can set pay rates" });
+      }
+      
+      const payRate = await storage.setCaregiverPayRate(familyId, targetUserId, String(hourlyRate), currency || "USD");
+      res.json(payRate);
+    } catch (error) {
+      console.error("Error setting pay rate:", error);
+      res.status(500).json({ error: "Failed to set pay rate" });
+    }
+  });
+
+  // Get caregiver's time entries
+  app.get("/api/caregiver/time-entries", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only caregivers can view their own time entries
+      if (role !== 'caregiver') {
+        return res.status(403).json({ error: "Only caregivers can access time entries" });
+      }
+      
+      const entries = await storage.getCaregiverTimeEntries(userId, familyId);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching time entries:", error);
+      res.status(500).json({ error: "Failed to fetch time entries" });
+    }
+  });
+
+  // Create a new time entry
+  app.post("/api/caregiver/time-entries", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only caregivers can log their hours
+      if (role !== 'caregiver') {
+        return res.status(403).json({ error: "Only caregivers can log time entries" });
+      }
+      
+      // Get the caregiver's pay rate
+      const payRate = await storage.getCaregiverPayRate(userId, familyId);
+      if (!payRate) {
+        return res.status(400).json({ error: "Please set your hourly rate before logging hours" });
+      }
+      
+      const result = insertCaregiverTimeEntrySchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+      
+      const entry = await storage.createCaregiverTimeEntry(familyId, userId, result.data, payRate.hourlyRate);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error("Error creating time entry:", error);
+      res.status(500).json({ error: "Failed to create time entry" });
+    }
+  });
+
+  // Delete a time entry
+  app.delete("/api/caregiver/time-entries/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only caregivers can delete their own entries
+      if (role !== 'caregiver') {
+        return res.status(403).json({ error: "Only caregivers can delete time entries" });
+      }
+      
+      await storage.deleteCaregiverTimeEntry(req.params.id, userId, familyId);
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: "Time entry not found" });
+      }
+      console.error("Error deleting time entry:", error);
+      res.status(500).json({ error: "Failed to delete time entry" });
     }
   });
 
