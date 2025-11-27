@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
@@ -66,6 +66,15 @@ export interface IStorage {
   getFamilyMessages(familyId: string): Promise<FamilyMessage[]>;
   createFamilyMessage(familyId: string, message: InsertFamilyMessage & { createdAt?: Date }): Promise<FamilyMessage>;
   deleteFamilyMessage(id: string, familyId: string): Promise<void>;
+
+  // Caregiver Pay Rates
+  getCaregiverPayRate(caregiverUserId: string, familyId: string): Promise<CaregiverPayRate | undefined>;
+  setCaregiverPayRate(familyId: string, caregiverUserId: string, hourlyRate: string, currency?: string): Promise<CaregiverPayRate>;
+
+  // Caregiver Time Entries
+  getCaregiverTimeEntries(caregiverUserId: string, familyId: string): Promise<CaregiverTimeEntry[]>;
+  createCaregiverTimeEntry(familyId: string, caregiverUserId: string, entry: InsertCaregiverTimeEntry, hourlyRate: string): Promise<CaregiverTimeEntry>;
+  deleteCaregiverTimeEntry(id: string, caregiverUserId: string, familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -79,6 +88,8 @@ export class MemStorage implements IStorage {
   private medicationsMap: Map<string, Medication>;
   private medicationLogsMap: Map<string, MedicationLog>;
   private familyMessagesMap: Map<string, FamilyMessage>;
+  private caregiverPayRatesMap: Map<string, CaregiverPayRate>;
+  private caregiverTimeEntriesMap: Map<string, CaregiverTimeEntry>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -91,6 +102,8 @@ export class MemStorage implements IStorage {
     this.medicationsMap = new Map();
     this.medicationLogsMap = new Map();
     this.familyMessagesMap = new Map();
+    this.caregiverPayRatesMap = new Map();
+    this.caregiverTimeEntriesMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -574,6 +587,77 @@ export class MemStorage implements IStorage {
     }
     this.familyMessagesMap.delete(id);
   }
+
+  // Caregiver Pay Rates
+  async getCaregiverPayRate(caregiverUserId: string, familyId: string): Promise<CaregiverPayRate | undefined> {
+    return Array.from(this.caregiverPayRatesMap.values()).find(
+      r => r.caregiverUserId === caregiverUserId && r.familyId === familyId
+    );
+  }
+
+  async setCaregiverPayRate(familyId: string, caregiverUserId: string, hourlyRate: string, currency: string = "USD"): Promise<CaregiverPayRate> {
+    const existing = await this.getCaregiverPayRate(caregiverUserId, familyId);
+    
+    if (existing) {
+      const updated: CaregiverPayRate = {
+        ...existing,
+        hourlyRate,
+        currency,
+        updatedAt: new Date(),
+      };
+      this.caregiverPayRatesMap.set(existing.id, updated);
+      return updated;
+    }
+
+    const id = randomUUID();
+    const payRate: CaregiverPayRate = {
+      id,
+      familyId,
+      caregiverUserId,
+      hourlyRate,
+      currency,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.caregiverPayRatesMap.set(id, payRate);
+    return payRate;
+  }
+
+  // Caregiver Time Entries
+  async getCaregiverTimeEntries(caregiverUserId: string, familyId: string): Promise<CaregiverTimeEntry[]> {
+    return Array.from(this.caregiverTimeEntriesMap.values())
+      .filter(e => e.caregiverUserId === caregiverUserId && e.familyId === familyId)
+      .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+  }
+
+  async createCaregiverTimeEntry(familyId: string, caregiverUserId: string, entry: InsertCaregiverTimeEntry, hourlyRate: string): Promise<CaregiverTimeEntry> {
+    const id = randomUUID();
+    const hours = parseFloat(entry.hoursWorked);
+    const rate = parseFloat(hourlyRate);
+    const calculatedPay = (hours * rate).toFixed(2);
+
+    const timeEntry: CaregiverTimeEntry = {
+      id,
+      familyId,
+      caregiverUserId,
+      hoursWorked: entry.hoursWorked,
+      entryDate: entry.entryDate,
+      notes: entry.notes || null,
+      hourlyRateAtTime: hourlyRate,
+      calculatedPay,
+      createdAt: new Date(),
+    };
+    this.caregiverTimeEntriesMap.set(id, timeEntry);
+    return timeEntry;
+  }
+
+  async deleteCaregiverTimeEntry(id: string, caregiverUserId: string, familyId: string): Promise<void> {
+    const entry = this.caregiverTimeEntriesMap.get(id);
+    if (!entry || entry.caregiverUserId !== caregiverUserId || entry.familyId !== familyId) {
+      throw new NotFoundError(`Time entry with id ${id} not found`);
+    }
+    this.caregiverTimeEntriesMap.delete(id);
+  }
 }
 
 // DrizzleStorage implementation
@@ -1003,6 +1087,74 @@ class DrizzleStorage implements IStorage {
       and(eq(familyMessages.id, id), eq(familyMessages.familyId, familyId))
     );
   }
+
+  // Caregiver Pay Rates
+  async getCaregiverPayRate(caregiverUserId: string, familyId: string): Promise<CaregiverPayRate | undefined> {
+    const result = await this.db.select().from(caregiverPayRates).where(
+      and(
+        eq(caregiverPayRates.caregiverUserId, caregiverUserId),
+        eq(caregiverPayRates.familyId, familyId)
+      )
+    ).limit(1);
+    return result[0];
+  }
+
+  async setCaregiverPayRate(familyId: string, caregiverUserId: string, hourlyRate: string, currency: string = "USD"): Promise<CaregiverPayRate> {
+    const existing = await this.getCaregiverPayRate(caregiverUserId, familyId);
+    
+    if (existing) {
+      const result = await this.db.update(caregiverPayRates)
+        .set({ hourlyRate, currency, updatedAt: new Date() })
+        .where(eq(caregiverPayRates.id, existing.id))
+        .returning();
+      return result[0];
+    }
+
+    const result = await this.db.insert(caregiverPayRates).values({
+      familyId,
+      caregiverUserId,
+      hourlyRate,
+      currency,
+    }).returning();
+    return result[0];
+  }
+
+  // Caregiver Time Entries
+  async getCaregiverTimeEntries(caregiverUserId: string, familyId: string): Promise<CaregiverTimeEntry[]> {
+    return await this.db.select().from(caregiverTimeEntries).where(
+      and(
+        eq(caregiverTimeEntries.caregiverUserId, caregiverUserId),
+        eq(caregiverTimeEntries.familyId, familyId)
+      )
+    ).orderBy(desc(caregiverTimeEntries.entryDate));
+  }
+
+  async createCaregiverTimeEntry(familyId: string, caregiverUserId: string, entry: InsertCaregiverTimeEntry, hourlyRate: string): Promise<CaregiverTimeEntry> {
+    const hours = parseFloat(entry.hoursWorked);
+    const rate = parseFloat(hourlyRate);
+    const calculatedPay = (hours * rate).toFixed(2);
+
+    const result = await this.db.insert(caregiverTimeEntries).values({
+      familyId,
+      caregiverUserId,
+      hoursWorked: entry.hoursWorked,
+      entryDate: entry.entryDate,
+      notes: entry.notes || null,
+      hourlyRateAtTime: hourlyRate,
+      calculatedPay,
+    }).returning();
+    return result[0];
+  }
+
+  async deleteCaregiverTimeEntry(id: string, caregiverUserId: string, familyId: string): Promise<void> {
+    await this.db.delete(caregiverTimeEntries).where(
+      and(
+        eq(caregiverTimeEntries.id, id),
+        eq(caregiverTimeEntries.caregiverUserId, caregiverUserId),
+        eq(caregiverTimeEntries.familyId, familyId)
+      )
+    );
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -1238,6 +1390,33 @@ class DemoAwareStorage implements IStorage {
   async deleteFamilyMessage(id: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteFamilyMessage(id, familyId);
+  }
+
+  // Caregiver Pay Rates
+  async getCaregiverPayRate(caregiverUserId: string, familyId: string): Promise<CaregiverPayRate | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getCaregiverPayRate(caregiverUserId, familyId);
+  }
+
+  async setCaregiverPayRate(familyId: string, caregiverUserId: string, hourlyRate: string, currency?: string): Promise<CaregiverPayRate> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.setCaregiverPayRate(familyId, caregiverUserId, hourlyRate, currency);
+  }
+
+  // Caregiver Time Entries
+  async getCaregiverTimeEntries(caregiverUserId: string, familyId: string): Promise<CaregiverTimeEntry[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getCaregiverTimeEntries(caregiverUserId, familyId);
+  }
+
+  async createCaregiverTimeEntry(familyId: string, caregiverUserId: string, entry: InsertCaregiverTimeEntry, hourlyRate: string): Promise<CaregiverTimeEntry> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createCaregiverTimeEntry(familyId, caregiverUserId, entry, hourlyRate);
+  }
+
+  async deleteCaregiverTimeEntry(id: string, caregiverUserId: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteCaregiverTimeEntry(id, caregiverUserId, familyId);
   }
 }
 
