@@ -23,6 +23,7 @@ export interface IStorage {
   getFamilyByInviteCode(inviteCode: string): Promise<Family | undefined>;
   joinFamily(userId: string, inviteCode: string, role?: string): Promise<FamilyMembership>;
   getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined>;
+  addUserToFamily(userId: string, familyId: string, role: string): Promise<FamilyMembership>;
   getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>>;
   getFamilyMembers(familyId: string): Promise<FamilyMember[]>;
   getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined>;
@@ -205,6 +206,21 @@ export class MemStorage implements IStorage {
   async getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined> {
     return Array.from(this.familyMemberships.values())
       .find(m => m.userId === userId && m.familyId === familyId);
+  }
+
+  async addUserToFamily(userId: string, familyId: string, role: string): Promise<FamilyMembership> {
+    const existing = await this.getUserFamilyMembership(userId, familyId);
+    if (existing) return existing;
+    
+    const membership: FamilyMembership = {
+      id: randomUUID(),
+      userId,
+      familyId,
+      role,
+      joinedAt: new Date(),
+    };
+    this.familyMemberships.set(membership.id, membership);
+    return membership;
   }
 
   async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
@@ -703,6 +719,19 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
+  async addUserToFamily(userId: string, familyId: string, role: string): Promise<FamilyMembership> {
+    const existing = await this.getUserFamilyMembership(userId, familyId);
+    if (existing) return existing;
+    
+    const result = await this.db.insert(familyMemberships).values({
+      id: randomUUID(),
+      userId,
+      familyId,
+      role,
+    }).returning();
+    return result[0];
+  }
+
   async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
     const result = await this.db
       .select({
@@ -1047,6 +1076,11 @@ class DemoAwareStorage implements IStorage {
   async getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.getUserFamilyMembership(userId, familyId);
+  }
+
+  async addUserToFamily(userId: string, familyId: string, role: string): Promise<FamilyMembership> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.addUserToFamily(userId, familyId, role);
   }
 
   async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
