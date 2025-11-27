@@ -81,6 +81,28 @@ A dedicated caregiver portal with care-focused views and medication management:
 - **Role-Based Permissions**: Caregivers can view medications and log doses; owners/members can create, edit, and delete medications
 - **Demo Data**: 5 sample medications for Dorothy (Mom's Care Calendar): Lisinopril, Metoprolol, Vitamin D3, Trazodone, Baby Aspirin with realistic dosages and schedules
 
+### Caregiver Time Tracking & Pay Calculation
+
+A comprehensive time tracking system for caregivers to log hours and calculate pay:
+
+- **Route**: Integrated into `/care` - Caregiver Dashboard
+- **Schema**: 
+  - `caregiverPayRates` table: `userId`, `familyId`, `hourlyRate` (decimal), `effectiveDate`, `createdAt`
+  - `caregiverTimeEntries` table: `userId`, `familyId`, `date`, `hoursWorked`, `notes`, `payAmount` (calculated server-side), `createdAt`
+- **API Routes**: 
+  - GET/POST `/api/caregiver/pay-rate` - Get or set caregiver's hourly rate for a family
+  - GET/POST `/api/caregiver/time-entries` - View and log time entries with automatic pay calculation
+- **Frontend Components**: Time Tracking section in `CaregiverDashboard.tsx` featuring:
+  - Set/Update hourly rate dialog with form validation
+  - Log hours dialog with date picker, hours input, and optional notes
+  - Real-time pay estimation before submission
+  - Weekly summary: hours worked and pay earned this week
+  - Total summary: all-time hours and total earnings
+  - Recent entries list with date, hours, and pay displayed
+- **Pay Calculation**: Server-side calculation (hours × hourly rate) prevents client-side tampering
+- **Role-Based Permissions**: Only caregivers can access time tracking; each caregiver sees only their own entries
+- **Demo Data**: Maya's hourly rate ($28/hr) pre-seeded in Mom's Care Calendar
+
 ## External Dependencies
 
 ### Third-Party UI Libraries

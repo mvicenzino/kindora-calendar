@@ -68,18 +68,18 @@ type MedicationLog = {
   administeredByUser?: { id: string; firstName: string; lastName: string };
 };
 
-// Validation schemas for forms
+// Validation schemas for forms with trimmed inputs
 const payRateFormSchema = z.object({
-  hourlyRate: z.string().min(1, "Hourly rate is required")
-    .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Rate must be a positive number"),
+  hourlyRate: z.string().trim().min(1, "Hourly rate is required")
+    .refine(val => !isNaN(parseFloat(val.trim())) && parseFloat(val.trim()) > 0, "Rate must be a positive number"),
 });
 
 const timeEntryFormSchema = z.object({
-  date: z.string().min(1, "Date is required"),
-  hoursWorked: z.string().min(1, "Hours are required")
-    .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, "Hours must be positive")
-    .refine(val => parseFloat(val) <= 24, "Hours cannot exceed 24"),
-  notes: z.string().optional(),
+  date: z.string().trim().min(1, "Date is required"),
+  hoursWorked: z.string().trim().min(1, "Hours are required")
+    .refine(val => !isNaN(parseFloat(val.trim())) && parseFloat(val.trim()) > 0, "Hours must be positive")
+    .refine(val => parseFloat(val.trim()) <= 24, "Hours cannot exceed 24"),
+  notes: z.string().trim().optional(),
 });
 
 type PayRateFormValues = z.infer<typeof payRateFormSchema>;
@@ -130,15 +130,23 @@ export default function CaregiverDashboard() {
     enabled: !!activeFamilyId,
   });
   
-  // Time tracking queries
-  const { data: payRate } = useQuery<CaregiverPayRate | null>({
-    queryKey: ['/api/caregiver/pay-rate', activeFamilyId],
+  // Get user's role in this family
+  const { data: userRole } = useQuery<{ role: string }>({
+    queryKey: [`/api/family/${activeFamilyId}/role`],
     enabled: !!activeFamilyId,
   });
   
+  const isCaregiver = userRole?.role === 'caregiver';
+  
+  // Time tracking queries - only for caregivers
+  const { data: payRate } = useQuery<CaregiverPayRate | null>({
+    queryKey: ['/api/caregiver/pay-rate?familyId=' + activeFamilyId],
+    enabled: !!activeFamilyId && isCaregiver,
+  });
+  
   const { data: timeEntries = [] } = useQuery<CaregiverTimeEntry[]>({
-    queryKey: ['/api/caregiver/time-entries', activeFamilyId],
-    enabled: !!activeFamilyId,
+    queryKey: ['/api/caregiver/time-entries?familyId=' + activeFamilyId],
+    enabled: !!activeFamilyId && isCaregiver,
   });
 
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
@@ -209,7 +217,7 @@ export default function CaregiverDashboard() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/caregiver/pay-rate', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/caregiver/pay-rate?familyId=' + activeFamilyId] });
       setShowPayRateDialog(false);
       payRateForm.reset();
       toast({
@@ -237,7 +245,7 @@ export default function CaregiverDashboard() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/caregiver/time-entries', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/caregiver/time-entries?familyId=' + activeFamilyId] });
       setShowLogHoursDialog(false);
       timeEntryForm.reset({ 
         date: format(new Date(), "yyyy-MM-dd"),
@@ -263,7 +271,7 @@ export default function CaregiverDashboard() {
       await apiRequest('DELETE', `/api/caregiver/time-entries/${entryId}?familyId=${activeFamilyId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/caregiver/time-entries', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/caregiver/time-entries?familyId=' + activeFamilyId] });
       toast({
         title: "Entry deleted",
         description: "The time entry has been removed.",
@@ -671,8 +679,8 @@ export default function CaregiverDashboard() {
           </CardContent>
         </Card>
 
-        {/* Time Tracking Section */}
-        <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-time-tracking">
+        {/* Time Tracking Section - Only visible to caregivers */}
+        {isCaregiver && <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-time-tracking">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
             <div>
               <CardTitle className="text-white flex items-center gap-2">
@@ -970,7 +978,7 @@ export default function CaregiverDashboard() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </Card>}
       </main>
     </div>
   );
