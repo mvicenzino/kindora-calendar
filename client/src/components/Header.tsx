@@ -63,8 +63,8 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             </span>
           </div>
           
-          {/* Center: Navigation tabs - absolutely positioned to be truly centered */}
-          <nav ref={containerRef} className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20">
+          {/* Center: Navigation tabs - use flex on mobile, absolute centering on desktop */}
+          <nav ref={containerRef} className="flex items-center gap-0.5 sm:gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 md:absolute md:left-1/2 md:-translate-x-1/2">
             <div
               className="absolute bg-orange-300/60 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-orange-300/70 z-0"
               style={{
@@ -89,10 +89,11 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 aria-pressed={currentView === view.value}
                 aria-label={`Switch to ${view.label} view`}
                 className={`
-                  relative z-10 flex-1 md:min-w-[80px] px-3 md:px-4 py-2 rounded-full text-sm font-medium 
+                  relative z-10 flex-1 md:min-w-[80px] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium 
                   flex items-center justify-center
                   transition-colors duration-300 ease-out
                   focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
+                  ${view.value === 'timeline' ? 'hidden sm:flex' : ''}
                   ${currentView === view.value
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
@@ -105,33 +106,33 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
           </nav>
 
           {/* Right: Family selector + action buttons */}
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
             {/* Family selector - hidden on mobile */}
             <div className="hidden md:block">
               <FamilySelector />
             </div>
             
             {/* Action buttons */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white border border-white/50"
+                className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9 hidden sm:flex"
                 aria-label="Messages"
                 onClick={() => setLocation('/messages')}
                 data-testid="button-messages"
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white border border-white/50"
+                className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
                 aria-label="Memories"
                 onClick={() => setLocation('/memories')}
                 data-testid="button-memories"
               >
-                <Image className="w-5 h-5" />
+                <Image className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <Button
                 size="icon"
@@ -149,11 +150,11 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="text-white border border-white/50"
+                  className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
                   aria-label="User profile"
                   data-testid="button-profile"
                 >
-                  <User className="w-5 h-5" />
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
                 </Button>
               )}
             </div>
