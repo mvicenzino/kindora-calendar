@@ -87,6 +87,9 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // ============================================
     const familyId = families[0].id;
     
+    // Rename the default family to a more friendly name
+    await storage.updateFamily(familyId, { name: "Your Family Calendar" });
+    
     // Add Michael and Jenny to the family with proper roles
     await storage.addUserToFamily(michaelId, familyId, "member");
     await storage.addUserToFamily(jennyId, familyId, "member");

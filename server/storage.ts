@@ -17,6 +17,7 @@ export interface IStorage {
 
   // Family operations
   createFamily(userId: string, family: InsertFamily): Promise<Family>;
+  updateFamily(familyId: string, updates: Partial<InsertFamily>): Promise<Family>;
   getUserFamily(userId: string): Promise<Family | undefined>;
   getUserFamilies(userId: string): Promise<Family[]>;
   getFamilyById(familyId: string): Promise<Family | undefined>;
@@ -174,6 +175,16 @@ export class MemStorage implements IStorage {
     this.familyMemberships.set(membershipId, membership);
     
     return family;
+  }
+
+  async updateFamily(familyId: string, updates: Partial<InsertFamily>): Promise<Family> {
+    const family = this.families.get(familyId);
+    if (!family) {
+      throw new NotFoundError(`Family not found: ${familyId}`);
+    }
+    const updatedFamily: Family = { ...family, ...updates };
+    this.families.set(familyId, updatedFamily);
+    return updatedFamily;
   }
 
   async getUserFamily(userId: string): Promise<Family | undefined> {
@@ -757,6 +768,14 @@ class DrizzleStorage implements IStorage {
     return familyResult[0];
   }
 
+  async updateFamily(familyId: string, updates: Partial<InsertFamily>): Promise<Family> {
+    const result = await this.db.update(families).set(updates).where(eq(families.id, familyId)).returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Family not found: ${familyId}`);
+    }
+    return result[0];
+  }
+
   async getUserFamily(userId: string): Promise<Family | undefined> {
     const membership = await this.db.select().from(familyMemberships).where(eq(familyMemberships.userId, userId)).limit(1);
     if (!membership[0]) {
@@ -1197,6 +1216,16 @@ class DemoAwareStorage implements IStorage {
   // Family operations
   async createFamily(userId: string, family: InsertFamily): Promise<Family> {
     return this.getStorage(userId).createFamily(userId, family);
+  }
+
+  async updateFamily(familyId: string, updates: Partial<InsertFamily>): Promise<Family> {
+    // For demo users, use demo storage; otherwise use persistent
+    // Since we don't have userId here, we check if familyId belongs to demo storage
+    const demoFamily = await this.demoStorage.getFamilyById(familyId);
+    if (demoFamily) {
+      return this.demoStorage.updateFamily(familyId, updates);
+    }
+    return this.persistentStorage.updateFamily(familyId, updates);
   }
 
   async getUserFamily(userId: string): Promise<Family | undefined> {
