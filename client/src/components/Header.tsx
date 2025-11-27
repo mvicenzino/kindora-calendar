@@ -54,68 +54,17 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
   return (
     <header className="sticky top-0 z-50 w-full">
       <div className="backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
-        <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-6 py-4 gap-4">
-          <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto justify-between md:justify-start">
-            <div className="flex items-center gap-3">
-              <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 rounded-lg" data-testid="icon-logo" />
-              <span className="text-xl app-title">
-                <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
-              </span>
-            </div>
-            
-            <div className="hidden md:block">
-              <FamilySelector />
-            </div>
-            
-            {/* Mobile navigation buttons */}
-            <div className="flex items-center gap-2 md:hidden">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50"
-                aria-label="Messages"
-                onClick={() => setLocation('/messages')}
-                data-testid="button-messages-mobile"
-              >
-                <MessageCircle className="w-5 h-5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50"
-                aria-label="Memories"
-                onClick={() => setLocation('/memories')}
-                data-testid="button-memories-mobile"
-              >
-                <Image className="w-5 h-5" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50"
-                aria-label="Search events"
-                onClick={onSearchClick}
-                data-testid="button-search-mobile"
-              >
-                <Search className="w-5 h-5" />
-              </Button>
-              {onMemberColorChange ? (
-                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
-              ) : (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-white border border-white/50"
-                  aria-label="User profile"
-                  data-testid="button-profile-mobile"
-                >
-                  <User className="w-5 h-5" />
-                </Button>
-              )}
-            </div>
+        <div className="relative flex items-center justify-between px-4 md:px-6 py-4">
+          {/* Left: Logo */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 rounded-lg" data-testid="icon-logo" />
+            <span className="text-xl app-title hidden sm:inline">
+              <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
+            </span>
           </div>
           
-          <nav ref={containerRef} className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 w-full md:w-auto">
+          {/* Center: Navigation tabs - absolutely positioned to be truly centered */}
+          <nav ref={containerRef} className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20">
             <div
               className="absolute bg-orange-300/60 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-orange-300/70 z-0"
               style={{
@@ -155,51 +104,59 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
             ))}
           </nav>
 
-          {/* Desktop navigation buttons */}
-          <div className="hidden md:flex items-center gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/50"
-              aria-label="Messages"
-              onClick={() => setLocation('/messages')}
-              data-testid="button-messages-desktop"
-            >
-              <MessageCircle className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/50"
-              aria-label="Memories"
-              onClick={() => setLocation('/memories')}
-              data-testid="button-memories-desktop"
-            >
-              <Image className="w-5 h-5" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/50"
-              aria-label="Search events"
-              onClick={onSearchClick}
-              data-testid="button-search-desktop"
-            >
-              <Search className="w-5 h-5" />
-            </Button>
-            {onMemberColorChange ? (
-              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
-            ) : (
+          {/* Right: Family selector + action buttons */}
+          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+            {/* Family selector - hidden on mobile */}
+            <div className="hidden md:block">
+              <FamilySelector />
+            </div>
+            
+            {/* Action buttons */}
+            <div className="flex items-center gap-2">
               <Button
                 size="icon"
                 variant="ghost"
                 className="text-white border border-white/50"
-                aria-label="User profile"
-                data-testid="button-profile-desktop"
+                aria-label="Messages"
+                onClick={() => setLocation('/messages')}
+                data-testid="button-messages"
               >
-                <User className="w-5 h-5" />
+                <MessageCircle className="w-5 h-5" />
               </Button>
-            )}
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white border border-white/50"
+                aria-label="Memories"
+                onClick={() => setLocation('/memories')}
+                data-testid="button-memories"
+              >
+                <Image className="w-5 h-5" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white border border-white/50 hidden sm:flex"
+                aria-label="Search events"
+                onClick={onSearchClick}
+                data-testid="button-search"
+              >
+                <Search className="w-5 h-5" />
+              </Button>
+              {onMemberColorChange ? (
+                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
+              ) : (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-white border border-white/50"
+                  aria-label="User profile"
+                  data-testid="button-profile"
+                >
+                  <User className="w-5 h-5" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
