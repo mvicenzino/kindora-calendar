@@ -71,12 +71,12 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       profileImageUrl: null,
     });
     
-    // Maria - Professional caregiver (nurse) for Mom
-    const mariaId = `${userId}-maria`;
+    // Maya - Professional caregiver (nurse) for Mom
+    const mayaId = `${userId}-maya`;
     await storage.upsertUser({
-      id: mariaId,
-      email: "maria@demo.kindora.app",
-      firstName: "Maria",
+      id: mayaId,
+      email: "maya@demo.kindora.app",
+      firstName: "Maya",
       lastName: "Santos",
       profileImageUrl: null,
     });
@@ -186,7 +186,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       },
       {
         title: "Grocery Run",
-        description: "Need items for Sunday dinner at Grandma Dorothy's",
+        description: "Need items for Sunday dinner at Grandma Marilyn's",
         startTime: setMinutes(setHours(today, 10), 0),
         endTime: setMinutes(setHours(today, 11), 30),
         memberIds: [mom.id],
@@ -224,7 +224,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       },
       {
         title: "Family Dinner at Grandma's",
-        description: "Sunday dinner with Grandma Dorothy - bringing her favorite apple pie!",
+        description: "Sunday dinner with Grandma Marilyn - bringing her favorite apple pie!",
         startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
         endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
         memberIds: [mom.id, dad.id, daughter.id, son.id],
@@ -337,12 +337,12 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     
     // Add family members and caregivers to Mom's Care Calendar
     await storage.addUserToFamily(davidId, careFamilyId, "member");
-    await storage.addUserToFamily(mariaId, careFamilyId, "caregiver");
+    await storage.addUserToFamily(mayaId, careFamilyId, "caregiver");
     await storage.addUserToFamily(jamesId, careFamilyId, "caregiver");
 
     // Family members in the care calendar
     const grandma = await storage.createFamilyMember(careFamilyId, {
-      name: "Dorothy (Mom)",
+      name: "Marilyn (Mom)",
       color: "#F59E0B", // Amber - the aging parent
       avatar: null,
     });
@@ -360,7 +360,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     const nurseAide = await storage.createFamilyMember(careFamilyId, {
-      name: "Maria (Home Aide)",
+      name: "Maya (Home Aide)",
       color: "#EC4899", // Pink - regular home health aide
       avatar: null,
     });
@@ -417,7 +417,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         completed: true,
       },
       {
-        title: "Maria - Morning Care",
+        title: "Maya - Morning Care",
         description: "Help with bathing, breakfast prep, and light housekeeping. Check medication box is organized.",
         startTime: setMinutes(setHours(today, 9), 0),
         endTime: setMinutes(setHours(today, 12), 0),
@@ -427,7 +427,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       },
       {
         title: "Lunch + Afternoon Meds",
-        description: "Light lunch, afternoon heart medication. Maria leaves at 12 - David checking in by phone at 2pm.",
+        description: "Light lunch, afternoon heart medication. Maya leaves at 12 - David checking in by phone at 2pm.",
         startTime: setMinutes(setHours(today, 12), 0),
         endTime: setMinutes(setHours(today, 13), 0),
         memberIds: [grandma.id],
@@ -464,7 +464,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         photoUrl: null,
       },
       {
-        title: "Maria - Morning Care",
+        title: "Maya - Morning Care",
         description: "Regular morning routine. Will prep meals for the next two days.",
         startTime: setMinutes(setHours(addDays(today, 1), 9), 0),
         endTime: setMinutes(setHours(addDays(today, 1), 12), 0),
@@ -527,8 +527,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         photoUrl: null,
       },
       {
-        title: "Maria - Extended Care Day",
-        description: "Maria staying longer so you can attend Lucas's tournament. Will handle all meals and meds.",
+        title: "Maya - Extended Care Day",
+        description: "Maya staying longer so you can attend Lucas's tournament. Will handle all meals and meds.",
         startTime: setMinutes(setHours(addDays(today, 6), 8), 0),
         endTime: setMinutes(setHours(addDays(today, 6), 18), 0),
         memberIds: [grandma.id, nurseAide.id],
@@ -547,7 +547,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // Add demo notes to key care events - showing caregiver communication
     const ptEvent = createdCareEvents.find(e => e.title === "Physical Therapy Session");
     const medicationEvent = createdCareEvents.find(e => e.title === "Morning Medication");
-    const extendedCareEvent = createdCareEvents.find(e => e.title === "Maria - Extended Care Day");
+    const extendedCareEvent = createdCareEvents.find(e => e.title === "Maya - Extended Care Day");
 
     if (ptEvent) {
       const ptNote1 = await storage.createEventNote(careFamilyId, {
@@ -569,7 +569,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       await storage.createEventNote(careFamilyId, {
         eventId: medicationEvent.id,
         authorUserId: userId,
-        content: "Maria, please make sure Mom takes the heart medication with food, not on an empty stomach. Dr. Patel emphasized this during the last visit.",
+        content: "Maya, please make sure Mom takes the heart medication with food, not on an empty stomach. Dr. Patel emphasized this during the last visit.",
         parentNoteId: null,
       });
     }
@@ -578,7 +578,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       const careNote1 = await storage.createEventNote(careFamilyId, {
         eventId: extendedCareEvent.id,
         authorUserId: userId,
-        content: "Maria, thank you so much for covering the extended hours! Lunch is prepped in the fridge. Mom likes her afternoon tea around 3pm.",
+        content: "Maya, thank you so much for covering the extended hours! Lunch is prepped in the fridge. Mom likes her afternoon tea around 3pm.",
         parentNoteId: null,
       });
       
@@ -594,7 +594,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // MEDICATIONS for Mom's Care Calendar
     // ============================================
     
-    // Create medications for Dorothy (Mom)
+    // Create medications for Marilyn (Mom)
     const medications = [
       {
         memberId: grandma.id,
@@ -818,7 +818,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
 
     await storage.createFamilyMessage(familyId, {
       authorUserId: michaelId, // Michael
-      content: "Team effort! Don't forget we're doing dinner at Grandma Dorothy's on Sunday - she's excited to see the kids.",
+      content: "Team effort! Don't forget we're doing dinner at Grandma Marilyn's on Sunday - she's excited to see the kids.",
       createdAt: msgTime(0, 8, 50),
       parentMessageId: f1_thread4_root.id,
     });
@@ -851,7 +851,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     const c1_t1_reply2 = await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: mariaId, // Maria (Nurse - caregiver)
+      authorUserId: mayaId, // Maya (Nurse - caregiver)
       content: "I checked the med log - she's been taking the Trazodone consistently at 9pm. Maybe it's the timing? I've read it works better if taken 30-45 min before intended sleep.",
       createdAt: msgTime(4, 11, 0),
       parentMessageId: c1_thread1_root.id,
@@ -859,20 +859,20 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
 
     await storage.createFamilyMessage(careFamilyId, {
       authorUserId: userId, // Sarah
-      content: "Great catch Maria! Let's try 9:30pm instead and see if that helps. I'll update the care notes.",
+      content: "Great catch Maya! Let's try 9:30pm instead and see if that helps. I'll update the care notes.",
       createdAt: msgTime(4, 11, 15),
       parentMessageId: c1_t1_reply2.id,
     });
 
     await storage.createFamilyMessage(careFamilyId, {
       authorUserId: davidId, // David (brother - family)
-      content: "I called to check on her last night around 8pm and she sounded more relaxed than usual. She said Maria made her favorite chamomile tea. Small things make such a difference!",
+      content: "I called to check on her last night around 8pm and she sounded more relaxed than usual. She said Maya made her favorite chamomile tea. Small things make such a difference!",
       createdAt: msgTime(3, 8, 30),
       parentMessageId: c1_thread1_root.id,
     });
 
     await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: mariaId, // Maria (Nurse - caregiver)
+      authorUserId: mayaId, // Maya (Nurse - caregiver)
       content: "Update: Mom slept through the night last night! First time in a week. The adjusted timing seems to be working. I'll keep monitoring.",
       createdAt: msgTime(2, 7, 45),
       parentMessageId: c1_thread1_root.id,
@@ -882,7 +882,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // James (PT) shares exciting news, everyone celebrates
     const c1_thread2_root = await storage.createFamilyMessage(careFamilyId, {
       authorUserId: jamesId, // James (PT - caregiver)
-      content: "Everyone! Huge milestone today - Dorothy walked to the mailbox and back completely independently! No walker, just me spotting her. She was SO proud of herself!",
+      content: "Everyone! Huge milestone today - Marilyn walked to the mailbox and back completely independently! No walker, just me spotting her. She was SO proud of herself!",
       createdAt: msgTime(2, 15, 30),
     });
 
@@ -894,8 +894,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: mariaId, // Maria (Nurse - caregiver)
-      content: "Way to go Dorothy! I'm bringing extra flowers this weekend to celebrate. She's worked so hard for this!",
+      authorUserId: mayaId, // Maya (Nurse - caregiver)
+      content: "Way to go Marilyn! I'm bringing extra flowers this weekend to celebrate. She's worked so hard for this!",
       createdAt: msgTime(2, 16, 0),
       parentMessageId: c1_thread2_root.id,
     });
@@ -930,7 +930,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: mariaId, // Maria (Nurse - caregiver)
+      authorUserId: mayaId, // Maya (Nurse - caregiver)
       content: "Yes please! I've been tracking it on the fridge chart. There's also a list of questions I wanted to ask - it's in the blue folder on her kitchen table.",
       createdAt: msgTime(1, 9, 45),
       parentMessageId: c1_t3_reply1.id,
@@ -961,7 +961,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // Family and caregivers coordinate on upcoming family dinner
     const c1_thread4_root = await storage.createFamilyMessage(careFamilyId, {
       authorUserId: userId, // Sarah (family)
-      content: "Sunday family dinner planning! The grandkids are SO excited to see Dorothy. What should I bring? I'm thinking her favorite apple pie plus something for the kids.",
+      content: "Sunday family dinner planning! The grandkids are SO excited to see Marilyn. What should I bring? I'm thinking her favorite apple pie plus something for the kids.",
       createdAt: msgTime(0, 8, 0),
     });
 
@@ -980,8 +980,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     await storage.createFamilyMessage(careFamilyId, {
-      authorUserId: mariaId, // Maria (Nurse - caregiver)
-      content: "I'll make sure Dorothy is well-rested on Sunday morning. These family visits really lift her spirits - she talks about them all week!",
+      authorUserId: mayaId, // Maya (Nurse - caregiver)
+      content: "I'll make sure Marilyn is well-rested on Sunday morning. These family visits really lift her spirits - she talks about them all week!",
       createdAt: msgTime(0, 9, 0),
       parentMessageId: c1_thread4_root.id,
     });
@@ -996,7 +996,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     console.log(`Demo account seeded:`);
     console.log(`   Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
     console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
-    console.log(`   Medications: ${medications.length} meds tracked for Dorothy`);
+    console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
