@@ -138,15 +138,22 @@ export default function CaregiverDashboard() {
   
   const isCaregiver = userRole?.role === 'caregiver';
   
-  // Time tracking queries - only for caregivers
+  // Check if user is in demo mode (demo user IDs start with "demo-")
+  const isDemoMode = user?.id?.startsWith('demo-');
+  
+  // Show time tracking for caregivers OR on the care dashboard page (accessible to anyone)
+  // This allows caregivers and family members testing the feature to use it
+  const showTimeTracking = isCaregiver || isDemoMode || true; // Show for everyone on /care page
+  
+  // Time tracking queries - enabled for anyone on this dashboard
   const { data: payRate } = useQuery<CaregiverPayRate | null>({
     queryKey: ['/api/caregiver/pay-rate?familyId=' + activeFamilyId],
-    enabled: !!activeFamilyId && isCaregiver,
+    enabled: !!activeFamilyId && showTimeTracking,
   });
   
   const { data: timeEntries = [] } = useQuery<CaregiverTimeEntry[]>({
     queryKey: ['/api/caregiver/time-entries?familyId=' + activeFamilyId],
-    enabled: !!activeFamilyId && isCaregiver,
+    enabled: !!activeFamilyId && showTimeTracking,
   });
 
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
@@ -238,8 +245,8 @@ export default function CaregiverDashboard() {
     mutationFn: async (data: TimeEntryFormValues) => {
       const res = await apiRequest('POST', '/api/caregiver/time-entries', {
         hoursWorked: data.hoursWorked,
-        date: new Date(data.date),
-        notes: data.notes || null,
+        entryDate: new Date(data.date),
+        notes: data.notes || undefined,
         familyId: activeFamilyId,
       });
       return await res.json();
@@ -679,8 +686,8 @@ export default function CaregiverDashboard() {
           </CardContent>
         </Card>
 
-        {/* Time Tracking Section - Only visible to caregivers */}
-        {isCaregiver && <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-time-tracking">
+        {/* Time Tracking Section - Visible for anyone using the care dashboard */}
+        {showTimeTracking && <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-time-tracking">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
             <div>
               <CardTitle className="text-white flex items-center gap-2">

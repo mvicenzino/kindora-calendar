@@ -1828,7 +1828,7 @@ Visit Kindora Calendar: ${joinUrl}
 
   // Caregiver Time Tracking Routes
   
-  // Get caregiver's pay rate
+  // Get user's pay rate (for time tracking)
   app.get("/api/caregiver/pay-rate", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -1842,11 +1842,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only caregivers can get their own pay rate
-      if (role !== 'caregiver') {
-        return res.status(403).json({ error: "Only caregivers can access pay rates" });
-      }
-      
+      // All family members can access time tracking features
       const payRate = await storage.getCaregiverPayRate(userId, familyId);
       res.json(payRate || null);
     } catch (error) {
@@ -1855,7 +1851,7 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
-  // Set caregiver's pay rate (owners only, or caregiver setting their own)
+  // Set user's pay rate (for time tracking)
   app.put("/api/caregiver/pay-rate", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -1875,13 +1871,10 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "Valid hourly rate is required" });
       }
       
-      // Determine target caregiver
+      // Determine target user (owners can set for others)
       let targetUserId = userId;
       if (caregiverUserId && role === 'owner') {
-        // Owners can set rates for any caregiver
         targetUserId = caregiverUserId;
-      } else if (role !== 'caregiver' && role !== 'owner') {
-        return res.status(403).json({ error: "Only caregivers or owners can set pay rates" });
       }
       
       const payRate = await storage.setCaregiverPayRate(familyId, targetUserId, String(hourlyRate), currency || "USD");
@@ -1892,7 +1885,7 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
-  // Get caregiver's time entries
+  // Get user's time entries
   app.get("/api/caregiver/time-entries", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -1906,11 +1899,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only caregivers can view their own time entries
-      if (role !== 'caregiver') {
-        return res.status(403).json({ error: "Only caregivers can access time entries" });
-      }
-      
+      // All family members can view their own time entries
       const entries = await storage.getCaregiverTimeEntries(userId, familyId);
       res.json(entries);
     } catch (error) {
@@ -1933,12 +1922,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only caregivers can log their hours
-      if (role !== 'caregiver') {
-        return res.status(403).json({ error: "Only caregivers can log time entries" });
-      }
-      
-      // Get the caregiver's pay rate
+      // Get the user's pay rate
       const payRate = await storage.getCaregiverPayRate(userId, familyId);
       if (!payRate) {
         return res.status(400).json({ error: "Please set your hourly rate before logging hours" });
@@ -1971,11 +1955,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only caregivers can delete their own entries
-      if (role !== 'caregiver') {
-        return res.status(403).json({ error: "Only caregivers can delete time entries" });
-      }
-      
+      // All family members can delete their own entries
       await storage.deleteCaregiverTimeEntry(req.params.id, userId, familyId);
       res.status(204).send();
     } catch (error) {
