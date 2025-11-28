@@ -18,7 +18,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
   const [, setLocation] = useLocation();
 
   return (
-    <header className="w-full" data-testid="header-main">
+    <header className="relative z-[60] w-full" data-testid="header-main">
       <div className="backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
         <div className="flex items-center justify-between px-4 md:px-6 py-3">
           {/* Left: Logo */}

@@ -39,7 +39,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
   }, [currentView]);
 
   return (
-    <div className="w-full backdrop-blur-xl bg-black/30 border-b border-white/10">
+    <div className="relative z-[40] w-full backdrop-blur-xl bg-black/30 border-b border-white/10">
       <div className="flex items-center justify-center px-4 py-2">
         <nav 
           ref={containerRef} 
