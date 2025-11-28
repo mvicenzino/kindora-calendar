@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Users, ArrowLeft, UserPlus, Mail, Send } from "lucide-react";
+import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Family {
   id: string;
@@ -33,6 +34,66 @@ export default function FamilySettings() {
   const { data: family, isLoading } = useQuery<Family>({
     queryKey: ['/api/family', activeFamilyId],
     enabled: !!activeFamilyId,
+  });
+
+  // Fetch all families the user belongs to
+  const { data: allFamilies } = useQuery<Family[]>({
+    queryKey: ['/api/families'],
+  });
+
+  // Fetch user's roles in all families
+  interface FamilyWithRole extends Family {
+    role?: string;
+  }
+
+  // Leave family mutation
+  const leaveFamilyMutation = useMutation({
+    mutationFn: async (familyId: string) => {
+      const res = await apiRequest('POST', `/api/family/${familyId}/leave`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/families'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({
+        title: "Left family successfully",
+        description: "You are no longer a member of this family.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to leave family",
+        description: error.message || "Could not leave the family",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete family mutation
+  const deleteFamilyMutation = useMutation({
+    mutationFn: async (familyId: string) => {
+      const res = await apiRequest('DELETE', `/api/family/${familyId}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/families'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({
+        title: "Family deleted",
+        description: "The family calendar has been permanently deleted.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to delete family",
+        description: error.message || "Could not delete the family",
+        variant: "destructive",
+      });
+    },
   });
 
   // Join family mutation
@@ -267,6 +328,34 @@ export default function FamilySettings() {
           </CardContent>
         </Card>
 
+        {/* Manage Your Families Card */}
+        {allFamilies && allFamilies.length > 0 && (
+          <Card className="mb-6 bg-white/10 backdrop-blur-md border-white/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Heart className="w-5 h-5" />
+                Your Calendars
+              </CardTitle>
+              <CardDescription className="text-white/70">
+                Manage your family calendars - leave or delete calendars you no longer need
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {allFamilies.map((fam) => (
+                <FamilyRow 
+                  key={fam.id} 
+                  family={fam} 
+                  isActive={fam.id === activeFamilyId}
+                  onLeave={() => leaveFamilyMutation.mutate(fam.id)}
+                  onDelete={() => deleteFamilyMutation.mutate(fam.id)}
+                  isLeaving={leaveFamilyMutation.isPending}
+                  isDeleting={deleteFamilyMutation.isPending}
+                />
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Join Different Family Card */}
         <Card className="bg-white/10 backdrop-blur-md border-white/20">
           <CardHeader>
@@ -385,6 +474,129 @@ export default function FamilySettings() {
             everyone sees the same events and family members. Any changes made by one person are visible to everyone in the family.
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// FamilyRow component for managing individual families
+interface FamilyRowProps {
+  family: Family;
+  isActive: boolean;
+  onLeave: () => void;
+  onDelete: () => void;
+  isLeaving: boolean;
+  isDeleting: boolean;
+}
+
+function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting }: FamilyRowProps) {
+  // Fetch user's role in this family
+  const { data: roleData } = useQuery<{ role: string }>({
+    queryKey: ['/api/family', family.id, 'role'],
+  });
+
+  const isOwner = roleData?.role === 'owner';
+  const isCaregiver = roleData?.role === 'caregiver';
+
+  return (
+    <div className={`flex items-center justify-between p-3 rounded-lg ${isActive ? 'bg-purple-500/20 border border-purple-500/30' : 'bg-white/5 border border-white/10'}`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isActive ? 'bg-purple-500/30' : 'bg-white/10'}`}>
+          {isOwner ? (
+            <Crown className="w-5 h-5 text-yellow-400" />
+          ) : isCaregiver ? (
+            <Heart className="w-5 h-5 text-pink-400" />
+          ) : (
+            <UserCheck className="w-5 h-5 text-white/70" />
+          )}
+        </div>
+        <div>
+          <div className="font-medium text-white flex items-center gap-2">
+            {family.name}
+            {isActive && (
+              <span className="text-xs bg-purple-500/30 text-purple-200 px-2 py-0.5 rounded-full">
+                Active
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-white/60">
+            {isOwner ? 'Owner' : isCaregiver ? 'Caregiver' : 'Member'}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {isOwner ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                disabled={isDeleting}
+                data-testid={`button-delete-family-${family.id}`}
+              >
+                <Trash2 className="w-4 h-4 mr-1" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-slate-900 border-white/20">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">Delete "{family.name}"?</AlertDialogTitle>
+                <AlertDialogDescription className="text-white/70">
+                  This will permanently delete this family calendar and remove all members. 
+                  All events, messages, and shared data will be lost. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onDelete}
+                  className="bg-red-500 text-white hover:bg-red-600"
+                >
+                  Delete Forever
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-orange-500/10 border-orange-500/30 text-orange-300 hover:bg-orange-500/20 hover:text-orange-200"
+                disabled={isLeaving}
+                data-testid={`button-leave-family-${family.id}`}
+              >
+                <LogOut className="w-4 h-4 mr-1" />
+                Leave
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-slate-900 border-white/20">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">Leave "{family.name}"?</AlertDialogTitle>
+                <AlertDialogDescription className="text-white/70">
+                  You will no longer see this family's calendar or events. 
+                  You can rejoin later if you have the invite code.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={onLeave}
+                  className="bg-orange-500 text-white hover:bg-orange-600"
+                >
+                  Leave Family
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
     </div>
   );

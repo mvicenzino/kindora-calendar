@@ -26,6 +26,8 @@ export interface IStorage {
   getUserFamilyMembership(userId: string, familyId: string): Promise<FamilyMembership | undefined>;
   addUserToFamily(userId: string, familyId: string, role: string): Promise<FamilyMembership>;
   getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>>;
+  leaveFamily(userId: string, familyId: string): Promise<void>;
+  deleteFamily(familyId: string): Promise<void>;
   getFamilyMembers(familyId: string): Promise<FamilyMember[]>;
   getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined>;
   createFamilyMember(familyId: string, member: InsertFamilyMember): Promise<FamilyMember>;
@@ -245,6 +247,24 @@ export class MemStorage implements IStorage {
     };
     this.familyMemberships.set(membership.id, membership);
     return membership;
+  }
+
+  async leaveFamily(userId: string, familyId: string): Promise<void> {
+    const membershipToDelete = Array.from(this.familyMemberships.entries())
+      .find(([_, m]) => m.userId === userId && m.familyId === familyId);
+    if (membershipToDelete) {
+      this.familyMemberships.delete(membershipToDelete[0]);
+    }
+  }
+
+  async deleteFamily(familyId: string): Promise<void> {
+    // Delete all memberships for this family
+    const idsToDelete = Array.from(this.familyMemberships.entries())
+      .filter(([_, m]) => m.familyId === familyId)
+      .map(([id]) => id);
+    idsToDelete.forEach(id => this.familyMemberships.delete(id));
+    // Delete the family itself
+    this.families.delete(familyId);
   }
 
   async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
@@ -835,6 +855,19 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
+  async leaveFamily(userId: string, familyId: string): Promise<void> {
+    await this.db.delete(familyMemberships).where(
+      and(eq(familyMemberships.userId, userId), eq(familyMemberships.familyId, familyId))
+    );
+  }
+
+  async deleteFamily(familyId: string): Promise<void> {
+    // Delete all memberships for this family
+    await this.db.delete(familyMemberships).where(eq(familyMemberships.familyId, familyId));
+    // Delete the family itself
+    await this.db.delete(families).where(eq(families.id, familyId));
+  }
+
   async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {
     const result = await this.db
       .select({
@@ -1262,6 +1295,16 @@ class DemoAwareStorage implements IStorage {
   async addUserToFamily(userId: string, familyId: string, role: string): Promise<FamilyMembership> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.addUserToFamily(userId, familyId, role);
+  }
+
+  async leaveFamily(userId: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.leaveFamily(userId, familyId);
+  }
+
+  async deleteFamily(familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteFamily(familyId);
   }
 
   async getFamilyMembershipsWithUsers(familyId: string): Promise<Array<FamilyMembership & { user: User }>> {

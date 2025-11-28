@@ -116,6 +116,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to join family" });
     }
   });
+
+  // Leave a family
+  app.post("/api/family/:familyId/leave", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.params.familyId;
+      
+      // Check if user is a member of this family
+      const membership = await storage.getUserFamilyMembership(userId, familyId);
+      if (!membership) {
+        return res.status(404).json({ error: "You are not a member of this family" });
+      }
+      
+      // Check if user is the owner - owners can't leave, they must delete
+      if (membership.role === 'owner') {
+        return res.status(400).json({ error: "Owners cannot leave their family. You can delete the family instead." });
+      }
+      
+      await storage.leaveFamily(userId, familyId);
+      res.json({ success: true, message: "Successfully left the family" });
+    } catch (error) {
+      console.error("Error leaving family:", error);
+      res.status(500).json({ error: "Failed to leave family" });
+    }
+  });
+
+  // Delete a family (owner only)
+  app.delete("/api/family/:familyId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.params.familyId;
+      
+      // Check if user is the owner of this family
+      const membership = await storage.getUserFamilyMembership(userId, familyId);
+      if (!membership) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+      
+      if (membership.role !== 'owner') {
+        return res.status(403).json({ error: "Only the family owner can delete the family" });
+      }
+      
+      await storage.deleteFamily(familyId);
+      res.json({ success: true, message: "Family deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting family:", error);
+      res.status(500).json({ error: "Failed to delete family" });
+    }
+  });
   
   // Get user's role in a family
   app.get("/api/family/:familyId/role", isAuthenticated, async (req: any, res) => {
