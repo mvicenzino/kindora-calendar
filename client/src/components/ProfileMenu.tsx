@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { UiFamilyMember } from "@shared/types";
 import type { FamilyMembership, User as UserType } from "@shared/schema";
-import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles } from 'lucide-react';
 import { useUserRole } from "@/hooks/useUserRole";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ProfileMenuProps {
   members: UiFamilyMember[];
@@ -52,6 +53,10 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
   const isReadOnly = roleLoading || isCaregiver;
   const { activeFamilyId, activeFamily } = useActiveFamily();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  
+  // Check if user is in demo mode (user ID starts with "demo-")
+  const isDemoMode = user?.id?.startsWith('demo-') ?? false;
 
   // Fetch user accounts (family memberships with user info)
   const { data: userAccounts = [], isLoading: accountsLoading } = useQuery<FamilyMembershipWithUser[]>({
@@ -356,16 +361,28 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
             )}
           </div>
 
-          {/* Quick Logout - Always visible at bottom */}
-          <div className="border-t border-white/10 p-3">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 transition-all"
-              data-testid="button-quick-logout"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Sign Out</span>
-            </button>
+          {/* Quick Logout / Exit Demo - Always visible at bottom */}
+          <div className="border-t border-white/10 p-3 space-y-2">
+            {isDemoMode && (
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-500/20 to-teal-500/20 hover:from-purple-500/30 hover:to-teal-500/30 border border-purple-500/30 text-white transition-all"
+                data-testid="button-exit-demo"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm font-medium">Exit Demo</span>
+              </button>
+            )}
+            {!isDemoMode && (
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 hover:text-red-300 transition-all"
+                data-testid="button-quick-logout"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm font-medium">Sign Out</span>
+              </button>
+            )}
           </div>
         </div>
       )}
