@@ -35,7 +35,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
+      sameSite: "none",
       maxAge: sessionTtl,
     },
   });
@@ -182,7 +183,14 @@ export async function setupAuth(app: Express) {
           console.error("Demo login error:", err);
           return res.redirect("/api/login");
         }
-        res.redirect("/demo-welcome");
+        // Explicitly save session before redirecting to ensure it's persisted
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/api/login");
+          }
+          res.redirect("/demo-welcome");
+        });
       });
     } catch (error) {
       console.error("Demo login error:", error);
