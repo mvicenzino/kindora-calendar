@@ -191,7 +191,8 @@ export async function setupAuth(app: Express) {
           }
           // Redirect with demo token for fallback authentication
           // This helps work around third-party cookie blocking in iframes
-          res.redirect(`/demo-welcome?demo_token=${demoUserId}`);
+          // Default destination is the Caregiver Dashboard
+          res.redirect(`/demo-welcome?demo_token=${demoUserId}&next=/care`);
         });
       });
     } catch (error) {

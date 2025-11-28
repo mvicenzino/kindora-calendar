@@ -37,9 +37,10 @@ export default function DemoWelcome() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const demoToken = urlParams.get("demo_token");
+    const nextPath = urlParams.get("next") || "/care"; // Default to Caregiver Dashboard
     
     if (demoToken) {
-      // Store the token and try to verify/re-establish the session
+      // Store the token and destination
       localStorage.setItem("demo_token", demoToken);
       
       // Clean up the URL
@@ -56,8 +57,8 @@ export default function DemoWelcome() {
       })
         .then(async (res) => {
           if (res.ok) {
-            // Session established, refresh to load user data
-            window.location.reload();
+            // Session established, navigate to destination (Caregiver Dashboard by default)
+            window.location.href = nextPath;
           } else {
             const data = await res.json();
             setVerificationError(data.message || "Failed to verify demo session");
