@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { 
   Calendar, 
   Users, 
@@ -17,7 +19,8 @@ import {
   DollarSign,
   Pill,
   ClipboardList,
-  MessageSquare
+  MessageSquare,
+  Loader2
 } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
@@ -27,6 +30,78 @@ type Persona = "family" | "caregiver";
 export default function DemoWelcome() {
   const [, setLocation] = useLocation();
   const [persona, setPersona] = useState<Persona>("family");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+
+  // Check if we have a demo token in the URL (fallback for when cookies don't work)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const demoToken = urlParams.get("demo_token");
+    
+    if (demoToken) {
+      // Store the token and try to verify/re-establish the session
+      localStorage.setItem("demo_token", demoToken);
+      
+      // Clean up the URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+      
+      // Try to verify the token and establish session
+      setIsVerifying(true);
+      fetch("/api/auth/demo-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ demoToken }),
+        credentials: "include",
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            // Session established, refresh to load user data
+            window.location.reload();
+          } else {
+            const data = await res.json();
+            setVerificationError(data.message || "Failed to verify demo session");
+          }
+        })
+        .catch((err) => {
+          console.error("Demo verification error:", err);
+          setVerificationError("Failed to connect to server");
+        })
+        .finally(() => {
+          setIsVerifying(false);
+        });
+    }
+  }, []);
+
+  // Show loading state while verifying demo token
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center">
+        <div className="text-center text-white">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <p className="text-xl">Setting up your demo account...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if verification failed
+  if (verificationError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center">
+        <div className="text-center text-white max-w-md px-4">
+          <p className="text-xl mb-4">Something went wrong</p>
+          <p className="text-white/70 mb-6">{verificationError}</p>
+          <Button
+            onClick={() => window.location.href = "/api/login/demo"}
+            className="bg-gradient-to-r from-purple-500 to-teal-500 text-white"
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">

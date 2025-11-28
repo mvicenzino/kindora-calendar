@@ -189,12 +189,66 @@ export async function setupAuth(app: Express) {
             console.error("Session save error:", saveErr);
             return res.redirect("/api/login");
           }
-          res.redirect("/demo-welcome");
+          // Redirect with demo token for fallback authentication
+          // This helps work around third-party cookie blocking in iframes
+          res.redirect(`/demo-welcome?demo_token=${demoUserId}`);
         });
       });
     } catch (error) {
       console.error("Demo login error:", error);
       res.redirect("/api/login");
+    }
+  });
+
+  // Demo token verification - fallback for when cookies don't work
+  app.post("/api/auth/demo-verify", async (req, res) => {
+    try {
+      const { demoToken } = req.body;
+      
+      if (!demoToken || !demoToken.startsWith("demo-")) {
+        return res.status(400).json({ message: "Invalid demo token" });
+      }
+
+      // Verify the demo user exists
+      const user = await storage.getUser(demoToken);
+      if (!user) {
+        return res.status(404).json({ message: "Demo user not found" });
+      }
+
+      // Create demo session
+      const demoClaims = {
+        sub: demoToken,
+        email: user.email || `${demoToken}@example.com`,
+        first_name: user.firstName || "Demo",
+        last_name: user.lastName || "User",
+        profile_image_url: user.profileImageUrl,
+        exp: Math.floor(Date.now() / 1000) + 86400,
+      };
+
+      const demoUser = {
+        claims: demoClaims,
+        access_token: "demo-token",
+        refresh_token: null,
+        expires_at: demoClaims.exp,
+      };
+
+      // Log in the demo user
+      req.login(demoUser, (err) => {
+        if (err) {
+          console.error("Demo verify login error:", err);
+          return res.status(500).json({ message: "Failed to establish session" });
+        }
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Demo verify session save error:", saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          res.json({ success: true, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName } });
+        });
+      });
+    } catch (error) {
+      console.error("Demo verify error:", error);
+      res.status(500).json({ message: "Demo verification failed" });
     }
   });
 }
