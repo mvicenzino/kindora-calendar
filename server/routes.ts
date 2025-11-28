@@ -403,70 +403,8 @@ How to Join:
 Visit Kindora Calendar: ${joinUrl}
       `.trim();
 
-      if (resendApiKey) {
-        // Send with Resend
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: email,
-            subject: subject,
-            html: htmlBody,
-            text: textBody
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorDetails;
-          try {
-            errorDetails = JSON.parse(errorText);
-          } catch {
-            errorDetails = { message: errorText };
-          }
-          
-          console.error('Resend API error:', response.status, errorDetails);
-          
-          // Provide helpful error messages based on Resend's response
-          if (response.status === 403) {
-            // Test sender restriction
-            return res.status(400).json({
-              error: "Test sender restriction: You can only send emails to mvicenzino@gmail.com",
-              details: "The test sender (onboarding@resend.dev) only allows sending to your verified email. To send to others, verify your own domain in Resend.",
-              provider: "resend",
-              fix: "Either: 1) Send test emails to mvicenzino@gmail.com, OR 2) Verify your domain at resend.com/domains and update EMAIL_FROM_ADDRESS"
-            });
-          }
-          
-          if (response.status === 422) {
-            return res.status(400).json({
-              error: "Email sending failed: Invalid sender email or unverified domain",
-              details: errorDetails.message || "The sender email must be from a domain verified in your Resend account",
-              provider: "resend",
-              fix: `Verify your domain in Resend, then set EMAIL_FROM_ADDRESS to an email from that domain (e.g., invites@yourdomain.com)`
-            });
-          }
-          
-          return res.status(500).json({
-            error: "Failed to send email via Resend",
-            details: errorDetails.message || errorText,
-            provider: "resend"
-          });
-        }
-
-        const result = await response.json();
-        console.log('Email sent via Resend:', result);
-        
-        return res.json({ 
-          success: true,
-          message: "Invitation email sent successfully",
-          provider: "resend"
-        });
-      } else if (sendgridApiKey) {
+      // Prioritize SendGrid over Resend (SendGrid has fewer restrictions)
+      if (sendgridApiKey) {
         // Send with SendGrid
         const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
           method: 'POST',
@@ -798,68 +736,8 @@ How to Join:
 Visit Kindora Calendar: ${joinUrl}
       `.trim();
 
-      if (resendApiKey) {
-        // Send with Resend
-        const response = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: email,
-            subject: subject,
-            html: htmlBody,
-            text: textBody
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorDetails;
-          try {
-            errorDetails = JSON.parse(errorText);
-          } catch {
-            errorDetails = { message: errorText };
-          }
-          
-          console.error('Resend API error:', response.status, errorDetails);
-          
-          if (response.status === 403) {
-            return res.status(400).json({
-              error: "Test sender restriction: You can only send emails to mvicenzino@gmail.com",
-              details: "The test sender (onboarding@resend.dev) only allows sending to your verified email. To send to others, verify your own domain in Resend.",
-              provider: "resend",
-              fix: "Either: 1) Send test emails to mvicenzino@gmail.com, OR 2) Verify your domain at resend.com/domains and update EMAIL_FROM_ADDRESS"
-            });
-          }
-          
-          if (response.status === 422) {
-            return res.status(400).json({
-              error: "Email sending failed: Invalid sender email or unverified domain",
-              details: errorDetails.message || "The sender email must be from a domain verified in your Resend account",
-              provider: "resend",
-              fix: `Verify your domain in Resend, then set EMAIL_FROM_ADDRESS to an email from that domain (e.g., invites@yourdomain.com)`
-            });
-          }
-          
-          return res.status(500).json({
-            error: "Failed to send email via Resend",
-            details: errorDetails.message || errorText,
-            provider: "resend"
-          });
-        }
-
-        const result = await response.json();
-        console.log('Invite forwarded via Resend:', result);
-        
-        return res.json({ 
-          success: true,
-          message: "Invitation email sent successfully",
-          provider: "resend"
-        });
-      } else if (sendgridApiKey) {
+      // Prioritize SendGrid over Resend (SendGrid has fewer restrictions)
+      if (sendgridApiKey) {
         // Send with SendGrid
         const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
           method: 'POST',
