@@ -104,7 +104,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
       </Button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl z-[100] overflow-hidden">
           {/* Header with tabs */}
           <div className="border-b border-white/10">
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
