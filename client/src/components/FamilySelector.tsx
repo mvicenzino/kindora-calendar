@@ -9,13 +9,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect } from "react";
+import { useLocation } from "wouter";
 
 export default function FamilySelector() {
   const { activeFamilyId, setActiveFamilyId, activeFamily, setActiveFamily } = useActiveFamily();
+  const [, setLocation] = useLocation();
   
   const { data: families, isLoading } = useQuery<Family[]>({
     queryKey: ['/api/families'],
   });
+
+  // Helper to check if a family is a care/eldercare family
+  const isCareFamily = (family: Family) => {
+    const name = family.name.toLowerCase();
+    return name.includes('care') || name.includes('elder') || name.includes("mom's") || name.includes("dad's");
+  };
 
   useEffect(() => {
     if (families && families.length > 0) {
@@ -39,6 +47,15 @@ export default function FamilySelector() {
     if (family) {
       setActiveFamilyId(familyId);
       setActiveFamily(family);
+      
+      // Navigate to appropriate default view based on family type
+      if (isCareFamily(family)) {
+        // Care families default to the caregiver dashboard
+        setLocation('/care');
+      } else {
+        // Standard families default to the calendar view
+        setLocation('/');
+      }
     }
   };
 
