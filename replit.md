@@ -20,7 +20,28 @@ The backend is an **Express.js** application with TypeScript, providing a REST A
 
 ### Data Storage Solutions
 
-The database schema includes `Family Members`, `Events`, and `Event Notes` tables, linked by foreign keys. Event notes support threading via `parentNoteId` for replies, with `authorUserId` tracking who wrote each note. **Drizzle Kit** manages PostgreSQL migrations, with schema definitions in `/shared/schema.ts`. The system supports in-memory storage for demos and is configured for PostgreSQL for persistent data.
+The database schema includes the following tables, all stored in PostgreSQL:
+- **users** - Authenticated user accounts
+- **sessions** - Session management for authentication
+- **families** - Family calendar groups with invite codes
+- **family_memberships** - Links users to families with roles (owner/member/caregiver)
+- **family_members** - Calendar members (people on the calendar)
+- **events** - Calendar events with completion tracking
+- **event_notes** - Threaded notes on events with `parentNoteId` for replies
+- **messages** - Legacy event-specific messages
+- **family_messages** - Global family messaging with threading
+- **medications** - Medication schedules for care recipients
+- **medication_logs** - Logs of medication administration (given/skipped/refused)
+- **caregiver_pay_rates** - Hourly rates per caregiver per family
+- **caregiver_time_entries** - Time tracking with automatic pay calculation
+
+**Storage Architecture:**
+- `DemoAwareStorage` wrapper intelligently routes data:
+  - **Demo users** (ID starts with "demo-") → `MemStorage` (in-memory, ephemeral)
+  - **Real users** → `DrizzleStorage` (PostgreSQL, persistent)
+- This design ensures demo data doesn't pollute the production database while real users have full data persistence
+- **Drizzle Kit** manages PostgreSQL migrations via `npm run db:push`
+- Schema definitions in `/shared/schema.ts` with Zod validation schemas
 
 ### Event Notes Feature
 
