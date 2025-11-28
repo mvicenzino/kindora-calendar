@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import Header from "@/components/Header";
+import ViewSwitcherBar from "@/components/ViewSwitcherBar";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
@@ -271,15 +272,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
-      <Header 
-        currentView={view} 
-        onViewChange={setView} 
-        members={members}
-        onMemberColorChange={handleMemberColorChange}
-        onSearchClick={() => setSearchOpen(true)}
-        onAddMember={() => setMemberModalOpen(true)}
-        onDeleteMember={handleDeleteMember}
-      />
+      {/* Sticky container for both header and view switcher */}
+      <div className="sticky top-0 z-50">
+        <Header 
+          members={members}
+          onMemberColorChange={handleMemberColorChange}
+          onSearchClick={() => setSearchOpen(true)}
+          onAddMember={() => setMemberModalOpen(true)}
+          onDeleteMember={handleDeleteMember}
+        />
+        <ViewSwitcherBar currentView={view} onViewChange={setView} />
+      </div>
       
       <SearchPanel
         isOpen={searchOpen}

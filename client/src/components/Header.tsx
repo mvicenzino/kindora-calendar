@@ -4,12 +4,9 @@ import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
-import { useRef, useEffect, useState } from "react";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 
 interface HeaderProps {
-  currentView: 'day' | 'week' | 'month' | 'timeline';
-  onViewChange: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   members?: UiFamilyMember[];
   onMemberColorChange?: (memberId: string, color: string) => void;
   onSearchClick?: () => void;
@@ -17,145 +14,71 @@ interface HeaderProps {
   onDeleteMember?: (memberId: string) => void;
 }
 
-export default function Header({ currentView, onViewChange, members = [], onMemberColorChange, onSearchClick, onAddMember, onDeleteMember }: HeaderProps) {
+export default function Header({ members = [], onMemberColorChange, onSearchClick, onAddMember, onDeleteMember }: HeaderProps) {
   const [, setLocation] = useLocation();
-  const containerRef = useRef<HTMLElement>(null);
-  const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
-  
-  const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
-    { value: 'day', label: 'Day' },
-    { value: 'week', label: 'Week' },
-    { value: 'month', label: 'Month' },
-    { value: 'timeline', label: 'Timeline' },
-  ];
-
-  useEffect(() => {
-    const updateIndicator = () => {
-      const activeButton = buttonsRef.current.get(currentView);
-      const container = containerRef.current;
-      
-      if (activeButton && container) {
-        const containerRect = container.getBoundingClientRect();
-        const buttonRect = activeButton.getBoundingClientRect();
-        
-        setIndicatorStyle({
-          left: buttonRect.left - containerRect.left,
-          width: buttonRect.width,
-        });
-      }
-    };
-
-    updateIndicator();
-    window.addEventListener('resize', updateIndicator);
-    return () => window.removeEventListener('resize', updateIndicator);
-  }, [currentView]);
 
   return (
-    <header className="sticky top-0 z-50 w-full">
+    <header className="w-full" data-testid="header-main">
       <div className="backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
-        <div className="relative flex items-center justify-between px-4 md:px-6 py-4">
+        <div className="flex items-center justify-between px-4 md:px-6 py-3">
           {/* Left: Logo */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 rounded-lg" data-testid="icon-logo" />
-            <span className="text-xl app-title hidden sm:inline">
-              <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg" data-testid="icon-logo" />
+            <span className="text-base sm:text-lg md:text-xl app-title">
+              <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white hidden sm:inline">Calendar</span>
             </span>
           </div>
           
-          {/* Center: Navigation tabs - use flex on mobile, absolute centering on desktop */}
-          <nav ref={containerRef} className="flex items-center gap-0.5 sm:gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 md:absolute md:left-1/2 md:-translate-x-1/2">
-            <div
-              className="absolute bg-orange-300/60 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-orange-300/70 z-0"
-              style={{
-                left: `${indicatorStyle.left}px`,
-                width: `${indicatorStyle.width}px`,
-                top: '4px',
-                bottom: '4px',
-              }}
-            />
-            {views.map((view) => (
-              <button
-                key={view.value}
-                ref={(el) => {
-                  if (el) {
-                    buttonsRef.current.set(view.value, el);
-                  } else {
-                    buttonsRef.current.delete(view.value);
-                  }
-                }}
-                onClick={() => onViewChange(view.value)}
-                data-testid={`button-view-${view.value}`}
-                aria-pressed={currentView === view.value}
-                aria-label={`Switch to ${view.label} view`}
-                className={`
-                  relative z-10 flex-1 md:min-w-[80px] px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium 
-                  flex items-center justify-center
-                  transition-colors duration-300 ease-out
-                  focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
-                  ${view.value === 'timeline' ? 'hidden sm:flex' : ''}
-                  ${currentView === view.value
-                    ? 'text-white'
-                    : 'text-white/60 hover:text-white/90'
-                  }
-                `}
-              >
-                {view.label}
-              </button>
-            ))}
-          </nav>
-
-          {/* Right: Family selector + action buttons */}
-          <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
-            {/* Family selector - compact on mobile, full on desktop */}
+          {/* Center: Family selector - prominently positioned */}
+          <div className="flex-1 flex justify-center px-2 min-w-0">
             <FamilySelector />
-            
-            {/* Action buttons */}
-            <div className="flex items-center gap-1 sm:gap-2">
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9 hidden sm:flex"
-                aria-label="Messages"
-                onClick={() => setLocation('/messages')}
-                data-testid="button-messages"
-              >
-                <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
+          </div>
+
+          {/* Right: Action buttons */}
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
+              aria-label="Messages"
+              onClick={() => setLocation('/messages')}
+              data-testid="button-messages"
+            >
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
+              aria-label="Memories"
+              onClick={() => setLocation('/memories')}
+              data-testid="button-memories"
+            >
+              <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9 hidden sm:flex"
+              aria-label="Search events"
+              onClick={onSearchClick}
+              data-testid="button-search"
+            >
+              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
+            {onMemberColorChange ? (
+              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
+            ) : (
               <Button
                 size="icon"
                 variant="ghost"
                 className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
-                aria-label="Memories"
-                onClick={() => setLocation('/memories')}
-                data-testid="button-memories"
+                aria-label="User profile"
+                data-testid="button-profile"
               >
-                <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+                <User className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50 hidden sm:flex"
-                aria-label="Search events"
-                onClick={onSearchClick}
-                data-testid="button-search"
-              >
-                <Search className="w-5 h-5" />
-              </Button>
-              {onMemberColorChange ? (
-                <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
-              ) : (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
-                  aria-label="User profile"
-                  data-testid="button-profile"
-                >
-                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                </Button>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
