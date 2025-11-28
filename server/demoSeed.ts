@@ -684,20 +684,203 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       createdMedications.push({ id: created.id, name: created.name });
     }
 
-    // Log some sample medication administrations for today's morning meds
-    const morningMeds = createdMedications.filter(m => 
-      m.name === "Lisinopril" || m.name === "Metoprolol" || m.name === "Vitamin D3"
-    );
+    // ============================================
+    // SAMPLE MEDICATION LOGS - Comprehensive Demo Data
+    // Shows realistic medication tracking across multiple days
+    // ============================================
     
-    for (const med of morningMeds) {
-      await storage.createMedicationLog(careFamilyId, {
-        medicationId: med.id,
-        administeredBy: userId, // Demo user gave meds this morning
+    // Get medication IDs by name for easier reference
+    const getMedId = (name: string) => createdMedications.find(m => m.name === name)?.id;
+    
+    // Create comprehensive medication logs spanning the past week
+    type MedStatus = "given" | "skipped" | "refused";
+    const medicationLogs: Array<{
+      medicationId: string;
+      administeredBy: string;
+      scheduledTime: Date;
+      administeredAt: Date;
+      status: MedStatus;
+      notes?: string;
+    }> = [
+      // TODAY's Morning Medications (8am scheduled)
+      {
+        medicationId: getMedId("Lisinopril")!,
+        administeredBy: mayaId, // Maya gave morning meds
         scheduledTime: setMinutes(setHours(today, 8), 0),
-        administeredAt: setMinutes(setHours(today, 8), 15), // Gave 15 min after scheduled
+        administeredAt: setMinutes(setHours(today, 8), 10),
         status: "given",
-        notes: med.name === "Metoprolol" ? "Given with oatmeal as instructed" : undefined,
-      });
+        notes: "Blood pressure looked good this morning - 128/78",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(today, 8), 0),
+        administeredAt: setMinutes(setHours(today, 8), 12),
+        status: "given",
+        notes: "Given with oatmeal and blueberries",
+      },
+      {
+        medicationId: getMedId("Vitamin D3")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(today, 8), 0),
+        administeredAt: setMinutes(setHours(today, 8), 15),
+        status: "given",
+      },
+      
+      // YESTERDAY - Full day of medications
+      {
+        medicationId: getMedId("Lisinopril")!,
+        administeredBy: userId, // Sarah (demo user)
+        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 5),
+        status: "given",
+        notes: "Visiting in the morning - gave meds before heading to work",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: userId,
+        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 5),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Vitamin D3")!,
+        administeredBy: userId,
+        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 8),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Baby Aspirin")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 1), 12), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 1), 12), 30),
+        status: "given",
+        notes: "Took with lunch - chicken soup and crackers",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: davidId, // David (brother)
+        scheduledTime: setMinutes(setHours(subDays(today, 1), 18), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 1), 18), 15),
+        status: "given",
+        notes: "Stopped by for dinner visit",
+      },
+      {
+        medicationId: getMedId("Trazodone")!,
+        administeredBy: davidId,
+        scheduledTime: setMinutes(setHours(subDays(today, 1), 21), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 1), 21), 0),
+        status: "skipped",
+        notes: "Mom said she's been sleeping well, decided to skip tonight",
+      },
+      
+      // 2 DAYS AGO - Maya handled most medications
+      {
+        medicationId: getMedId("Lisinopril")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 20),
+        status: "given",
+        notes: "Slightly late - was helping with PT exercises first",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 22),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Vitamin D3")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 25),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Baby Aspirin")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 2), 12), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 2), 12), 0),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: userId,
+        scheduledTime: setMinutes(setHours(subDays(today, 2), 18), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 2), 19), 0),
+        status: "given",
+        notes: "Running late from work, gave as soon as I arrived",
+      },
+      
+      // 3 DAYS AGO - Example of a refused medication
+      {
+        medicationId: getMedId("Lisinopril")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 10),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 10),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Vitamin D3")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 15),
+        status: "refused",
+        notes: "Mom wasn't feeling well, said it was making her nauseous. Will try again tomorrow.",
+      },
+      {
+        medicationId: getMedId("Baby Aspirin")!,
+        administeredBy: mayaId,
+        scheduledTime: setMinutes(setHours(subDays(today, 3), 12), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 3), 12), 15),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: davidId,
+        scheduledTime: setMinutes(setHours(subDays(today, 3), 18), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 3), 18), 30),
+        status: "given",
+        notes: "Picked up dinner, stayed to give evening meds",
+      },
+      
+      // 4 DAYS AGO - Doctor appointment day
+      {
+        medicationId: getMedId("Lisinopril")!,
+        administeredBy: userId,
+        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 45),
+        status: "given",
+        notes: "Early dose before cardiology appointment",
+      },
+      {
+        medicationId: getMedId("Metoprolol")!,
+        administeredBy: userId,
+        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 45),
+        status: "given",
+      },
+      {
+        medicationId: getMedId("Vitamin D3")!,
+        administeredBy: userId,
+        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
+        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 50),
+        status: "given",
+      },
+    ];
+    
+    // Create all medication logs
+    for (const log of medicationLogs) {
+      await storage.createMedicationLog(careFamilyId, log);
     }
 
     // ============================================
@@ -1031,6 +1214,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     console.log(`   Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
     console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
     console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
+    console.log(`   Medication Logs: ${medicationLogs.length} dose records (given/skipped/refused)`);
     console.log(`   Time Tracking: ${timeEntries.length} time entries for Maya ($28/hr) - 27hrs total`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
