@@ -336,6 +336,50 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     // Set Maya's hourly rate for time tracking demo
     await storage.setCaregiverPayRate(careFamilyId, mayaId, "28.00", "USD");
 
+    // Add sample time entries for Maya to demonstrate Time Tracking feature
+    // This shows a realistic week of caregiver work with various hours and notes
+    const timeEntries = [
+      {
+        hoursWorked: "4.5",
+        entryDate: subDays(today, 6),
+        notes: "Morning care + physical therapy assistance",
+      },
+      {
+        hoursWorked: "3.0",
+        entryDate: subDays(today, 5),
+        notes: "Afternoon medication management and meal prep",
+      },
+      {
+        hoursWorked: "5.0",
+        entryDate: subDays(today, 4),
+        notes: "Doctor's appointment - accompanied Marilyn to cardiology",
+      },
+      {
+        hoursWorked: "4.0",
+        entryDate: subDays(today, 3),
+        notes: "Morning routine and light housekeeping",
+      },
+      {
+        hoursWorked: "3.5",
+        entryDate: subDays(today, 2),
+        notes: "PT exercises and garden walk",
+      },
+      {
+        hoursWorked: "4.0",
+        entryDate: subDays(today, 1),
+        notes: "Evening care - dinner prep and medication",
+      },
+      {
+        hoursWorked: "3.0",
+        entryDate: today,
+        notes: "Morning care session",
+      },
+    ];
+
+    for (const entry of timeEntries) {
+      await storage.createCaregiverTimeEntry(careFamilyId, mayaId, entry, "28.00");
+    }
+
     // Family members in the care calendar
     const grandma = await storage.createFamilyMember(careFamilyId, {
       name: "Marilyn (Mom)",
@@ -987,6 +1031,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     console.log(`   Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
     console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
     console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
+    console.log(`   Time Tracking: ${timeEntries.length} time entries for Maya ($28/hr) - 27hrs total`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
