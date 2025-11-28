@@ -190,7 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const fromEmail = process.env.EMAIL_FROM_ADDRESS || "mvicenzino@gmail.com";
+      const fromEmail = (process.env.EMAIL_FROM_ADDRESS || "mvicenzino@gmail.com").toLowerCase();
       
       // HTML email template
       const htmlBody = `
@@ -523,7 +523,7 @@ Visit Kindora Calendar: ${joinUrl}
         });
       }
       
-      const fromEmail = process.env.EMAIL_FROM_ADDRESS || "mvicenzino@gmail.com";
+      const fromEmail = (process.env.EMAIL_FROM_ADDRESS || "mvicenzino@gmail.com").toLowerCase();
       
       // HTML email template
       const htmlBody = `
