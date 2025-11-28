@@ -39,11 +39,11 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
   }, [currentView]);
 
   return (
-    <div className="w-full backdrop-blur-xl bg-white/5 border-b border-white/10">
+    <div className="w-full backdrop-blur-xl bg-black/30 border-b border-white/10">
       <div className="flex items-center justify-center px-4 py-2">
         <nav 
           ref={containerRef} 
-          className="relative flex items-center gap-1 bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 overflow-x-auto scrollbar-hide"
+          className="relative flex items-center gap-1 bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/15 overflow-x-auto scrollbar-hide"
           data-testid="nav-view-switcher"
         >
           <div
