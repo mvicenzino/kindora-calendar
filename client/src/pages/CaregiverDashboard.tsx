@@ -187,27 +187,35 @@ export default function CaregiverDashboard() {
     ), [todayEvents]
   );
 
+  const [recentlyLoggedMedId, setRecentlyLoggedMedId] = useState<string | null>(null);
+
   const logMedicationMutation = useMutation({
-    mutationFn: async ({ medicationId, status, notes }: { medicationId: string; status: string; notes?: string }) => {
+    mutationFn: async ({ medicationId, status, notes, medicationName }: { medicationId: string; status: string; notes?: string; medicationName?: string }) => {
       const res = await apiRequest('POST', `/api/medications/${medicationId}/logs`, {
         status,
         notes,
         administeredAt: new Date(),
         familyId: activeFamilyId,
       });
-      return await res.json();
+      return { ...(await res.json()), medicationName, status };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/medication-logs/today?familyId=' + activeFamilyId] });
+      setRecentlyLoggedMedId(data.medicationId || null);
+      setTimeout(() => setRecentlyLoggedMedId(null), 3000);
+      
+      const userName = user?.firstName || 'You';
+      const timeStr = format(new Date(), 'h:mm a');
       toast({
-        title: "Medication logged",
-        description: "The dose has been recorded successfully.",
+        title: data.status === 'given' ? "Medication given" : "Medication logged",
+        description: `${data.medicationName || 'Dose'} logged by ${userName} at ${timeStr}`,
+        duration: 4000,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to log medication",
-        description: error.message || "Please try again.",
+        title: "Could not log medication",
+        description: error.message || "Please try again - your care is important.",
         variant: "destructive",
       });
     },
@@ -223,18 +231,19 @@ export default function CaregiverDashboard() {
       });
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/caregiver/pay-rate?familyId=' + activeFamilyId] });
       setShowPayRateDialog(false);
       payRateForm.reset();
       toast({
-        title: "Pay rate updated",
-        description: "Your hourly rate has been saved.",
+        title: "Rate saved",
+        description: `Your hourly rate is now set to ${formatCurrency(parseFloat(data.hourlyRate))}. You're all set!`,
+        duration: 4000,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to update pay rate",
+        title: "Could not save rate",
         description: error.message || "Please try again.",
         variant: "destructive",
       });
@@ -249,9 +258,9 @@ export default function CaregiverDashboard() {
         notes: data.notes || undefined,
         familyId: activeFamilyId,
       });
-      return await res.json();
+      return { ...(await res.json()), hoursWorked: data.hoursWorked };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/caregiver/time-entries?familyId=' + activeFamilyId] });
       setShowLogHoursDialog(false);
       timeEntryForm.reset({ 
@@ -259,15 +268,17 @@ export default function CaregiverDashboard() {
         hoursWorked: "",
         notes: "",
       });
+      const estimatedPay = payRate ? parseFloat(data.hoursWorked) * parseFloat(payRate.hourlyRate) : 0;
       toast({
-        title: "Hours logged",
-        description: "Your work hours have been recorded.",
+        title: "Hours recorded",
+        description: `${parseFloat(data.hoursWorked).toFixed(1)} hours logged${payRate ? ` (${formatCurrency(estimatedPay)})` : ''}. Great work today!`,
+        duration: 4000,
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Failed to log hours",
-        description: error.message || "Please try again.",
+        title: "Could not log hours",
+        description: error.message || "Please try again - your time is valuable.",
         variant: "destructive",
       });
     },
@@ -384,58 +395,97 @@ export default function CaregiverDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-events">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/20">
-                  <CalendarDays className="h-5 w-5 text-blue-300" />
+        {/* Priority Alert Banner - Shows when there are urgent actions */}
+        {(pendingMeds.length > 0 || medicalEvents.length > 0) && (
+          <div 
+            className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/30 backdrop-blur-xl"
+            data-testid="banner-priority-alert"
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/30 animate-pulse">
+                  <AlertCircle className="h-6 w-6 text-amber-200" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-white">{todayEvents.length}</p>
-                  <p className="text-sm text-white/60">Today's Events</p>
+                  <h3 className="text-lg font-semibold text-white mb-1">Action Needed</h3>
+                  <p className="text-amber-100/80 text-sm">
+                    {pendingMeds.length > 0 && (
+                      <span className="font-medium">{pendingMeds.length} medication{pendingMeds.length !== 1 ? 's' : ''} pending</span>
+                    )}
+                    {pendingMeds.length > 0 && medicalEvents.length > 0 && <span> • </span>}
+                    {medicalEvents.length > 0 && (
+                      <span className="font-medium">{medicalEvents.length} medical appointment{medicalEvents.length !== 1 ? 's' : ''} today</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              {pendingMeds.length > 0 && (
+                <Button
+                  className="bg-amber-500/30 hover:bg-amber-500/40 text-amber-100 border border-amber-400/40 min-h-11"
+                  onClick={() => document.getElementById('medications-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  data-testid="button-view-pending-meds"
+                >
+                  <Pill className="h-4 w-4 mr-2" />
+                  Log Medications
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stats Summary Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-events">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/20 flex-shrink-0">
+                  <CalendarDays className="h-4 w-4 md:h-5 md:w-5 text-blue-300" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold text-white">{todayEvents.length}</p>
+                  <p className="text-xs md:text-sm text-white/60 truncate">Events Today</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-medical">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-500/20">
-                  <Heart className="h-5 w-5 text-red-300" />
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-2 rounded-lg bg-red-500/20 flex-shrink-0">
+                  <Heart className="h-4 w-4 md:h-5 md:w-5 text-red-300" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{medicalEvents.length}</p>
-                  <p className="text-sm text-white/60">Medical Appts</p>
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold text-white">{medicalEvents.length}</p>
+                  <p className="text-xs md:text-sm text-white/60 truncate">Medical Appts</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-meds-pending">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500/20">
-                  <Pill className="h-5 w-5 text-amber-300" />
+          <Card className={`backdrop-blur-xl border-white/20 ${pendingMeds.length > 0 ? 'bg-amber-500/15 border-amber-500/30' : 'bg-white/10'}`} data-testid="card-stat-meds-pending">
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className={`p-2 rounded-lg flex-shrink-0 ${pendingMeds.length > 0 ? 'bg-amber-500/30' : 'bg-amber-500/20'}`}>
+                  <Pill className={`h-4 w-4 md:h-5 md:w-5 ${pendingMeds.length > 0 ? 'text-amber-200' : 'text-amber-300'}`} />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{pendingMeds.length}</p>
-                  <p className="text-sm text-white/60">Meds Pending</p>
+                <div className="min-w-0">
+                  <p className={`text-xl md:text-2xl font-bold ${pendingMeds.length > 0 ? 'text-amber-100' : 'text-white'}`}>{pendingMeds.length}</p>
+                  <p className={`text-xs md:text-sm truncate ${pendingMeds.length > 0 ? 'text-amber-200/70' : 'text-white/60'}`}>Meds Pending</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-meds-done">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/20">
-                  <CheckCircle2 className="h-5 w-5 text-green-300" />
+            <CardContent className="p-3 md:p-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="p-2 rounded-lg bg-green-500/20 flex-shrink-0">
+                  <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-300" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{completedMeds.length}</p>
-                  <p className="text-sm text-white/60">Meds Given</p>
+                <div className="min-w-0">
+                  <p className="text-xl md:text-2xl font-bold text-white">{completedMeds.length}</p>
+                  <p className="text-xs md:text-sm text-white/60 truncate">Meds Given</p>
                 </div>
               </div>
             </CardContent>
@@ -443,7 +493,7 @@ export default function CaregiverDashboard() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-medications">
+          <Card id="medications-section" className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-medications">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
               <CardTitle className="text-white flex items-center gap-2">
                 <Pill className="h-5 w-5" />
@@ -511,11 +561,11 @@ export default function CaregiverDashboard() {
                               </div>
                             </div>
                             <div className="flex flex-col gap-2">
-                              {status === 'given' ? (
-                                <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Given
-                                </Badge>
+                              {status === 'given' || recentlyLoggedMedId === med.id ? (
+                                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${recentlyLoggedMedId === med.id ? 'bg-green-500/30 animate-pulse' : 'bg-green-500/20'}`}>
+                                  <CheckCircle2 className="h-4 w-4 text-green-300" />
+                                  <span className="text-green-300 text-sm font-medium">Given</span>
+                                </div>
                               ) : status === 'skipped' ? (
                                 <Badge className="bg-gray-500/20 text-gray-300 border-gray-500/30">
                                   Skipped
@@ -524,8 +574,8 @@ export default function CaregiverDashboard() {
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
-                                    className="bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30"
-                                    onClick={() => logMedicationMutation.mutate({ medicationId: med.id, status: 'given' })}
+                                    className="bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 min-h-[44px]"
+                                    onClick={() => logMedicationMutation.mutate({ medicationId: med.id, status: 'given', medicationName: med.name })}
                                     disabled={logMedicationMutation.isPending}
                                     data-testid={`button-log-med-${med.id}`}
                                   >

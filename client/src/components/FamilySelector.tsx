@@ -71,11 +71,11 @@ export default function FamilySelector() {
   return (
     <Select value={activeFamilyId || undefined} onValueChange={handleFamilyChange}>
       <SelectTrigger 
-        className="w-[200px] bg-white/10 border-white/30 text-white hover-elevate"
+        className="w-auto min-w-[100px] md:min-w-[180px] max-w-[140px] md:max-w-[220px] bg-white/10 border-white/30 text-white hover-elevate text-xs md:text-sm min-h-[36px] md:min-h-[40px]"
         data-testid="select-family"
       >
         <SelectValue>
-          {activeFamily?.name || "Select family"}
+          <span className="truncate">{activeFamily?.name || "Select"}</span>
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

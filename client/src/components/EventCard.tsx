@@ -109,6 +109,17 @@ export default function EventCard({
 
   const photoOpacity = variant === 'grid' ? 'opacity-50' : 'opacity-35';
 
+  const isLightColor = (hex: string) => {
+    const color = hex.replace('#', '');
+    const r = parseInt(color.substr(0, 2), 16);
+    const g = parseInt(color.substr(2, 2), 16);
+    const b = parseInt(color.substr(4, 2), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6;
+  };
+
+  const needsDarkText = !event.photoUrl && isLightColor(event.color);
+
   return (
     <div
       onClick={onClick}
@@ -116,6 +127,10 @@ export default function EventCard({
       className={cardClasses}
       style={{ backgroundColor: event.color }}
     >
+      {/* Dark overlay for light colors to ensure text readability - only without photos */}
+      {needsDarkText && (
+        <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+      )}
       {/* Photo Background (if exists) */}
       {event.photoUrl && (
         <div 
@@ -129,34 +144,36 @@ export default function EventCard({
       <div className="relative z-10">
         {/* Top Row: Checkmark and Delete */}
         <div className="flex items-start justify-between mb-2">
-          {/* Checkmark Button */}
+          {/* Checkmark Button - min 44px touch target */}
           <button
             onClick={handleCheckmarkClick}
             data-testid={`button-complete-${event.id}`}
             className={`
-              w-7 h-7 rounded-full flex items-center justify-center transition-all
+              w-8 h-8 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all
               ${event.completed 
-                ? 'bg-white text-purple-600' 
-                : 'bg-white/20 border-2 border-white/60 text-white hover:bg-white/30'
+                ? needsDarkText ? 'bg-gray-900 text-white' : 'bg-white text-purple-600'
+                : needsDarkText 
+                  ? 'bg-black/10 border-2 border-black/30 text-gray-800 hover:bg-black/20'
+                  : 'bg-white/20 border-2 border-white/60 text-white hover:bg-white/30'
               }
             `}
           >
             {event.completed && <Check className="w-4 h-4" strokeWidth={3} />}
           </button>
 
-          {/* Delete Button */}
+          {/* Delete Button - min 44px touch target */}
           <button
             onClick={handleDeleteClick}
             data-testid={`button-delete-${event.id}`}
-            className="w-7 h-7 rounded-full bg-white/20 border border-white/40 flex items-center justify-center hover:bg-white/30 transition-all"
+            className={`w-8 h-8 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all ${needsDarkText ? 'bg-black/10 border border-black/20 hover:bg-black/20' : 'bg-white/20 border border-white/40 hover:bg-white/30'}`}
           >
-            <Trash2 className="w-4 h-4 text-white" />
+            <Trash2 className={`w-4 h-4 ${needsDarkText ? 'text-gray-800' : 'text-white'}`} />
           </button>
         </div>
 
         {/* Title */}
         <h3 
-          className={`font-semibold text-white mb-2 ${variant === 'grid' ? 'text-base' : 'text-xl'}`}
+          className={`font-semibold mb-2 ${variant === 'grid' ? 'text-base' : 'text-xl'} ${needsDarkText ? 'text-gray-900' : 'text-white'}`}
           data-testid={`text-title-${event.id}`}
         >
           {event.title}
@@ -167,14 +184,14 @@ export default function EventCard({
           <div className="mb-3">
             {isSometimeToday() ? (
               <span 
-                className="inline-flex items-center gap-1 px-3 py-1 bg-white/20 rounded-full text-sm text-white border border-white/30"
+                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm border ${needsDarkText ? 'bg-black/10 text-gray-800 border-black/20' : 'bg-white/20 text-white border-white/30'}`}
                 data-testid={`text-time-${event.id}`}
               >
                 <Clock className="w-3 h-3" />
                 Sometime today
               </span>
             ) : (
-              <p className="text-sm text-white/90" data-testid={`text-time-${event.id}`}>
+              <p className={`text-sm ${needsDarkText ? 'text-gray-800' : 'text-white/90'}`} data-testid={`text-time-${event.id}`}>
                 {format(event.startTime, 'h:mm a')} - {format(event.endTime, 'h:mm a')}
               </p>
             )}
@@ -182,28 +199,28 @@ export default function EventCard({
         )}
 
         {showDate && (
-          <p className="text-sm text-white/80 mb-3" data-testid={`text-date-${event.id}`}>
+          <p className={`text-sm mb-3 ${needsDarkText ? 'text-gray-700' : 'text-white/80'}`} data-testid={`text-date-${event.id}`}>
             {format(event.startTime, 'MMM d, yyyy')}
           </p>
         )}
 
         {/* Description */}
         {event.description && variant === 'full' && (
-          <p className="text-sm text-white/80 mb-3" data-testid={`text-description-${event.id}`}>
+          <p className={`text-sm mb-3 ${needsDarkText ? 'text-gray-700' : 'text-white/80'}`} data-testid={`text-description-${event.id}`}>
             {event.description}
           </p>
         )}
 
         {/* Bottom Row: Notes Indicator (left) and Member Avatars (right) */}
         <div className="flex justify-between items-center gap-2">
-          {/* Notes Indicator - Lower Left (Clickable) */}
+          {/* Notes Indicator - Lower Left (Clickable) - min 44px touch target */}
           {(event.noteCount ?? 0) > 0 ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setNotesModalOpen(true);
               }}
-              className="flex items-center gap-1 text-white/80 hover:text-white hover:bg-white/20 rounded-full px-2 py-1 transition-all"
+              className={`flex items-center gap-1 rounded-full px-3 py-1.5 min-h-[44px] transition-all ${needsDarkText ? 'text-gray-700 hover:text-gray-900 hover:bg-black/10' : 'text-white/80 hover:text-white hover:bg-white/20'}`}
               data-testid={`notes-indicator-${event.id}`}
             >
               <MessageSquare className="w-4 h-4" />

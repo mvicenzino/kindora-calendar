@@ -107,10 +107,8 @@ export default function Header({ currentView, onViewChange, members = [], onMemb
 
           {/* Right: Family selector + action buttons */}
           <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
-            {/* Family selector - hidden on mobile */}
-            <div className="hidden md:block">
-              <FamilySelector />
-            </div>
+            {/* Family selector - compact on mobile, full on desktop */}
+            <FamilySelector />
             
             {/* Action buttons */}
             <div className="flex items-center gap-1 sm:gap-2">
