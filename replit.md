@@ -102,6 +102,23 @@ A dedicated caregiver portal with care-focused views and medication management:
 - **Role-Based Permissions**: Caregivers can view medications and log doses; owners/members can create, edit, and delete medications
 - **Demo Data**: 5 sample medications for Dorothy (Mom's Care Calendar): Lisinopril, Metoprolol, Vitamin D3, Trazodone, Baby Aspirin with realistic dosages and schedules
 
+### Navigation Architecture
+
+The application uses a two-tier sticky navigation structure:
+
+- **Header Row** (`Header.tsx`): 
+  - Left: Kindora logo
+  - Center: FamilySelector dropdown (only visible when user has 2+ families)
+  - Right: Action buttons (Messages, Memories, Search, Profile menu)
+  
+- **View Switcher Bar** (`ViewSwitcherBar.tsx`):
+  - Centered toggle group: Day / Week / Month / Timeline views
+  - Animated sliding indicator for active view
+  - Positioned directly below the header
+  
+- **Sticky Positioning**: Both components are wrapped in a single sticky container (`top-0 z-50` in Home.tsx) to remain visible while scrolling
+- **Responsive Design**: Mobile-optimized with smaller buttons and truncated text
+
 ### Caregiver Time Tracking & Pay Calculation
 
 A comprehensive time tracking system for caregivers to log hours and calculate pay:
