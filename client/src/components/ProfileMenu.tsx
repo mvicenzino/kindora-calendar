@@ -105,7 +105,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
 
       {isOpen && (
         <div 
-          className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-80 bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl overflow-hidden"
+          className="fixed right-4 top-14 w-[calc(100vw-2rem)] max-w-80 bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl overflow-hidden pointer-events-auto"
           style={{ zIndex: 9999 }}
         >
           {/* Header with tabs */}

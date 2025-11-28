@@ -1,9 +1,10 @@
-import { Search, User, Image, MessageCircle } from "lucide-react";
+import { Search, Image, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
+import { useAuth } from "@/hooks/useAuth";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 
 interface HeaderProps {
@@ -16,6 +17,14 @@ interface HeaderProps {
 
 export default function Header({ members = [], onMemberColorChange, onSearchClick, onAddMember, onDeleteMember }: HeaderProps) {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  
+  // Check if user is in demo mode
+  const isDemoMode = user?.id?.startsWith('demo-') ?? false;
+
+  const handleExitDemo = () => {
+    window.location.href = "/api/logout";
+  };
 
   return (
     <header className="relative z-[60] w-full" data-testid="header-main">
@@ -36,6 +45,19 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
 
           {/* Right: Action buttons */}
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            {/* Exit Demo button - only visible in demo mode */}
+            {isDemoMode && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-white border-white/50 bg-red-500/20 hover:bg-red-500/30 h-8 px-2 sm:px-3 gap-1"
+                onClick={handleExitDemo}
+                data-testid="button-exit-demo"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-xs font-medium">Exit Demo</span>
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -66,19 +88,12 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             >
               <Search className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
-            {onMemberColorChange ? (
-              <ProfileMenu members={members} onMemberColorChange={onMemberColorChange} onAddMember={onAddMember} onDeleteMember={onDeleteMember} />
-            ) : (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
-                aria-label="User profile"
-                data-testid="button-profile"
-              >
-                <User className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            )}
+            <ProfileMenu 
+              members={members} 
+              onMemberColorChange={onMemberColorChange || (() => {})} 
+              onAddMember={onAddMember} 
+              onDeleteMember={onDeleteMember} 
+            />
           </div>
         </div>
       </div>
