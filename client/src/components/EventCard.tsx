@@ -152,14 +152,14 @@ export default function EventCard({
             className={`
               w-8 h-8 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all
               ${event.completed 
-                ? needsDarkText ? 'bg-gray-900 text-white' : 'bg-white text-purple-600'
+                ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
                 : needsDarkText 
-                  ? 'bg-black/10 border-2 border-black/30 text-gray-800 hover:bg-black/20'
-                  : 'bg-white/20 border-2 border-white/60 text-white hover:bg-white/30'
+                  ? 'bg-white/80 border-2 border-gray-400 text-gray-400 hover:border-green-500 hover:text-green-500'
+                  : 'bg-white/30 border-2 border-white/80 text-white/60 hover:border-green-400 hover:text-green-400'
               }
             `}
           >
-            {event.completed && <Check className="w-4 h-4" strokeWidth={3} />}
+            <Check className={`w-4 h-4 ${event.completed ? '' : 'opacity-50'}`} strokeWidth={3} />
           </button>
 
           {/* Delete Button - min 44px touch target */}
