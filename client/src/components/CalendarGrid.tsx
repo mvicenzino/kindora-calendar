@@ -100,11 +100,10 @@ export default function CalendarGrid({
                       onEventClick(event);
                     }}
                     data-testid={`event-badge-${event.id}`}
-                    className="text-xs backdrop-blur-md cursor-pointer hover-elevate active-elevate-2 flex items-center gap-1"
+                    className="text-xs backdrop-blur-md cursor-pointer hover-elevate active-elevate-2 flex items-center gap-1 text-white"
                     style={{ 
-                      backgroundColor: `${event.color}30`,
-                      color: event.color,
-                      borderColor: `${event.color}50`
+                      backgroundColor: event.color,
+                      borderColor: `${event.color}`
                     }}
                   >
                     <span className="truncate flex-1">{event.title}</span>

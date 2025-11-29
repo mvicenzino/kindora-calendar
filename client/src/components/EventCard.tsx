@@ -115,7 +115,8 @@ export default function EventCard({
     const g = parseInt(color.substr(2, 2), 16);
     const b = parseInt(color.substr(4, 2), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.6;
+    // Only use dark text for very light colors (yellow, light pink, white, etc.)
+    return luminance > 0.75;
   };
 
   const needsDarkText = !event.photoUrl && isLightColor(event.color);

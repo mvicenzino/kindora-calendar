@@ -96,6 +96,15 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
               const isTodayDate = isToday(day);
               const eventColor = dayEvents.length > 0 ? dayEvents[0].color : null;
 
+              // Convert hex color to rgba with 40% opacity for background
+              const getBgWithAlpha = (hex: string) => {
+                const color = hex.replace('#', '');
+                const r = parseInt(color.substr(0, 2), 16);
+                const g = parseInt(color.substr(2, 2), 16);
+                const b = parseInt(color.substr(4, 2), 16);
+                return `rgba(${r}, ${g}, ${b}, 0.4)`;
+              };
+
               return (
                 <button
                   key={day.toISOString()}
@@ -108,7 +117,7 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                     }
                   }}
                   data-testid={`day-${format(day, 'yyyy-MM-dd')}`}
-                  style={hasEvents && eventColor ? { backgroundColor: eventColor, opacity: 0.25 } : undefined}
+                  style={hasEvents && eventColor ? { backgroundColor: getBgWithAlpha(eventColor) } : undefined}
                   className={`
                     aspect-square rounded-lg flex flex-col items-center justify-center transition-all
                     ${isTodayDate ? 'border-2 border-white' : hasEvents ? 'border border-white/50' : 'border border-white/20'}
@@ -117,7 +126,10 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
                     hover:bg-white/15 active:scale-[0.95]
                   `}
                 >
-                  <span className="text-sm font-semibold text-white">
+                  <span 
+                    className="text-sm font-semibold"
+                    style={{ color: 'white' }}
+                  >
                     {format(day, 'd')}
                   </span>
                 </button>
