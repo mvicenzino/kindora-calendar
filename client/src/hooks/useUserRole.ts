@@ -10,8 +10,8 @@ export function useUserRole() {
   const { isAuthenticated } = useAuth();
   const { activeFamilyId } = useActiveFamily();
 
-  const { data, isLoading } = useQuery<RoleResponse>({
-    queryKey: [`/api/family/${activeFamilyId}/role`],
+  const { data, isLoading, isFetching } = useQuery<RoleResponse>({
+    queryKey: ['/api/family', activeFamilyId, 'role'],
     enabled: isAuthenticated && !!activeFamilyId,
   });
 
@@ -20,6 +20,7 @@ export function useUserRole() {
     isOwner: data?.role === 'owner',
     isMember: data?.role === 'member',
     isCaregiver: data?.role === 'caregiver',
-    isLoading
+    isLoading: isLoading || isFetching,
+    activeFamilyId
   };
 }

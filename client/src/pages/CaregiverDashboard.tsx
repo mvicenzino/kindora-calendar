@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -41,8 +41,9 @@ import {
   Trash2,
   Settings
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import Header from "@/components/Header";
+import { useUserRole } from "@/hooks/useUserRole";
 
 type MedicationWithMember = {
   id: string;
@@ -88,8 +89,17 @@ type TimeEntryFormValues = z.infer<typeof timeEntryFormSchema>;
 export default function CaregiverDashboard() {
   const { user } = useAuth();
   const { activeFamilyId } = useActiveFamily();
+  const { isCaregiver: isCaregiverRole, isLoading: isLoadingRole } = useUserRole();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("today");
+  
+  // Redirect non-caregivers to the calendar view
+  useEffect(() => {
+    if (!isLoadingRole && !isCaregiverRole && activeFamilyId) {
+      setLocation('/');
+    }
+  }, [isCaregiverRole, isLoadingRole, activeFamilyId, setLocation]);
   
   // Time tracking dialog state
   const [showLogHoursDialog, setShowLogHoursDialog] = useState(false);

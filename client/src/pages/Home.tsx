@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import Header from "@/components/Header";
 import ViewSwitcherBar from "@/components/ViewSwitcherBar";
 import SearchPanel from "@/components/SearchPanel";
@@ -21,6 +23,8 @@ import { useToast } from "@/hooks/use-toast";
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const { activeFamilyId, isLoadingFamily } = useActiveFamily();
+  const { isCaregiver, isLoading: isLoadingRole } = useUserRole();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
@@ -37,6 +41,13 @@ export default function Home() {
       window.location.href = "/api/login";
     }
   }, [isAuthenticated, isLoading]);
+
+  // Redirect caregivers to the caregiver dashboard
+  useEffect(() => {
+    if (!isLoadingRole && isCaregiver) {
+      setLocation('/care');
+    }
+  }, [isCaregiver, isLoadingRole, setLocation]);
 
   // Auto-join family if there's a pending invite code
   const joinFamilyMutation = useMutation({
