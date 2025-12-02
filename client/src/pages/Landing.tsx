@@ -56,46 +56,52 @@ export default function Landing() {
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 rounded-lg" />
-            <span className="text-xl app-title">
-              <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
-            </span>
+        <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-4 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-base sm:text-xl font-extrabold text-orange-300 app-title">Kindora</span>
+              <span className="text-[10px] sm:text-sm font-medium text-white/80 tracking-wide">CALENDAR</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             {isAuthenticated ? (
               <>
                 <Button
+                  size="sm"
                   onClick={() => setLocation("/")}
-                  className="bg-white text-slate-900 hover:bg-white/90"
+                  className="bg-white text-slate-900 hover:bg-white/90 text-xs sm:text-sm px-2 sm:px-3"
                   data-testid="button-open-app"
                 >
                   Open Calendar
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() => (window.location.href = "/api/logout")}
                   variant="outline"
-                  className="border-white text-white hover:bg-white/10"
+                  className="border-white text-white hover:bg-white/10 text-xs sm:text-sm px-2 sm:px-3"
                   data-testid="button-logout"
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
+                  <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Sign Out</span>
+                  <span className="sm:hidden">Out</span>
                 </Button>
               </>
             ) : (
               <>
                 <Button
+                  size="sm"
                   onClick={() => (window.location.href = "/api/login/demo")}
-                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
+                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0 text-xs sm:text-sm px-2 sm:px-3"
                   data-testid="button-demo"
                 >
                   Try Demo
                 </Button>
                 <Button
+                  size="sm"
                   onClick={() => (window.location.href = "/api/login")}
                   variant="outline"
-                  className="border-white text-white hover:bg-white/10 bg-white/5 backdrop-blur-sm"
+                  className="border-white text-white hover:bg-white/10 bg-white/5 backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3"
                   data-testid="button-login"
                 >
                   Sign In
