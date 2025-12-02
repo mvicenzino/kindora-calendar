@@ -28,19 +28,16 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
 
   return (
     <header className="relative z-[60] w-full" data-testid="header-main">
+      {/* Main header bar */}
       <div className="backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3">
+        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-3">
           {/* Left: Logo */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg" data-testid="icon-logo" />
-            <span className="text-base sm:text-lg md:text-xl app-title">
-              <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white hidden sm:inline">Calendar</span>
-            </span>
-          </div>
-          
-          {/* Center: Family selector - prominently positioned */}
-          <div className="flex-1 flex justify-center px-2 min-w-0">
-            <FamilySelector />
+            <div className="flex flex-col leading-tight">
+              <span className="text-base sm:text-lg md:text-xl font-extrabold text-orange-300 app-title">Kindora</span>
+              <span className="text-[10px] sm:text-xs font-medium text-white/80 tracking-wide hidden sm:block">CALENDAR</span>
+            </div>
           </div>
 
           {/* Right: Action buttons */}
@@ -96,6 +93,11 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             />
           </div>
         </div>
+      </div>
+      
+      {/* Family selector row - separate for better mobile layout */}
+      <div className="backdrop-blur-xl bg-white/5 border-b border-white/10 px-3 sm:px-4 md:px-6 py-2">
+        <FamilySelector />
       </div>
     </header>
   );
