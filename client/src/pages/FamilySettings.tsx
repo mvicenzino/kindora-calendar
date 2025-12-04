@@ -8,8 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart } from "lucide-react";
+import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Family {
@@ -24,29 +23,20 @@ export default function FamilySettings() {
   const [, navigate] = useLocation();
   const { activeFamilyId } = useActiveFamily();
   const { toast } = useToast();
+  const [caregiverEmail, setCaregiverEmail] = useState("");
+  const [familyMemberEmail, setFamilyMemberEmail] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [forwardEmail, setForwardEmail] = useState("");
-  const [forwardInviteCode, setForwardInviteCode] = useState("");
-  const [forwardRole, setForwardRole] = useState<"member" | "caregiver">("caregiver");
+  const [codeCopied, setCodeCopied] = useState(false);
 
-  // Fetch current family
   const { data: family, isLoading } = useQuery<Family>({
     queryKey: ['/api/family', activeFamilyId],
     enabled: !!activeFamilyId,
   });
 
-  // Fetch all families the user belongs to
   const { data: allFamilies } = useQuery<Family[]>({
     queryKey: ['/api/families'],
   });
 
-  // Fetch user's roles in all families
-  interface FamilyWithRole extends Family {
-    role?: string;
-  }
-
-  // Leave family mutation
   const leaveFamilyMutation = useMutation({
     mutationFn: async (familyId: string) => {
       const res = await apiRequest('POST', `/api/family/${familyId}/leave`);
@@ -71,7 +61,6 @@ export default function FamilySettings() {
     },
   });
 
-  // Delete family mutation
   const deleteFamilyMutation = useMutation({
     mutationFn: async (familyId: string) => {
       const res = await apiRequest('DELETE', `/api/family/${familyId}`);
@@ -96,14 +85,12 @@ export default function FamilySettings() {
     },
   });
 
-  // Join family mutation
   const joinFamilyMutation = useMutation({
     mutationFn: async (inviteCode: string) => {
       const res = await apiRequest('POST', '/api/family/join', { inviteCode });
       return await res.json();
     },
     onSuccess: () => {
-      // Invalidate all family-related queries using query key prefixes
       queryClient.invalidateQueries({ queryKey: ['/api/families'] });
       queryClient.invalidateQueries({ queryKey: ['/api/family'] });
       queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
@@ -123,8 +110,33 @@ export default function FamilySettings() {
     },
   });
 
-  // Send invite email mutation
-  const sendInviteMutation = useMutation({
+  const inviteCaregiverMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await apiRequest('POST', '/api/family/forward-invite', { 
+        email, 
+        inviteCode: family?.inviteCode,
+        familyName: family?.name,
+        role: 'caregiver'
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Caregiver invited!",
+        description: "They'll receive an email with instructions to join.",
+      });
+      setCaregiverEmail("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send invitation",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const inviteFamilyMemberMutation = useMutation({
     mutationFn: async (email: string) => {
       const res = await apiRequest('POST', '/api/family/send-invite', { email });
       return await res.json();
@@ -132,37 +144,14 @@ export default function FamilySettings() {
     onSuccess: () => {
       toast({
         title: "Invitation sent!",
-        description: "The invite email has been sent successfully.",
+        description: "They'll receive an email with your invite code.",
       });
-      setInviteEmail("");
+      setFamilyMemberEmail("");
     },
     onError: (error: any) => {
       toast({
         title: "Failed to send invitation",
-        description: error.message || "Please check your email configuration",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Forward invite code to someone else (e.g., caregiver, healthcare worker)
-  const forwardInviteMutation = useMutation({
-    mutationFn: async ({ email, inviteCode, familyName, role }: { email: string; inviteCode: string; familyName?: string; role?: string }) => {
-      const res = await apiRequest('POST', '/api/family/forward-invite', { email, inviteCode, familyName, role });
-      return await res.json();
-    },
-    onSuccess: () => {
-      toast({
-        title: "Invitation sent!",
-        description: "The invite has been forwarded successfully.",
-      });
-      setForwardEmail("");
-      setForwardInviteCode("");
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Failed to send invitation",
-        description: error.message || "Please check your email configuration",
+        description: error.message || "Please try again",
         variant: "destructive",
       });
     },
@@ -171,54 +160,43 @@ export default function FamilySettings() {
   const copyInviteCode = () => {
     if (family?.inviteCode) {
       navigator.clipboard.writeText(family.inviteCode);
+      setCodeCopied(true);
       toast({
-        title: "Invite code copied!",
-        description: "Share this code with family members to invite them.",
+        title: "Code copied!",
+        description: "Share this code with anyone you want to invite.",
       });
+      setTimeout(() => setCodeCopied(false), 3000);
     }
+  };
+
+  const handleInviteCaregiver = () => {
+    if (!caregiverEmail.trim() || !caregiverEmail.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    inviteCaregiverMutation.mutate(caregiverEmail.trim());
+  };
+
+  const handleInviteFamilyMember = () => {
+    if (!familyMemberEmail.trim() || !familyMemberEmail.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    inviteFamilyMemberMutation.mutate(familyMemberEmail.trim());
   };
 
   const handleJoinFamily = () => {
     if (joinCode.trim()) {
       joinFamilyMutation.mutate(joinCode.trim());
     }
-  };
-
-  const handleSendInvite = () => {
-    if (inviteEmail.trim() && inviteEmail.includes('@')) {
-      sendInviteMutation.mutate(inviteEmail.trim());
-    } else {
-      toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleForwardInvite = () => {
-    if (!forwardEmail.trim() || !forwardEmail.includes('@')) {
-      toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!forwardInviteCode.trim()) {
-      toast({
-        title: "Missing invite code",
-        description: "Please enter the invite code to forward",
-        variant: "destructive",
-      });
-      return;
-    }
-    forwardInviteMutation.mutate({
-      email: forwardEmail.trim(),
-      inviteCode: forwardInviteCode.trim().toUpperCase(),
-      familyName: undefined, // We don't know the family name for other families
-      role: forwardRole
-    });
   };
 
   if (isLoading) {
@@ -232,7 +210,6 @@ export default function FamilySettings() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Button
             variant="outline"
@@ -245,99 +222,127 @@ export default function FamilySettings() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold text-white">Family Settings</h1>
-            <p className="text-white/70">Manage your shared calendar</p>
+            <p className="text-white/70">{family?.name || "Manage your calendar"}</p>
           </div>
         </div>
 
-        {/* Current Family Card */}
+        {/* Invite Caregiver - Primary Action */}
+        <Card className="mb-6 bg-gradient-to-br from-teal-500/20 to-teal-600/10 backdrop-blur-md border-teal-500/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Heart className="w-5 h-5 text-pink-400" />
+              Invite a Caregiver
+            </CardTitle>
+            <CardDescription className="text-white/80">
+              Invite your nanny, babysitter, or caregiver to view the calendar and mark tasks complete
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                value={caregiverEmail}
+                onChange={(e) => setCaregiverEmail(e.target.value)}
+                placeholder="nanny@email.com"
+                className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                data-testid="input-caregiver-email"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleInviteCaregiver();
+                }}
+              />
+              <Button
+                onClick={handleInviteCaregiver}
+                disabled={!caregiverEmail.trim() || inviteCaregiverMutation.isPending}
+                className="bg-teal-500 hover:bg-teal-600 text-white flex-shrink-0"
+                data-testid="button-invite-caregiver"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {inviteCaregiverMutation.isPending ? "Sending..." : "Invite"}
+              </Button>
+            </div>
+            <p className="text-sm text-white/60 mt-3">
+              Caregivers can view events, log medications, and mark tasks done - but can't delete or edit events.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Invite Family Member */}
         <Card className="mb-6 bg-white/10 backdrop-blur-md border-white/20">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-white">
               <Users className="w-5 h-5" />
-              Your Family
+              Invite Family Member
             </CardTitle>
             <CardDescription className="text-white/70">
-              Share your calendar with family members
+              Invite your spouse, partner, or family member with full access
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label className="text-white/90 text-sm">Family Name</Label>
-              <div className="text-xl font-semibold text-white mt-1">
-                {family?.name || "My Family"}
-              </div>
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                value={familyMemberEmail}
+                onChange={(e) => setFamilyMemberEmail(e.target.value)}
+                placeholder="spouse@email.com"
+                className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
+                data-testid="input-family-member-email"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleInviteFamilyMember();
+                }}
+              />
+              <Button
+                onClick={handleInviteFamilyMember}
+                disabled={!familyMemberEmail.trim() || inviteFamilyMemberMutation.isPending}
+                className="bg-purple-500 hover:bg-purple-600 text-white flex-shrink-0"
+                data-testid="button-invite-family-member"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                {inviteFamilyMemberMutation.isPending ? "Sending..." : "Invite"}
+              </Button>
             </div>
 
-            <div>
-              <Label className="text-white/90 text-sm">Invite Code</Label>
-              <div className="flex gap-2 mt-1">
+            <div className="pt-3 border-t border-white/10">
+              <Label className="text-white/80 text-sm">Or share your invite code manually</Label>
+              <div className="flex gap-2 mt-2">
                 <Input
                   value={family?.inviteCode || ""}
                   readOnly
-                  className="bg-white/5 border-white/20 text-white text-lg font-mono tracking-wider"
+                  className="bg-white/5 border-white/20 text-white font-mono tracking-wider"
                   data-testid="input-invite-code"
                 />
                 <Button
                   onClick={copyInviteCode}
                   variant="outline"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex-shrink-0"
+                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex-shrink-0 min-w-[80px]"
                   data-testid="button-copy-code"
                 >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy
+                  {codeCopied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2 text-green-400" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy
+                    </>
+                  )}
                 </Button>
               </div>
-              <p className="text-sm text-white/60 mt-2">
-                Share this code with your wife or family members so they can join your shared calendar
-              </p>
-            </div>
-
-            <div className="pt-2 border-t border-white/10">
-              <Label className="text-white/90 text-sm flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Send Invite by Email
-              </Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="friend@example.com"
-                  className="bg-white/5 border-white/20 text-white"
-                  data-testid="input-invite-email"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleSendInvite();
-                    }
-                  }}
-                />
-                <Button
-                  onClick={handleSendInvite}
-                  disabled={!inviteEmail.trim() || sendInviteMutation.isPending}
-                  className="bg-blue-500 hover:bg-blue-600 text-white flex-shrink-0"
-                  data-testid="button-send-invite"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {sendInviteMutation.isPending ? "Sending..." : "Send"}
-                </Button>
-              </div>
-              <p className="text-sm text-white/60 mt-2">
-                They'll receive a welcome email with a link to join Kindora Calendar and your invite code
-              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Manage Your Families Card */}
+        {/* Your Calendars */}
         {allFamilies && allFamilies.length > 0 && (
           <Card className="mb-6 bg-white/10 backdrop-blur-md border-white/20">
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-white">
                 <Heart className="w-5 h-5" />
                 Your Calendars
               </CardTitle>
               <CardDescription className="text-white/70">
-                Manage your family calendars - leave or delete calendars you no longer need
+                Manage calendars you belong to
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -356,130 +361,46 @@ export default function FamilySettings() {
           </Card>
         )}
 
-        {/* Join Different Family Card */}
+        {/* Join Another Calendar */}
         <Card className="bg-white/10 backdrop-blur-md border-white/20">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-white">
               <UserPlus className="w-5 h-5" />
-              Join a Different Family
+              Join Another Calendar
             </CardTitle>
             <CardDescription className="text-white/70">
-              Join another family's calendar or invite caregivers to access it
+              Have an invite code? Enter it here to join
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="join-code" className="text-white/90">
-                Invite Code
-              </Label>
-              <div className="flex gap-2 mt-1">
-                <Input
-                  id="join-code"
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value)}
-                  placeholder="Enter 8-character code"
-                  className="bg-white/5 border-white/20 text-white"
-                  data-testid="input-join-code"
-                />
-                <Button
-                  onClick={handleJoinFamily}
-                  disabled={!joinCode.trim() || joinFamilyMutation.isPending}
-                  className="bg-purple-500 hover:bg-purple-600 text-white flex-shrink-0"
-                  data-testid="button-join-family"
-                >
-                  {joinFamilyMutation.isPending ? "Joining..." : "Join"}
-                </Button>
-              </div>
-              <p className="text-sm text-white/60 mt-2">
-                <strong className="text-white/80">Note:</strong> When you join another family, you'll switch to their calendar. 
-                If you're the only person in your current family, it will be removed. Otherwise, you'll just leave it.
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-white/10">
-              <Label className="text-white/90 text-sm flex items-center gap-2">
-                <Mail className="w-4 h-4" />
-                Send Invite Code to Someone
-              </Label>
-              <p className="text-sm text-white/60 mt-1 mb-3">
-                Forward an invite code to caregivers, healthcare workers, or family helpers
-              </p>
-              <div className="space-y-2">
-                <Input
-                  value={forwardInviteCode}
-                  onChange={(e) => setForwardInviteCode(e.target.value)}
-                  placeholder="Enter invite code"
-                  className="bg-white/5 border-white/20 text-white"
-                  data-testid="input-forward-invite-code"
-                />
-                <div>
-                  <Label className="text-white/90 text-sm mb-1 block">
-                    Invite as
-                  </Label>
-                  <Select value={forwardRole} onValueChange={(val: "member" | "caregiver") => setForwardRole(val)}>
-                    <SelectTrigger 
-                      className="bg-white/5 border-white/20 text-white"
-                      data-testid="select-forward-role"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="member" data-testid="option-member">
-                        Family Member (full access)
-                      </SelectItem>
-                      <SelectItem value="caregiver" data-testid="option-caregiver">
-                        Caregiver (view-only, can mark tasks done)
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-white/50 mt-1">
-                    {forwardRole === "caregiver" 
-                      ? "Caregivers can view events and mark tasks complete but cannot delete items"
-                      : "Family members have full access to create, edit, and delete events"}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    type="email"
-                    value={forwardEmail}
-                    onChange={(e) => setForwardEmail(e.target.value)}
-                    placeholder="caregiver@example.com"
-                    className="bg-white/5 border-white/20 text-white"
-                    data-testid="input-forward-email"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleForwardInvite();
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={handleForwardInvite}
-                    disabled={!forwardEmail.trim() || !forwardInviteCode.trim() || forwardInviteMutation.isPending}
-                    className="bg-teal-500 hover:bg-teal-600 text-white flex-shrink-0"
-                    data-testid="button-forward-invite"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    {forwardInviteMutation.isPending ? "Sending..." : "Send"}
-                  </Button>
-                </div>
-              </div>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="Enter 8-character code"
+                className="bg-white/5 border-white/20 text-white font-mono uppercase"
+                data-testid="input-join-code"
+                maxLength={8}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleJoinFamily();
+                }}
+              />
+              <Button
+                onClick={handleJoinFamily}
+                disabled={!joinCode.trim() || joinFamilyMutation.isPending}
+                className="bg-blue-500 hover:bg-blue-600 text-white flex-shrink-0"
+                data-testid="button-join-family"
+              >
+                {joinFamilyMutation.isPending ? "Joining..." : "Join"}
+              </Button>
             </div>
           </CardContent>
         </Card>
-
-        {/* Info Card */}
-        <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-          <p className="text-sm text-white/80">
-            <strong className="text-white">How it works:</strong> When you share your calendar with family members,
-            everyone sees the same events and family members. Any changes made by one person are visible to everyone in the family.
-          </p>
-        </div>
       </div>
     </div>
   );
 }
 
-// FamilyRow component for managing individual families
 interface FamilyRowProps {
   family: Family;
   isActive: boolean;
@@ -490,7 +411,6 @@ interface FamilyRowProps {
 }
 
 function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting }: FamilyRowProps) {
-  // Fetch user's role in this family
   const { data: roleData } = useQuery<{ role: string }>({
     queryKey: ['/api/family', family.id, 'role'],
   });
@@ -544,8 +464,8 @@ function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting 
               <AlertDialogHeader>
                 <AlertDialogTitle className="text-white">Delete "{family.name}"?</AlertDialogTitle>
                 <AlertDialogDescription className="text-white/70">
-                  This will permanently delete this family calendar and remove all members. 
-                  All events, messages, and shared data will be lost. This action cannot be undone.
+                  This will permanently delete this calendar and remove all members. 
+                  All events and data will be lost.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -579,8 +499,7 @@ function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting 
               <AlertDialogHeader>
                 <AlertDialogTitle className="text-white">Leave "{family.name}"?</AlertDialogTitle>
                 <AlertDialogDescription className="text-white/70">
-                  You will no longer see this family's calendar or events. 
-                  You can rejoin later if you have the invite code.
+                  You will no longer see this calendar or its events.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -591,7 +510,7 @@ function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting 
                   onClick={onLeave}
                   className="bg-orange-500 text-white hover:bg-orange-600"
                 >
-                  Leave Family
+                  Leave Calendar
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
