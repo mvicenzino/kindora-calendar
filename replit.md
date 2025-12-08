@@ -52,6 +52,29 @@ The application includes a threaded notes system for events:
 - **Features**: Add notes, reply to notes (threaded), delete own notes, view author info with timestamps
 - **Demo Data**: Sample notes in both family and eldercare calendars showcasing coordination between family members and caregivers
 
+### Recurring Events
+
+The application supports creating repeating events with flexible recurrence patterns:
+
+- **Schema**: `events` table includes recurrence fields:
+  - `recurrenceRule`: text enum ('daily', 'weekly', 'biweekly', 'monthly', 'yearly')
+  - `recurrenceEndDate`: timestamp for "end on date" condition
+  - `recurrenceCount`: integer for "after X occurrences" condition
+  - `recurringEventId`: links all instances in a series to the first event
+- **Frontend**: `EventModal.tsx` with modern recurrence UI featuring:
+  - Dropdown selector for repeat frequency (Does not repeat, Daily, Weekly, Biweekly, Monthly, Yearly)
+  - End condition controls (Never, After X occurrences, On specific date)
+  - Recurrence UI only shown for new event creation (not when editing existing events)
+- **Backend Logic**: `createRecurringEvents` helper function that:
+  - Creates the first event with all metadata
+  - Generates subsequent instances with proper date advancement
+  - Links all instances via `recurringEventId`
+  - Respects end conditions (count-based or date-based)
+  - Safety cap of 2 years maximum and 500 occurrences limit
+- **Design Notes**: 
+  - Each recurring instance is stored as a separate event (allows individual editing)
+  - Uses storage-normalized timestamps to prevent timezone drift
+
 ### Global Family Messaging
 
 A real-time messaging system for family coordination with threading support:
