@@ -66,6 +66,10 @@ export const events = pgTable("events", {
   photoUrl: text("photo_url"),
   completed: boolean("completed").notNull().default(false),
   completedAt: timestamp("completed_at"),
+  recurrenceRule: varchar("recurrence_rule"), // 'daily', 'weekly', 'biweekly', 'monthly', 'yearly', or null for non-recurring
+  recurrenceEndDate: timestamp("recurrence_end_date"), // When the recurrence ends (optional)
+  recurrenceCount: varchar("recurrence_count"), // Number of occurrences (stored as string, optional)
+  recurringEventId: varchar("recurring_event_id"), // Links instances to the parent/first event in the series
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -186,6 +190,10 @@ export const insertEventSchema = createInsertSchema(events).omit({
   memberIds: z.array(z.string()).min(1, "At least one family member is required"),
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
+  recurrenceRule: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly']).nullable().optional(),
+  recurrenceEndDate: z.coerce.date().nullable().optional(),
+  recurrenceCount: z.string().nullable().optional(),
+  recurringEventId: z.string().nullable().optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
