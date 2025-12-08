@@ -5,11 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, Users, Trash2, X } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown } from "lucide-react";
+import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
 import type { UiFamilyMember } from "@shared/types";
 import { useUserRole } from "@/hooks/useUserRole";
+
+type RecurrenceRule = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | null;
+type EndCondition = 'never' | 'after' | 'on';
 
 interface Event {
   id?: string;
@@ -18,6 +21,9 @@ interface Event {
   startTime: Date;
   endTime: Date;
   memberIds: string[];
+  recurrenceRule?: RecurrenceRule;
+  recurrenceEndDate?: Date | null;
+  recurrenceCount?: string | null;
 }
 
 interface EventModalProps {
@@ -68,6 +74,14 @@ export default function EventModal({
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Recurrence state
+  const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>(null);
+  const [endCondition, setEndCondition] = useState<EndCondition>('never');
+  const [recurrenceCount, setRecurrenceCount] = useState("10");
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
+  const [showRecurrenceDropdown, setShowRecurrenceDropdown] = useState(false);
+  const recurrenceDropdownRef = useRef<HTMLDivElement>(null);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -78,6 +92,11 @@ export default function EventModal({
       setSelectedMemberIds([]);
       setMemberSearch("");
       setShowMemberDropdown(false);
+      setRecurrenceRule(null);
+      setEndCondition('never');
+      setRecurrenceCount("10");
+      setRecurrenceEndDate("");
+      setShowRecurrenceDropdown(false);
     }
   }, [isOpen]);
 
@@ -114,19 +133,22 @@ export default function EventModal({
     }
   }, [event, selectedDate, isOpen, members]);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setShowMemberDropdown(false);
       }
+      if (recurrenceDropdownRef.current && !recurrenceDropdownRef.current.contains(e.target as Node)) {
+        setShowRecurrenceDropdown(false);
+      }
     };
     
-    if (showMemberDropdown) {
+    if (showMemberDropdown || showRecurrenceDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showMemberDropdown]);
+  }, [showMemberDropdown, showRecurrenceDropdown]);
 
   const toggleMember = (id: string) => {
     setSelectedMemberIds(prev => {
@@ -164,6 +186,18 @@ export default function EventModal({
     const startDateTime = new Date(`${startDate}T${actualStartTime}`);
     const endDateTime = new Date(`${startDate}T${actualEndTime}`);
 
+    // Calculate recurrence end based on end condition
+    let finalRecurrenceEndDate: Date | null = null;
+    let finalRecurrenceCount: string | null = null;
+    
+    if (recurrenceRule) {
+      if (endCondition === 'after') {
+        finalRecurrenceCount = recurrenceCount;
+      } else if (endCondition === 'on' && recurrenceEndDate) {
+        finalRecurrenceEndDate = new Date(`${recurrenceEndDate}T23:59:59`);
+      }
+    }
+
     onSave({
       ...(event?.id && { id: event.id }),
       title,
@@ -171,8 +205,26 @@ export default function EventModal({
       startTime: startDateTime,
       endTime: endDateTime,
       memberIds: selectedMemberIds,
+      recurrenceRule: recurrenceRule,
+      recurrenceEndDate: finalRecurrenceEndDate,
+      recurrenceCount: finalRecurrenceCount,
     });
     onClose();
+  };
+  
+  // Helper for recurrence options
+  const recurrenceOptions: { value: RecurrenceRule; label: string }[] = [
+    { value: null, label: 'Does not repeat' },
+    { value: 'daily', label: 'Daily' },
+    { value: 'weekly', label: 'Weekly' },
+    { value: 'biweekly', label: 'Every 2 weeks' },
+    { value: 'monthly', label: 'Monthly' },
+    { value: 'yearly', label: 'Yearly' },
+  ];
+  
+  const getRecurrenceLabel = () => {
+    const option = recurrenceOptions.find(o => o.value === recurrenceRule);
+    return option?.label || 'Does not repeat';
   };
 
   const selectedMember = members.find(m => m.id === memberId);
@@ -399,6 +451,132 @@ export default function EventModal({
                     disabled={isReadOnly}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Recurrence Section - Only show when creating new events */}
+            {!event?.id && !isReadOnly && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-white flex items-center gap-2">
+                  <Repeat className="w-4 h-4" />
+                  Repeat
+                </Label>
+                
+                {/* Recurrence Selector */}
+                <div className="relative" ref={recurrenceDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowRecurrenceDropdown(!showRecurrenceDropdown)}
+                    data-testid="button-recurrence-selector"
+                    className="w-full bg-white/15 border border-white/40 rounded-2xl text-white px-4 py-3 text-left hover:bg-white/20 transition-all flex items-center justify-between"
+                  >
+                    <span>{getRecurrenceLabel()}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showRecurrenceDropdown ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {showRecurrenceDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-gradient-to-br from-[#4A5A6A] to-[#5A6A7A] border border-white/40 rounded-2xl shadow-lg z-50 overflow-hidden">
+                      {recurrenceOptions.map((option) => (
+                        <button
+                          key={option.value ?? 'none'}
+                          type="button"
+                          onClick={() => {
+                            setRecurrenceRule(option.value);
+                            setShowRecurrenceDropdown(false);
+                            if (!option.value) {
+                              setEndCondition('never');
+                            }
+                          }}
+                          data-testid={`option-recurrence-${option.value ?? 'none'}`}
+                          className={`w-full px-4 py-3 text-left hover:bg-white/10 transition-all border-b border-white/10 last:border-0 ${
+                            recurrenceRule === option.value ? 'bg-white/15 text-white' : 'text-white/80'
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {/* End Condition - Only show when recurrence is selected */}
+                {recurrenceRule && (
+                  <div className="space-y-3 pt-2">
+                    <Label className="text-sm font-medium text-white/80">Ends</Label>
+                    
+                    {/* End condition buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEndCondition('never')}
+                        data-testid="button-end-never"
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                          endCondition === 'never'
+                            ? 'bg-purple-600 text-white border border-purple-400'
+                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
+                        }`}
+                      >
+                        Never
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEndCondition('after')}
+                        data-testid="button-end-after"
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                          endCondition === 'after'
+                            ? 'bg-purple-600 text-white border border-purple-400'
+                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
+                        }`}
+                      >
+                        After
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEndCondition('on')}
+                        data-testid="button-end-on"
+                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                          endCondition === 'on'
+                            ? 'bg-purple-600 text-white border border-purple-400'
+                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
+                        }`}
+                      >
+                        On Date
+                      </button>
+                    </div>
+                    
+                    {/* After X occurrences input */}
+                    {endCondition === 'after' && (
+                      <div className="flex items-center gap-3 bg-white/10 rounded-2xl p-3 border border-white/20">
+                        <span className="text-white/70 text-sm">After</span>
+                        <Input
+                          type="number"
+                          min="2"
+                          max="365"
+                          value={recurrenceCount}
+                          onChange={(e) => setRecurrenceCount(e.target.value)}
+                          data-testid="input-recurrence-count"
+                          className="w-20 bg-white/15 border border-white/40 rounded-xl text-white text-center h-10"
+                        />
+                        <span className="text-white/70 text-sm">occurrences</span>
+                      </div>
+                    )}
+                    
+                    {/* On specific date input */}
+                    {endCondition === 'on' && (
+                      <div className="flex items-center gap-3 bg-white/10 rounded-2xl p-3 border border-white/20">
+                        <span className="text-white/70 text-sm">Until</span>
+                        <Input
+                          type="date"
+                          value={recurrenceEndDate}
+                          onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                          min={startDate}
+                          data-testid="input-recurrence-end-date"
+                          className="flex-1 bg-white/15 border border-white/40 rounded-xl text-white h-10"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             </div>
