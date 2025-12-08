@@ -232,7 +232,7 @@ export default function EventModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl max-h-[90vh] flex flex-col">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl max-h-[90vh] flex flex-col">
         <DialogTitle className="sr-only">
           {event?.id ? 'Edit Event' : 'Create New Event'}
         </DialogTitle>
@@ -293,7 +293,7 @@ export default function EventModal({
             </div>
 
             {/* Date and Family Members */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Date */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-white flex items-center gap-2">
@@ -421,11 +421,11 @@ export default function EventModal({
 
             {/* Start and End Times */}
             {!isSometimeToday && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-white flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    Start Time
+                    From
                   </Label>
                   <Input
                     type="time"
@@ -440,7 +440,7 @@ export default function EventModal({
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-white flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    End Time
+                    To
                   </Label>
                   <Input
                     type="time"
@@ -505,12 +505,12 @@ export default function EventModal({
                     <Label className="text-sm font-medium text-white/80">Ends</Label>
                     
                     {/* End condition buttons */}
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => setEndCondition('never')}
                         data-testid="button-end-never"
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                        className={`flex-1 min-w-[70px] py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                           endCondition === 'never'
                             ? 'bg-purple-600 text-white border border-purple-400'
                             : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
@@ -522,7 +522,7 @@ export default function EventModal({
                         type="button"
                         onClick={() => setEndCondition('after')}
                         data-testid="button-end-after"
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                        className={`flex-1 min-w-[70px] py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                           endCondition === 'after'
                             ? 'bg-purple-600 text-white border border-purple-400'
                             : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
@@ -534,7 +534,7 @@ export default function EventModal({
                         type="button"
                         onClick={() => setEndCondition('on')}
                         data-testid="button-end-on"
-                        className={`flex-1 py-2 px-3 rounded-xl text-sm font-medium transition-all ${
+                        className={`flex-1 min-w-[70px] py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                           endCondition === 'on'
                             ? 'bg-purple-600 text-white border border-purple-400'
                             : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
