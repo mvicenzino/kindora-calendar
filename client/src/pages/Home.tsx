@@ -13,6 +13,7 @@ import TimelineView from "@/components/TimelineView";
 import EventModal from "@/components/EventModal";
 import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
+import DayEventsDialog from "@/components/DayEventsDialog";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -34,6 +35,8 @@ export default function Home() {
   const [selectedEventId, setSelectedEventId] = useState<string>();
   const [searchOpen, setSearchOpen] = useState(false);
   const [eventModalDate, setEventModalDate] = useState<Date | undefined>();
+  const [dayEventsOpen, setDayEventsOpen] = useState(false);
+  const [selectedDayDate, setSelectedDayDate] = useState<Date>(new Date());
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -238,6 +241,11 @@ export default function Home() {
     setEventModalOpen(true);
   };
 
+  const handleDayClick = (date: Date) => {
+    setSelectedDayDate(date);
+    setDayEventsOpen(true);
+  };
+
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
   };
@@ -336,7 +344,7 @@ export default function Home() {
           onEventClick={handleEventClick}
           onViewChange={setView}
           onAddEvent={handleAddEvent}
-          onAddEventForDate={handleAddEventForDate}
+          onAddEventForDate={handleDayClick}
           onDateChange={handleDateChange}
         />
       )}
@@ -388,6 +396,17 @@ export default function Home() {
         onSave={async (memberData) => {
           await createMemberMutation.mutateAsync(memberData);
         }}
+      />
+
+      {/* Day Events Dialog - shows all events for a clicked date */}
+      <DayEventsDialog
+        isOpen={dayEventsOpen}
+        onClose={() => setDayEventsOpen(false)}
+        date={selectedDayDate}
+        events={events}
+        members={members}
+        onEventClick={handleEventClick}
+        onAddEvent={() => handleAddEventForDate(selectedDayDate)}
       />
     </div>
   );
