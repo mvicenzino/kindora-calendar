@@ -204,3 +204,30 @@ The application integrates with email services to send family invite codes.
 - **Supported Services**: Resend (recommended) or SendGrid.
 - **Configuration**: Requires `RESEND_API_KEY` or `SENDGRID_API_KEY` and `EMAIL_FROM_ADDRESS` environment variables.
 - **Features**: Allows users to send their family's invite code or forward any invite code to caregivers.
+
+### Automated Weekly Summary Emails
+
+A Cozi-style weekly digest system that automatically sends calendar summaries to family members:
+
+- **Database Schema**:
+  - `weekly_summary_schedules` - Family-level settings: `familyId`, `isEnabled`, `dayOfWeek` (0-6), `timeOfDay` (HH:MM), `timezone`, `lastSentAt`
+  - `weekly_summary_preferences` - User-level opt-in: `userId`, `familyId`, `optedIn`
+- **API Routes**:
+  - GET/PUT `/api/weekly-summary-schedule` - Admin schedule configuration (owners/members only)
+  - GET/PUT `/api/weekly-summary-preference` - User preference toggle
+  - POST `/api/cron/weekly-summary` - Automated send endpoint (for Replit Cron or external scheduler)
+  - POST `/api/send-weekly-summary` - Manual send (immediate)
+- **Admin Configuration** (Family Settings page):
+  - Toggle to enable/disable automated summaries
+  - Day of week selector (Sunday-Saturday)
+  - Time of day selector (6 AM - 8 PM)
+  - Only visible to family owners and members
+- **User Preferences** (Profile Menu > Settings):
+  - Toggle to opt in/out of receiving automated weekly emails
+  - Users are opted-in by default
+  - Visible to all family roles
+- **Cron Endpoint Security**: Optional `CRON_SECRET` environment variable for authentication via `X-Cron-Secret` header
+- **Design Notes**:
+  - Email feature disabled in demo mode with user-friendly toast message
+  - Weekly summaries include events for the current week, organized by day
+  - Each family member with an email receives their own personalized summary
