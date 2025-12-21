@@ -2266,6 +2266,259 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // ========== Weekly Summary Schedule Configuration (Admin) ==========
+  
+  // Get weekly summary schedule for a family
+  app.get("/api/weekly-summary-schedule", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+      
+      // Check if user has permission to manage this setting (owner/member)
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const schedule = await storage.getWeeklySummarySchedule(familyId);
+      
+      res.json({
+        schedule: schedule || {
+          familyId,
+          isEnabled: false,
+          dayOfWeek: '0',
+          timeOfDay: '08:00',
+          timezone: 'America/New_York',
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching weekly summary schedule:", error);
+      res.status(500).json({ error: "Failed to fetch schedule" });
+    }
+  });
+  
+  // Update weekly summary schedule for a family (owners/members only)
+  app.put("/api/weekly-summary-schedule", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, isEnabled, dayOfWeek, timeOfDay, timezone } = req.body;
+      
+      if (!familyId) {
+        return res.status(400).json({ error: "Family ID is required" });
+      }
+      
+      // Check if user has permission to manage this setting (owner/member only)
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role || role === 'caregiver') {
+        return res.status(403).json({ error: "Only family owners and members can configure weekly summaries" });
+      }
+      
+      const schedule = await storage.upsertWeeklySummarySchedule(familyId, {
+        familyId,
+        isEnabled: isEnabled ?? false,
+        dayOfWeek: dayOfWeek ?? '0',
+        timeOfDay: timeOfDay ?? '08:00',
+        timezone: timezone ?? 'America/New_York',
+      });
+      
+      res.json({ success: true, schedule });
+    } catch (error) {
+      console.error("Error updating weekly summary schedule:", error);
+      res.status(500).json({ error: "Failed to update schedule" });
+    }
+  });
+  
+  // ========== Weekly Summary User Preferences ==========
+  
+  // Get user's weekly summary preference for a family
+  app.get("/api/weekly-summary-preference", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+      
+      const preference = await storage.getWeeklySummaryPreference(userId, familyId);
+      
+      res.json({
+        preference: preference || {
+          userId,
+          familyId,
+          optedIn: true, // Default to opted in
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching weekly summary preference:", error);
+      res.status(500).json({ error: "Failed to fetch preference" });
+    }
+  });
+  
+  // Update user's weekly summary preference
+  app.put("/api/weekly-summary-preference", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, optedIn } = req.body;
+      
+      if (!familyId) {
+        return res.status(400).json({ error: "Family ID is required" });
+      }
+      
+      const preference = await storage.upsertWeeklySummaryPreference(userId, familyId, optedIn ?? true);
+      
+      res.json({ success: true, preference });
+    } catch (error) {
+      console.error("Error updating weekly summary preference:", error);
+      res.status(500).json({ error: "Failed to update preference" });
+    }
+  });
+  
+  // ========== Automated Weekly Summary Cron Endpoint ==========
+  
+  // This endpoint can be called by Replit Cron or an external scheduler
+  // It sends weekly summaries to all opted-in users for families with active schedules
+  app.post("/api/cron/weekly-summary", async (req: any, res) => {
+    try {
+      // Optional: Add a secret token for security
+      const cronSecret = req.headers['x-cron-secret'];
+      if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      // Get all active weekly summary schedules
+      const activeSchedules = await storage.getActiveWeeklySummarySchedules();
+      
+      if (activeSchedules.length === 0) {
+        return res.json({ message: "No active schedules found", sent: 0 });
+      }
+      
+      const results: { familyId: string; usersSent: number; errors: string[] }[] = [];
+      
+      for (const schedule of activeSchedules) {
+        const familyResults = { familyId: schedule.familyId, usersSent: 0, errors: [] as string[] };
+        
+        try {
+          // Get family info
+          const family = await storage.getFamilyById(schedule.familyId);
+          if (!family) {
+            familyResults.errors.push("Family not found");
+            results.push(familyResults);
+            continue;
+          }
+          
+          // Get all opted-in users for this family
+          const optedInUsers = await storage.getOptedInUsersForFamily(schedule.familyId);
+          
+          // If no explicit preferences, get all family members (default opted-in)
+          let usersToEmail = optedInUsers;
+          if (usersToEmail.length === 0) {
+            // Get all family memberships and their users
+            const memberships = await storage.getFamilyMembershipsWithUsers(schedule.familyId);
+            usersToEmail = memberships
+              .filter(m => m.user.email)
+              .map(m => ({ userId: m.userId, user: m.user }));
+          }
+          
+          // Calculate week range
+          const today = new Date();
+          const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+          const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
+          const weekRange = `${format(weekStart, 'MMM d')}–${format(weekEnd, 'd')}`;
+          
+          // Get events for this week
+          const events = await storage.getEvents(schedule.familyId);
+          const familyMembers = await storage.getFamilyMembers(schedule.familyId);
+          
+          const weekEvents = events.filter(event => {
+            const eventDate = new Date(event.startTime);
+            return eventDate >= weekStart && eventDate <= weekEnd;
+          }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+          
+          const eventSummaries = weekEvents.map(event => {
+            const memberNames = (event.memberIds || [])
+              .map(id => familyMembers.find(m => m.id === id)?.name)
+              .filter(Boolean) as string[];
+            
+            const endTime = new Date(event.endTime);
+            const isAllDay = endTime.getHours() === 23 && endTime.getMinutes() >= 58;
+            
+            return {
+              id: event.id,
+              title: event.title,
+              startTime: new Date(event.startTime),
+              endTime: endTime,
+              description: event.description,
+              memberNames,
+              isAllDay
+            };
+          });
+          
+          // Send to each opted-in user
+          for (const { user } of usersToEmail) {
+            if (!user.email) continue;
+            
+            const recipientName = user.firstName || user.email.split('@')[0] || 'User';
+            
+            const htmlContent = generateWeeklySummaryHtml({
+              familyName: family.name,
+              weekStart,
+              weekEnd,
+              events: eventSummaries,
+              recipientName
+            });
+            
+            const textContent = generateWeeklySummaryText({
+              familyName: family.name,
+              weekStart,
+              weekEnd,
+              events: eventSummaries,
+              recipientName
+            });
+            
+            const result = await sendWeeklySummaryEmail(
+              user.email,
+              htmlContent,
+              textContent,
+              weekRange
+            );
+            
+            if (result.success) {
+              familyResults.usersSent++;
+            } else {
+              familyResults.errors.push(`Failed to send to ${user.email}: ${result.error}`);
+            }
+          }
+          
+          // Update last sent timestamp
+          await storage.updateWeeklySummaryLastSent(schedule.familyId);
+          
+        } catch (err) {
+          familyResults.errors.push(String(err));
+        }
+        
+        results.push(familyResults);
+      }
+      
+      const totalSent = results.reduce((sum, r) => sum + r.usersSent, 0);
+      
+      res.json({
+        success: true,
+        schedulesProcessed: activeSchedules.length,
+        totalEmailsSent: totalSent,
+        details: results
+      });
+      
+    } catch (error) {
+      console.error("Error in cron weekly summary:", error);
+      res.status(500).json({ error: "Failed to process weekly summaries", details: String(error) });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
