@@ -8,7 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check } from "lucide-react";
+import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Family {
@@ -17,6 +19,15 @@ interface Family {
   inviteCode: string;
   createdBy: string;
   createdAt: Date;
+}
+
+interface WeeklySummarySchedule {
+  familyId: string;
+  isEnabled: boolean;
+  dayOfWeek: string;
+  timeOfDay: string;
+  timezone: string;
+  lastSentAt?: Date;
 }
 
 export default function FamilySettings() {
@@ -156,6 +167,55 @@ export default function FamilySettings() {
       });
     },
   });
+
+  // Weekly Summary Schedule
+  const { data: scheduleData, isLoading: isLoadingSchedule } = useQuery<{ schedule: WeeklySummarySchedule }>({
+    queryKey: ['/api/weekly-summary-schedule', activeFamilyId],
+    enabled: !!activeFamilyId,
+  });
+
+  const { data: roleData } = useQuery<{ role: string }>({
+    queryKey: ['/api/family', activeFamilyId, 'role'],
+    enabled: !!activeFamilyId,
+  });
+
+  const isOwnerOrMember = roleData?.role === 'owner' || roleData?.role === 'member';
+
+  const updateScheduleMutation = useMutation({
+    mutationFn: async (schedule: Partial<WeeklySummarySchedule>) => {
+      const res = await apiRequest('PUT', '/api/weekly-summary-schedule', {
+        familyId: activeFamilyId,
+        ...schedule,
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-summary-schedule', activeFamilyId] });
+      toast({
+        title: "Schedule updated",
+        description: "Weekly summary schedule has been saved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update schedule",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleScheduleToggle = (enabled: boolean) => {
+    updateScheduleMutation.mutate({ isEnabled: enabled });
+  };
+
+  const handleDayChange = (day: string) => {
+    updateScheduleMutation.mutate({ dayOfWeek: day });
+  };
+
+  const handleTimeChange = (time: string) => {
+    updateScheduleMutation.mutate({ timeOfDay: time });
+  };
 
   const copyInviteCode = () => {
     if (family?.inviteCode) {
@@ -357,6 +417,97 @@ export default function FamilySettings() {
                   isDeleting={deleteFamilyMutation.isPending}
                 />
               ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Weekly Email Summary */}
+        {isOwnerOrMember && (
+          <Card className="mb-6 bg-white/10 backdrop-blur-md border-white/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Mail className="w-5 h-5" />
+                Weekly Email Summary
+              </CardTitle>
+              <CardDescription className="text-white/70">
+                Automatically send a weekly calendar summary to all family members
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingSchedule ? (
+                <div className="text-white/60">Loading...</div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-white/70" />
+                      <Label className="text-white">Enable automatic summaries</Label>
+                    </div>
+                    <Switch
+                      checked={scheduleData?.schedule.isEnabled ?? false}
+                      onCheckedChange={handleScheduleToggle}
+                      disabled={updateScheduleMutation.isPending}
+                      data-testid="switch-weekly-summary-enabled"
+                    />
+                  </div>
+                  
+                  {scheduleData?.schedule.isEnabled && (
+                    <div className="space-y-4 pt-4 border-t border-white/10">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-white/80 text-sm">Day of Week</Label>
+                          <Select
+                            value={scheduleData?.schedule.dayOfWeek ?? '0'}
+                            onValueChange={handleDayChange}
+                            disabled={updateScheduleMutation.isPending}
+                          >
+                            <SelectTrigger className="bg-white/5 border-white/20 text-white" data-testid="select-weekly-summary-day">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-900 border-white/20">
+                              <SelectItem value="0" className="text-white">Sunday</SelectItem>
+                              <SelectItem value="1" className="text-white">Monday</SelectItem>
+                              <SelectItem value="2" className="text-white">Tuesday</SelectItem>
+                              <SelectItem value="3" className="text-white">Wednesday</SelectItem>
+                              <SelectItem value="4" className="text-white">Thursday</SelectItem>
+                              <SelectItem value="5" className="text-white">Friday</SelectItem>
+                              <SelectItem value="6" className="text-white">Saturday</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label className="text-white/80 text-sm">Time</Label>
+                          <Select
+                            value={scheduleData?.schedule.timeOfDay ?? '08:00'}
+                            onValueChange={handleTimeChange}
+                            disabled={updateScheduleMutation.isPending}
+                          >
+                            <SelectTrigger className="bg-white/5 border-white/20 text-white" data-testid="select-weekly-summary-time">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-900 border-white/20 max-h-60">
+                              <SelectItem value="06:00" className="text-white">6:00 AM</SelectItem>
+                              <SelectItem value="07:00" className="text-white">7:00 AM</SelectItem>
+                              <SelectItem value="08:00" className="text-white">8:00 AM</SelectItem>
+                              <SelectItem value="09:00" className="text-white">9:00 AM</SelectItem>
+                              <SelectItem value="10:00" className="text-white">10:00 AM</SelectItem>
+                              <SelectItem value="12:00" className="text-white">12:00 PM</SelectItem>
+                              <SelectItem value="18:00" className="text-white">6:00 PM</SelectItem>
+                              <SelectItem value="20:00" className="text-white">8:00 PM</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      <p className="text-sm text-white/60">
+                        All family members will receive a weekly calendar summary at the scheduled time.
+                        Members can opt out in their profile settings.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         )}
