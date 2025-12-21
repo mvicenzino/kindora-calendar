@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { UiFamilyMember } from "@shared/types";
 import type { FamilyMembership, User as UserType } from "@shared/schema";
-import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2 } from 'lucide-react';
 import { useUserRole } from "@/hooks/useUserRole";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileMenuProps {
   members: UiFamilyMember[];
@@ -54,9 +56,31 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
   const { activeFamilyId, activeFamily } = useActiveFamily();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const { toast } = useToast();
   
   // Check if user is in demo mode (user ID starts with "demo-")
   const isDemoMode = user?.id?.startsWith('demo-') ?? false;
+  
+  // Weekly summary mutation
+  const sendWeeklySummaryMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/send-weekly-summary', { weekOffset: 0 });
+      return response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Weekly Summary Sent!",
+        description: `Email sent with ${data.eventCount || 0} events for ${data.weekRange}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Send",
+        description: error.message || "Could not send weekly summary. Check your email settings.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch user accounts (family memberships with user info)
   const { data: userAccounts = [], isLoading: accountsLoading } = useQuery<FamilyMembershipWithUser[]>({
@@ -356,6 +380,38 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                     <div>
                       <div className="text-sm font-medium text-white">Family Settings</div>
                       <div className="text-xs text-white/50">Manage invites & sharing</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-white/40" />
+                </button>
+                
+                {/* Weekly Summary Email */}
+                <button
+                  onClick={() => {
+                    if (!isDemoMode) {
+                      sendWeeklySummaryMutation.mutate();
+                    } else {
+                      toast({
+                        title: "Demo Mode",
+                        description: "Email sending is disabled in demo mode. Sign up to use this feature!",
+                      });
+                    }
+                  }}
+                  disabled={sendWeeklySummaryMutation.isPending}
+                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/10 transition-all text-left disabled:opacity-50"
+                  data-testid="button-send-weekly-summary"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                      {sendWeeklySummaryMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                      ) : (
+                        <Mail className="w-4 h-4 text-purple-400" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-white">Send Weekly Summary</div>
+                      <div className="text-xs text-white/50">Email this week's agenda</div>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-white/40" />

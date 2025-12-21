@@ -6,6 +6,8 @@ import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
+import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
+import { startOfWeek, endOfWeek, format } from "date-fns";
 
 // Helper function to get familyId from request or fallback to user's first family
 async function getFamilyId(req: any, userId: string): Promise<string | null> {
@@ -2069,6 +2071,198 @@ Visit Kindora Calendar: ${joinUrl}
       }
       console.error("Error setting event photo:", error);
       res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Weekly Summary Email Routes
+  app.post("/api/send-weekly-summary", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      if (!user.email) {
+        return res.status(400).json({ error: "No email address on file. Please update your profile." });
+      }
+      
+      // Get all families user belongs to
+      const families = await storage.getUserFamilies(userId);
+      
+      if (families.length === 0) {
+        return res.status(400).json({ error: "No families found for user" });
+      }
+      
+      // Calculate week range (current week or specified week)
+      const weekOffset = req.body.weekOffset || 0; // 0 = current week, 1 = next week
+      const today = new Date();
+      const targetDate = new Date(today);
+      targetDate.setDate(targetDate.getDate() + (weekOffset * 7));
+      
+      const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); // Sunday
+      const weekEnd = endOfWeek(targetDate, { weekStartsOn: 0 }); // Saturday
+      const weekRange = `${format(weekStart, 'MMM d')}–${format(weekEnd, 'd')}`;
+      
+      // Collect events from all families
+      const allFamilySummaries: string[] = [];
+      let totalEventCount = 0;
+      
+      for (const family of families) {
+        const events = await storage.getEvents(family.id);
+        const familyMembers = await storage.getFamilyMembers(family.id);
+        
+        // Filter events for the specified week
+        const weekEvents = events.filter(event => {
+          const eventDate = new Date(event.startTime);
+          return eventDate >= weekStart && eventDate <= weekEnd;
+        }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        
+        // Map events with member names
+        const eventSummaries = weekEvents.map(event => {
+          const memberNames = (event.memberIds || [])
+            .map(id => familyMembers.find(m => m.id === id)?.name)
+            .filter(Boolean) as string[];
+          
+          // Check if it's an all-day event (ends at 23:58 or 23:59)
+          const endTime = new Date(event.endTime);
+          const isAllDay = endTime.getHours() === 23 && endTime.getMinutes() >= 58;
+          
+          return {
+            id: event.id,
+            title: event.title,
+            startTime: new Date(event.startTime),
+            endTime: endTime,
+            description: event.description,
+            memberNames,
+            isAllDay
+          };
+        });
+        
+        totalEventCount += eventSummaries.length;
+        
+        // Generate HTML for this family
+        const recipientName = user.firstName || user.email.split('@')[0];
+        const htmlContent = generateWeeklySummaryHtml({
+          familyName: family.name,
+          weekStart,
+          weekEnd,
+          events: eventSummaries,
+          recipientName
+        });
+        
+        const textContent = generateWeeklySummaryText({
+          familyName: family.name,
+          weekStart,
+          weekEnd,
+          events: eventSummaries,
+          recipientName
+        });
+        
+        // Send email for this family
+        const result = await sendWeeklySummaryEmail(
+          user.email,
+          htmlContent,
+          textContent,
+          weekRange
+        );
+        
+        if (result.success) {
+          allFamilySummaries.push(family.name);
+        } else {
+          console.error(`Failed to send summary for family ${family.name}:`, result.error);
+        }
+      }
+      
+      if (allFamilySummaries.length === 0) {
+        return res.status(500).json({ error: "Failed to send any summary emails" });
+      }
+      
+      res.json({
+        success: true,
+        message: `Weekly summary sent to ${user.email}`,
+        families: allFamilySummaries,
+        eventCount: totalEventCount,
+        weekRange
+      });
+      
+    } catch (error) {
+      console.error("Error sending weekly summary:", error);
+      res.status(500).json({ error: "Failed to send weekly summary", details: String(error) });
+    }
+  });
+  
+  // Preview weekly summary (returns HTML without sending email)
+  app.get("/api/weekly-summary-preview", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const familyId = await getFamilyId(req, userId);
+      
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const family = await storage.getFamilyById(familyId);
+      if (!family) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+      
+      // Calculate week range
+      const weekOffset = parseInt(req.query.weekOffset as string) || 0;
+      const today = new Date();
+      const targetDate = new Date(today);
+      targetDate.setDate(targetDate.getDate() + (weekOffset * 7));
+      
+      const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
+      const weekEnd = endOfWeek(targetDate, { weekStartsOn: 0 });
+      
+      const events = await storage.getEvents(familyId);
+      const familyMembers = await storage.getFamilyMembers(familyId);
+      
+      // Filter events for the specified week
+      const weekEvents = events.filter(event => {
+        const eventDate = new Date(event.startTime);
+        return eventDate >= weekStart && eventDate <= weekEnd;
+      }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      
+      // Map events with member names
+      const eventSummaries = weekEvents.map(event => {
+        const memberNames = (event.memberIds || [])
+          .map(id => familyMembers.find(m => m.id === id)?.name)
+          .filter(Boolean) as string[];
+        
+        const endTime = new Date(event.endTime);
+        const isAllDay = endTime.getHours() === 23 && endTime.getMinutes() >= 58;
+        
+        return {
+          id: event.id,
+          title: event.title,
+          startTime: new Date(event.startTime),
+          endTime: endTime,
+          description: event.description,
+          memberNames,
+          isAllDay
+        };
+      });
+      
+      const recipientName = user?.firstName || user?.email?.split('@')[0] || 'User';
+      
+      const htmlContent = generateWeeklySummaryHtml({
+        familyName: family.name,
+        weekStart,
+        weekEnd,
+        events: eventSummaries,
+        recipientName
+      });
+      
+      res.setHeader('Content-Type', 'text/html');
+      res.send(htmlContent);
+      
+    } catch (error) {
+      console.error("Error generating preview:", error);
+      res.status(500).json({ error: "Failed to generate preview" });
     }
   });
 
