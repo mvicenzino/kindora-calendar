@@ -156,6 +156,29 @@ export const caregiverTimeEntries = pgTable("caregiver_time_entries", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Weekly Summary Schedule table - admin-configurable schedule per family
+export const weeklySummarySchedules = pgTable("weekly_summary_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull().unique(), // One schedule per family
+  isEnabled: boolean("is_enabled").notNull().default(false),
+  dayOfWeek: varchar("day_of_week").notNull().default("0"), // 0=Sunday, 1=Monday, etc.
+  timeOfDay: varchar("time_of_day").notNull().default("08:00"), // 24h format HH:MM
+  timezone: varchar("timezone").notNull().default("America/New_York"),
+  lastSentAt: timestamp("last_sent_at"), // Track when last sent
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+// Weekly Summary Preferences table - user opt-in preferences
+export const weeklySummaryPreferences = pgTable("weekly_summary_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  familyId: varchar("family_id").notNull(),
+  optedIn: boolean("opted_in").notNull().default(true), // Users opt-in by default
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -263,6 +286,26 @@ export const insertCaregiverTimeEntrySchema = createInsertSchema(caregiverTimeEn
   notes: z.string().optional(),
 });
 
+export const insertWeeklySummaryScheduleSchema = createInsertSchema(weeklySummarySchedules).omit({
+  id: true,
+  lastSentAt: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  isEnabled: z.boolean().default(false),
+  dayOfWeek: z.string().regex(/^[0-6]$/, "Day must be 0-6 (Sunday-Saturday)"),
+  timeOfDay: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Time must be in HH:MM format"),
+  timezone: z.string().min(1, "Timezone is required"),
+});
+
+export const insertWeeklySummaryPreferenceSchema = createInsertSchema(weeklySummaryPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  optedIn: z.boolean().default(true),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -310,6 +353,14 @@ export type CaregiverPayRate = typeof caregiverPayRates.$inferSelect;
 // Caregiver Time Entry types
 export type InsertCaregiverTimeEntry = z.infer<typeof insertCaregiverTimeEntrySchema>;
 export type CaregiverTimeEntry = typeof caregiverTimeEntries.$inferSelect;
+
+// Weekly Summary Schedule types
+export type InsertWeeklySummarySchedule = z.infer<typeof insertWeeklySummaryScheduleSchema>;
+export type WeeklySummarySchedule = typeof weeklySummarySchedules.$inferSelect;
+
+// Weekly Summary Preference types
+export type InsertWeeklySummaryPreference = z.infer<typeof insertWeeklySummaryPreferenceSchema>;
+export type WeeklySummaryPreference = typeof weeklySummaryPreferences.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {

@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
@@ -78,6 +78,17 @@ export interface IStorage {
   getCaregiverTimeEntries(caregiverUserId: string, familyId: string): Promise<CaregiverTimeEntry[]>;
   createCaregiverTimeEntry(familyId: string, caregiverUserId: string, entry: InsertCaregiverTimeEntry, hourlyRate: string): Promise<CaregiverTimeEntry>;
   deleteCaregiverTimeEntry(id: string, caregiverUserId: string, familyId: string): Promise<void>;
+
+  // Weekly Summary Schedule (admin configurable per family)
+  getWeeklySummarySchedule(familyId: string): Promise<WeeklySummarySchedule | undefined>;
+  upsertWeeklySummarySchedule(familyId: string, schedule: Partial<InsertWeeklySummarySchedule>): Promise<WeeklySummarySchedule>;
+  getActiveWeeklySummarySchedules(): Promise<WeeklySummarySchedule[]>;
+  updateWeeklySummaryLastSent(familyId: string): Promise<void>;
+
+  // Weekly Summary Preferences (user opt-in per family)
+  getWeeklySummaryPreference(userId: string, familyId: string): Promise<WeeklySummaryPreference | undefined>;
+  upsertWeeklySummaryPreference(userId: string, familyId: string, optedIn: boolean): Promise<WeeklySummaryPreference>;
+  getOptedInUsersForFamily(familyId: string): Promise<Array<{ userId: string; user: User }>>;
 }
 
 export class MemStorage implements IStorage {
@@ -689,6 +700,93 @@ export class MemStorage implements IStorage {
     }
     this.caregiverTimeEntriesMap.delete(id);
   }
+
+  // Weekly Summary Schedule - In-memory storage (for demo mode)
+  private weeklySummarySchedulesMap: Map<string, WeeklySummarySchedule> = new Map();
+  private weeklySummaryPreferencesMap: Map<string, WeeklySummaryPreference> = new Map();
+
+  async getWeeklySummarySchedule(familyId: string): Promise<WeeklySummarySchedule | undefined> {
+    return Array.from(this.weeklySummarySchedulesMap.values()).find(s => s.familyId === familyId);
+  }
+
+  async upsertWeeklySummarySchedule(familyId: string, schedule: Partial<InsertWeeklySummarySchedule>): Promise<WeeklySummarySchedule> {
+    const existing = await this.getWeeklySummarySchedule(familyId);
+    if (existing) {
+      const updated: WeeklySummarySchedule = {
+        ...existing,
+        ...schedule,
+        updatedAt: new Date(),
+      };
+      this.weeklySummarySchedulesMap.set(existing.id, updated);
+      return updated;
+    }
+    const id = randomUUID();
+    const newSchedule: WeeklySummarySchedule = {
+      id,
+      familyId,
+      isEnabled: schedule.isEnabled ?? false,
+      dayOfWeek: schedule.dayOfWeek ?? '0',
+      timeOfDay: schedule.timeOfDay ?? '08:00',
+      timezone: schedule.timezone ?? 'America/New_York',
+      lastSentAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.weeklySummarySchedulesMap.set(id, newSchedule);
+    return newSchedule;
+  }
+
+  async getActiveWeeklySummarySchedules(): Promise<WeeklySummarySchedule[]> {
+    return Array.from(this.weeklySummarySchedulesMap.values()).filter(s => s.isEnabled);
+  }
+
+  async updateWeeklySummaryLastSent(familyId: string): Promise<void> {
+    const schedule = await this.getWeeklySummarySchedule(familyId);
+    if (schedule) {
+      schedule.lastSentAt = new Date();
+      this.weeklySummarySchedulesMap.set(schedule.id, schedule);
+    }
+  }
+
+  async getWeeklySummaryPreference(userId: string, familyId: string): Promise<WeeklySummaryPreference | undefined> {
+    return Array.from(this.weeklySummaryPreferencesMap.values()).find(p => p.userId === userId && p.familyId === familyId);
+  }
+
+  async upsertWeeklySummaryPreference(userId: string, familyId: string, optedIn: boolean): Promise<WeeklySummaryPreference> {
+    const existing = await this.getWeeklySummaryPreference(userId, familyId);
+    if (existing) {
+      const updated: WeeklySummaryPreference = {
+        ...existing,
+        optedIn,
+        updatedAt: new Date(),
+      };
+      this.weeklySummaryPreferencesMap.set(existing.id, updated);
+      return updated;
+    }
+    const id = randomUUID();
+    const newPref: WeeklySummaryPreference = {
+      id,
+      userId,
+      familyId,
+      optedIn,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.weeklySummaryPreferencesMap.set(id, newPref);
+    return newPref;
+  }
+
+  async getOptedInUsersForFamily(familyId: string): Promise<Array<{ userId: string; user: User }>> {
+    const prefs = Array.from(this.weeklySummaryPreferencesMap.values()).filter(p => p.familyId === familyId && p.optedIn);
+    const result: Array<{ userId: string; user: User }> = [];
+    for (const pref of prefs) {
+      const user = this.users.get(pref.userId);
+      if (user) {
+        result.push({ userId: pref.userId, user });
+      }
+    }
+    return result;
+  }
 }
 
 // DrizzleStorage implementation
@@ -1207,6 +1305,89 @@ class DrizzleStorage implements IStorage {
       )
     );
   }
+
+  // Weekly Summary Schedule
+  async getWeeklySummarySchedule(familyId: string): Promise<WeeklySummarySchedule | undefined> {
+    const results = await this.db.select().from(weeklySummarySchedules).where(eq(weeklySummarySchedules.familyId, familyId));
+    return results[0];
+  }
+
+  async upsertWeeklySummarySchedule(familyId: string, schedule: Partial<InsertWeeklySummarySchedule>): Promise<WeeklySummarySchedule> {
+    const existing = await this.getWeeklySummarySchedule(familyId);
+    if (existing) {
+      const result = await this.db.update(weeklySummarySchedules)
+        .set({ ...schedule, updatedAt: new Date() })
+        .where(eq(weeklySummarySchedules.familyId, familyId))
+        .returning();
+      return result[0];
+    }
+    const result = await this.db.insert(weeklySummarySchedules).values({
+      familyId,
+      isEnabled: schedule.isEnabled ?? false,
+      dayOfWeek: schedule.dayOfWeek ?? '0',
+      timeOfDay: schedule.timeOfDay ?? '08:00',
+      timezone: schedule.timezone ?? 'America/New_York',
+    }).returning();
+    return result[0];
+  }
+
+  async getActiveWeeklySummarySchedules(): Promise<WeeklySummarySchedule[]> {
+    return await this.db.select().from(weeklySummarySchedules).where(eq(weeklySummarySchedules.isEnabled, true));
+  }
+
+  async updateWeeklySummaryLastSent(familyId: string): Promise<void> {
+    await this.db.update(weeklySummarySchedules)
+      .set({ lastSentAt: new Date() })
+      .where(eq(weeklySummarySchedules.familyId, familyId));
+  }
+
+  // Weekly Summary Preferences
+  async getWeeklySummaryPreference(userId: string, familyId: string): Promise<WeeklySummaryPreference | undefined> {
+    const results = await this.db.select().from(weeklySummaryPreferences).where(
+      and(
+        eq(weeklySummaryPreferences.userId, userId),
+        eq(weeklySummaryPreferences.familyId, familyId)
+      )
+    );
+    return results[0];
+  }
+
+  async upsertWeeklySummaryPreference(userId: string, familyId: string, optedIn: boolean): Promise<WeeklySummaryPreference> {
+    const existing = await this.getWeeklySummaryPreference(userId, familyId);
+    if (existing) {
+      const result = await this.db.update(weeklySummaryPreferences)
+        .set({ optedIn, updatedAt: new Date() })
+        .where(and(
+          eq(weeklySummaryPreferences.userId, userId),
+          eq(weeklySummaryPreferences.familyId, familyId)
+        ))
+        .returning();
+      return result[0];
+    }
+    const result = await this.db.insert(weeklySummaryPreferences).values({
+      userId,
+      familyId,
+      optedIn,
+    }).returning();
+    return result[0];
+  }
+
+  async getOptedInUsersForFamily(familyId: string): Promise<Array<{ userId: string; user: User }>> {
+    const prefs = await this.db.select().from(weeklySummaryPreferences).where(
+      and(
+        eq(weeklySummaryPreferences.familyId, familyId),
+        eq(weeklySummaryPreferences.optedIn, true)
+      )
+    );
+    const result: Array<{ userId: string; user: User }> = [];
+    for (const pref of prefs) {
+      const userResults = await this.db.select().from(users).where(eq(users.id, pref.userId));
+      if (userResults[0]) {
+        result.push({ userId: pref.userId, user: userResults[0] });
+      }
+    }
+    return result;
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -1489,6 +1670,43 @@ class DemoAwareStorage implements IStorage {
   async deleteCaregiverTimeEntry(id: string, caregiverUserId: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteCaregiverTimeEntry(id, caregiverUserId, familyId);
+  }
+
+  // Weekly Summary Schedule
+  async getWeeklySummarySchedule(familyId: string): Promise<WeeklySummarySchedule | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getWeeklySummarySchedule(familyId);
+  }
+
+  async upsertWeeklySummarySchedule(familyId: string, schedule: Partial<InsertWeeklySummarySchedule>): Promise<WeeklySummarySchedule> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.upsertWeeklySummarySchedule(familyId, schedule);
+  }
+
+  async getActiveWeeklySummarySchedules(): Promise<WeeklySummarySchedule[]> {
+    // For automated schedules, we only check persistent storage (real users)
+    return this.persistentStorage.getActiveWeeklySummarySchedules();
+  }
+
+  async updateWeeklySummaryLastSent(familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateWeeklySummaryLastSent(familyId);
+  }
+
+  // Weekly Summary Preferences
+  async getWeeklySummaryPreference(userId: string, familyId: string): Promise<WeeklySummaryPreference | undefined> {
+    const storage = this.getStorage(userId);
+    return storage.getWeeklySummaryPreference(userId, familyId);
+  }
+
+  async upsertWeeklySummaryPreference(userId: string, familyId: string, optedIn: boolean): Promise<WeeklySummaryPreference> {
+    const storage = this.getStorage(userId);
+    return storage.upsertWeeklySummaryPreference(userId, familyId, optedIn);
+  }
+
+  async getOptedInUsersForFamily(familyId: string): Promise<Array<{ userId: string; user: User }>> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getOptedInUsersForFamily(familyId);
   }
 }
 
