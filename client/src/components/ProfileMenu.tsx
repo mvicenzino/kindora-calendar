@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { UiFamilyMember } from "@shared/types";
 import type { FamilyMembership, User as UserType } from "@shared/schema";
-import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2 } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2, Bell, BellOff } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
+import { queryClient } from "@/lib/queryClient";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
@@ -77,6 +79,38 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
       toast({
         title: "Failed to Send",
         description: error.message || "Could not send weekly summary. Check your email settings.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Weekly summary preference query
+  const { data: prefData, isLoading: prefLoading } = useQuery<{ preference: { optedIn: boolean } }>({
+    queryKey: ['/api/weekly-summary-preference', activeFamilyId],
+    enabled: !!activeFamilyId && isOpen,
+  });
+
+  const updatePrefMutation = useMutation({
+    mutationFn: async (optedIn: boolean) => {
+      const response = await apiRequest('PUT', '/api/weekly-summary-preference', {
+        familyId: activeFamilyId,
+        optedIn,
+      });
+      return response.json();
+    },
+    onSuccess: (_, optedIn) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/weekly-summary-preference', activeFamilyId] });
+      toast({
+        title: optedIn ? "Subscribed" : "Unsubscribed",
+        description: optedIn
+          ? "You'll receive weekly calendar summaries by email"
+          : "You won't receive automated weekly summaries",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update",
+        description: error.message || "Could not update preference",
         variant: "destructive",
       });
     },
@@ -416,6 +450,40 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                   </div>
                   <ChevronRight className="w-4 h-4 text-white/40" />
                 </button>
+                
+                {/* Weekly Summary Opt-in Toggle */}
+                <div className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                      {prefData?.preference.optedIn ? (
+                        <Bell className="w-4 h-4 text-teal-400" />
+                      ) : (
+                        <BellOff className="w-4 h-4 text-white/40" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-white">Receive Weekly Emails</div>
+                      <div className="text-xs text-white/50">
+                        {prefData?.preference.optedIn ? "Subscribed to automated summaries" : "Opt into weekly digest"}
+                      </div>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={prefData?.preference.optedIn ?? true}
+                    onCheckedChange={(checked) => {
+                      if (!isDemoMode) {
+                        updatePrefMutation.mutate(checked);
+                      } else {
+                        toast({
+                          title: "Demo Mode",
+                          description: "Settings are disabled in demo mode. Sign up to customize!",
+                        });
+                      }
+                    }}
+                    disabled={prefLoading || updatePrefMutation.isPending}
+                    data-testid="switch-weekly-summary-optin"
+                  />
+                </div>
               </div>
             )}
           </div>
