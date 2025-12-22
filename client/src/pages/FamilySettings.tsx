@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ export default function FamilySettings() {
   const [, navigate] = useLocation();
   const { activeFamilyId } = useActiveFamily();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [caregiverEmail, setCaregiverEmail] = useState("");
   const [familyMemberEmail, setFamilyMemberEmail] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -179,7 +181,9 @@ export default function FamilySettings() {
     enabled: !!activeFamilyId,
   });
 
-  const isOwnerOrMember = roleData?.role === 'owner' || roleData?.role === 'member';
+  // Check role from API, or fallback to checking if user created the family
+  const isOwnerOrMember = roleData?.role === 'owner' || roleData?.role === 'member' || 
+    (user?.id && family?.createdBy === user.id);
 
   const updateScheduleMutation = useMutation({
     mutationFn: async (schedule: Partial<WeeklySummarySchedule>) => {
