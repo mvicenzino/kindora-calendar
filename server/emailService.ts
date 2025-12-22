@@ -36,12 +36,12 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
     if (dayEvents.length === 0) {
       return `
         <tr>
-          <td style="background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%); padding: 10px 14px; font-weight: 600; color: #7c3aed; border-bottom: 1px solid #ddd6fe;">
+          <td style="background: rgba(255,255,255,0.05); padding: 12px 16px; font-weight: 600; color: rgba(255,255,255,0.9); border-bottom: 1px solid rgba(255,255,255,0.08);">
             ${dateHeader}
           </td>
         </tr>
         <tr>
-          <td style="padding: 12px 16px; color: #888; font-style: italic; border-bottom: 1px solid #f0f0f0;">
+          <td style="padding: 14px 16px; color: rgba(255,255,255,0.4); font-style: italic; border-bottom: 1px solid rgba(255,255,255,0.05);">
             No events scheduled
           </td>
         </tr>
@@ -58,15 +58,15 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
       
       return `
         <tr>
-          <td style="padding: 12px 16px; border-bottom: 1px solid #f5f5f5;">
+          <td style="padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="width: 80px; color: #7c3aed; font-size: 13px; font-weight: 500; vertical-align: top;">
+                <td style="width: 80px; color: #60a5fa; font-size: 13px; font-weight: 500; vertical-align: top;">
                   ${timeStr}
                 </td>
                 <td style="vertical-align: top;">
-                  <div style="font-weight: 600; color: #333; margin-bottom: 2px;">${event.title}</div>
-                  ${members ? `<div style="font-size: 12px; color: #666;">${members}</div>` : ''}
+                  <div style="font-weight: 600; color: rgba(255,255,255,0.9); margin-bottom: 3px;">${event.title}</div>
+                  ${members ? `<div style="font-size: 12px; color: rgba(255,255,255,0.5);">${members}</div>` : ''}
                 </td>
               </tr>
             </table>
@@ -77,7 +77,7 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
 
     return `
       <tr>
-        <td style="background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%); padding: 10px 14px; font-weight: 600; color: #7c3aed; border-bottom: 1px solid #ddd6fe;">
+        <td style="background: rgba(255,255,255,0.05); padding: 12px 16px; font-weight: 600; color: rgba(255,255,255,0.9); border-bottom: 1px solid rgba(255,255,255,0.08);">
           ${dateHeader}
         </td>
       </tr>
@@ -93,31 +93,35 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Weekly Agenda</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1a2e; padding: 20px 0;">
+<body style="margin: 0; padding: 0; background-color: #1a1d2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1d2e; padding: 24px 0;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
-          <!-- Header with Kindora Branding -->
+        <table width="100%" style="max-width: 600px; background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+          <!-- Header with Kindora Branding - matching app header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%); padding: 28px 24px; text-align: center;">
+            <td style="background: rgba(0,0,0,0.2); padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center">
-                    <!-- Logo Icon -->
-                    <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 12px; display: inline-block; margin-bottom: 12px; line-height: 56px;">
-                      <span style="font-size: 28px;">📅</span>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center">
-                    <div style="font-size: 32px; font-weight: 800; color: #fdba74; letter-spacing: -0.5px; margin-bottom: 4px;">
-                      Kindora
-                    </div>
-                    <div style="color: rgba(255,255,255,0.85); font-size: 13px; text-transform: uppercase; letter-spacing: 2px; font-weight: 500;">
-                      Family Calendar
-                    </div>
+                  <td>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="vertical-align: middle;">
+                          <!-- Orange Logo Icon -->
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); border-radius: 10px; display: inline-block; text-align: center; line-height: 40px;">
+                            <span style="font-size: 20px;">📅</span>
+                          </div>
+                        </td>
+                        <td style="vertical-align: middle; padding-left: 12px;">
+                          <div style="font-size: 22px; font-weight: 800; color: #fdba74; letter-spacing: -0.3px;">
+                            Kindora
+                          </div>
+                          <div style="color: rgba(255,255,255,0.5); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 500; margin-top: -2px;">
+                            Calendar
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
@@ -126,20 +130,20 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           
           <!-- Greeting -->
           <tr>
-            <td style="padding: 20px 24px 12px;">
-              <div style="color: #333; font-size: 16px;">
+            <td style="padding: 24px 24px 12px;">
+              <div style="color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 500;">
                 Hi ${recipientName},
               </div>
-              <div style="color: #666; font-size: 14px; margin-top: 8px;">
-                Here's your family's agenda for <strong>${weekRange}</strong>
+              <div style="color: rgba(255,255,255,0.6); font-size: 14px; margin-top: 8px;">
+                Here's your family's agenda for <strong style="color: rgba(255,255,255,0.9);">${weekRange}</strong>
               </div>
             </td>
           </tr>
           
           <!-- Family Name -->
           <tr>
-            <td style="padding: 0 24px 16px;">
-              <div style="display: inline-block; background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%); padding: 8px 18px; border-radius: 20px; color: #7c3aed; font-weight: 600; font-size: 14px; border: 1px solid #ddd6fe;">
+            <td style="padding: 0 24px 20px;">
+              <div style="display: inline-block; background: rgba(249, 115, 22, 0.15); padding: 8px 18px; border-radius: 20px; color: #fdba74; font-weight: 600; font-size: 14px; border: 1px solid rgba(249, 115, 22, 0.3);">
                 ${familyName}
               </div>
             </td>
@@ -148,7 +152,7 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           <!-- Events Table -->
           <tr>
             <td style="padding: 0 16px 24px;">
-              <table width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden;">
                 ${dayRows}
               </table>
             </td>
@@ -156,9 +160,9 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           
           <!-- CTA Button -->
           <tr>
-            <td style="padding: 0 24px 24px; text-align: center;">
+            <td style="padding: 0 24px 28px; text-align: center;">
               <a href="${process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://kindora.replit.app'}" 
-                 style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%); color: white; text-decoration: none; padding: 14px 36px; border-radius: 25px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
+                 style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; text-decoration: none; padding: 14px 36px; border-radius: 25px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
                 View Full Calendar
               </a>
             </td>
@@ -166,13 +170,13 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           
           <!-- Footer -->
           <tr>
-            <td style="background: linear-gradient(135deg, #f8f7ff 0%, #f3f1ff 100%); padding: 20px 24px; text-align: center; border-top: 1px solid #e8e5f0;">
-              <div style="color: #7c3aed; font-weight: 600; font-size: 13px; margin-bottom: 4px;">
+            <td style="background: rgba(0,0,0,0.15); padding: 20px 24px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08);">
+              <div style="color: #fdba74; font-weight: 600; font-size: 13px; margin-bottom: 4px;">
                 Kindora
               </div>
-              <div style="color: #888; font-size: 11px;">
+              <div style="color: rgba(255,255,255,0.4); font-size: 11px;">
                 Keeping families connected &amp; organized<br>
-                <span style="color: #aaa;">You're receiving this because you have weekly summaries enabled.</span>
+                <span style="color: rgba(255,255,255,0.3);">You're receiving this because you have weekly summaries enabled.</span>
               </div>
             </td>
           </tr>
