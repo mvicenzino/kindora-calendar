@@ -36,12 +36,12 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
     if (dayEvents.length === 0) {
       return `
         <tr>
-          <td style="background-color: #e3f2fd; padding: 8px 12px; font-weight: 600; color: #1976d2; border-bottom: 1px solid #bbdefb;">
+          <td style="background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%); padding: 10px 14px; font-weight: 600; color: #7c3aed; border-bottom: 1px solid #ddd6fe;">
             ${dateHeader}
           </td>
         </tr>
         <tr>
-          <td style="padding: 12px 16px; color: #666; font-style: italic; border-bottom: 1px solid #e0e0e0;">
+          <td style="padding: 12px 16px; color: #888; font-style: italic; border-bottom: 1px solid #f0f0f0;">
             No events scheduled
           </td>
         </tr>
@@ -53,19 +53,19 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
         ? 'All Day' 
         : format(new Date(event.startTime), 'h:mm a');
       const members = event.memberNames.length > 0 
-        ? `<span style="color: #f44336;">●</span> ${event.memberNames.join(', ')}` 
+        ? `<span style="color: #fdba74;">●</span> ${event.memberNames.join(', ')}` 
         : '';
       
       return `
         <tr>
-          <td style="padding: 10px 16px; border-bottom: 1px solid #f0f0f0;">
+          <td style="padding: 12px 16px; border-bottom: 1px solid #f5f5f5;">
             <table width="100%" cellpadding="0" cellspacing="0">
               <tr>
-                <td style="width: 80px; color: #666; font-size: 13px; vertical-align: top;">
+                <td style="width: 80px; color: #7c3aed; font-size: 13px; font-weight: 500; vertical-align: top;">
                   ${timeStr}
                 </td>
                 <td style="vertical-align: top;">
-                  <div style="font-weight: 500; color: #333; margin-bottom: 2px;">${event.title}</div>
+                  <div style="font-weight: 600; color: #333; margin-bottom: 2px;">${event.title}</div>
                   ${members ? `<div style="font-size: 12px; color: #666;">${members}</div>` : ''}
                 </td>
               </tr>
@@ -77,7 +77,7 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
 
     return `
       <tr>
-        <td style="background-color: #e3f2fd; padding: 8px 12px; font-weight: 600; color: #1976d2; border-bottom: 1px solid #bbdefb;">
+        <td style="background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%); padding: 10px 14px; font-weight: 600; color: #7c3aed; border-bottom: 1px solid #ddd6fe;">
           ${dateHeader}
         </td>
       </tr>
@@ -93,20 +93,34 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Weekly Agenda</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+<body style="margin: 0; padding: 0; background-color: #1a1a2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1a2e; padding: 20px 0;">
     <tr>
       <td align="center">
-        <table width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <!-- Header -->
+        <table width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.25);">
+          <!-- Header with Kindora Branding -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; text-align: center;">
-              <div style="font-size: 28px; font-weight: bold; color: white; margin-bottom: 4px;">
-                📅 Kindora
-              </div>
-              <div style="color: rgba(255,255,255,0.9); font-size: 14px;">
-                CALENDAR
-              </div>
+            <td style="background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%); padding: 28px 24px; text-align: center;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <!-- Logo Icon -->
+                    <div style="width: 56px; height: 56px; background: rgba(255,255,255,0.15); border-radius: 12px; display: inline-block; margin-bottom: 12px; line-height: 56px;">
+                      <span style="font-size: 28px;">📅</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <div style="font-size: 32px; font-weight: 800; color: #fdba74; letter-spacing: -0.5px; margin-bottom: 4px;">
+                      Kindora
+                    </div>
+                    <div style="color: rgba(255,255,255,0.85); font-size: 13px; text-transform: uppercase; letter-spacing: 2px; font-weight: 500;">
+                      Family Calendar
+                    </div>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           
@@ -125,7 +139,7 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           <!-- Family Name -->
           <tr>
             <td style="padding: 0 24px 16px;">
-              <div style="display: inline-block; background-color: #f0f4ff; padding: 8px 16px; border-radius: 20px; color: #5c6bc0; font-weight: 600; font-size: 14px;">
+              <div style="display: inline-block; background: linear-gradient(135deg, #f3f0ff 0%, #ede9fe 100%); padding: 8px 18px; border-radius: 20px; color: #7c3aed; font-weight: 600; font-size: 14px; border: 1px solid #ddd6fe;">
                 ${familyName}
               </div>
             </td>
@@ -144,7 +158,7 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           <tr>
             <td style="padding: 0 24px 24px; text-align: center;">
               <a href="${process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://kindora.replit.app'}" 
-                 style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 12px 32px; border-radius: 25px; font-weight: 600; font-size: 14px;">
+                 style="display: inline-block; background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a855f7 100%); color: white; text-decoration: none; padding: 14px 36px; border-radius: 25px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);">
                 View Full Calendar
               </a>
             </td>
@@ -152,10 +166,13 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           
           <!-- Footer -->
           <tr>
-            <td style="background-color: #f9f9f9; padding: 16px 24px; text-align: center; border-top: 1px solid #e0e0e0;">
-              <div style="color: #999; font-size: 12px;">
-                This email was sent by Kindora Calendar.<br>
-                You're receiving this because you have weekly summaries enabled.
+            <td style="background: linear-gradient(135deg, #f8f7ff 0%, #f3f1ff 100%); padding: 20px 24px; text-align: center; border-top: 1px solid #e8e5f0;">
+              <div style="color: #7c3aed; font-weight: 600; font-size: 13px; margin-bottom: 4px;">
+                Kindora
+              </div>
+              <div style="color: #888; font-size: 11px;">
+                Keeping families connected &amp; organized<br>
+                <span style="color: #aaa;">You're receiving this because you have weekly summaries enabled.</span>
               </div>
             </td>
           </tr>
