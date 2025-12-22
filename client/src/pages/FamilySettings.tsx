@@ -500,10 +500,56 @@ export default function FamilySettings() {
                         </div>
                       </div>
                       
-                      <p className="text-sm text-white/60">
+                      <p className="text-sm text-white/60 mb-4">
                         All family members will receive a weekly calendar summary at the scheduled time.
                         Members can opt out in their profile settings.
                       </p>
+                      
+                      <div className="flex gap-2 pt-2 border-t border-white/10">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-white/20 text-white hover:bg-white/10"
+                          onClick={() => window.open('/api/weekly-summary-preview', '_blank')}
+                          data-testid="button-preview-email"
+                        >
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Preview Email
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-white/20 text-white hover:bg-white/10"
+                          onClick={async () => {
+                            try {
+                              const res = await apiRequest('POST', '/api/send-weekly-summary', {});
+                              const data = await res.json();
+                              if (data.success) {
+                                toast({
+                                  title: "Test email sent!",
+                                  description: `Check your inbox for the weekly summary.`,
+                                });
+                              } else {
+                                toast({
+                                  title: "Email not sent",
+                                  description: data.error || "Could not send test email",
+                                  variant: "destructive",
+                                });
+                              }
+                            } catch (error: any) {
+                              toast({
+                                title: "Email not sent",
+                                description: error.message || "Could not send test email",
+                                variant: "destructive",
+                              });
+                            }
+                          }}
+                          data-testid="button-send-test-email"
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Send Test Email
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </>
