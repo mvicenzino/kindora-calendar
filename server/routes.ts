@@ -2722,6 +2722,124 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // ========================================
+  // Google Drive Integration Routes
+  // ========================================
+  
+  // Check if Google Drive is connected
+  app.get("/api/google-drive/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const { checkDriveConnection } = await import("./googleDriveService");
+      const connected = await checkDriveConnection();
+      res.json({ connected });
+    } catch (error) {
+      res.json({ connected: false });
+    }
+  });
+  
+  // List files from Google Drive
+  app.get("/api/google-drive/files", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role || (role !== 'owner' && role !== 'member')) {
+        return res.status(403).json({ error: "Only family owners and members can access Google Drive" });
+      }
+      
+      const { listDriveFiles } = await import("./googleDriveService");
+      const folderId = req.query.folderId as string | undefined;
+      const pageToken = req.query.pageToken as string | undefined;
+      
+      const result = await listDriveFiles(folderId, pageToken);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error listing Google Drive files:", error);
+      if (error.message?.includes('not connected')) {
+        return res.status(401).json({ error: "Google Drive not connected" });
+      }
+      res.status(500).json({ error: "Failed to list Google Drive files" });
+    }
+  });
+  
+  // Import a file from Google Drive
+  app.post("/api/google-drive/import", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role || (role !== 'owner' && role !== 'member')) {
+        return res.status(403).json({ error: "Only family owners and members can import from Google Drive" });
+      }
+      
+      const { fileId, title, documentType, description, memberId } = req.body;
+      
+      if (!fileId || !title || !documentType) {
+        return res.status(400).json({ error: "fileId, title, and documentType are required" });
+      }
+      
+      const validTypes = ['medical', 'insurance', 'legal', 'care_plan', 'other'];
+      if (!validTypes.includes(documentType)) {
+        return res.status(400).json({ error: `Invalid document type. Must be one of: ${validTypes.join(', ')}` });
+      }
+      
+      const { downloadDriveFile } = await import("./googleDriveService");
+      const { buffer, mimeType, name, size } = await downloadDriveFile(fileId);
+      
+      const privateDir = process.env.PRIVATE_OBJECT_DIR;
+      if (!privateDir) {
+        return res.status(500).json({ error: "Object storage not configured" });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      const timestamp = Date.now();
+      const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const subPath = `care-documents/${familyId}/${timestamp}-${safeName}`;
+      
+      const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURLWithPath(subPath);
+      
+      const uploadResponse = await fetch(uploadURL, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': mimeType,
+        },
+        body: buffer,
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error(`Failed to upload to storage: ${uploadResponse.status}`);
+      }
+      
+      const document = await storage.createCareDocument(familyId, {
+        title,
+        documentType,
+        description: description || null,
+        memberId: memberId || null,
+        uploadedBy: userId,
+        fileUrl: objectPath,
+        fileName: name,
+        fileSize: size,
+        mimeType,
+      });
+      
+      res.status(201).json(document);
+    } catch (error: any) {
+      console.error("Error importing from Google Drive:", error);
+      if (error.message?.includes('not connected')) {
+        return res.status(401).json({ error: "Google Drive not connected" });
+      }
+      res.status(500).json({ error: `Failed to import from Google Drive: ${error.message}` });
+    }
+  });
+
+  // ========================================
   // Emergency Bridge Routes
   // ========================================
   
