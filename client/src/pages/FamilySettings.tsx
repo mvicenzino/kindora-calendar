@@ -453,24 +453,24 @@ export default function FamilySettings() {
         </div>
 
         {/* Invite Caregiver - Primary Action */}
-        <Card className="mb-6 bg-gradient-to-br from-teal-500/20 to-teal-600/10 backdrop-blur-md border-teal-500/30">
+        <Card className="mb-6 bg-white/10 backdrop-blur-md border-white/20">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-white">
               <Heart className="w-5 h-5 text-pink-400" />
               Invite a Caregiver
             </CardTitle>
-            <CardDescription className="text-white/80">
+            <CardDescription className="text-white/70">
               Invite your nanny, babysitter, or caregiver to view the calendar and mark tasks complete
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
                 type="email"
                 value={caregiverEmail}
                 onChange={(e) => setCaregiverEmail(e.target.value)}
                 placeholder="nanny@email.com"
-                className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 data-testid="input-caregiver-email"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleInviteCaregiver();
@@ -479,14 +479,14 @@ export default function FamilySettings() {
               <Button
                 onClick={handleInviteCaregiver}
                 disabled={!caregiverEmail.trim() || inviteCaregiverMutation.isPending}
-                className="bg-teal-500 hover:bg-teal-600 text-white flex-shrink-0"
+                className="flex-shrink-0"
                 data-testid="button-invite-caregiver"
               >
                 <Send className="w-4 h-4 mr-2" />
                 {inviteCaregiverMutation.isPending ? "Sending..." : "Invite"}
               </Button>
             </div>
-            <p className="text-sm text-white/60 mt-3">
+            <p className="text-sm text-white/60">
               Caregivers can view events, log medications, and mark tasks done - but can't delete or edit events.
             </p>
           </CardContent>
@@ -510,7 +510,7 @@ export default function FamilySettings() {
                 value={familyMemberEmail}
                 onChange={(e) => setFamilyMemberEmail(e.target.value)}
                 placeholder="spouse@email.com"
-                className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
+                className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                 data-testid="input-family-member-email"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleInviteFamilyMember();
@@ -519,7 +519,7 @@ export default function FamilySettings() {
               <Button
                 onClick={handleInviteFamilyMember}
                 disabled={!familyMemberEmail.trim() || inviteFamilyMemberMutation.isPending}
-                className="bg-purple-500 hover:bg-purple-600 text-white flex-shrink-0"
+                className="flex-shrink-0"
                 data-testid="button-invite-family-member"
               >
                 <Send className="w-4 h-4 mr-2" />
@@ -528,18 +528,18 @@ export default function FamilySettings() {
             </div>
 
             <div className="pt-3 border-t border-white/10">
-              <Label className="text-white/80 text-sm">Or share your invite code manually</Label>
+              <Label className="text-white/70 text-sm">Or share your invite code manually</Label>
               <div className="flex gap-2 mt-2">
                 <Input
                   value={family?.inviteCode || ""}
                   readOnly
-                  className="bg-white/5 border-white/20 text-white font-mono tracking-wider"
+                  className="bg-white/10 border-white/20 text-white font-mono tracking-wider"
                   data-testid="input-invite-code"
                 />
                 <Button
                   onClick={copyInviteCode}
                   variant="outline"
-                  className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex-shrink-0 min-w-[80px]"
+                  className="flex-shrink-0 min-w-[80px]"
                   data-testid="button-copy-code"
                 >
                   {codeCopied ? (
@@ -621,13 +621,13 @@ export default function FamilySettings() {
                     <div className="space-y-4 pt-4 border-t border-white/10">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-white/80 text-sm">Day of Week</Label>
+                          <Label className="text-white/70 text-sm">Day of Week</Label>
                           <Select
                             value={scheduleData?.schedule.dayOfWeek ?? '0'}
                             onValueChange={handleDayChange}
                             disabled={updateScheduleMutation.isPending}
                           >
-                            <SelectTrigger className="bg-white/5 border-white/20 text-white" data-testid="select-weekly-summary-day">
+                            <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-weekly-summary-day">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-slate-900 border-white/20">
@@ -643,13 +643,13 @@ export default function FamilySettings() {
                         </div>
                         
                         <div className="space-y-2">
-                          <Label className="text-white/80 text-sm">Time</Label>
+                          <Label className="text-white/70 text-sm">Time</Label>
                           <Select
                             value={scheduleData?.schedule.timeOfDay ?? '08:00'}
                             onValueChange={handleTimeChange}
                             disabled={updateScheduleMutation.isPending}
                           >
-                            <SelectTrigger className="bg-white/5 border-white/20 text-white" data-testid="select-weekly-summary-time">
+                            <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-weekly-summary-time">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent className="bg-slate-900 border-white/20 max-h-60">
@@ -666,7 +666,7 @@ export default function FamilySettings() {
                         </div>
                       </div>
                       
-                      <p className="text-sm text-white/60 mb-4">
+                      <p className="text-sm text-white/60">
                         All family members will receive a weekly calendar summary at the scheduled time.
                         Members can opt out in their profile settings.
                       </p>
@@ -675,7 +675,6 @@ export default function FamilySettings() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-white/20 text-white hover:bg-white/10"
                           onClick={() => window.open('/api/weekly-summary-preview', '_blank')}
                           data-testid="button-preview-email"
                         >
@@ -726,13 +725,13 @@ export default function FamilySettings() {
 
         {/* Emergency Bridge Mode */}
         {isOwnerOrMember && (
-          <Card className="mb-6 bg-gradient-to-br from-orange-500/20 to-red-500/10 backdrop-blur-md border-orange-500/30">
+          <Card className="mb-6 bg-white/10 backdrop-blur-md border-white/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-white">
                 <Shield className="w-5 h-5 text-orange-400" />
                 Emergency Bridge Mode
               </CardTitle>
-              <CardDescription className="text-white/80">
+              <CardDescription className="text-white/70">
                 Create temporary access links for backup caregivers during emergencies
               </CardDescription>
             </CardHeader>
@@ -741,20 +740,20 @@ export default function FamilySettings() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-white/80 text-sm">Label (optional)</Label>
+                    <Label className="text-white/70 text-sm">Label (optional)</Label>
                     <Input
                       type="text"
                       value={bridgeLabel}
                       onChange={(e) => setBridgeLabel(e.target.value)}
                       placeholder="e.g., Neighbor Susan"
-                      className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                       data-testid="input-bridge-label"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-white/80 text-sm">Duration</Label>
+                    <Label className="text-white/70 text-sm">Duration</Label>
                     <Select value={bridgeDuration} onValueChange={setBridgeDuration}>
-                      <SelectTrigger className="bg-white/10 border-white/30 text-white" data-testid="select-bridge-duration">
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-bridge-duration">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-900 border-white/20">
@@ -768,7 +767,7 @@ export default function FamilySettings() {
                 <Button
                   onClick={handleCreateBridgeToken}
                   disabled={createBridgeTokenMutation.isPending}
-                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  className="w-full"
                   data-testid="button-create-bridge-link"
                 >
                   <Link className="w-4 h-4 mr-2" />
@@ -778,10 +777,10 @@ export default function FamilySettings() {
 
               {/* Newly created token display */}
               {newBridgeToken && (
-                <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-lg space-y-3">
+                <div className="p-4 bg-white/5 border border-white/20 rounded-lg space-y-3">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-white/90">
+                    <p className="text-sm text-white/80">
                       This link is shown only once. Copy or email it now to your backup caregiver.
                     </p>
                   </div>
@@ -789,13 +788,13 @@ export default function FamilySettings() {
                     <Input
                       value={`${window.location.origin}/emergency-bridge/${newBridgeToken}`}
                       readOnly
-                      className="bg-white/10 border-white/30 text-white text-xs font-mono"
+                      className="bg-white/10 border-white/20 text-white text-xs font-mono"
                       data-testid="input-new-bridge-link"
                     />
                     <Button
                       onClick={() => copyBridgeLink(newBridgeToken)}
                       variant="outline"
-                      className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex-shrink-0"
+                      className="flex-shrink-0"
                       data-testid="button-copy-bridge-link"
                     >
                       {bridgeLinkCopied ? (
@@ -813,14 +812,14 @@ export default function FamilySettings() {
                   </div>
                   
                   <div className="pt-3 border-t border-white/10 space-y-2">
-                    <Label className="text-white/80 text-sm">Or send via email</Label>
+                    <Label className="text-white/70 text-sm">Or send via email</Label>
                     <div className="grid grid-cols-2 gap-2">
                       <Input
                         type="text"
                         value={bridgeRecipientName}
                         onChange={(e) => setBridgeRecipientName(e.target.value)}
                         placeholder="Name (optional)"
-                        className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                         data-testid="input-bridge-recipient-name"
                       />
                       <Input
@@ -828,14 +827,14 @@ export default function FamilySettings() {
                         value={bridgeRecipientEmail}
                         onChange={(e) => setBridgeRecipientEmail(e.target.value)}
                         placeholder="caregiver@email.com"
-                        className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                         data-testid="input-bridge-recipient-email"
                       />
                     </div>
                     <Button
                       onClick={handleSendBridgeEmail}
                       disabled={!bridgeRecipientEmail.trim() || sendBridgeEmailMutation.isPending}
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                      className="w-full"
                       data-testid="button-send-bridge-email"
                     >
                       <Mail className="w-4 h-4 mr-2" />
@@ -860,17 +859,17 @@ export default function FamilySettings() {
                 <div className="text-white/60 text-sm">Loading active links...</div>
               ) : bridgeTokens && bridgeTokens.length > 0 ? (
                 <div className="space-y-2 pt-3 border-t border-white/10">
-                  <Label className="text-white/80 text-sm">Active Emergency Links</Label>
+                  <Label className="text-white/70 text-sm">Active Emergency Links</Label>
                   {bridgeTokens.map((token) => (
                     <div
                       key={token.id}
-                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/20"
                       data-testid={`bridge-token-${token.id}`}
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-white font-medium">{token.label || "Emergency Access"}</span>
-                          <span className="text-xs bg-orange-500/30 text-orange-200 px-2 py-0.5 rounded-full">
+                          <span className="text-xs bg-white/20 text-white/80 px-2 py-0.5 rounded-full">
                             {formatExpiresIn(token.expiresAt)}
                           </span>
                         </div>
@@ -887,7 +886,6 @@ export default function FamilySettings() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20"
                             disabled={revokeBridgeTokenMutation.isPending}
                             data-testid={`button-revoke-token-${token.id}`}
                           >
@@ -908,7 +906,7 @@ export default function FamilySettings() {
                             </AlertDialogCancel>
                             <AlertDialogAction
                               onClick={() => revokeBridgeTokenMutation.mutate(token.id)}
-                              className="bg-red-500 text-white hover:bg-red-600"
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
                               Revoke Access
                             </AlertDialogAction>
@@ -928,7 +926,7 @@ export default function FamilySettings() {
         )}
 
         {/* Join Another Calendar */}
-        <Card className="bg-white/10 backdrop-blur-md border-white/20">
+        <Card className="mb-6 bg-white/10 backdrop-blur-md border-white/20">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-white">
               <UserPlus className="w-5 h-5" />
@@ -938,13 +936,13 @@ export default function FamilySettings() {
               Have an invite code? Enter it here to join
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 placeholder="Enter 8-character code"
-                className="bg-white/5 border-white/20 text-white font-mono uppercase"
+                className="bg-white/10 border-white/20 text-white font-mono uppercase placeholder:text-white/50"
                 data-testid="input-join-code"
                 maxLength={8}
                 onKeyDown={(e) => {
@@ -954,7 +952,7 @@ export default function FamilySettings() {
               <Button
                 onClick={handleJoinFamily}
                 disabled={!joinCode.trim() || joinFamilyMutation.isPending}
-                className="bg-blue-500 hover:bg-blue-600 text-white flex-shrink-0"
+                className="flex-shrink-0"
                 data-testid="button-join-family"
               >
                 {joinFamilyMutation.isPending ? "Joining..." : "Join"}
