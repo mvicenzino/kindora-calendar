@@ -637,7 +637,7 @@ export default function Documents() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-auto min-h-[400px] max-h-[60vh] bg-muted/20 rounded-lg flex items-center justify-center">
+          <div className="flex-1 overflow-auto min-h-[300px] max-h-[60vh] bg-muted/20 rounded-lg flex items-center justify-center">
             {previewDocument?.mimeType?.startsWith("image/") ? (
               <img 
                 src={previewDocument.fileUrl} 
@@ -646,12 +646,23 @@ export default function Documents() {
                 data-testid="preview-image"
               />
             ) : previewDocument?.mimeType === "application/pdf" ? (
-              <iframe
-                src={previewDocument.fileUrl}
-                className="w-full h-[60vh] rounded-lg"
-                title={previewDocument.title}
-                data-testid="preview-pdf"
-              />
+              <div className="text-center p-8" data-testid="preview-pdf-prompt">
+                <FileText className="w-16 h-16 mx-auto mb-4 text-primary" />
+                <h3 className="text-lg font-medium mb-2">PDF Document</h3>
+                <p className="text-muted-foreground mb-4">
+                  Click below to view this PDF in a new browser tab
+                </p>
+                <Button asChild>
+                  <a 
+                    href={previewDocument.fileUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Open PDF
+                  </a>
+                </Button>
+              </div>
             ) : (
               <div className="text-center text-muted-foreground p-8">
                 <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
