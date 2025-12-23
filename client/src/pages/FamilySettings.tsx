@@ -244,7 +244,7 @@ export default function FamilySettings() {
   // Emergency Bridge Tokens
   const { data: bridgeTokens, isLoading: isLoadingBridgeTokens } = useQuery<EmergencyBridgeToken[]>({
     queryKey: ['/api/emergency-bridge/tokens', activeFamilyId],
-    enabled: !!activeFamilyId && isOwnerOrMember,
+    enabled: !!activeFamilyId && !!isOwnerOrMember,
   });
 
   const createBridgeTokenMutation = useMutation({
@@ -684,7 +684,6 @@ export default function FamilySettings() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-white/20 text-white hover:bg-white/10"
                           onClick={async () => {
                             try {
                               const res = await apiRequest('POST', '/api/send-weekly-summary', {});
