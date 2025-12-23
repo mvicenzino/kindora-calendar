@@ -37,8 +37,13 @@ import {
   X,
   ChevronLeft,
   Eye,
-  ExternalLink
+  ExternalLink,
+  CloudDownload,
+  Folder,
+  ArrowLeft,
+  Loader2
 } from "lucide-react";
+import { SiGoogledrive } from "react-icons/si";
 import { Link } from "wouter";
 import Header from "@/components/Header";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -81,6 +86,7 @@ export default function Documents() {
   const { toast } = useToast();
   
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [showDriveDialog, setShowDriveDialog] = useState(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
   const [previewDocument, setPreviewDocument] = useState<CareDocument | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -96,6 +102,25 @@ export default function Documents() {
   });
   const [isUploading, setIsUploading] = useState(false);
   
+  const [driveFolderStack, setDriveFolderStack] = useState<{ id: string | undefined; name: string }[]>([{ id: undefined, name: "My Drive" }]);
+  const [selectedDriveFile, setSelectedDriveFile] = useState<DriveFile | null>(null);
+  const [driveImportForm, setDriveImportForm] = useState({
+    title: "",
+    documentType: "other" as DocumentType,
+    description: "",
+    memberId: "",
+  });
+  const [isImporting, setIsImporting] = useState(false);
+
+  interface DriveFile {
+    id: string;
+    name: string;
+    mimeType: string;
+    size?: string;
+    modifiedTime?: string;
+    iconLink?: string;
+  }
+  
   const { data: rawDocuments = [], isLoading: isLoadingDocuments } = useQuery<CareDocument[]>({
     queryKey: ['/api/care-documents?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
@@ -107,6 +132,29 @@ export default function Documents() {
   });
   
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
+
+  const currentFolderId = driveFolderStack[driveFolderStack.length - 1]?.id;
+  
+  const { data: driveStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ['/api/google-drive/status'],
+    enabled: !!activeFamilyId && (isOwner || isMember),
+    staleTime: 60000,
+  });
+  
+  const { data: driveFilesData, isLoading: isLoadingDriveFiles, refetch: refetchDriveFiles } = useQuery<{ files: DriveFile[], nextPageToken?: string }>({
+    queryKey: ['/api/google-drive/files', currentFolderId],
+    queryFn: async () => {
+      const url = currentFolderId 
+        ? `/api/google-drive/files?folderId=${currentFolderId}` 
+        : '/api/google-drive/files';
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to load Drive files');
+      return res.json();
+    },
+    enabled: !!activeFamilyId && showDriveDialog && driveStatus?.connected,
+  });
+  
+  const driveFiles = driveFilesData?.files || [];
   
   const documents = useMemo(() => {
     let filtered = rawDocuments;
@@ -163,6 +211,60 @@ export default function Documents() {
       toast({ title: "Error", description: "Failed to delete document.", variant: "destructive" });
     },
   });
+
+  const navigateToFolder = (folderId: string, folderName: string) => {
+    setDriveFolderStack(prev => [...prev, { id: folderId, name: folderName }]);
+    setSelectedDriveFile(null);
+  };
+
+  const navigateBack = () => {
+    if (driveFolderStack.length > 1) {
+      setDriveFolderStack(prev => prev.slice(0, -1));
+      setSelectedDriveFile(null);
+    }
+  };
+
+  const handleDriveImport = async () => {
+    if (!selectedDriveFile || !driveImportForm.title.trim()) {
+      toast({ title: "Missing information", description: "Please provide a title for the document.", variant: "destructive" });
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const response = await apiRequest("POST", `/api/google-drive/import?familyId=${activeFamilyId}`, {
+        fileId: selectedDriveFile.id,
+        title: driveImportForm.title.trim(),
+        documentType: driveImportForm.documentType,
+        description: driveImportForm.description.trim() || null,
+        memberId: driveImportForm.memberId || null,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to import document");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['/api/care-documents?familyId=' + activeFamilyId] });
+      toast({ title: "Document imported", description: "Your document has been imported from Google Drive." });
+      
+      setShowDriveDialog(false);
+      setSelectedDriveFile(null);
+      setDriveImportForm({ title: "", documentType: "other", description: "", memberId: "" });
+      setDriveFolderStack([{ id: undefined, name: "My Drive" }]);
+    } catch (error: any) {
+      toast({ title: "Import failed", description: error.message || "Failed to import from Google Drive.", variant: "destructive" });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const openDriveDialog = () => {
+    setShowDriveDialog(true);
+    setSelectedDriveFile(null);
+    setDriveFolderStack([{ id: undefined, name: "My Drive" }]);
+    setDriveImportForm({ title: "", documentType: "other", description: "", memberId: "" });
+  };
   
   const handleUpload = async () => {
     if (!uploadForm.file || !uploadForm.title.trim()) {
@@ -311,14 +413,27 @@ export default function Documents() {
             </div>
             
             {canUpload && (
-              <Button 
-                onClick={() => setShowUploadDialog(true)}
-                className="gap-2"
-                data-testid="button-upload-document"
-              >
-                <Upload className="w-4 h-4" />
-                Upload Document
-              </Button>
+              <div className="flex items-center gap-2">
+                {driveStatus?.connected && (
+                  <Button 
+                    variant="outline"
+                    onClick={openDriveDialog}
+                    className="gap-2"
+                    data-testid="button-import-drive"
+                  >
+                    <SiGoogledrive className="w-4 h-4" />
+                    Import from Drive
+                  </Button>
+                )}
+                <Button 
+                  onClick={() => setShowUploadDialog(true)}
+                  className="gap-2"
+                  data-testid="button-upload-document"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload Document
+                </Button>
+              </div>
             )}
           </div>
           
@@ -728,6 +843,199 @@ export default function Documents() {
                 Open in New Tab
               </a>
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Google Drive Import Dialog */}
+      <Dialog open={showDriveDialog} onOpenChange={setShowDriveDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh]" data-testid="dialog-drive-import">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SiGoogledrive className="w-5 h-5 text-blue-500" />
+              Import from Google Drive
+            </DialogTitle>
+            <DialogDescription>
+              Browse your Google Drive and select a document to import
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedDriveFile ? (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/30">
+                <FileText className="w-10 h-10 text-primary" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{selectedDriveFile.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatFileSize(selectedDriveFile.size)}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedDriveFile(null)}
+                >
+                  Change
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="drive-title">Document Title</Label>
+                <Input
+                  id="drive-title"
+                  placeholder="e.g., Mom's Insurance Card"
+                  value={driveImportForm.title}
+                  onChange={(e) => setDriveImportForm(prev => ({ ...prev, title: e.target.value }))}
+                  data-testid="input-drive-title"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Document Type</Label>
+                <Select 
+                  value={driveImportForm.documentType} 
+                  onValueChange={(v) => setDriveImportForm(prev => ({ ...prev, documentType: v as DocumentType }))}
+                >
+                  <SelectTrigger data-testid="select-drive-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(DOCUMENT_TYPE_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Related Family Member (Optional)</Label>
+                <Select 
+                  value={driveImportForm.memberId || "none"} 
+                  onValueChange={(v) => setDriveImportForm(prev => ({ ...prev, memberId: v === "none" ? "" : v }))}
+                >
+                  <SelectTrigger data-testid="select-drive-member">
+                    <SelectValue placeholder="Family-wide document" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Family-wide document</SelectItem>
+                    {members.map(member => (
+                      <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description (Optional)</Label>
+                <Textarea
+                  placeholder="Add any notes about this document..."
+                  value={driveImportForm.description}
+                  onChange={(e) => setDriveImportForm(prev => ({ ...prev, description: e.target.value }))}
+                  rows={2}
+                  data-testid="input-drive-description"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="py-4">
+              <div className="flex items-center gap-2 mb-4">
+                {driveFolderStack.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={navigateBack}
+                    data-testid="button-drive-back"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                <div className="flex items-center gap-1 text-sm text-muted-foreground overflow-hidden">
+                  {driveFolderStack.map((folder, index) => (
+                    <span key={index} className="flex items-center gap-1">
+                      {index > 0 && <span>/</span>}
+                      <span className={index === driveFolderStack.length - 1 ? "font-medium text-foreground" : ""}>
+                        {folder.name}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <ScrollArea className="h-[300px] border rounded-lg">
+                {isLoadingDriveFiles ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : driveFiles.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <FolderOpen className="w-12 h-12 mb-2 opacity-50" />
+                    <p>No files in this folder</p>
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-1">
+                    {driveFiles.map((file) => {
+                      const isFolder = file.mimeType === "application/vnd.google-apps.folder";
+                      const FileIcon = isFolder ? Folder : getFileIcon(file.mimeType);
+                      
+                      return (
+                        <button
+                          key={file.id}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg hover-elevate text-left transition-colors"
+                          onClick={() => {
+                            if (isFolder) {
+                              navigateToFolder(file.id, file.name);
+                            } else {
+                              setSelectedDriveFile(file);
+                              setDriveImportForm(prev => ({
+                                ...prev,
+                                title: file.name.replace(/\.[^/.]+$/, ""),
+                              }));
+                            }
+                          }}
+                          data-testid={`drive-file-${file.id}`}
+                        >
+                          <FileIcon className={`w-5 h-5 ${isFolder ? "text-yellow-500" : "text-muted-foreground"}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{file.name}</p>
+                            {!isFolder && file.size && (
+                              <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                            )}
+                          </div>
+                          {isFolder && (
+                            <ChevronLeft className="w-4 h-4 text-muted-foreground rotate-180" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDriveDialog(false)}>
+              Cancel
+            </Button>
+            {selectedDriveFile && (
+              <Button 
+                onClick={handleDriveImport} 
+                disabled={isImporting || !driveImportForm.title.trim()}
+                data-testid="button-confirm-import"
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <CloudDownload className="w-4 h-4 mr-2" />
+                    Import Document
+                  </>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

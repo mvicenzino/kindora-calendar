@@ -2790,8 +2790,47 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: `Invalid document type. Must be one of: ${validTypes.join(', ')}` });
       }
       
-      const { downloadDriveFile } = await import("./googleDriveService");
+      const { downloadDriveFile, getDriveFile } = await import("./googleDriveService");
+      
+      // First check file metadata before downloading
+      const fileMetadata = await getDriveFile(fileId);
+      
+      // Validate file size (max 25MB to prevent memory issues)
+      const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+      if (fileMetadata.size && parseInt(fileMetadata.size) > MAX_FILE_SIZE) {
+        return res.status(400).json({ error: "File too large. Maximum size is 25MB." });
+      }
+      
+      // Validate MIME type - allow common document types
+      const allowedMimeTypes = [
+        'application/pdf',
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
+        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'text/plain', 'text/csv',
+        // Google Docs types (will be exported as PDF/Office)
+        'application/vnd.google-apps.document',
+        'application/vnd.google-apps.spreadsheet',
+        'application/vnd.google-apps.presentation',
+      ];
+      
+      const isAllowedType = allowedMimeTypes.some(type => 
+        fileMetadata.mimeType === type || fileMetadata.mimeType.startsWith('image/')
+      );
+      
+      if (!isAllowedType) {
+        return res.status(400).json({ error: "File type not supported. Please upload PDFs, images, or common document formats." });
+      }
+      
+      console.log("Importing from Google Drive:", { fileId, fileName: fileMetadata.name, mimeType: fileMetadata.mimeType });
+      
       const { buffer, mimeType, name, size } = await downloadDriveFile(fileId);
+      
+      // Double-check downloaded file size
+      if (buffer.length > MAX_FILE_SIZE) {
+        return res.status(400).json({ error: "Downloaded file too large. Maximum size is 25MB." });
+      }
       
       const privateDir = process.env.PRIVATE_OBJECT_DIR;
       if (!privateDir) {
@@ -2802,6 +2841,8 @@ Visit Kindora Calendar: ${joinUrl}
       const timestamp = Date.now();
       const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
       const subPath = `care-documents/${familyId}/${timestamp}-${safeName}`;
+      
+      console.log("Uploading to object storage:", { subPath, size: buffer.length });
       
       const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURLWithPath(subPath);
       
@@ -2817,6 +2858,8 @@ Visit Kindora Calendar: ${joinUrl}
         throw new Error(`Failed to upload to storage: ${uploadResponse.status}`);
       }
       
+      console.log("Creating care document record...");
+      
       const document = await storage.createCareDocument(familyId, {
         title,
         documentType,
@@ -2829,6 +2872,7 @@ Visit Kindora Calendar: ${joinUrl}
         mimeType,
       });
       
+      console.log("Google Drive import complete:", document.id);
       res.status(201).json(document);
     } catch (error: any) {
       console.error("Error importing from Google Drive:", error);
