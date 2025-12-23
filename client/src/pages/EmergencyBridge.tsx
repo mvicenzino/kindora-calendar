@@ -49,7 +49,7 @@ export default function EmergencyBridge() {
   const token = params?.token;
 
   const { data, isLoading, error } = useQuery<EmergencyBridgeData>({
-    queryKey: ['/api/emergency-bridge', token],
+    queryKey: ['/api/emergency-bridge/access', token],
     enabled: !!token,
   });
 

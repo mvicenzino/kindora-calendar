@@ -58,6 +58,8 @@ export default function FamilySettings() {
   const [bridgeDuration, setBridgeDuration] = useState("24");
   const [newBridgeToken, setNewBridgeToken] = useState<string | null>(null);
   const [bridgeLinkCopied, setBridgeLinkCopied] = useState(false);
+  const [bridgeRecipientEmail, setBridgeRecipientEmail] = useState("");
+  const [bridgeRecipientName, setBridgeRecipientName] = useState("");
 
   const { data: family, isLoading } = useQuery<Family>({
     queryKey: ['/api/family', activeFamilyId],
@@ -292,10 +294,57 @@ export default function FamilySettings() {
     },
   });
 
+  const sendBridgeEmailMutation = useMutation({
+    mutationFn: async ({ email, name, token, expiresInHours, label }: { email: string; name: string; token: string; expiresInHours: number; label: string }) => {
+      const res = await apiRequest('POST', '/api/emergency-bridge/send-email', {
+        recipientEmail: email,
+        recipientName: name,
+        token,
+        familyId: activeFamilyId,
+        expiresInHours,
+        label,
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email sent!",
+        description: "Emergency bridge link has been emailed to your backup caregiver.",
+      });
+      setBridgeRecipientEmail("");
+      setBridgeRecipientName("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to send email",
+        description: error.message || "Please try again or copy the link manually",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleCreateBridgeToken = () => {
     createBridgeTokenMutation.mutate({
       label: bridgeLabel.trim() || "Emergency Access",
       expiresInHours: parseInt(bridgeDuration),
+    });
+  };
+
+  const handleSendBridgeEmail = () => {
+    if (!bridgeRecipientEmail.trim() || !bridgeRecipientEmail.includes('@') || !newBridgeToken) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    sendBridgeEmailMutation.mutate({
+      email: bridgeRecipientEmail.trim(),
+      name: bridgeRecipientName.trim(),
+      token: newBridgeToken,
+      expiresInHours: parseInt(bridgeDuration),
+      label: bridgeLabel.trim() || "Emergency Access",
     });
   };
 
@@ -733,7 +782,7 @@ export default function FamilySettings() {
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-white/90">
-                      This link is shown only once. Copy it now and share with your backup caregiver.
+                      This link is shown only once. Copy or email it now to your backup caregiver.
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -762,6 +811,38 @@ export default function FamilySettings() {
                       )}
                     </Button>
                   </div>
+                  
+                  <div className="pt-3 border-t border-white/10 space-y-2">
+                    <Label className="text-white/80 text-sm">Or send via email</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="text"
+                        value={bridgeRecipientName}
+                        onChange={(e) => setBridgeRecipientName(e.target.value)}
+                        placeholder="Name (optional)"
+                        className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                        data-testid="input-bridge-recipient-name"
+                      />
+                      <Input
+                        type="email"
+                        value={bridgeRecipientEmail}
+                        onChange={(e) => setBridgeRecipientEmail(e.target.value)}
+                        placeholder="caregiver@email.com"
+                        className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                        data-testid="input-bridge-recipient-email"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSendBridgeEmail}
+                      disabled={!bridgeRecipientEmail.trim() || sendBridgeEmailMutation.isPending}
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+                      data-testid="button-send-bridge-email"
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      {sendBridgeEmailMutation.isPending ? "Sending..." : "Send Link via Email"}
+                    </Button>
+                  </div>
+                  
                   <Button
                     variant="ghost"
                     size="sm"

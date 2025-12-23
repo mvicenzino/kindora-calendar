@@ -274,3 +274,209 @@ export async function sendWeeklySummaryEmail(
     return { success: false, error: String(error) };
   }
 }
+
+interface EmergencyBridgeEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  familyName: string;
+  senderName: string;
+  accessLink: string;
+  expiresInHours: number;
+  label: string;
+}
+
+export function generateEmergencyBridgeHtml(data: EmergencyBridgeEmailData): string {
+  const { recipientName, familyName, senderName, accessLink, expiresInHours, label } = data;
+  
+  const durationText = expiresInHours >= 24 
+    ? `${Math.floor(expiresInHours / 24)} days` 
+    : `${expiresInHours} hours`;
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emergency Access to ${familyName}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1d2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1d2e; padding: 24px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width: 600px; background: linear-gradient(180deg, rgba(249,115,22,0.15) 0%, rgba(255,255,255,0.04) 100%); border-radius: 16px; overflow: hidden; border: 1px solid rgba(249,115,22,0.3);">
+          <!-- Header -->
+          <tr>
+            <td style="background: rgba(249,115,22,0.2); padding: 20px 24px; border-bottom: 1px solid rgba(249,115,22,0.3);">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="vertical-align: middle;">
+                          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); border-radius: 10px; display: inline-block; text-align: center; line-height: 40px;">
+                            <span style="font-size: 20px; color: white;">🛡️</span>
+                          </div>
+                        </td>
+                        <td style="vertical-align: middle; padding-left: 12px;">
+                          <div style="font-size: 22px; font-weight: 800; color: #fdba74; letter-spacing: -0.3px;">
+                            Emergency Bridge
+                          </div>
+                          <div style="color: rgba(255,255,255,0.5); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 500; margin-top: -2px;">
+                            Kindora Calendar
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 28px 24px;">
+              <div style="color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 500; margin-bottom: 16px;">
+                Hi ${recipientName || 'there'},
+              </div>
+              <div style="color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+                <strong style="color: rgba(255,255,255,0.9);">${senderName}</strong> has shared temporary emergency access to the <strong style="color: #fdba74;">${familyName}</strong> family calendar with you.
+              </div>
+              
+              <div style="background: rgba(249,115,22,0.15); border: 1px solid rgba(249,115,22,0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <div style="color: #fdba74; font-weight: 600; font-size: 14px; margin-bottom: 8px;">
+                  ${label}
+                </div>
+                <div style="color: rgba(255,255,255,0.6); font-size: 13px;">
+                  ⏱️ This access expires in <strong style="color: rgba(255,255,255,0.9);">${durationText}</strong>
+                </div>
+              </div>
+              
+              <div style="color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+                You can view:
+                <ul style="margin: 10px 0; padding-left: 20px; color: rgba(255,255,255,0.8);">
+                  <li style="margin-bottom: 6px;">📅 Upcoming schedule & events</li>
+                  <li style="margin-bottom: 6px;">💊 Medications and care needs</li>
+                  <li style="margin-bottom: 6px;">👨‍👩‍👧‍👦 Family member details & emergency contacts</li>
+                  <li>📄 Important care documents</li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 0 24px 28px; text-align: center;">
+              <a href="${accessLink}" 
+                 style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); color: white; text-decoration: none; padding: 16px 40px; border-radius: 25px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);">
+                Access Emergency Info
+              </a>
+            </td>
+          </tr>
+          
+          <!-- Security Note -->
+          <tr>
+            <td style="padding: 0 24px 24px;">
+              <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 14px; text-align: center;">
+                <div style="color: rgba(255,255,255,0.5); font-size: 12px;">
+                  🔒 This link is private and expires automatically. Do not share with others.
+                </div>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="background: rgba(0,0,0,0.15); padding: 20px 24px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08);">
+              <div style="color: #fdba74; font-weight: 600; font-size: 13px; margin-bottom: 4px;">
+                Kindora
+              </div>
+              <div style="color: rgba(255,255,255,0.4); font-size: 11px;">
+                Keeping families connected &amp; organized
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+export function generateEmergencyBridgeText(data: EmergencyBridgeEmailData): string {
+  const { recipientName, familyName, senderName, accessLink, expiresInHours, label } = data;
+  
+  const durationText = expiresInHours >= 24 
+    ? `${Math.floor(expiresInHours / 24)} days` 
+    : `${expiresInHours} hours`;
+
+  return `
+Hi ${recipientName || 'there'},
+
+${senderName} has shared temporary emergency access to the ${familyName} family calendar with you.
+
+${label}
+This access expires in ${durationText}.
+
+You can view:
+- Upcoming schedule & events
+- Medications and care needs
+- Family member details & emergency contacts
+- Important care documents
+
+Access Emergency Info: ${accessLink}
+
+This link is private and expires automatically. Do not share with others.
+
+---
+Kindora - Keeping families connected & organized
+  `.trim();
+}
+
+export async function sendEmergencyBridgeEmail(
+  data: EmergencyBridgeEmailData
+): Promise<{ success: boolean; error?: string }> {
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  const fromEmail = process.env.EMAIL_FROM_ADDRESS || 'noreply@kindora.app';
+  
+  if (!sendgridApiKey) {
+    return { success: false, error: 'SendGrid API key not configured' };
+  }
+  
+  const htmlContent = generateEmergencyBridgeHtml(data);
+  const textContent = generateEmergencyBridgeText(data);
+  const subject = `Emergency access to ${data.familyName} shared with you`;
+  
+  try {
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${sendgridApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: data.recipientEmail }] }],
+        from: { email: fromEmail, name: 'Kindora Calendar' },
+        subject: subject,
+        content: [
+          { type: 'text/plain', value: textContent },
+          { type: 'text/html', value: htmlContent }
+        ]
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('SendGrid error:', response.status, errorText);
+      return { success: false, error: `SendGrid error: ${response.status}` };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Email send error:', error);
+    return { success: false, error: String(error) };
+  }
+}

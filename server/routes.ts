@@ -2807,6 +2807,62 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
   
+  // Send emergency bridge link via email (authenticated)
+  app.post("/api/emergency-bridge/send-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { recipientEmail, recipientName, token, familyId: reqFamilyId, expiresInHours, label } = req.body;
+      
+      if (!recipientEmail || !token) {
+        return res.status(400).json({ error: "Recipient email and token are required" });
+      }
+      
+      const familyId = reqFamilyId || await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (role !== 'owner' && role !== 'member') {
+        return res.status(403).json({ error: "Only family owners and members can send emergency bridge emails" });
+      }
+      
+      const family = await storage.getFamilyById(familyId);
+      const user = await storage.getUser(userId);
+      
+      if (!family || !user) {
+        return res.status(404).json({ error: "Family or user not found" });
+      }
+      
+      const baseUrl = process.env.REPLIT_DOMAINS?.split(',')[0] 
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` 
+        : 'https://kindora.replit.app';
+      const accessLink = `${baseUrl}/emergency-bridge/${token}`;
+      
+      const { sendEmergencyBridgeEmail } = await import('./emailService');
+      const result = await sendEmergencyBridgeEmail({
+        recipientEmail,
+        recipientName: recipientName || '',
+        familyName: family.name,
+        senderName: user.firstName && user.lastName 
+          ? `${user.firstName} ${user.lastName}` 
+          : user.email || 'A family member',
+        accessLink,
+        expiresInHours: expiresInHours || 24,
+        label: label || 'Emergency Access',
+      });
+      
+      if (result.success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ error: result.error });
+      }
+    } catch (error) {
+      console.error("Error sending emergency bridge email:", error);
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+  
   // Public endpoint to access emergency bridge data (no authentication required)
   app.get("/api/emergency-bridge/access/:token", async (req: any, res) => {
     try {
