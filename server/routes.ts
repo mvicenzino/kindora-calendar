@@ -2667,6 +2667,8 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: `Invalid document type. Must be one of: ${validTypes.join(', ')}` });
       }
       
+      console.log("Creating care document:", { familyId, title, documentType, fileName, fileUrl, memberId, uploadedBy: userId });
+      
       const document = await storage.createCareDocument(familyId, {
         title,
         documentType,
@@ -2679,10 +2681,13 @@ Visit Kindora Calendar: ${joinUrl}
         mimeType: mimeType || null,
       });
       
+      console.log("Care document created successfully:", document.id);
       res.status(201).json(document);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating care document:", error);
-      res.status(500).json({ error: "Failed to create care document" });
+      console.error("Error details:", error?.message, error?.stack);
+      const errorMessage = error?.message || "Failed to create care document";
+      res.status(500).json({ error: `Failed to create care document: ${errorMessage}` });
     }
   });
   
