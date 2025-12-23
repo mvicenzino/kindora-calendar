@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar } from "lucide-react";
+import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -31,6 +31,20 @@ interface WeeklySummarySchedule {
   lastSentAt?: Date;
 }
 
+interface EmergencyBridgeToken {
+  id: string;
+  familyId: string;
+  tokenHash: string;
+  createdByUserId: string;
+  label: string | null;
+  expiresAt: string;
+  status: string;
+  accessCount: number;
+  lastAccessedAt: string | null;
+  createdAt: string;
+  rawToken?: string;
+}
+
 export default function FamilySettings() {
   const [, navigate] = useLocation();
   const { activeFamilyId } = useActiveFamily();
@@ -40,6 +54,10 @@ export default function FamilySettings() {
   const [familyMemberEmail, setFamilyMemberEmail] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
+  const [bridgeLabel, setBridgeLabel] = useState("");
+  const [bridgeDuration, setBridgeDuration] = useState("24");
+  const [newBridgeToken, setNewBridgeToken] = useState<string | null>(null);
+  const [bridgeLinkCopied, setBridgeLinkCopied] = useState(false);
 
   const { data: family, isLoading } = useQuery<Family>({
     queryKey: ['/api/family', activeFamilyId],
@@ -219,6 +237,101 @@ export default function FamilySettings() {
 
   const handleTimeChange = (time: string) => {
     updateScheduleMutation.mutate({ timeOfDay: time });
+  };
+
+  // Emergency Bridge Tokens
+  const { data: bridgeTokens, isLoading: isLoadingBridgeTokens } = useQuery<EmergencyBridgeToken[]>({
+    queryKey: ['/api/emergency-bridge/tokens', activeFamilyId],
+    enabled: !!activeFamilyId && isOwnerOrMember,
+  });
+
+  const createBridgeTokenMutation = useMutation({
+    mutationFn: async ({ label, expiresInHours }: { label: string; expiresInHours: number }) => {
+      const res = await apiRequest('POST', '/api/emergency-bridge/tokens', {
+        familyId: activeFamilyId,
+        label,
+        expiresInHours,
+      });
+      return await res.json();
+    },
+    onSuccess: (data: EmergencyBridgeToken) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/emergency-bridge/tokens', activeFamilyId] });
+      setNewBridgeToken(data.rawToken || null);
+      setBridgeLabel("");
+      toast({
+        title: "Emergency Bridge link created!",
+        description: "Share this link with a backup caregiver for temporary access.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to create link",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const revokeBridgeTokenMutation = useMutation({
+    mutationFn: async (tokenId: string) => {
+      await apiRequest('DELETE', `/api/emergency-bridge/tokens/${tokenId}?familyId=${activeFamilyId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/emergency-bridge/tokens', activeFamilyId] });
+      toast({
+        title: "Link revoked",
+        description: "The emergency access link has been deactivated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to revoke link",
+        description: error.message || "Please try again",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateBridgeToken = () => {
+    createBridgeTokenMutation.mutate({
+      label: bridgeLabel.trim() || "Emergency Access",
+      expiresInHours: parseInt(bridgeDuration),
+    });
+  };
+
+  const copyBridgeLink = (token: string) => {
+    const link = `${window.location.origin}/emergency-bridge/${token}`;
+    navigator.clipboard.writeText(link);
+    setBridgeLinkCopied(true);
+    toast({
+      title: "Link copied!",
+      description: "Share this link with your backup caregiver.",
+    });
+    setTimeout(() => setBridgeLinkCopied(false), 3000);
+  };
+
+  const formatTimeAgo = (dateString: string | null) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  };
+
+  const formatExpiresIn = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    if (diffMs < 0) return "Expired";
+    const diffHours = Math.floor(diffMs / 3600000);
+    if (diffHours < 24) return `${diffHours}h left`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d left`;
   };
 
   const copyInviteCode = () => {
@@ -558,6 +671,177 @@ export default function FamilySettings() {
                   )}
                 </>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Emergency Bridge Mode */}
+        {isOwnerOrMember && (
+          <Card className="mb-6 bg-gradient-to-br from-orange-500/20 to-red-500/10 backdrop-blur-md border-orange-500/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Shield className="w-5 h-5 text-orange-400" />
+                Emergency Bridge Mode
+              </CardTitle>
+              <CardDescription className="text-white/80">
+                Create temporary access links for backup caregivers during emergencies
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* New link creation form */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-white/80 text-sm">Label (optional)</Label>
+                    <Input
+                      type="text"
+                      value={bridgeLabel}
+                      onChange={(e) => setBridgeLabel(e.target.value)}
+                      placeholder="e.g., Neighbor Susan"
+                      className="bg-white/10 border-white/30 text-white placeholder:text-white/50"
+                      data-testid="input-bridge-label"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-white/80 text-sm">Duration</Label>
+                    <Select value={bridgeDuration} onValueChange={setBridgeDuration}>
+                      <SelectTrigger className="bg-white/10 border-white/30 text-white" data-testid="select-bridge-duration">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-white/20">
+                        <SelectItem value="24" className="text-white">24 hours</SelectItem>
+                        <SelectItem value="48" className="text-white">48 hours</SelectItem>
+                        <SelectItem value="168" className="text-white">7 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleCreateBridgeToken}
+                  disabled={createBridgeTokenMutation.isPending}
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                  data-testid="button-create-bridge-link"
+                >
+                  <Link className="w-4 h-4 mr-2" />
+                  {createBridgeTokenMutation.isPending ? "Creating..." : "Create Emergency Access Link"}
+                </Button>
+              </div>
+
+              {/* Newly created token display */}
+              {newBridgeToken && (
+                <div className="p-4 bg-green-500/20 border border-green-500/30 rounded-lg space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-white/90">
+                      This link is shown only once. Copy it now and share with your backup caregiver.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={`${window.location.origin}/emergency-bridge/${newBridgeToken}`}
+                      readOnly
+                      className="bg-white/10 border-white/30 text-white text-xs font-mono"
+                      data-testid="input-new-bridge-link"
+                    />
+                    <Button
+                      onClick={() => copyBridgeLink(newBridgeToken)}
+                      variant="outline"
+                      className="bg-white/10 border-white/20 text-white hover:bg-white/20 flex-shrink-0"
+                      data-testid="button-copy-bridge-link"
+                    >
+                      {bridgeLinkCopied ? (
+                        <>
+                          <Check className="w-4 h-4 mr-1 text-green-400" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-1" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setNewBridgeToken(null)}
+                    className="text-white/60 hover:text-white"
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    Dismiss
+                  </Button>
+                </div>
+              )}
+
+              {/* Active tokens list */}
+              {isLoadingBridgeTokens ? (
+                <div className="text-white/60 text-sm">Loading active links...</div>
+              ) : bridgeTokens && bridgeTokens.length > 0 ? (
+                <div className="space-y-2 pt-3 border-t border-white/10">
+                  <Label className="text-white/80 text-sm">Active Emergency Links</Label>
+                  {bridgeTokens.map((token) => (
+                    <div
+                      key={token.id}
+                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10"
+                      data-testid={`bridge-token-${token.id}`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-medium">{token.label || "Emergency Access"}</span>
+                          <span className="text-xs bg-orange-500/30 text-orange-200 px-2 py-0.5 rounded-full">
+                            {formatExpiresIn(token.expiresAt)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-white/50">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3 h-3" />
+                            {token.accessCount} views
+                          </span>
+                          <span>Last accessed: {formatTimeAgo(token.lastAccessedAt)}</span>
+                        </div>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20"
+                            disabled={revokeBridgeTokenMutation.isPending}
+                            data-testid={`button-revoke-token-${token.id}`}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Revoke
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-slate-900 border-white/20">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-white">Revoke emergency access?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-white/70">
+                              This will immediately disable the link. The caregiver will no longer be able to view your family's information.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => revokeBridgeTokenMutation.mutate(token.id)}
+                              className="bg-red-500 text-white hover:bg-red-600"
+                            >
+                              Revoke Access
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <p className="text-sm text-white/60">
+                Emergency Bridge provides read-only access to your schedule, medications, and family member info.
+              </p>
             </CardContent>
           </Card>
         )}
