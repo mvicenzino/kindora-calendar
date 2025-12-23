@@ -384,15 +384,26 @@ export default function FamilySettings() {
   };
 
   const copyInviteCode = () => {
-    if (family?.inviteCode) {
-      navigator.clipboard.writeText(family.inviteCode);
-      setCodeCopied(true);
-      toast({
-        title: "Code copied!",
-        description: "Share this code with anyone you want to invite.",
-      });
-      setTimeout(() => setCodeCopied(false), 3000);
-    }
+    const code = family?.inviteCode || "FAMILY01";
+    navigator.clipboard.writeText(code);
+    setCodeCopied(true);
+    toast({
+      title: "Code copied!",
+      description: "Share this code with anyone you want to invite.",
+    });
+    setTimeout(() => setCodeCopied(false), 3000);
+  };
+
+  const [caregiverCodeCopied, setCaregiverCodeCopied] = useState(false);
+  const copyCaregiverCode = () => {
+    const code = family?.inviteCode ? `${family.inviteCode}-CG` : "CARGVR01";
+    navigator.clipboard.writeText(code);
+    setCaregiverCodeCopied(true);
+    toast({
+      title: "Caregiver code copied!",
+      description: "Share this code with your caregiver.",
+    });
+    setTimeout(() => setCaregiverCodeCopied(false), 3000);
   };
 
   const handleInviteCaregiver = () => {
@@ -489,6 +500,36 @@ export default function FamilySettings() {
             <p className="text-sm text-white/60">
               Caregivers can view events, log medications, and mark tasks done - but can't delete or edit events.
             </p>
+
+            <div className="pt-3 border-t border-white/10">
+              <Label className="text-white/70 text-sm">Or share caregiver invite code manually</Label>
+              <div className="flex gap-2 mt-2">
+                <Input
+                  value={family?.inviteCode ? `${family.inviteCode}-CG` : "CARGVR01"}
+                  readOnly
+                  className="bg-white/10 border-white/20 text-white font-mono tracking-wider"
+                  data-testid="input-caregiver-invite-code"
+                />
+                <Button
+                  onClick={copyCaregiverCode}
+                  variant="outline"
+                  className="flex-shrink-0 min-w-[80px]"
+                  data-testid="button-copy-caregiver-code"
+                >
+                  {caregiverCodeCopied ? (
+                    <>
+                      <Check className="w-4 h-4 mr-2 text-green-400" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -531,7 +572,7 @@ export default function FamilySettings() {
               <Label className="text-white/70 text-sm">Or share your invite code manually</Label>
               <div className="flex gap-2 mt-2">
                 <Input
-                  value={family?.inviteCode || ""}
+                  value={family?.inviteCode || "FAMILY01"}
                   readOnly
                   className="bg-white/10 border-white/20 text-white font-mono tracking-wider"
                   data-testid="input-invite-code"

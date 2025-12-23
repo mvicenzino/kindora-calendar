@@ -209,11 +209,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invite code is required" });
       }
       
+      let actualInviteCode = inviteCode.toUpperCase();
+      let memberRole = role || 'member';
+      
+      // Handle caregiver codes (ending with -CG)
+      if (actualInviteCode.endsWith('-CG')) {
+        actualInviteCode = actualInviteCode.slice(0, -3); // Remove -CG suffix
+        memberRole = 'caregiver'; // Force caregiver role for caregiver codes
+      }
+      
       // Validate role if provided
       const validRoles = ['member', 'caregiver'];
-      const memberRole = role && validRoles.includes(role) ? role : 'member';
+      if (!validRoles.includes(memberRole)) {
+        memberRole = 'member';
+      }
       
-      const membership = await storage.joinFamily(userId, inviteCode.toUpperCase(), memberRole);
+      const membership = await storage.joinFamily(userId, actualInviteCode, memberRole);
       const family = await storage.getUserFamily(userId);
       res.json(family);
     } catch (error: any) {
