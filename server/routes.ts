@@ -2601,6 +2601,13 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "fileName is required" });
       }
       
+      // Check if object storage is configured
+      const privateDir = process.env.PRIVATE_OBJECT_DIR;
+      if (!privateDir) {
+        console.error("PRIVATE_OBJECT_DIR not configured");
+        return res.status(500).json({ error: "Object storage not configured. Please contact support." });
+      }
+      
       const objectStorageService = new ObjectStorageService();
       
       // Generate unique path for care documents
@@ -2611,9 +2618,10 @@ Visit Kindora Calendar: ${joinUrl}
       const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURLWithPath(subPath);
       
       res.json({ uploadURL, objectPath });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating upload URL:", error);
-      res.status(500).json({ error: "Failed to generate upload URL" });
+      const message = error?.message || "Failed to generate upload URL";
+      res.status(500).json({ error: message });
     }
   });
   

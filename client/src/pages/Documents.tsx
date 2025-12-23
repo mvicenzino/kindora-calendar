@@ -178,7 +178,17 @@ export default function Documents() {
         contentType: uploadForm.file.type,
       });
       
-      const { uploadURL, objectPath } = await urlResponse.json();
+      const urlData = await urlResponse.json().catch(() => ({}));
+      
+      if (!urlResponse.ok) {
+        throw new Error(urlData.error || `Server error: ${urlResponse.status}`);
+      }
+      
+      const { uploadURL, objectPath } = urlData;
+      
+      if (!uploadURL) {
+        throw new Error("No upload URL received from server");
+      }
       
       const uploadResponse = await fetch(uploadURL, {
         method: "PUT",
@@ -187,7 +197,7 @@ export default function Documents() {
       });
       
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload file");
+        throw new Error(`Failed to upload file to storage (${uploadResponse.status})`);
       }
       
       await apiRequest("POST", `/api/care-documents?familyId=${activeFamilyId}`, {
@@ -213,9 +223,10 @@ export default function Documents() {
       });
       setShowUploadDialog(false);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Upload error:", error);
-      toast({ title: "Upload failed", description: "There was an error uploading your document.", variant: "destructive" });
+      const message = error?.message || "There was an error uploading your document.";
+      toast({ title: "Upload failed", description: message, variant: "destructive" });
     } finally {
       setIsUploading(false);
     }
