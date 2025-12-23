@@ -5,11 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown } from "lucide-react";
+import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
 import type { UiFamilyMember } from "@shared/types";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import EventNotesSection from "./EventNotesSection";
 
 type RecurrenceRule = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | null;
 type EndCondition = 'never' | 'after' | 'on';
@@ -60,6 +62,7 @@ export default function EventModal({
   selectedDate,
 }: EventModalProps) {
   const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const { activeFamilyId } = useActiveFamily();
   const isReadOnly = roleLoading || isCaregiver;
   const defaultDate = selectedDate || new Date();
   const defaultTimes = getDefaultTimes();
@@ -577,6 +580,34 @@ export default function EventModal({
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Notes Section - Only show when editing existing events */}
+            {event?.id && activeFamilyId && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-white flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  Notes & Conversation
+                </Label>
+                <div className="bg-white/5 rounded-2xl border border-white/20 overflow-hidden">
+                  <EventNotesSection
+                    eventId={event.id}
+                    familyId={activeFamilyId}
+                    currentUserId={undefined}
+                    showEmojiPicker={true}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Notes hint for new events */}
+            {!event?.id && (
+              <div className="bg-white/5 border border-white/20 rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-white/60">
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="text-sm">Notes can be added after creating the event</span>
+                </div>
               </div>
             )}
             </div>
