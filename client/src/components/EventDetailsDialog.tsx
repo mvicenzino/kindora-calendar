@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Edit2, X, Upload, Trash2 } from "lucide-react";
+import { Calendar, Clock, Edit2, X, Upload, Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -123,23 +123,21 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
         <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-white">Event Details</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={onEdit}
-                className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
-                data-testid="button-edit-event"
-              >
-                <Edit2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={onClose}
-                className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
-                data-testid="button-close-details"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              onClick={onEdit}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/15 border border-white/30 text-white hover:bg-white/20 transition-all"
+              data-testid="button-edit-event"
+            >
+              <Pencil className="w-4 h-4" />
+              <span className="text-sm font-medium">Edit Details</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+              data-testid="button-close-details"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Event Title Card with Members */}
