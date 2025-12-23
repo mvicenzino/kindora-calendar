@@ -14,6 +14,7 @@ import DemoWelcome from "@/pages/DemoWelcome";
 import FamilySettings from "@/pages/FamilySettings";
 import CaregiverDashboard from "@/pages/CaregiverDashboard";
 import Messages from "@/pages/Messages";
+import Documents from "@/pages/Documents";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -36,6 +37,7 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/care" component={CaregiverDashboard} />
           <Route path="/messages" component={Messages} />
+          <Route path="/documents" component={Documents} />
           <Route path="/memories" component={Memories} />
           <Route path="/family" component={FamilySettings} />
           <Route path="/onboarding" component={Onboarding} />

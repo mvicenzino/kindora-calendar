@@ -1,4 +1,4 @@
-import { Search, Image, MessageCircle, X } from "lucide-react";
+import { Search, Image, MessageCircle, FileText, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
@@ -64,6 +64,16 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
               data-testid="button-messages"
             >
               <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
+              aria-label="Documents"
+              onClick={() => setLocation('/documents')}
+              data-testid="button-documents"
+            >
+              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <Button
               size="icon"
