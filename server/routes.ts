@@ -2697,6 +2697,218 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // ========================================
+  // Emergency Bridge Routes
+  // ========================================
+  
+  // Get emergency bridge tokens for a family (authenticated)
+  app.get("/api/emergency-bridge/tokens", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can view tokens
+      if (role !== 'owner' && role !== 'member') {
+        return res.status(403).json({ error: "Only family owners and members can view emergency bridge tokens" });
+      }
+      
+      const tokens = await storage.getEmergencyBridgeTokens(familyId);
+      res.json(tokens);
+    } catch (error) {
+      console.error("Error fetching emergency bridge tokens:", error);
+      res.status(500).json({ error: "Failed to fetch emergency bridge tokens" });
+    }
+  });
+  
+  // Create an emergency bridge token (authenticated)
+  app.post("/api/emergency-bridge/tokens", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can create tokens
+      if (role !== 'owner' && role !== 'member') {
+        return res.status(403).json({ error: "Only family owners and members can create emergency bridge tokens" });
+      }
+      
+      const { label, expiresInHours } = req.body;
+      
+      // Default to 24 hours, max 7 days (168 hours)
+      const hours = Math.min(Math.max(expiresInHours || 24, 1), 168);
+      const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
+      
+      // Generate a secure random token
+      const crypto = await import('crypto');
+      const rawToken = crypto.randomUUID() + '-' + crypto.randomBytes(16).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      
+      const token = await storage.createEmergencyBridgeToken(
+        familyId,
+        userId,
+        tokenHash,
+        expiresAt,
+        label
+      );
+      
+      // Return the raw token (only shown once) along with the token record
+      res.json({
+        ...token,
+        rawToken, // User needs this to share the link
+      });
+    } catch (error) {
+      console.error("Error creating emergency bridge token:", error);
+      res.status(500).json({ error: "Failed to create emergency bridge token" });
+    }
+  });
+  
+  // Revoke an emergency bridge token (authenticated)
+  app.delete("/api/emergency-bridge/tokens/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can revoke tokens
+      if (role !== 'owner' && role !== 'member') {
+        return res.status(403).json({ error: "Only family owners and members can revoke emergency bridge tokens" });
+      }
+      
+      await storage.revokeEmergencyBridgeToken(req.params.id, familyId);
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: "Token not found" });
+      }
+      console.error("Error revoking emergency bridge token:", error);
+      res.status(500).json({ error: "Failed to revoke emergency bridge token" });
+    }
+  });
+  
+  // Public endpoint to access emergency bridge data (no authentication required)
+  app.get("/api/emergency-bridge/access/:token", async (req: any, res) => {
+    try {
+      const rawToken = req.params.token;
+      
+      // Hash the token to look it up
+      const crypto = await import('crypto');
+      const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+      
+      const tokenRecord = await storage.getEmergencyBridgeTokenByHash(tokenHash);
+      
+      if (!tokenRecord) {
+        return res.status(404).json({ error: "Invalid or expired emergency bridge link" });
+      }
+      
+      // Check if token is expired
+      if (tokenRecord.status !== 'active' || new Date(tokenRecord.expiresAt) < new Date()) {
+        return res.status(410).json({ error: "This emergency bridge link has expired" });
+      }
+      
+      // Increment access count
+      await storage.incrementEmergencyBridgeTokenAccess(tokenRecord.id);
+      
+      const familyId = tokenRecord.familyId;
+      
+      // Fetch family info
+      const family = await storage.getFamilyById(familyId);
+      if (!family) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+      
+      // Fetch family members
+      const members = await storage.getFamilyMembers(familyId);
+      
+      // Fetch upcoming events (next 7 days)
+      const events = await storage.getEvents(familyId);
+      const now = new Date();
+      const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const upcomingEvents = events.filter(e => {
+        const eventStart = new Date(e.startTime);
+        return eventStart >= now && eventStart <= weekFromNow;
+      }).slice(0, 20); // Limit to 20 events
+      
+      // Fetch medications
+      const medications = await storage.getMedications(familyId);
+      const activeMedications = medications.filter(m => m.isActive);
+      
+      // Fetch care documents that are marked for emergency access
+      const documents = await storage.getCareDocuments(familyId);
+      // Filter to important document types for emergency access
+      const emergencyDocumentTypes = ['medical', 'insurance', 'legal', 'emergency'];
+      const emergencyDocuments = documents.filter(d => 
+        emergencyDocumentTypes.includes(d.documentType)
+      ).map(d => ({
+        id: d.id,
+        title: d.title,
+        documentType: d.documentType,
+        description: d.description,
+        memberId: d.memberId,
+        // Don't expose file URLs in public endpoint for security
+      }));
+      
+      res.json({
+        family: {
+          name: family.name,
+        },
+        members: members.map(m => ({
+          id: m.id,
+          name: m.name,
+          color: m.color,
+          avatar: m.avatar,
+        })),
+        upcomingEvents: upcomingEvents.map(e => ({
+          id: e.id,
+          title: e.title,
+          description: e.description,
+          startTime: e.startTime,
+          endTime: e.endTime,
+          memberIds: e.memberIds,
+          color: e.color,
+        })),
+        medications: activeMedications.map(m => ({
+          id: m.id,
+          name: m.name,
+          dosage: m.dosage,
+          frequency: m.frequency,
+          instructions: m.instructions,
+          memberId: m.memberId,
+          scheduledTimes: m.scheduledTimes,
+        })),
+        emergencyDocuments,
+        accessInfo: {
+          label: tokenRecord.label,
+          expiresAt: tokenRecord.expiresAt,
+        },
+      });
+    } catch (error) {
+      console.error("Error accessing emergency bridge:", error);
+      res.status(500).json({ error: "Failed to access emergency bridge" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
