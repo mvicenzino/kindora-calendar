@@ -34,8 +34,12 @@ import {
   FileCheck,
   ClipboardList,
   FolderOpen,
-  X
+  X,
+  ChevronLeft,
+  Eye,
+  ExternalLink
 } from "lucide-react";
+import { Link } from "wouter";
 import Header from "@/components/Header";
 import { useUserRole } from "@/hooks/useUserRole";
 
@@ -65,6 +69,11 @@ function formatFileSize(bytes: string | number | null | undefined): string {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function isPreviewable(mimeType: string | null | undefined): boolean {
+  if (!mimeType) return false;
+  return mimeType.startsWith("image/") || mimeType === "application/pdf";
+}
+
 export default function Documents() {
   const { user } = useAuth();
   const { activeFamilyId } = useActiveFamily();
@@ -73,6 +82,7 @@ export default function Documents() {
   
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<CareDocument | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<DocumentType | "all">("all");
   const [filterMember, setFilterMember] = useState<string | "all">("all");
@@ -246,6 +256,14 @@ export default function Documents() {
       
       <main className="container mx-auto px-4 py-6 max-w-6xl">
         <div className="flex flex-col gap-6">
+          {/* Breadcrumb Navigation */}
+          <nav className="flex items-center gap-2 text-sm" data-testid="breadcrumb-documents">
+            <Link href="/" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+              <span>Back to Calendar</span>
+            </Link>
+          </nav>
+
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight" data-testid="text-documents-title">
@@ -406,6 +424,16 @@ export default function Documents() {
                                 </div>
                                 
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {isPreviewable(doc.mimeType) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setPreviewDocument(doc)}
+                                      data-testid={`button-preview-${doc.id}`}
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="icon"
@@ -596,6 +624,66 @@ export default function Documents() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={!!previewDocument} onOpenChange={(open) => !open && setPreviewDocument(null)}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh]" data-testid="dialog-preview-document">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {previewDocument?.title}
+            </DialogTitle>
+            <DialogDescription className="flex items-center gap-2 text-sm">
+              {previewDocument?.fileName} • {formatFileSize(previewDocument?.fileSize)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-auto min-h-[400px] max-h-[60vh] bg-muted/20 rounded-lg flex items-center justify-center">
+            {previewDocument?.mimeType?.startsWith("image/") ? (
+              <img 
+                src={previewDocument.fileUrl} 
+                alt={previewDocument.title}
+                className="max-w-full max-h-full object-contain"
+                data-testid="preview-image"
+              />
+            ) : previewDocument?.mimeType === "application/pdf" ? (
+              <iframe
+                src={previewDocument.fileUrl}
+                className="w-full h-[60vh] rounded-lg"
+                title={previewDocument.title}
+                data-testid="preview-pdf"
+              />
+            ) : (
+              <div className="text-center text-muted-foreground p-8">
+                <FileText className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p>Preview not available for this file type</p>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="flex-row justify-between sm:justify-between gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPreviewDocument(null)}
+            >
+              Close
+            </Button>
+            <Button
+              variant="outline"
+              asChild
+            >
+              <a 
+                href={previewDocument?.fileUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                data-testid="button-open-new-tab"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Open in New Tab
+              </a>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
