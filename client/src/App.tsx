@@ -15,6 +15,7 @@ import FamilySettings from "@/pages/FamilySettings";
 import CaregiverDashboard from "@/pages/CaregiverDashboard";
 import Messages from "@/pages/Messages";
 import Documents from "@/pages/Documents";
+import EmergencyBridge from "@/pages/EmergencyBridge";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -29,6 +30,7 @@ function Router() {
 
   return (
     <Switch>
+      <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
