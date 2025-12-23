@@ -173,15 +173,23 @@ export default function Documents() {
     setIsUploading(true);
     
     try {
-      const urlResponse = await apiRequest("POST", `/api/care-documents/upload-url?familyId=${activeFamilyId}`, {
-        fileName: uploadForm.file.name,
-        contentType: uploadForm.file.type,
-      });
+      console.log("Step 1: Requesting upload URL...");
+      let urlResponse;
+      try {
+        urlResponse = await apiRequest("POST", `/api/care-documents/upload-url?familyId=${activeFamilyId}`, {
+          fileName: uploadForm.file.name,
+          contentType: uploadForm.file.type,
+        });
+      } catch (fetchError: any) {
+        console.error("Failed to get upload URL:", fetchError);
+        throw new Error(`Network error getting upload URL: ${fetchError.message}`);
+      }
       
       const urlData = await urlResponse.json().catch(() => ({}));
+      console.log("Step 1 response:", urlResponse.status, urlData);
       
       if (!urlResponse.ok) {
-        throw new Error(urlData.error || `Server error: ${urlResponse.status}`);
+        throw new Error(urlData.error || `Server error getting upload URL: ${urlResponse.status}`);
       }
       
       const { uploadURL, objectPath } = urlData;
@@ -190,17 +198,28 @@ export default function Documents() {
         throw new Error("No upload URL received from server");
       }
       
-      const uploadResponse = await fetch(uploadURL, {
-        method: "PUT",
-        body: uploadForm.file,
-        headers: { "Content-Type": uploadForm.file.type },
-      });
-      
-      if (!uploadResponse.ok) {
-        throw new Error(`Failed to upload file to storage (${uploadResponse.status})`);
+      console.log("Step 2: Uploading file to storage...");
+      let uploadResponse;
+      try {
+        uploadResponse = await fetch(uploadURL, {
+          method: "PUT",
+          body: uploadForm.file,
+          headers: { "Content-Type": uploadForm.file.type },
+        });
+      } catch (uploadError: any) {
+        console.error("Failed to upload to storage:", uploadError);
+        throw new Error(`Network error uploading file: ${uploadError.message}`);
       }
       
-      await apiRequest("POST", `/api/care-documents?familyId=${activeFamilyId}`, {
+      console.log("Step 2 response:", uploadResponse.status);
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text().catch(() => "");
+        console.error("Storage upload failed:", errorText);
+        throw new Error(`Failed to upload file to storage (${uploadResponse.status}): ${errorText.slice(0, 100)}`);
+      }
+      
+      console.log("Step 3: Creating document record...");
+      const createResponse = await apiRequest("POST", `/api/care-documents?familyId=${activeFamilyId}`, {
         title: uploadForm.title.trim(),
         documentType: uploadForm.documentType,
         description: uploadForm.description.trim() || null,
@@ -211,6 +230,12 @@ export default function Documents() {
         mimeType: uploadForm.file.type,
       });
       
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to create document record: ${createResponse.status}`);
+      }
+      
+      console.log("Upload complete!");
       queryClient.invalidateQueries({ queryKey: ['/api/care-documents?familyId=' + activeFamilyId] });
       toast({ title: "Document uploaded", description: "Your document has been securely stored." });
       
