@@ -87,12 +87,12 @@ export default function Documents() {
   const [isUploading, setIsUploading] = useState(false);
   
   const { data: rawDocuments = [], isLoading: isLoadingDocuments } = useQuery<CareDocument[]>({
-    queryKey: ['/api/care-documents', activeFamilyId],
+    queryKey: ['/api/care-documents?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
   });
   
   const { data: rawMembers = [] } = useQuery<FamilyMember[]>({
-    queryKey: ['/api/family-members', activeFamilyId],
+    queryKey: ['/api/family-members?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
   });
   
@@ -145,7 +145,7 @@ export default function Documents() {
       await apiRequest("DELETE", `/api/care-documents/${documentId}?familyId=${activeFamilyId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/care-documents', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/care-documents?familyId=' + activeFamilyId] });
       toast({ title: "Document deleted", description: "The document has been removed." });
       setDeleteDocumentId(null);
     },
@@ -191,7 +191,7 @@ export default function Documents() {
         mimeType: uploadForm.file.type,
       });
       
-      queryClient.invalidateQueries({ queryKey: ['/api/care-documents', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/care-documents?familyId=' + activeFamilyId] });
       toast({ title: "Document uploaded", description: "Your document has been securely stored." });
       
       setUploadForm({
