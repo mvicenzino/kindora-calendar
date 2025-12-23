@@ -179,6 +179,23 @@ export const weeklySummaryPreferences = pgTable("weekly_summary_preferences", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+// Care Documents table - secure document storage for care-related files
+export const careDocuments = pgTable("care_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  memberId: varchar("member_id"), // Optional - can be family-wide or member-specific
+  uploadedBy: varchar("uploaded_by").notNull(), // User ID who uploaded
+  title: text("title").notNull(),
+  description: text("description"),
+  documentType: varchar("document_type").notNull(), // 'medical', 'insurance', 'legal', 'care_plan', 'other'
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(), // Object storage path
+  fileSize: varchar("file_size"), // Size in bytes as string
+  mimeType: varchar("mime_type"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -306,6 +323,24 @@ export const insertWeeklySummaryPreferenceSchema = createInsertSchema(weeklySumm
   optedIn: z.boolean().default(true),
 });
 
+export const DOCUMENT_TYPES = ['medical', 'insurance', 'legal', 'care_plan', 'other'] as const;
+export type DocumentType = typeof DOCUMENT_TYPES[number];
+
+export const insertCareDocumentSchema = createInsertSchema(careDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  title: z.string().min(1, "Title is required").trim(),
+  documentType: z.enum(DOCUMENT_TYPES),
+  fileName: z.string().min(1, "File name is required"),
+  fileUrl: z.string().min(1, "File URL is required"),
+  memberId: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  fileSize: z.string().optional().nullable(),
+  mimeType: z.string().optional().nullable(),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -362,6 +397,10 @@ export type WeeklySummarySchedule = typeof weeklySummarySchedules.$inferSelect;
 export type InsertWeeklySummaryPreference = z.infer<typeof insertWeeklySummaryPreferenceSchema>;
 export type WeeklySummaryPreference = typeof weeklySummaryPreferences.$inferSelect;
 
+// Care Document types
+export type InsertCareDocument = z.infer<typeof insertCareDocumentSchema>;
+export type CareDocument = typeof careDocuments.$inferSelect;
+
 // Role constants and utilities
 export const FAMILY_ROLES = {
   OWNER: 'owner',
@@ -387,6 +426,9 @@ export const ROLE_PERMISSIONS = {
     canManageMedications: true,
     canLogMedications: true,
     canViewMedications: true,
+    canUploadDocuments: true,
+    canDeleteDocuments: true,
+    canViewDocuments: true,
   },
   [FAMILY_ROLES.MEMBER]: {
     canCreateEvents: true,
@@ -403,6 +445,9 @@ export const ROLE_PERMISSIONS = {
     canManageMedications: true,
     canLogMedications: true,
     canViewMedications: true,
+    canUploadDocuments: true,
+    canDeleteDocuments: true,
+    canViewDocuments: true,
   },
   [FAMILY_ROLES.CAREGIVER]: {
     canCreateEvents: false,
@@ -419,5 +464,8 @@ export const ROLE_PERMISSIONS = {
     canManageMedications: false,
     canLogMedications: true,
     canViewMedications: true,
+    canUploadDocuments: false,
+    canDeleteDocuments: false,
+    canViewDocuments: true,
   },
 } as const;

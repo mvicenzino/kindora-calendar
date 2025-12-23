@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
@@ -89,6 +89,13 @@ export interface IStorage {
   getWeeklySummaryPreference(userId: string, familyId: string): Promise<WeeklySummaryPreference | undefined>;
   upsertWeeklySummaryPreference(userId: string, familyId: string, optedIn: boolean): Promise<WeeklySummaryPreference>;
   getOptedInUsersForFamily(familyId: string): Promise<Array<{ userId: string; user: User }>>;
+
+  // Care Documents
+  getCareDocuments(familyId: string): Promise<CareDocument[]>;
+  getCareDocumentsByMember(memberId: string, familyId: string): Promise<CareDocument[]>;
+  getCareDocument(id: string, familyId: string): Promise<CareDocument | undefined>;
+  createCareDocument(familyId: string, document: InsertCareDocument): Promise<CareDocument>;
+  deleteCareDocument(id: string, familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -104,6 +111,7 @@ export class MemStorage implements IStorage {
   private familyMessagesMap: Map<string, FamilyMessage>;
   private caregiverPayRatesMap: Map<string, CaregiverPayRate>;
   private caregiverTimeEntriesMap: Map<string, CaregiverTimeEntry>;
+  private careDocumentsMap: Map<string, CareDocument>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -118,6 +126,7 @@ export class MemStorage implements IStorage {
     this.familyMessagesMap = new Map();
     this.caregiverPayRatesMap = new Map();
     this.caregiverTimeEntriesMap = new Map();
+    this.careDocumentsMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -787,6 +796,49 @@ export class MemStorage implements IStorage {
     }
     return result;
   }
+
+  // Care Documents
+  async getCareDocuments(familyId: string): Promise<CareDocument[]> {
+    return Array.from(this.careDocumentsMap.values())
+      .filter(d => d.familyId === familyId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getCareDocumentsByMember(memberId: string, familyId: string): Promise<CareDocument[]> {
+    return Array.from(this.careDocumentsMap.values())
+      .filter(d => d.memberId === memberId && d.familyId === familyId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async getCareDocument(id: string, familyId: string): Promise<CareDocument | undefined> {
+    const doc = this.careDocumentsMap.get(id);
+    return doc && doc.familyId === familyId ? doc : undefined;
+  }
+
+  async createCareDocument(familyId: string, insertDoc: InsertCareDocument): Promise<CareDocument> {
+    const id = randomUUID();
+    const document: CareDocument = {
+      ...insertDoc,
+      id,
+      familyId,
+      memberId: insertDoc.memberId || null,
+      description: insertDoc.description || null,
+      fileSize: insertDoc.fileSize || null,
+      mimeType: insertDoc.mimeType || null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.careDocumentsMap.set(id, document);
+    return document;
+  }
+
+  async deleteCareDocument(id: string, familyId: string): Promise<void> {
+    const doc = this.careDocumentsMap.get(id);
+    if (!doc || doc.familyId !== familyId) {
+      throw new NotFoundError(`Care document with id ${id} not found`);
+    }
+    this.careDocumentsMap.delete(id);
+  }
 }
 
 // DrizzleStorage implementation
@@ -1388,6 +1440,45 @@ class DrizzleStorage implements IStorage {
     }
     return result;
   }
+
+  // Care Documents
+  async getCareDocuments(familyId: string): Promise<CareDocument[]> {
+    return await this.db.select().from(careDocuments)
+      .where(eq(careDocuments.familyId, familyId))
+      .orderBy(desc(careDocuments.createdAt));
+  }
+
+  async getCareDocumentsByMember(memberId: string, familyId: string): Promise<CareDocument[]> {
+    return await this.db.select().from(careDocuments)
+      .where(and(
+        eq(careDocuments.memberId, memberId),
+        eq(careDocuments.familyId, familyId)
+      ))
+      .orderBy(desc(careDocuments.createdAt));
+  }
+
+  async getCareDocument(id: string, familyId: string): Promise<CareDocument | undefined> {
+    const result = await this.db.select().from(careDocuments)
+      .where(and(eq(careDocuments.id, id), eq(careDocuments.familyId, familyId)));
+    return result[0];
+  }
+
+  async createCareDocument(familyId: string, insertDoc: InsertCareDocument): Promise<CareDocument> {
+    const result = await this.db.insert(careDocuments).values({
+      ...insertDoc,
+      familyId,
+    }).returning();
+    return result[0];
+  }
+
+  async deleteCareDocument(id: string, familyId: string): Promise<void> {
+    const result = await this.db.delete(careDocuments)
+      .where(and(eq(careDocuments.id, id), eq(careDocuments.familyId, familyId)))
+      .returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Care document with id ${id} not found`);
+    }
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -1707,6 +1798,32 @@ class DemoAwareStorage implements IStorage {
   async getOptedInUsersForFamily(familyId: string): Promise<Array<{ userId: string; user: User }>> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.getOptedInUsersForFamily(familyId);
+  }
+
+  // Care Documents
+  async getCareDocuments(familyId: string): Promise<CareDocument[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getCareDocuments(familyId);
+  }
+
+  async getCareDocumentsByMember(memberId: string, familyId: string): Promise<CareDocument[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getCareDocumentsByMember(memberId, familyId);
+  }
+
+  async getCareDocument(id: string, familyId: string): Promise<CareDocument | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getCareDocument(id, familyId);
+  }
+
+  async createCareDocument(familyId: string, document: InsertCareDocument): Promise<CareDocument> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createCareDocument(familyId, document);
+  }
+
+  async deleteCareDocument(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteCareDocument(id, familyId);
   }
 }
 
