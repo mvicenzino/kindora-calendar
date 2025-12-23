@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, index, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, index, numeric, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -196,6 +196,20 @@ export const careDocuments = pgTable("care_documents", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+// Emergency Bridge Tokens - time-limited access links for backup caregivers
+export const emergencyBridgeTokens = pgTable("emergency_bridge_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  tokenHash: varchar("token_hash").notNull().unique(), // Hashed token for lookup
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  label: varchar("label"), // Optional description like "For Aunt Mary"
+  expiresAt: timestamp("expires_at").notNull(),
+  status: varchar("status").notNull().default("active"), // 'active', 'revoked', 'expired'
+  accessCount: integer("access_count").notNull().default(0),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -342,6 +356,23 @@ export const insertCareDocumentSchema = createInsertSchema(careDocuments).omit({
   mimeType: z.string().optional().nullable(),
 });
 
+export const BRIDGE_EXPIRATION_OPTIONS = ['24h', '48h', '7d'] as const;
+export type BridgeExpiration = typeof BRIDGE_EXPIRATION_OPTIONS[number];
+
+export const insertEmergencyBridgeTokenSchema = createInsertSchema(emergencyBridgeTokens).omit({
+  id: true,
+  tokenHash: true,
+  familyId: true,
+  createdByUserId: true,
+  status: true,
+  accessCount: true,
+  lastAccessedAt: true,
+  createdAt: true,
+}).extend({
+  label: z.string().optional().nullable(),
+  expiresAt: z.coerce.date(),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -401,6 +432,10 @@ export type WeeklySummaryPreference = typeof weeklySummaryPreferences.$inferSele
 // Care Document types
 export type InsertCareDocument = z.infer<typeof insertCareDocumentSchema>;
 export type CareDocument = typeof careDocuments.$inferSelect;
+
+// Emergency Bridge Token types
+export type InsertEmergencyBridgeToken = z.infer<typeof insertEmergencyBridgeTokenSchema>;
+export type EmergencyBridgeToken = typeof emergencyBridgeTokens.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {
