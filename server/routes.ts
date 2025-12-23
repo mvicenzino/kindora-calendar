@@ -2519,6 +2519,184 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // ========== Care Documents Routes ==========
+  
+  // Get all care documents for a family
+  app.get("/api/care-documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Filter by member if specified
+      const memberId = req.query.memberId as string | undefined;
+      let documents;
+      if (memberId) {
+        documents = await storage.getCareDocumentsByMember(memberId, familyId);
+      } else {
+        documents = await storage.getCareDocuments(familyId);
+      }
+      
+      res.json(documents);
+    } catch (error) {
+      console.error("Error fetching care documents:", error);
+      res.status(500).json({ error: "Failed to fetch care documents" });
+    }
+  });
+  
+  // Get a specific care document
+  app.get("/api/care-documents/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const document = await storage.getCareDocument(req.params.id, familyId);
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      
+      res.json(document);
+    } catch (error) {
+      console.error("Error fetching care document:", error);
+      res.status(500).json({ error: "Failed to fetch care document" });
+    }
+  });
+  
+  // Request presigned URL for document upload
+  app.post("/api/care-documents/upload-url", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can upload documents
+      if (role !== 'owner' && role !== 'member') {
+        return res.status(403).json({ error: "Only family owners and members can upload documents" });
+      }
+      
+      const { fileName, contentType } = req.body;
+      if (!fileName) {
+        return res.status(400).json({ error: "fileName is required" });
+      }
+      
+      const objectStorageService = new ObjectStorageService();
+      
+      // Generate unique path for care documents
+      const timestamp = Date.now();
+      const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const subPath = `care-documents/${familyId}/${timestamp}-${safeName}`;
+      
+      const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURLWithPath(subPath);
+      
+      res.json({ uploadURL, objectPath });
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
+  });
+  
+  // Create a care document record after upload
+  app.post("/api/care-documents", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can upload documents
+      if (role !== 'owner' && role !== 'member') {
+        return res.status(403).json({ error: "Only family owners and members can upload documents" });
+      }
+      
+      const { title, documentType, description, memberId, fileUrl, fileName, fileSize, mimeType } = req.body;
+      
+      if (!title || !documentType || !fileUrl || !fileName) {
+        return res.status(400).json({ error: "title, documentType, fileUrl, and fileName are required" });
+      }
+      
+      // Validate document type
+      const validTypes = ['medical', 'insurance', 'legal', 'care_plan', 'other'];
+      if (!validTypes.includes(documentType)) {
+        return res.status(400).json({ error: `Invalid document type. Must be one of: ${validTypes.join(', ')}` });
+      }
+      
+      const document = await storage.createCareDocument(familyId, {
+        title,
+        documentType,
+        description: description || null,
+        memberId: memberId || null,
+        uploadedBy: userId,
+        fileUrl,
+        fileName,
+        fileSize: fileSize || null,
+        mimeType: mimeType || null,
+      });
+      
+      res.status(201).json(document);
+    } catch (error) {
+      console.error("Error creating care document:", error);
+      res.status(500).json({ error: "Failed to create care document" });
+    }
+  });
+  
+  // Delete a care document
+  app.delete("/api/care-documents/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Only owners and members can delete documents
+      if (role !== 'owner' && role !== 'member') {
+        return res.status(403).json({ error: "Only family owners and members can delete documents" });
+      }
+      
+      await storage.deleteCareDocument(req.params.id, familyId);
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+      console.error("Error deleting care document:", error);
+      res.status(500).json({ error: "Failed to delete care document" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

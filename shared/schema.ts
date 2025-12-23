@@ -328,6 +328,7 @@ export type DocumentType = typeof DOCUMENT_TYPES[number];
 
 export const insertCareDocumentSchema = createInsertSchema(careDocuments).omit({
   id: true,
+  familyId: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
