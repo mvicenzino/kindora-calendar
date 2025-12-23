@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
@@ -96,6 +96,13 @@ export interface IStorage {
   getCareDocument(id: string, familyId: string): Promise<CareDocument | undefined>;
   createCareDocument(familyId: string, document: InsertCareDocument): Promise<CareDocument>;
   deleteCareDocument(id: string, familyId: string): Promise<void>;
+
+  // Emergency Bridge Tokens
+  getEmergencyBridgeTokens(familyId: string): Promise<EmergencyBridgeToken[]>;
+  getEmergencyBridgeTokenByHash(tokenHash: string): Promise<EmergencyBridgeToken | undefined>;
+  createEmergencyBridgeToken(familyId: string, createdByUserId: string, tokenHash: string, expiresAt: Date, label?: string | null): Promise<EmergencyBridgeToken>;
+  revokeEmergencyBridgeToken(id: string, familyId: string): Promise<void>;
+  incrementEmergencyBridgeTokenAccess(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -112,6 +119,7 @@ export class MemStorage implements IStorage {
   private caregiverPayRatesMap: Map<string, CaregiverPayRate>;
   private caregiverTimeEntriesMap: Map<string, CaregiverTimeEntry>;
   private careDocumentsMap: Map<string, CareDocument>;
+  private emergencyBridgeTokensMap: Map<string, EmergencyBridgeToken>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -127,6 +135,7 @@ export class MemStorage implements IStorage {
     this.caregiverPayRatesMap = new Map();
     this.caregiverTimeEntriesMap = new Map();
     this.careDocumentsMap = new Map();
+    this.emergencyBridgeTokensMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -839,6 +848,59 @@ export class MemStorage implements IStorage {
     }
     this.careDocumentsMap.delete(id);
   }
+
+  // Emergency Bridge Token methods
+  async getEmergencyBridgeTokens(familyId: string): Promise<EmergencyBridgeToken[]> {
+    return Array.from(this.emergencyBridgeTokensMap.values())
+      .filter(t => t.familyId === familyId && t.status === 'active');
+  }
+
+  async getEmergencyBridgeTokenByHash(tokenHash: string): Promise<EmergencyBridgeToken | undefined> {
+    return Array.from(this.emergencyBridgeTokensMap.values())
+      .find(t => t.tokenHash === tokenHash);
+  }
+
+  async createEmergencyBridgeToken(
+    familyId: string,
+    createdByUserId: string,
+    tokenHash: string,
+    expiresAt: Date,
+    label?: string | null
+  ): Promise<EmergencyBridgeToken> {
+    const id = randomUUID();
+    const token: EmergencyBridgeToken = {
+      id,
+      familyId,
+      tokenHash,
+      createdByUserId,
+      label: label ?? null,
+      expiresAt,
+      status: 'active',
+      accessCount: 0,
+      lastAccessedAt: null,
+      createdAt: new Date(),
+    };
+    this.emergencyBridgeTokensMap.set(id, token);
+    return token;
+  }
+
+  async revokeEmergencyBridgeToken(id: string, familyId: string): Promise<void> {
+    const token = this.emergencyBridgeTokensMap.get(id);
+    if (!token || token.familyId !== familyId) {
+      throw new NotFoundError(`Emergency bridge token with id ${id} not found`);
+    }
+    token.status = 'revoked';
+    this.emergencyBridgeTokensMap.set(id, token);
+  }
+
+  async incrementEmergencyBridgeTokenAccess(id: string): Promise<void> {
+    const token = this.emergencyBridgeTokensMap.get(id);
+    if (token) {
+      token.accessCount = (token.accessCount || 0) + 1;
+      token.lastAccessedAt = new Date();
+      this.emergencyBridgeTokensMap.set(id, token);
+    }
+  }
 }
 
 // DrizzleStorage implementation
@@ -1479,6 +1541,67 @@ class DrizzleStorage implements IStorage {
       throw new NotFoundError(`Care document with id ${id} not found`);
     }
   }
+
+  // Emergency Bridge Token methods
+  async getEmergencyBridgeTokens(familyId: string): Promise<EmergencyBridgeToken[]> {
+    return await this.db.select().from(emergencyBridgeTokens)
+      .where(and(
+        eq(emergencyBridgeTokens.familyId, familyId),
+        eq(emergencyBridgeTokens.status, 'active')
+      ))
+      .orderBy(desc(emergencyBridgeTokens.createdAt));
+  }
+
+  async getEmergencyBridgeTokenByHash(tokenHash: string): Promise<EmergencyBridgeToken | undefined> {
+    const result = await this.db.select().from(emergencyBridgeTokens)
+      .where(eq(emergencyBridgeTokens.tokenHash, tokenHash));
+    return result[0];
+  }
+
+  async createEmergencyBridgeToken(
+    familyId: string,
+    createdByUserId: string,
+    tokenHash: string,
+    expiresAt: Date,
+    label?: string | null
+  ): Promise<EmergencyBridgeToken> {
+    const result = await this.db.insert(emergencyBridgeTokens).values({
+      familyId,
+      createdByUserId,
+      tokenHash,
+      expiresAt,
+      label: label ?? null,
+      status: 'active',
+      accessCount: 0,
+    }).returning();
+    return result[0];
+  }
+
+  async revokeEmergencyBridgeToken(id: string, familyId: string): Promise<void> {
+    const result = await this.db.update(emergencyBridgeTokens)
+      .set({ status: 'revoked' })
+      .where(and(
+        eq(emergencyBridgeTokens.id, id),
+        eq(emergencyBridgeTokens.familyId, familyId)
+      ))
+      .returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Emergency bridge token with id ${id} not found`);
+    }
+  }
+
+  async incrementEmergencyBridgeTokenAccess(id: string): Promise<void> {
+    const token = await this.db.select().from(emergencyBridgeTokens)
+      .where(eq(emergencyBridgeTokens.id, id));
+    if (token[0]) {
+      await this.db.update(emergencyBridgeTokens)
+        .set({
+          accessCount: (token[0].accessCount || 0) + 1,
+          lastAccessedAt: new Date(),
+        })
+        .where(eq(emergencyBridgeTokens.id, id));
+    }
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -1824,6 +1947,45 @@ class DemoAwareStorage implements IStorage {
   async deleteCareDocument(id: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteCareDocument(id, familyId);
+  }
+
+  // Emergency Bridge Tokens
+  async getEmergencyBridgeTokens(familyId: string): Promise<EmergencyBridgeToken[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getEmergencyBridgeTokens(familyId);
+  }
+
+  async getEmergencyBridgeTokenByHash(tokenHash: string): Promise<EmergencyBridgeToken | undefined> {
+    // Try demo storage first, then persistent
+    const demoToken = await this.demoStorage.getEmergencyBridgeTokenByHash(tokenHash);
+    if (demoToken) return demoToken;
+    return this.persistentStorage.getEmergencyBridgeTokenByHash(tokenHash);
+  }
+
+  async createEmergencyBridgeToken(
+    familyId: string,
+    createdByUserId: string,
+    tokenHash: string,
+    expiresAt: Date,
+    label?: string | null
+  ): Promise<EmergencyBridgeToken> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createEmergencyBridgeToken(familyId, createdByUserId, tokenHash, expiresAt, label);
+  }
+
+  async revokeEmergencyBridgeToken(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.revokeEmergencyBridgeToken(id, familyId);
+  }
+
+  async incrementEmergencyBridgeTokenAccess(id: string): Promise<void> {
+    // Try demo storage first, then persistent
+    const demoTokens = Array.from((this.demoStorage as any).emergencyBridgeTokensMap?.values() || []);
+    const demoToken = demoTokens.find((t: any) => t.id === id);
+    if (demoToken) {
+      return this.demoStorage.incrementEmergencyBridgeTokenAccess(id);
+    }
+    return this.persistentStorage.incrementEmergencyBridgeTokenAccess(id);
   }
 }
 
