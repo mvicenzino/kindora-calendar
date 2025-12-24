@@ -212,6 +212,22 @@ export default function EventCard({
           </p>
         )}
 
+        {/* Latest Note Preview - only in full and compact variants (not grid/calendar) */}
+        {event.latestNote && variant !== 'grid' && (
+          <div 
+            className={`text-xs mb-3 p-2 rounded-lg ${needsDarkText ? 'bg-black/10 border border-black/10' : 'bg-white/15 border border-white/20'}`}
+            data-testid={`note-preview-${event.id}`}
+          >
+            <div className={`flex items-center gap-1 mb-1 ${needsDarkText ? 'text-gray-600' : 'text-white/60'}`}>
+              <MessageSquare className="w-3 h-3" />
+              <span className="font-medium">{event.latestNote.authorName}</span>
+            </div>
+            <p className={`line-clamp-2 ${needsDarkText ? 'text-gray-700' : 'text-white/80'}`}>
+              {event.latestNote.content}
+            </p>
+          </div>
+        )}
+
         {/* Bottom Row: Notes Indicator (left) and Member Avatars (right) */}
         <div className="flex justify-between items-center gap-2">
           {/* Notes Indicator - Lower Left (Clickable) - min 44px touch target */}

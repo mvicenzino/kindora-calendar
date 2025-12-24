@@ -1132,15 +1132,35 @@ Visit Kindora Calendar: ${joinUrl}
       }
       const events = await storage.getEvents(familyId);
       
-      // Add note counts to each event
-      const eventsWithNoteCounts = await Promise.all(
+      // Add note counts and latest note to each event
+      const eventsWithNotes = await Promise.all(
         events.map(async (event) => {
           const notes = await storage.getEventNotes(event.id, familyId);
-          return { ...event, noteCount: notes.length };
+          const sortedNotes = notes.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          const latestNote = sortedNotes[0];
+          let latestNoteData = undefined;
+          
+          if (latestNote) {
+            const author = await storage.getUser(latestNote.authorUserId);
+            latestNoteData = {
+              id: latestNote.id,
+              content: latestNote.content,
+              createdAt: latestNote.createdAt,
+              authorName: author ? `${author.firstName} ${author.lastName}` : 'Unknown',
+            };
+          }
+          
+          return { 
+            ...event, 
+            noteCount: notes.length,
+            latestNote: latestNoteData,
+          };
         })
       );
       
-      res.json(eventsWithNoteCounts);
+      res.json(eventsWithNotes);
     } catch (error) {
       console.error("Error fetching events:", error);
       res.status(500).json({ error: "Failed to fetch events", details: String(error) });
@@ -1452,6 +1472,65 @@ Visit Kindora Calendar: ${joinUrl}
       }
       console.error("Error deleting event note:", error);
       res.status(500).json({ error: "Failed to delete event note" });
+    }
+  });
+
+  // Get all recent event notes across all events in a family (for Messages view)
+  app.get("/api/all-event-notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      // Verify user is a member of this family
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      // Get all events for the family
+      const events = await storage.getEvents(familyId);
+      
+      // Collect notes from all events
+      const allNotes: any[] = [];
+      for (const event of events) {
+        const notes = await storage.getEventNotes(event.id, familyId);
+        for (const note of notes) {
+          allNotes.push({
+            ...note,
+            eventTitle: event.title,
+            eventColor: event.color,
+            eventStartTime: event.startTime,
+          });
+        }
+      }
+      
+      // Sort by createdAt descending (most recent first)
+      allNotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      // Limit to most recent 50 notes
+      const recentNotes = allNotes.slice(0, 50);
+      
+      // Enrich with author information
+      const enrichedNotes = await Promise.all(recentNotes.map(async (note) => {
+        const author = await storage.getUser(note.authorUserId);
+        return {
+          ...note,
+          author: author ? {
+            id: author.id,
+            firstName: author.firstName,
+            lastName: author.lastName,
+            profileImageUrl: author.profileImageUrl,
+          } : null,
+        };
+      }));
+      
+      res.json(enrichedNotes);
+    } catch (error) {
+      console.error("Error fetching all event notes:", error);
+      res.status(500).json({ error: "Failed to fetch event notes" });
     }
   });
 

@@ -6,6 +6,13 @@ import type { Event as DBEvent, FamilyMember as DBFamilyMember } from "./schema"
  * - Timestamps converted to Date objects
  * - Additional view-specific fields
  */
+export interface LatestNote {
+  id: string;
+  content: string;
+  createdAt: string;
+  authorName: string;
+}
+
 export interface UiEvent extends Omit<DBEvent, 'description' | 'photoUrl' | 'completedAt' | 'startTime' | 'endTime'> {
   description?: string;
   photoUrl?: string;
@@ -14,6 +21,7 @@ export interface UiEvent extends Omit<DBEvent, 'description' | 'photoUrl' | 'com
   endTime: Date;
   members?: UiFamilyMember[];
   noteCount?: number;
+  latestNote?: LatestNote;
 }
 
 /**

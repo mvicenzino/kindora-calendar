@@ -10,11 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Send, 
   MessageCircle,
   Users,
-  ArrowLeft
+  ArrowLeft,
+  Calendar,
+  MessageSquare
 } from "lucide-react";
 import { Link } from "wouter";
 import Header from "@/components/Header";
@@ -36,6 +39,23 @@ type FamilyMessage = {
   createdAt: string;
   parentMessageId: string | null;
   author: MessageAuthor | null;
+};
+
+type EventNoteWithContext = {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  eventColor: string;
+  eventStartTime: string;
+  content: string;
+  createdAt: string;
+  parentNoteId: string | null;
+  author: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    profileImageUrl: string | null;
+  } | null;
 };
 
 function formatMessageTime(dateString: string): string {
@@ -97,11 +117,18 @@ export default function Messages() {
   const { activeFamilyId } = useActiveFamily();
   const { toast } = useToast();
   const [newMessage, setNewMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("conversations");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [], isLoading } = useQuery<FamilyMessage[]>({
     queryKey: ['/api/family-messages?familyId=' + activeFamilyId],
+    enabled: !!activeFamilyId,
+    refetchInterval: 10000,
+  });
+
+  const { data: eventNotes = [], isLoading: notesLoading } = useQuery<EventNoteWithContext[]>({
+    queryKey: ['/api/all-event-notes?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
     refetchInterval: 10000,
   });
@@ -158,7 +185,7 @@ export default function Messages() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
-      <Header currentView="day" onViewChange={() => {}} />
+      <Header />
       <div className="container mx-auto px-4 py-6 max-w-3xl">
         <div className="flex items-center gap-3 mb-6">
           <Link href="/">
@@ -169,30 +196,51 @@ export default function Messages() {
           <div>
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <MessageCircle className="h-6 w-6" />
-              Family Messages
+              Messages
             </h1>
             <p className="text-white/70 text-sm">
-              Stay connected with everyone in the family
+              Family conversations and event notes
             </p>
           </div>
         </div>
 
-        <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl h-[calc(100vh-200px)] flex flex-col">
-          <CardHeader className="border-b border-white/10 pb-4 flex flex-row items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                <Users className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-white text-lg" data-testid="text-family-name">
-                  {family?.name || 'Family Chat'}
-                </CardTitle>
-                <p className="text-white/60 text-sm">
-                  {messages.length} message{messages.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-            </div>
-          </CardHeader>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100vh-200px)]">
+          <TabsList className="w-full bg-white/10 border border-white/20 rounded-xl mb-4 p-1">
+            <TabsTrigger 
+              value="conversations" 
+              className="flex-1 data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/70 rounded-lg"
+              data-testid="tab-conversations"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              Conversations ({messages.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="event-notes" 
+              className="flex-1 data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/70 rounded-lg"
+              data-testid="tab-event-notes"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Event Notes ({eventNotes.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="conversations" className="mt-0 h-[calc(100%-60px)]">
+            <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl h-full flex flex-col">
+              <CardHeader className="border-b border-white/10 pb-4 flex flex-row items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-white text-lg" data-testid="text-family-name">
+                      {family?.name || 'Family Chat'}
+                    </CardTitle>
+                    <p className="text-white/60 text-sm">
+                      {messages.length} message{messages.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
 
           <CardContent className="flex-1 p-0 overflow-hidden flex flex-col">
             <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
@@ -275,29 +323,111 @@ export default function Messages() {
               </div>
             </ScrollArea>
 
-            <form 
-              onSubmit={handleSendMessage}
-              className="p-4 border-t border-white/10 flex gap-3"
-            >
-              <Textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
-                className="flex-1 min-h-[44px] max-h-32 resize-none bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
-                data-testid="input-message"
-              />
-              <Button
-                type="submit"
-                disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                className="h-11 w-11 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-0"
-                data-testid="button-send-message"
+              <form 
+                onSubmit={handleSendMessage}
+                className="p-4 border-t border-white/10 flex gap-3"
               >
-                <Send className="h-5 w-5" />
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <Textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Type a message..."
+                  className="flex-1 min-h-[44px] max-h-32 resize-none bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
+                  data-testid="input-message"
+                />
+                <Button
+                  type="submit"
+                  disabled={!newMessage.trim() || sendMessageMutation.isPending}
+                  className="h-11 w-11 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-0"
+                  data-testid="button-send-message"
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="event-notes" className="mt-0 h-[calc(100%-60px)]">
+          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl h-full flex flex-col">
+            <CardHeader className="border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-white text-lg">Event Notes</CardTitle>
+                  <p className="text-white/60 text-sm">
+                    Notes and updates from calendar events
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="flex-1 p-0 overflow-hidden">
+              <ScrollArea className="h-full px-4">
+                <div className="py-4 space-y-3">
+                  {notesLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="text-white/60">Loading event notes...</div>
+                    </div>
+                  ) : eventNotes.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <MessageSquare className="h-12 w-12 text-white/30 mb-4" />
+                      <h3 className="text-white/80 font-medium mb-2">No event notes yet</h3>
+                      <p className="text-white/50 text-sm max-w-xs">
+                        Notes added to calendar events will appear here for easy reference.
+                      </p>
+                    </div>
+                  ) : (
+                    eventNotes.map((note) => (
+                      <div 
+                        key={note.id} 
+                        className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors"
+                        data-testid={`event-note-${note.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div 
+                            className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0"
+                            style={{ backgroundColor: note.eventColor }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-white font-medium text-sm truncate">
+                                {note.eventTitle}
+                              </span>
+                              <span className="text-white/40 text-xs">
+                                {format(parseISO(note.eventStartTime), 'MMM d')}
+                              </span>
+                            </div>
+                            <p className="text-white/90 text-sm mb-2">{note.content}</p>
+                            <div className="flex items-center gap-2 text-white/50 text-xs">
+                              {note.author && (
+                                <div className="flex items-center gap-1">
+                                  <Avatar className="h-4 w-4">
+                                    {note.author.profileImageUrl && (
+                                      <AvatarImage src={note.author.profileImageUrl} />
+                                    )}
+                                    <AvatarFallback className="text-[8px] bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+                                      {getInitials(note.author.firstName, note.author.lastName)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span>{note.author.firstName}</span>
+                                </div>
+                              )}
+                              <span>{formatMessageTime(note.createdAt)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
       </div>
     </div>
   );
