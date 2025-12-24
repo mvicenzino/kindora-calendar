@@ -231,7 +231,6 @@ export default function EventModal({
   };
 
   const selectedMember = members.find(m => m.id === memberId);
-  const displayDate = format(new Date(`${startDate}T12:00`), 'MMM d, yyyy');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -303,21 +302,14 @@ export default function EventModal({
                   <Calendar className="w-4 h-4" />
                   Date
                 </Label>
-                <button
-                  onClick={() => {
-                    if (isReadOnly) return;
-                    const input = document.createElement('input');
-                    input.type = 'date';
-                    input.value = startDate;
-                    input.onchange = (e: any) => setStartDate(e.target.value);
-                    input.click();
-                  }}
-                  className="w-full bg-white/15 border border-white/40 rounded-2xl text-white px-4 py-3 text-center hover:bg-white/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  data-testid="button-event-date"
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-white/15 border border-white/40 rounded-2xl text-white px-4 py-3 h-12 focus:border-purple-400 focus:ring-purple-400/50 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  data-testid="input-event-date"
                   disabled={isReadOnly}
-                >
-                  {displayDate}
-                </button>
+                />
               </div>
 
               {/* Family Members - Multi-select Typeahead */}
