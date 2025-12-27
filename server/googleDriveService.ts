@@ -60,10 +60,9 @@ export interface DriveFile {
 export async function listDriveFiles(folderId?: string, pageToken?: string): Promise<{ files: DriveFile[], nextPageToken?: string }> {
   const drive = await getUncachableGoogleDriveClient();
   
-  let query = "trashed = false";
-  if (folderId) {
-    query += ` and '${folderId}' in parents`;
-  }
+  // Use 'root' to show items in My Drive root, or specific folder ID
+  const parentId = folderId || 'root';
+  const query = `'${parentId}' in parents and trashed = false`;
   
   const response = await drive.files.list({
     q: query,
@@ -71,6 +70,9 @@ export async function listDriveFiles(folderId?: string, pageToken?: string): Pro
     pageToken: pageToken,
     fields: 'nextPageToken, files(id, name, mimeType, size, modifiedTime, iconLink, webViewLink)',
     orderBy: 'folder,name',
+    // Include files from shared drives if user has access
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
 
   return {
