@@ -49,11 +49,11 @@ import Header from "@/components/Header";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const DOCUMENT_TYPE_CONFIG = {
-  medical: { label: "Medical Records", icon: Heart, color: "text-red-500" },
-  insurance: { label: "Insurance", icon: Shield, color: "text-blue-500" },
-  legal: { label: "Legal Documents", icon: FileCheck, color: "text-purple-500" },
-  care_plan: { label: "Care Plans", icon: ClipboardList, color: "text-green-500" },
-  other: { label: "Other", icon: FolderOpen, color: "text-gray-500" },
+  medical: { label: "Medical Records", icon: Heart, color: "text-red-400" },
+  insurance: { label: "Insurance", icon: Shield, color: "text-blue-400" },
+  legal: { label: "Legal Documents", icon: FileCheck, color: "text-purple-400" },
+  care_plan: { label: "Care Plans", icon: ClipboardList, color: "text-green-400" },
+  other: { label: "Other", icon: FolderOpen, color: "text-white/60" },
 } as const;
 
 type DocumentType = keyof typeof DOCUMENT_TYPE_CONFIG;
@@ -375,12 +375,12 @@ export default function Documents() {
   
   if (!activeFamilyId) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Card className="w-full max-w-md mx-4 backdrop-blur-xl bg-card/80 border-border/50">
+          <Card className="w-full max-w-md mx-4 bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
             <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">Please select a family to view documents.</p>
+              <p className="text-center text-white/70">Please select a family to view documents.</p>
             </CardContent>
           </Card>
         </div>
@@ -389,25 +389,29 @@ export default function Documents() {
   }
 
   return (
-    <div className="min-h-screen bg-background" data-testid="documents-page">
+    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]" data-testid="documents-page">
       <Header />
       
       <main className="container mx-auto px-4 py-6 max-w-6xl">
         <div className="flex flex-col gap-6">
           {/* Breadcrumb Navigation */}
           <nav className="flex items-center gap-2 text-sm" data-testid="breadcrumb-documents">
-            <Link href="/" className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-              <span>Back to Calendar</span>
+            <Link href="/">
+              <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
             </Link>
           </nav>
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight" data-testid="text-documents-title">
+              <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3" data-testid="text-documents-title">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                  <FolderOpen className="w-6 h-6 text-white" />
+                </div>
                 Care Documents
               </h1>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-white/70 mt-2 ml-15">
                 Secure storage for medical records, insurance, and legal documents
               </p>
             </div>
@@ -418,7 +422,7 @@ export default function Documents() {
                   <Button 
                     variant="outline"
                     onClick={openDriveDialog}
-                    className="gap-2"
+                    className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
                     data-testid="button-import-drive"
                   >
                     <SiGoogledrive className="w-4 h-4" />
@@ -427,7 +431,7 @@ export default function Documents() {
                 )}
                 <Button 
                   onClick={() => setShowUploadDialog(true)}
-                  className="gap-2"
+                  className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white"
                   data-testid="button-upload-document"
                 >
                   <Upload className="w-4 h-4" />
@@ -437,24 +441,24 @@ export default function Documents() {
             )}
           </div>
           
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50">
+          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-lg">
             <CardContent className="pt-6">
               <div className="flex flex-wrap gap-4">
                 <div className="flex-1 min-w-[200px]">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
                     <Input
                       placeholder="Search documents..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
+                      className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
                       data-testid="input-search-documents"
                     />
                   </div>
                 </div>
                 
                 <Select value={filterType} onValueChange={(v) => setFilterType(v as DocumentType | "all")}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-filter-type">
+                  <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white" data-testid="select-filter-type">
                     <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
@@ -467,7 +471,7 @@ export default function Documents() {
                 </Select>
                 
                 <Select value={filterMember} onValueChange={setFilterMember}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-filter-member">
+                  <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white" data-testid="select-filter-member">
                     <SelectValue placeholder="All members" />
                   </SelectTrigger>
                   <SelectContent>
@@ -484,20 +488,20 @@ export default function Documents() {
           {isLoadingDocuments ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map(i => (
-                <Card key={i} className="backdrop-blur-xl bg-card/80 border-border/50 animate-pulse">
+                <Card key={i} className="bg-white/10 backdrop-blur-xl border-white/20 animate-pulse">
                   <CardContent className="pt-6 h-32" />
                 </Card>
               ))}
             </div>
           ) : documents.length === 0 ? (
-            <Card className="backdrop-blur-xl bg-card/80 border-border/50">
+            <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-lg">
               <CardContent className="pt-12 pb-12 flex flex-col items-center justify-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
-                  <FolderOpen className="w-8 h-8 text-muted-foreground" />
+                <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+                  <FolderOpen className="w-8 h-8 text-white/50" />
                 </div>
                 <div className="text-center">
-                  <h3 className="font-semibold text-lg">No documents found</h3>
-                  <p className="text-muted-foreground mt-1">
+                  <h3 className="font-semibold text-lg text-white">No documents found</h3>
+                  <p className="text-white/60 mt-1">
                     {searchQuery || filterType !== "all" || filterMember !== "all" 
                       ? "Try adjusting your filters"
                       : "Upload your first care document to get started"}
@@ -507,7 +511,7 @@ export default function Documents() {
                   <Button 
                     onClick={() => setShowUploadDialog(true)}
                     variant="outline"
-                    className="gap-2 mt-2"
+                    className="gap-2 mt-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
                   >
                     <Plus className="w-4 h-4" />
                     Upload Document
@@ -527,8 +531,8 @@ export default function Documents() {
                   <div key={type}>
                     <div className="flex items-center gap-2 mb-3">
                       <Icon className={`w-5 h-5 ${config.color}`} />
-                      <h2 className="text-lg font-semibold">{config.label}</h2>
-                      <Badge variant="secondary" className="ml-2">{typeDocs.length}</Badge>
+                      <h2 className="text-lg font-semibold text-white">{config.label}</h2>
+                      <Badge variant="secondary" className="ml-2 bg-white/20 text-white border-white/30">{typeDocs.length}</Badge>
                     </div>
                     
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -538,36 +542,36 @@ export default function Documents() {
                         return (
                           <Card 
                             key={doc.id} 
-                            className="backdrop-blur-xl bg-card/80 border-border/50 hover-elevate group"
+                            className="bg-white/10 backdrop-blur-xl border-white/20 hover:bg-white/15 transition-colors group"
                             data-testid={`card-document-${doc.id}`}
                           >
                             <CardContent className="pt-4 pb-4">
                               <div className="flex items-start gap-3">
                                 <div 
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted/50"
+                                  className="w-10 h-10 rounded-lg flex items-center justify-center bg-white/10"
                                   style={{ borderLeft: `3px solid ${getMemberColor(doc.memberId)}` }}
                                 >
-                                  <FileIcon className="w-5 h-5 text-muted-foreground" />
+                                  <FileIcon className="w-5 h-5 text-white/70" />
                                 </div>
                                 
                                 <div className="flex-1 min-w-0">
-                                  <h3 className="font-medium truncate" data-testid={`text-document-title-${doc.id}`}>
+                                  <h3 className="font-medium truncate text-white" data-testid={`text-document-title-${doc.id}`}>
                                     {doc.title}
                                   </h3>
                                   <div className="flex items-center gap-2 mt-1">
                                     <Avatar className="w-5 h-5">
                                       <AvatarFallback 
-                                        className="text-xs"
+                                        className="text-xs text-white"
                                         style={{ backgroundColor: getMemberColor(doc.memberId) }}
                                       >
                                         {getMemberName(doc.memberId).charAt(0)}
                                       </AvatarFallback>
                                     </Avatar>
-                                    <span className="text-xs text-muted-foreground truncate">
+                                    <span className="text-xs text-white/60 truncate">
                                       {getMemberName(doc.memberId)}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-2 mt-2 text-xs text-white/50">
                                     <span>{formatFileSize(doc.fileSize)}</span>
                                     <span>•</span>
                                     <span>{format(new Date(doc.createdAt!), "MMM d, yyyy")}</span>
@@ -580,6 +584,7 @@ export default function Documents() {
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => setPreviewDocument(doc)}
+                                      className="text-white/70 hover:text-white hover:bg-white/10"
                                       data-testid={`button-preview-${doc.id}`}
                                     >
                                       <Eye className="w-4 h-4" />
@@ -589,6 +594,7 @@ export default function Documents() {
                                     variant="ghost"
                                     size="icon"
                                     asChild
+                                    className="text-white/70 hover:text-white hover:bg-white/10"
                                     data-testid={`button-download-${doc.id}`}
                                   >
                                     <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download>
@@ -600,7 +606,7 @@ export default function Documents() {
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => setDeleteDocumentId(doc.id)}
-                                      className="text-destructive hover:text-destructive"
+                                      className="text-red-400 hover:text-red-300 hover:bg-white/10"
                                       data-testid={`button-delete-${doc.id}`}
                                     >
                                       <Trash2 className="w-4 h-4" />
@@ -610,7 +616,7 @@ export default function Documents() {
                               </div>
                               
                               {doc.description && (
-                                <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                                <p className="text-sm text-white/60 mt-3 line-clamp-2">
                                   {doc.description}
                                 </p>
                               )}
