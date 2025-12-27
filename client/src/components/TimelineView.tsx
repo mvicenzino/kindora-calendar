@@ -10,8 +10,9 @@ interface TimelineViewProps {
 }
 
 export default function TimelineView({ events, onEventClick, onAddEvent }: TimelineViewProps) {
+  // Sort events by most recent first (descending)
   const sortedEvents = [...events].sort((a, b) => 
-    a.startTime.getTime() - b.startTime.getTime()
+    b.startTime.getTime() - a.startTime.getTime()
   );
 
   const groupedEvents: Array<{ date: Date; events: UiEvent[] }> = [];
