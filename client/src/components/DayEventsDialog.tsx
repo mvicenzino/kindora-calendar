@@ -78,7 +78,7 @@ export default function DayEventsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] border-white/20 text-white max-w-md">
+      <DialogContent className="bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] border-white/20 text-white max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white text-xl">
             <Calendar className="w-5 h-5" />

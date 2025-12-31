@@ -77,7 +77,7 @@ export default function DemoWelcome() {
   // Show loading state while verifying demo token
   if (isVerifying) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center">
         <div className="text-center text-white">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
           <p className="text-xl">Setting up your demo account...</p>
@@ -89,7 +89,7 @@ export default function DemoWelcome() {
   // Show error if verification failed
   if (verificationError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center">
         <div className="text-center text-white max-w-md px-4">
           <p className="text-xl mb-4">Something went wrong</p>
           <p className="text-white/70 mb-6">{verificationError}</p>
@@ -105,7 +105,7 @@ export default function DemoWelcome() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
+    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
         <div className="flex items-center justify-between px-6 py-4">

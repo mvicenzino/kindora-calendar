@@ -242,7 +242,7 @@ export default function EventModal({
           {event?.id ? 'Edit your event details' : 'Create a new calendar event'}
         </DialogDescription>
         {/* Dark background container with scrollable content */}
-        <div className="bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex flex-col flex-1 overflow-hidden">
+        <div className="bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex flex-col flex-1 overflow-hidden">
           {/* Scrollable form content */}
           <div className="flex-1 overflow-y-auto px-6 md:px-8 pt-6 md:pt-8 pb-4 space-y-6">
             {/* Header */}
@@ -606,7 +606,7 @@ export default function EventModal({
           </div>
 
           {/* Sticky Footer with Action Buttons */}
-          <div className="border-t border-white/20 px-6 md:px-8 py-4 bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex-shrink-0">
+          <div className="border-t border-white/20 px-6 md:px-8 py-4 bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex-shrink-0">
             <div className="flex items-center justify-between gap-3">
               {event?.id && onDelete && !isReadOnly && (
                 <Button

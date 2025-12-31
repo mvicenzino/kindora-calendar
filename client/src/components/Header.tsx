@@ -28,8 +28,8 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
 
   return (
     <header className="relative z-[60] w-full" data-testid="header-main">
-      {/* Main header bar */}
-      <div className="backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
+      {/* Main header bar with Tesla-inspired glow */}
+      <div className="titanium-glass tesla-glow-bar shadow-lg">
         <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-3">
           {/* Left: Logo */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
@@ -58,7 +58,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
+              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9"
               aria-label="Messages"
               onClick={() => setLocation('/messages')}
               data-testid="button-messages"
@@ -68,7 +68,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
+              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9"
               aria-label="Documents"
               onClick={() => setLocation('/documents')}
               data-testid="button-documents"
@@ -78,7 +78,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9"
+              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9"
               aria-label="Memories"
               onClick={() => setLocation('/memories')}
               data-testid="button-memories"
@@ -88,7 +88,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/50 h-8 w-8 sm:h-9 sm:w-9 hidden sm:flex"
+              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9 hidden sm:flex"
               aria-label="Search events"
               onClick={onSearchClick}
               data-testid="button-search"
@@ -106,7 +106,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
       </div>
       
       {/* Family selector row - separate for better mobile layout */}
-      <div className="backdrop-blur-xl bg-white/5 border-b border-white/10 px-3 sm:px-4 md:px-6 py-2">
+      <div className="titanium-glass border-t-0 border-b border-white/10 px-3 sm:px-4 md:px-6 py-2">
         <FamilySelector />
       </div>
     </header>

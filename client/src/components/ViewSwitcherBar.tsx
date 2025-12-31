@@ -39,20 +39,22 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
   }, [currentView]);
 
   return (
-    <div className="relative z-[40] w-full backdrop-blur-xl bg-black/30 border-b border-white/10">
+    <div className="relative z-[40] w-full titanium-glass border-b border-white/10">
       <div className="flex items-center justify-center px-4 py-2">
         <nav 
           ref={containerRef} 
-          className="relative flex items-center gap-1 bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/15 overflow-x-auto scrollbar-hide"
+          className="relative flex items-center gap-1 bg-white/5 backdrop-blur-xl rounded-full p-1 border border-white/15 overflow-x-auto scrollbar-hide shadow-inner"
           data-testid="nav-view-switcher"
         >
+          {/* Active indicator with amber glow - high contrast for accessibility */}
           <div
-            className="absolute bg-orange-300/60 backdrop-blur-md rounded-full shadow-lg transition-all duration-300 ease-out border border-orange-300/70 z-0"
+            className="absolute rounded-full shadow-lg transition-all duration-300 ease-out z-0 bg-amber-400/60 border border-amber-300/80"
             style={{
               left: `${indicatorStyle.left}px`,
               width: `${indicatorStyle.width}px`,
               top: '4px',
               bottom: '4px',
+              boxShadow: '0 0 12px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
             }}
           />
           {views.map((view) => (

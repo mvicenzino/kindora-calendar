@@ -375,7 +375,7 @@ export default function Documents() {
   
   if (!activeFamilyId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
+      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
           <Card className="w-full max-w-md mx-4 bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
@@ -389,7 +389,7 @@ export default function Documents() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]" data-testid="documents-page">
+    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]" data-testid="documents-page">
       <Header />
       
       <main className="container mx-auto px-4 py-6 max-w-6xl">

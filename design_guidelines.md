@@ -174,3 +174,46 @@
 - Smooth view transitions between month/week/day modes
 - Event drag preview with ghost effect
 - Loading skeletons with pulsing glass shimmer
+
+## Tesla-Inspired Premium Design System
+
+**Design Philosophy:**
+Inspired by Tesla Model Y's refined elegance - sleek surfaces, subtle ambient glow, and premium materials feel. The goal is to create an interface that feels as refined and desirable as a luxury vehicle.
+
+**Color Palette - Titanium Silver-Gray:**
+- Primary Background: `from-[#3A4550] via-[#4A5560] to-[#5A6570]`
+- Premium metallic undertones that shift subtly with viewing angle
+
+**Signature Glow Bar Effect:**
+- `.tesla-glow-bar` - Adds signature ambient light bar effect (like Tesla's rear light bar)
+- Subtle pulsing animation for a premium, living feel
+- Applied to header elements for visual hierarchy
+
+**Premium Surface Treatments:**
+- `.titanium-glass` - Refined glass surface with metallic gradient and enhanced blur
+- `.tesla-card` - Premium card styling with subtle inner glow and refined shadows
+- `.tesla-button` - Elevated button treatment with gradient and glow on hover
+
+**Interactive Elements:**
+- `.tesla-interactive` - Adds subtle ambient glow on hover
+- `.tesla-accent-glow` - Emerald accent glow for primary actions
+- `.tesla-transition` - Smooth 0.4s cubic-bezier transitions
+- `.tesla-transition-fast` - Quick 0.2s transitions for micro-interactions
+
+**Text Hierarchy:**
+- `.tesla-text-primary` - High contrast white with subtle text shadow
+- `.tesla-text-secondary` - 70% opacity for secondary information
+- `.tesla-text-tertiary` - 50% opacity for tertiary details
+
+**Input Styling:**
+- `.tesla-input` - Premium input fields with glass effect and focus glow
+
+**Utilities:**
+- `.tesla-divider` - Gradient divider with fade-out edges
+- `.tesla-scrollbar` - Refined, minimal scrollbar styling
+
+**Implementation Notes:**
+- All glow effects use subtle blue-silver tones (rgba 180, 200, 220)
+- Transitions use cubic-bezier(0.4, 0, 0.2, 1) for natural deceleration
+- Border colors maintain low contrast for refinement
+- Hover states elevate rather than change color

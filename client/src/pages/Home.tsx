@@ -272,10 +272,10 @@ export default function Home() {
   // Show loading state while authenticating, hydrating family, or fetching initial data
   if (isLoading || isLoadingFamily || membersLoading || eventsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white text-lg font-medium">Loading your calendar...</p>
+          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" style={{ boxShadow: '0 0 20px rgba(180, 200, 220, 0.2)' }}></div>
+          <p className="text-white text-lg font-medium tesla-text-primary">Loading your calendar...</p>
         </div>
       </div>
     );
@@ -290,7 +290,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A]">
+    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
       {/* Sticky container for both header and view switcher */}
       <div className="sticky top-0 z-50">
         <Header 

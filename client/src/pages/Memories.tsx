@@ -61,7 +61,7 @@ export default function Memories() {
   }, [eventsWithPhotos]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#4A5A6A] via-[#5A6A7A] to-[#6A7A8A] p-6">
+    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 mb-6">
