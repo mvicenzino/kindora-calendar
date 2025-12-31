@@ -192,7 +192,7 @@ Inspired by Tesla Model Y's refined elegance - sleek surfaces, subtle ambient gl
 **Premium Surface Treatments:**
 - `.titanium-glass` - Refined glass surface with metallic gradient and enhanced blur
 - `.tesla-card` - Premium card styling with subtle inner glow and refined shadows
-- `.tesla-button` - Elevated button treatment with gradient and glow on hover
+- Note: For buttons, use standard shadcn Button variants with simple border utilities (e.g., `border border-white/20`)
 
 **Interactive Elements:**
 - `.tesla-interactive` - Adds subtle ambient glow on hover
