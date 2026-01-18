@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
@@ -103,6 +103,13 @@ export interface IStorage {
   createEmergencyBridgeToken(familyId: string, createdByUserId: string, tokenHash: string, expiresAt: Date, label?: string | null): Promise<EmergencyBridgeToken>;
   revokeEmergencyBridgeToken(id: string, familyId: string): Promise<void>;
   incrementEmergencyBridgeTokenAccess(id: string): Promise<void>;
+
+  // Parsed Invoices (Gmail integration)
+  getParsedInvoices(familyId: string): Promise<ParsedInvoice[]>;
+  getParsedInvoiceByMessageId(gmailMessageId: string, familyId: string): Promise<ParsedInvoice | undefined>;
+  createParsedInvoice(familyId: string, userId: string, invoice: Omit<InsertParsedInvoice, 'familyId' | 'createdByUserId'>): Promise<ParsedInvoice>;
+  updateParsedInvoiceStatus(id: string, familyId: string, status: string, eventId?: string): Promise<ParsedInvoice>;
+  deleteParsedInvoice(id: string, familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -901,6 +908,64 @@ export class MemStorage implements IStorage {
       this.emergencyBridgeTokensMap.set(id, token);
     }
   }
+
+  // Parsed Invoices
+  private parsedInvoicesMap: Map<string, ParsedInvoice> = new Map();
+
+  async getParsedInvoices(familyId: string): Promise<ParsedInvoice[]> {
+    return Array.from(this.parsedInvoicesMap.values())
+      .filter(i => i.familyId === familyId)
+      .sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  async getParsedInvoiceByMessageId(gmailMessageId: string, familyId: string): Promise<ParsedInvoice | undefined> {
+    return Array.from(this.parsedInvoicesMap.values())
+      .find(i => i.gmailMessageId === gmailMessageId && i.familyId === familyId);
+  }
+
+  async createParsedInvoice(familyId: string, userId: string, invoice: Omit<InsertParsedInvoice, 'familyId' | 'createdByUserId'>): Promise<ParsedInvoice> {
+    const id = randomUUID();
+    const newInvoice: ParsedInvoice = {
+      id,
+      familyId,
+      createdByUserId: userId,
+      gmailMessageId: invoice.gmailMessageId,
+      subject: invoice.subject,
+      sender: invoice.sender,
+      senderEmail: invoice.senderEmail ?? null,
+      amount: invoice.amount ? String(invoice.amount) : null,
+      dueDate: invoice.dueDate ?? null,
+      category: invoice.category || 'other',
+      status: 'pending',
+      eventId: null,
+      snippet: invoice.snippet ?? null,
+      receivedAt: invoice.receivedAt ?? null,
+      createdAt: new Date(),
+    };
+    this.parsedInvoicesMap.set(id, newInvoice);
+    return newInvoice;
+  }
+
+  async updateParsedInvoiceStatus(id: string, familyId: string, status: string, eventId?: string): Promise<ParsedInvoice> {
+    const invoice = this.parsedInvoicesMap.get(id);
+    if (!invoice || invoice.familyId !== familyId) {
+      throw new NotFoundError(`Parsed invoice with id ${id} not found`);
+    }
+    invoice.status = status;
+    if (eventId) {
+      invoice.eventId = eventId;
+    }
+    this.parsedInvoicesMap.set(id, invoice);
+    return invoice;
+  }
+
+  async deleteParsedInvoice(id: string, familyId: string): Promise<void> {
+    const invoice = this.parsedInvoicesMap.get(id);
+    if (!invoice || invoice.familyId !== familyId) {
+      throw new NotFoundError(`Parsed invoice with id ${id} not found`);
+    }
+    this.parsedInvoicesMap.delete(id);
+  }
 }
 
 // DrizzleStorage implementation
@@ -1602,6 +1667,70 @@ class DrizzleStorage implements IStorage {
         .where(eq(emergencyBridgeTokens.id, id));
     }
   }
+
+  // Parsed Invoices
+  async getParsedInvoices(familyId: string): Promise<ParsedInvoice[]> {
+    return this.db.select().from(parsedInvoices)
+      .where(eq(parsedInvoices.familyId, familyId))
+      .orderBy(desc(parsedInvoices.createdAt));
+  }
+
+  async getParsedInvoiceByMessageId(gmailMessageId: string, familyId: string): Promise<ParsedInvoice | undefined> {
+    const result = await this.db.select().from(parsedInvoices)
+      .where(and(
+        eq(parsedInvoices.gmailMessageId, gmailMessageId),
+        eq(parsedInvoices.familyId, familyId)
+      ));
+    return result[0];
+  }
+
+  async createParsedInvoice(familyId: string, userId: string, invoice: Omit<InsertParsedInvoice, 'familyId' | 'createdByUserId'>): Promise<ParsedInvoice> {
+    const result = await this.db.insert(parsedInvoices).values({
+      familyId,
+      createdByUserId: userId,
+      gmailMessageId: invoice.gmailMessageId,
+      subject: invoice.subject,
+      sender: invoice.sender,
+      senderEmail: invoice.senderEmail,
+      amount: invoice.amount ? String(invoice.amount) : null,
+      dueDate: invoice.dueDate,
+      category: invoice.category || 'other',
+      status: 'pending',
+      snippet: invoice.snippet,
+      receivedAt: invoice.receivedAt,
+    }).returning();
+    return result[0];
+  }
+
+  async updateParsedInvoiceStatus(id: string, familyId: string, status: string, eventId?: string): Promise<ParsedInvoice> {
+    const updates: any = { status };
+    if (eventId) {
+      updates.eventId = eventId;
+    }
+    const result = await this.db.update(parsedInvoices)
+      .set(updates)
+      .where(and(
+        eq(parsedInvoices.id, id),
+        eq(parsedInvoices.familyId, familyId)
+      ))
+      .returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Parsed invoice with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async deleteParsedInvoice(id: string, familyId: string): Promise<void> {
+    const result = await this.db.delete(parsedInvoices)
+      .where(and(
+        eq(parsedInvoices.id, id),
+        eq(parsedInvoices.familyId, familyId)
+      ))
+      .returning();
+    if (!result[0]) {
+      throw new NotFoundError(`Parsed invoice with id ${id} not found`);
+    }
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -1986,6 +2115,34 @@ class DemoAwareStorage implements IStorage {
       return this.demoStorage.incrementEmergencyBridgeTokenAccess(id);
     }
     return this.persistentStorage.incrementEmergencyBridgeTokenAccess(id);
+  }
+
+  // Parsed Invoices
+  async getParsedInvoices(familyId: string): Promise<ParsedInvoice[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getParsedInvoices(familyId);
+  }
+
+  async getParsedInvoiceByMessageId(gmailMessageId: string, familyId: string): Promise<ParsedInvoice | undefined> {
+    // Try demo storage first, then persistent
+    const demoInvoice = await this.demoStorage.getParsedInvoiceByMessageId(gmailMessageId, familyId);
+    if (demoInvoice) return demoInvoice;
+    return this.persistentStorage.getParsedInvoiceByMessageId(gmailMessageId, familyId);
+  }
+
+  async createParsedInvoice(familyId: string, userId: string, invoice: Omit<InsertParsedInvoice, 'familyId' | 'createdByUserId'>): Promise<ParsedInvoice> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.createParsedInvoice(familyId, userId, invoice);
+  }
+
+  async updateParsedInvoiceStatus(id: string, familyId: string, status: string, eventId?: string): Promise<ParsedInvoice> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateParsedInvoiceStatus(id, familyId, status, eventId);
+  }
+
+  async deleteParsedInvoice(id: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteParsedInvoice(id, familyId);
   }
 }
 

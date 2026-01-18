@@ -7,7 +7,8 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
 import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
-import { startOfWeek, endOfWeek, format } from "date-fns";
+import { startOfWeek, endOfWeek, format, addDays } from "date-fns";
+import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
 
 // Helper function to get familyId from request or fallback to user's first family
 async function getFamilyId(req: any, userId: string): Promise<string | null> {
@@ -3227,6 +3228,219 @@ Visit Kindora Calendar: ${joinUrl}
     } catch (error) {
       console.error("Error accessing emergency bridge:", error);
       res.status(500).json({ error: "Failed to access emergency bridge" });
+    }
+  });
+
+  // Gmail Invoice Integration Routes
+
+  // Check if Gmail is connected
+  app.get("/api/gmail/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const connected = await isGmailConnected();
+      res.json({ connected });
+    } catch (error) {
+      console.error("Error checking Gmail status:", error);
+      res.json({ connected: false });
+    }
+  });
+
+  // Scan Gmail for invoices (requires owner or member role)
+  app.post("/api/gmail/scan", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+
+      // Verify user has permission to manage invoices (owners and members only)
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role || role === 'caregiver') {
+        return res.status(403).json({ error: "Only family owners and members can scan for invoices" });
+      }
+
+      const daysBack = req.body.daysBack || 30;
+      const invoices = await scanForInvoices(daysBack);
+
+      // Save new invoices to database (skip duplicates)
+      const savedInvoices = [];
+      for (const invoice of invoices) {
+        const existing = await storage.getParsedInvoiceByMessageId(invoice.messageId, familyId);
+        if (!existing) {
+          const saved = await storage.createParsedInvoice(familyId, userId, {
+            gmailMessageId: invoice.messageId,
+            subject: invoice.subject,
+            sender: invoice.sender,
+            senderEmail: invoice.senderEmail,
+            amount: invoice.amount,
+            dueDate: invoice.dueDate,
+            category: invoice.category,
+            snippet: invoice.snippet,
+            receivedAt: invoice.receivedAt,
+          });
+          savedInvoices.push(saved);
+        } else {
+          savedInvoices.push(existing);
+        }
+      }
+
+      res.json({ 
+        found: invoices.length,
+        saved: savedInvoices.length,
+        invoices: savedInvoices
+      });
+    } catch (error) {
+      console.error("Error scanning Gmail:", error);
+      res.status(500).json({ error: "Failed to scan Gmail for invoices" });
+    }
+  });
+
+  // Get stored invoices for family (requires family membership)
+  app.get("/api/invoices", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+
+      // Verify user is a member of this family
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+
+      // Caregivers can view invoices but with limited info (no email addresses)
+      const invoices = await storage.getParsedInvoices(familyId);
+      
+      if (role === 'caregiver') {
+        // Filter sensitive information for caregivers
+        const filteredInvoices = invoices.map(inv => ({
+          ...inv,
+          senderEmail: null,
+          snippet: null,
+        }));
+        return res.json(filteredInvoices);
+      }
+
+      res.json(invoices);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ error: "Failed to fetch invoices" });
+    }
+  });
+
+  // Add invoice to calendar (requires owner or member role)
+  app.post("/api/invoices/:id/add-to-calendar", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      const invoiceId = req.params.id;
+
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+
+      // Verify user has permission to add to calendar
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role || role === 'caregiver') {
+        return res.status(403).json({ error: "Only family owners and members can add invoices to calendar" });
+      }
+
+      // Get invoice
+      const invoices = await storage.getParsedInvoices(familyId);
+      const invoice = invoices.find(i => i.id === invoiceId);
+
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Determine event date - use due date if available, otherwise use received date
+      const eventDate = invoice.dueDate || invoice.receivedAt || new Date();
+      
+      // Create event for this invoice
+      const eventTitle = `Payment Due: ${invoice.sender}`;
+      const eventDescription = invoice.amount 
+        ? `Amount: $${invoice.amount}\n\nFrom: ${invoice.sender}\nSubject: ${invoice.subject}`
+        : `From: ${invoice.sender}\nSubject: ${invoice.subject}`;
+
+      // Create an all-day event (use midnight to midnight)
+      const startTime = new Date(eventDate);
+      startTime.setHours(9, 0, 0, 0); // 9 AM
+      const endTime = new Date(eventDate);
+      endTime.setHours(9, 30, 0, 0); // 9:30 AM
+
+      // Use a financial/blue color for payment events
+      const financialColor = "#3B82F6"; // blue
+
+      const event = await storage.createEvent(familyId, {
+        title: eventTitle,
+        description: eventDescription,
+        startTime,
+        endTime,
+        memberIds: [], // No specific member assigned
+        color: financialColor,
+      });
+
+      // Update invoice status
+      await storage.updateParsedInvoiceStatus(invoiceId, familyId, 'added_to_calendar', event.id);
+
+      res.json({ event, invoice });
+    } catch (error) {
+      console.error("Error adding invoice to calendar:", error);
+      res.status(500).json({ error: "Failed to add invoice to calendar" });
+    }
+  });
+
+  // Dismiss an invoice (requires owner or member role)
+  app.post("/api/invoices/:id/dismiss", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      const invoiceId = req.params.id;
+
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+
+      // Verify user has permission
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role || role === 'caregiver') {
+        return res.status(403).json({ error: "Only family owners and members can dismiss invoices" });
+      }
+
+      await storage.updateParsedInvoiceStatus(invoiceId, familyId, 'dismissed');
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error dismissing invoice:", error);
+      res.status(500).json({ error: "Failed to dismiss invoice" });
+    }
+  });
+
+  // Delete an invoice (requires owner or member role)
+  app.delete("/api/invoices/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      const invoiceId = req.params.id;
+
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+
+      // Verify user has permission
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role || role === 'caregiver') {
+        return res.status(403).json({ error: "Only family owners and members can delete invoices" });
+      }
+
+      await storage.deleteParsedInvoice(invoiceId, familyId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      res.status(500).json({ error: "Failed to delete invoice" });
     }
   });
 

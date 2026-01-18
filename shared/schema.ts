@@ -196,6 +196,25 @@ export const careDocuments = pgTable("care_documents", {
   updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
 });
 
+// Parsed Invoices table - invoices extracted from Gmail
+export const parsedInvoices = pgTable("parsed_invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  gmailMessageId: varchar("gmail_message_id").notNull(), // Gmail message ID to prevent duplicates
+  subject: text("subject").notNull(),
+  sender: text("sender").notNull(),
+  senderEmail: text("sender_email"),
+  amount: numeric("amount", { precision: 10, scale: 2 }),
+  dueDate: timestamp("due_date"),
+  category: varchar("category").notNull().default("other"), // 'utility', 'credit_card', 'subscription', 'medical', 'insurance', 'other'
+  status: varchar("status").notNull().default("pending"), // 'pending', 'added_to_calendar', 'dismissed'
+  eventId: varchar("event_id"), // If added to calendar, link to the event
+  snippet: text("snippet"), // Email preview snippet
+  receivedAt: timestamp("received_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
 // Emergency Bridge Tokens - time-limited access links for backup caregivers
 export const emergencyBridgeTokens = pgTable("emergency_bridge_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -373,6 +392,31 @@ export const insertEmergencyBridgeTokenSchema = createInsertSchema(emergencyBrid
   expiresAt: z.coerce.date(),
 });
 
+export const INVOICE_CATEGORIES = ['utility', 'credit_card', 'subscription', 'medical', 'insurance', 'other'] as const;
+export type InvoiceCategory = typeof INVOICE_CATEGORIES[number];
+
+export const INVOICE_STATUSES = ['pending', 'added_to_calendar', 'dismissed'] as const;
+export type InvoiceStatus = typeof INVOICE_STATUSES[number];
+
+export const insertParsedInvoiceSchema = createInsertSchema(parsedInvoices).omit({
+  id: true,
+  familyId: true,
+  createdByUserId: true,
+  status: true,
+  eventId: true,
+  createdAt: true,
+}).extend({
+  subject: z.string().min(1),
+  sender: z.string().min(1),
+  senderEmail: z.string().optional().nullable(),
+  amount: z.number().positive().optional().nullable(),
+  dueDate: z.coerce.date().optional().nullable(),
+  category: z.enum(INVOICE_CATEGORIES).default('other'),
+  gmailMessageId: z.string().min(1),
+  snippet: z.string().optional().nullable(),
+  receivedAt: z.coerce.date().optional().nullable(),
+});
+
 // User types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -436,6 +480,10 @@ export type CareDocument = typeof careDocuments.$inferSelect;
 // Emergency Bridge Token types
 export type InsertEmergencyBridgeToken = z.infer<typeof insertEmergencyBridgeTokenSchema>;
 export type EmergencyBridgeToken = typeof emergencyBridgeTokens.$inferSelect;
+
+// Parsed Invoice types
+export type InsertParsedInvoice = z.infer<typeof insertParsedInvoiceSchema>;
+export type ParsedInvoice = typeof parsedInvoices.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {
