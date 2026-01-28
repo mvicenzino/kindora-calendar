@@ -6,6 +6,9 @@ A modern calendar application for families and caregivers, featuring a "liquid g
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Business Documentation
+- **KINDORA_BUSINESS_PLAN.md**: Comprehensive investor-ready business plan covering Executive Summary, Problem Statement, Solution, Market Analysis (TAM/SAM/SOM), Competitive Analysis, Product Roadmap, Business Model, Go-to-Market Strategy, Operations Plan, 3-Year Financial Projections, Risk Analysis, and Exit Strategy.
+
 ## System Architecture
 ### Frontend
 Built with React 18, TypeScript, and Vite, utilizing Wouter for routing and TanStack Query for server state management. The UI is designed with shadcn/ui (New York style) based on Radix UI primitives and styled with Tailwind CSS. A custom "Liquid Glass" design system incorporates frosted effects, layered depth, and specific typography (Inter, Space Grotesk). State management uses React hooks, with React Hook Form and Zod for form handling. The design is responsive and accessibility-focused.
