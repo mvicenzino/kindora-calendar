@@ -95,8 +95,19 @@ If you cannot extract any events, return an empty array: []`;
       events,
       rawText: text,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error parsing schedule:", error);
+    
+    // Handle rate limiting errors with a user-friendly message
+    if (error?.message?.includes("429") || error?.message?.includes("RESOURCE_EXHAUSTED") || 
+        error?.code === 429 || error?.status === "RESOURCE_EXHAUSTED") {
+      return {
+        success: false,
+        events: [],
+        error: "The AI service is temporarily busy. Please wait a moment and try again.",
+      };
+    }
+    
     return {
       success: false,
       events: [],
@@ -167,8 +178,19 @@ Respond with a JSON array of events only. If you cannot extract any events, retu
       success: true,
       events,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error parsing image schedule:", error);
+    
+    // Handle rate limiting errors with a user-friendly message
+    if (error?.message?.includes("429") || error?.message?.includes("RESOURCE_EXHAUSTED") || 
+        error?.code === 429 || error?.status === "RESOURCE_EXHAUSTED") {
+      return {
+        success: false,
+        events: [],
+        error: "The AI service is temporarily busy. Please wait a moment and try again.",
+      };
+    }
+    
     return {
       success: false,
       events: [],
