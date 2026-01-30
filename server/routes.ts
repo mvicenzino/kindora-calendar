@@ -9,6 +9,7 @@ import type { FamilyRole } from "@shared/schema";
 import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
 import { startOfWeek, endOfWeek, format, addDays } from "date-fns";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
+import { parseScheduleFromText, parseScheduleFromImage, parseScheduleFromPdf, type ParsedScheduleEvent } from "./scheduleParser";
 
 // Helper function to get familyId from request or fallback to user's first family
 async function getFamilyId(req: any, userId: string): Promise<string | null> {
@@ -1262,6 +1263,72 @@ Visit Kindora Calendar: ${joinUrl}
       }
       console.error("Error bulk importing events:", error);
       res.status(500).json({ error: "Failed to import events", details: String(error) });
+    }
+  });
+
+  // Parse schedule from text using AI
+  app.post("/api/schedule/parse-text", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const { text } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ error: "Text content is required" });
+      }
+      
+      const result = await parseScheduleFromText(text);
+      res.json(result);
+    } catch (error) {
+      console.error("Error parsing schedule text:", error);
+      res.status(500).json({ error: "Failed to parse schedule", details: String(error) });
+    }
+  });
+
+  // Parse schedule from image using AI
+  app.post("/api/schedule/parse-image", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const { base64Data, mimeType } = req.body;
+      if (!base64Data || !mimeType) {
+        return res.status(400).json({ error: "Image data and mimeType are required" });
+      }
+      
+      const result = await parseScheduleFromImage(base64Data, mimeType);
+      res.json(result);
+    } catch (error) {
+      console.error("Error parsing schedule image:", error);
+      res.status(500).json({ error: "Failed to parse schedule", details: String(error) });
+    }
+  });
+
+  // Parse schedule from PDF using AI
+  app.post("/api/schedule/parse-pdf", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const { base64Data } = req.body;
+      if (!base64Data) {
+        return res.status(400).json({ error: "PDF data is required" });
+      }
+      
+      const result = await parseScheduleFromPdf(base64Data);
+      res.json(result);
+    } catch (error) {
+      console.error("Error parsing schedule PDF:", error);
+      res.status(500).json({ error: "Failed to parse schedule", details: String(error) });
     }
   });
 

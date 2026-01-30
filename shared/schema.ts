@@ -260,7 +260,7 @@ export const insertEventSchema = createInsertSchema(events).omit({
   createdAt: true,
 }).extend({
   title: z.string().min(1, "Title is required").trim(),
-  memberIds: z.array(z.string()).min(1, "At least one family member is required"),
+  memberIds: z.array(z.string()), // Allow empty arrays for imported events
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
   recurrenceRule: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly']).nullable().optional(),
