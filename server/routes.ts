@@ -10,6 +10,7 @@ import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummary
 import { startOfWeek, endOfWeek, format, addDays } from "date-fns";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
 import { parseScheduleFromText, parseScheduleFromImage, parseScheduleFromPdf, type ParsedScheduleEvent } from "./scheduleParser";
+import { parseICalData } from "./icalParser";
 
 // Helper function to get familyId from request or fallback to user's first family
 async function getFamilyId(req: any, userId: string): Promise<string | null> {
