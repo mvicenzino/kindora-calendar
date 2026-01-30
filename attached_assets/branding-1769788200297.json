@@ -1,0 +1,126 @@
+{
+  "colorScheme": "light",
+  "fonts": [
+    {
+      "family": "Inter",
+      "count": 51
+    },
+    {
+      "family": "-apple-system",
+      "count": 51
+    },
+    {
+      "family": "BlinkMacSystemFont",
+      "count": 51
+    },
+    {
+      "family": "Segoe UI",
+      "count": 51
+    },
+    {
+      "family": "Roboto",
+      "count": 51
+    },
+    {
+      "family": "Oxygen",
+      "count": 51
+    },
+    {
+      "family": "Ubuntu",
+      "count": 51
+    },
+    {
+      "family": "sans-serif",
+      "count": 51
+    },
+    {
+      "family": "Arial",
+      "count": 1
+    }
+  ],
+  "colors": {
+    "primary": "#475569",
+    "accent": "#0F172A",
+    "background": "#FFFFFF",
+    "textPrimary": "#0F172A",
+    "link": "#0F172A"
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Inter",
+      "heading": "Inter"
+    },
+    "fontStacks": {
+      "body": [
+        "Inter",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "Roboto",
+        "Oxygen",
+        "Ubuntu",
+        "sans-serif"
+      ],
+      "heading": [
+        "Inter",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "Roboto",
+        "Oxygen",
+        "Ubuntu",
+        "sans-serif"
+      ],
+      "paragraph": [
+        "Inter",
+        "-apple-system",
+        "BlinkMacSystemFont",
+        "Segoe UI",
+        "Roboto",
+        "Oxygen",
+        "Ubuntu",
+        "sans-serif"
+      ]
+    },
+    "fontSizes": {
+      "h1": "72px",
+      "h2": "40px",
+      "body": "20px"
+    }
+  },
+  "spacing": {
+    "baseUnit": 4,
+    "borderRadius": "0px"
+  },
+  "components": {},
+  "images": {
+    "logo": "File saved at: attached_assets/logo.svg",
+    "favicon": "https://stride-jobs.vercel.app/static/img/favicon.svg",
+    "ogImage": null
+  },
+  "__framework_hints": [],
+  "__llm_logo_reasoning": {
+    "selectedIndex": 0,
+    "reasoning": "Logo rejected: Red flags detected (small square icon). Strong indicators: header logo linking to homepage, header location, visible, highest logo on page, small square icon (likely UI icon, heavy penalty), SVG format. Score: 88 (clear winner by 88 points)",
+    "confidence": 0.9,
+    "rejected": true
+  },
+  "__llm_button_reasoning": {
+    "primary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "secondary": {
+      "index": -1,
+      "text": "N/A",
+      "reasoning": "LLM failed"
+    },
+    "confidence": 0
+  },
+  "confidence": {
+    "buttons": 0,
+    "colors": 0,
+    "overall": 0
+  }
+}
