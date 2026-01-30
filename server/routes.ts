@@ -1333,6 +1333,28 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // Parse iCal (.ics) file - no AI needed, direct parsing
+  app.post("/api/schedule/parse-ical", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      const { icsContent } = req.body;
+      if (!icsContent) {
+        return res.status(400).json({ error: "iCal content is required" });
+      }
+      
+      const result = parseICalData(icsContent);
+      res.json(result);
+    } catch (error) {
+      console.error("Error parsing iCal file:", error);
+      res.status(500).json({ error: "Failed to parse calendar file", details: String(error) });
+    }
+  });
+
   app.put("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

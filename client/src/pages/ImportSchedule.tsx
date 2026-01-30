@@ -62,8 +62,9 @@ export default function ImportSchedule() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const icalInputRef = useRef<HTMLInputElement>(null);
   
-  const [activeTab, setActiveTab] = useState("text");
+  const [activeTab, setActiveTab] = useState("ical");
   const [textInput, setTextInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
@@ -123,6 +124,31 @@ export default function ImportSchedule() {
         });
       } else {
         setParseError(data.error || "No events found in the file");
+        setParsedEvents([]);
+      }
+    },
+    onError: (error: Error) => {
+      setParseError(error.message);
+      setParsedEvents([]);
+    },
+  });
+
+  const parseICalMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const icsContent = await file.text();
+      const res = await apiRequest("POST", "/api/schedule/parse-ical", { icsContent });
+      return res.json() as Promise<ParseResult>;
+    },
+    onSuccess: (data) => {
+      if (data.success && data.events.length > 0) {
+        setParsedEvents(data.events);
+        setParseError(null);
+        toast({
+          title: "Calendar Imported",
+          description: `Found ${data.events.length} event(s) in the calendar file`,
+        });
+      } else {
+        setParseError(data.error || "No events found in the calendar file");
         setParsedEvents([]);
       }
     },
@@ -282,6 +308,10 @@ export default function ImportSchedule() {
             <CardContent className="space-y-4">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="bg-white/10 border border-white/20">
+                  <TabsTrigger value="ical" className="data-[state=active]:bg-white/20" data-testid="tab-ical">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    iCal
+                  </TabsTrigger>
                   <TabsTrigger value="text" className="data-[state=active]:bg-white/20" data-testid="tab-text">
                     <Type className="w-4 h-4 mr-2" />
                     Text
@@ -295,6 +325,51 @@ export default function ImportSchedule() {
                     PDF
                   </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="ical" className="mt-4">
+                  <div className="space-y-4">
+                    <div 
+                      className="border-2 border-dashed border-white/30 rounded-lg p-8 text-center cursor-pointer hover:border-white/50 transition-colors"
+                      onClick={() => icalInputRef.current?.click()}
+                      data-testid="dropzone-ical"
+                    >
+                      <input
+                        ref={icalInputRef}
+                        type="file"
+                        accept=".ics,.ical,text/calendar"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setSelectedFile(file);
+                            parseICalMutation.mutate(file);
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      {selectedFile && (selectedFile.name.endsWith('.ics') || selectedFile.name.endsWith('.ical')) ? (
+                        <div className="space-y-2">
+                          <Calendar className="w-12 h-12 mx-auto text-emerald-400" />
+                          <p className="text-white font-medium">{selectedFile.name}</p>
+                          <p className="text-white/60 text-sm">Click to change file</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Calendar className="w-12 h-12 mx-auto text-white/40" />
+                          <p className="text-white/70">Click to upload a calendar file</p>
+                          <p className="text-white/50 text-sm">.ics or .ical from Google Calendar or Apple Calendar</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-4 text-sm text-white/70">
+                      <p className="font-medium text-white mb-2">How to export:</p>
+                      <ul className="space-y-1 list-disc list-inside">
+                        <li><strong>Google Calendar:</strong> Settings → Import & Export → Export</li>
+                        <li><strong>Apple Calendar:</strong> File → Export → Export...</li>
+                        <li><strong>Outlook:</strong> File → Save Calendar → Save as .ics</li>
+                      </ul>
+                    </div>
+                  </div>
+                </TabsContent>
 
                 <TabsContent value="text" className="mt-4">
                   <Textarea
