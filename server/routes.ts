@@ -1211,6 +1211,60 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // Bulk import events (e.g., summer camp schedules)
+  app.post("/api/events/bulk-import", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      
+      // Check permissions
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canCreateEvents')) {
+        return res.status(403).json({ error: "You don't have permission to create events" });
+      }
+      
+      const { events: eventsData, source } = req.body;
+      
+      if (!Array.isArray(eventsData) || eventsData.length === 0) {
+        return res.status(400).json({ error: "Events array is required" });
+      }
+      
+      const createdEvents: any[] = [];
+      
+      for (const eventData of eventsData) {
+        const result = insertEventSchema.safeParse(eventData);
+        if (!result.success) {
+          console.warn("Skipping invalid event:", result.error.message);
+          continue;
+        }
+        
+        const event = await storage.createEvent(familyId, result.data);
+        createdEvents.push(event);
+      }
+      
+      res.status(201).json({ 
+        success: true, 
+        imported: createdEvents.length,
+        source: source || "manual",
+        events: createdEvents 
+      });
+    } catch (error) {
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
+      }
+      console.error("Error bulk importing events:", error);
+      res.status(500).json({ error: "Failed to import events", details: String(error) });
+    }
+  });
+
   app.put("/api/events/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
