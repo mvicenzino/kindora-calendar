@@ -341,7 +341,12 @@ export default function ImportSchedule() {
                           const file = e.target.files?.[0];
                           if (file) {
                             setSelectedFile(file);
-                            parseICalMutation.mutate(file);
+                            setParsedEvents([]);
+                            setParseError(null);
+                            setIsParsing(true);
+                            parseICalMutation.mutate(file, {
+                              onSettled: () => setIsParsing(false)
+                            });
                           }
                         }}
                         className="hidden"
