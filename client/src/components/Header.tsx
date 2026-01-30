@@ -1,4 +1,4 @@
-import { Search, Image, MessageCircle, FileText, X, Receipt } from "lucide-react";
+import { Search, Image, MessageCircle, FileText, X, Receipt, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
@@ -42,6 +42,17 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
 
           {/* Right: Action buttons */}
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            {/* Bulk Upload button - prominent for easy discovery */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-white border-white/50 bg-gradient-to-r from-orange-500/30 to-amber-500/30 hover:from-orange-500/50 hover:to-amber-500/50 h-8 px-2 sm:px-3 gap-1"
+              onClick={() => setLocation('/import')}
+              data-testid="button-bulk-upload"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline text-xs font-medium">Bulk Upload</span>
+            </Button>
             {/* Exit Demo button - only visible in demo mode */}
             {isDemoMode && (
               <Button
