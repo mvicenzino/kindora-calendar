@@ -3588,6 +3588,28 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // === Stride Integration: /add-event intake route ===
+  // Accepts event data via query params and redirects to the calendar with import data.
+  // Works for both authenticated and unauthenticated users.
+  // Deep link format: /add-event?title=...&start=...&end=...&description=...&color=...
+  app.get("/add-event", (req, res) => {
+    const { title, start, end, description, color } = req.query;
+
+    if (!title || !start) {
+      return res.redirect("/");
+    }
+
+    const params = new URLSearchParams();
+    if (title) params.set("title", String(title));
+    if (start) params.set("start", String(start));
+    if (end) params.set("end", String(end));
+    if (description) params.set("description", String(description));
+    if (color) params.set("color", String(color));
+    params.set("source", "stride");
+
+    return res.redirect(`/?import=${encodeURIComponent(params.toString())}`);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -37,6 +37,36 @@ export default function Home() {
   const [eventModalDate, setEventModalDate] = useState<Date | undefined>();
   const [dayEventsOpen, setDayEventsOpen] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date>(new Date());
+  const [importedEvent, setImportedEvent] = useState<{
+    title: string;
+    description?: string;
+    startTime: Date;
+    endTime: Date;
+  } | undefined>();
+
+  // Detect Stride import params in URL and auto-open event modal
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const importData = urlParams.get("import");
+    if (importData && isAuthenticated && !isLoading) {
+      const params = new URLSearchParams(importData);
+      const title = params.get("title");
+      const start = params.get("start");
+      if (title && start) {
+        const startTime = new Date(start);
+        const end = params.get("end");
+        const endTime = end ? new Date(end) : new Date(startTime.getTime() + 60 * 60 * 1000);
+        const description = params.get("description") || undefined;
+
+        setImportedEvent({ title, description, startTime, endTime });
+        setSelectedEventId(undefined);
+        setEventModalOpen(true);
+
+        // Clean the URL without reloading
+        window.history.replaceState({}, "", "/");
+      }
+    }
+  }, [isAuthenticated, isLoading]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -377,6 +407,7 @@ export default function Home() {
           setEventModalOpen(false);
           setSelectedEventId(undefined);
           setEventModalDate(undefined);
+          setImportedEvent(undefined);
         }}
         onSave={handleSaveEvent}
         onDelete={handleDeleteEvent}
@@ -385,6 +416,12 @@ export default function Home() {
           description: selectedEvent.description || undefined,
           startTime: new Date(selectedEvent.startTime),
           endTime: new Date(selectedEvent.endTime)
+        } : importedEvent ? {
+          title: importedEvent.title,
+          description: importedEvent.description,
+          startTime: importedEvent.startTime,
+          endTime: importedEvent.endTime,
+          memberIds: [],
         } : undefined}
         members={members}
         selectedDate={eventModalDate}
