@@ -48,10 +48,12 @@ export default function Home() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const importData = urlParams.get("import");
+    console.log("[Stride Import] useEffect fired", { importData: importData?.substring(0, 80), isAuthenticated, isLoading });
     if (importData && isAuthenticated && !isLoading) {
       const params = new URLSearchParams(importData);
       const title = params.get("title");
       const start = params.get("start");
+      console.log("[Stride Import] parsed", { title, start });
       if (title && start) {
         const startTime = new Date(start);
         const end = params.get("end");
@@ -61,6 +63,7 @@ export default function Home() {
         setImportedEvent({ title, description, startTime, endTime });
         setSelectedEventId(undefined);
         setEventModalOpen(true);
+        console.log("[Stride Import] modal opened with", { title, startTime, endTime });
 
         // Clean the URL without reloading
         window.history.replaceState({}, "", "/");
