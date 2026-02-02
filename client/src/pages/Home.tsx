@@ -45,29 +45,43 @@ export default function Home() {
   } | undefined>();
 
   // Detect Stride import params in URL and auto-open event modal
+  // Preserves import data through login redirect via sessionStorage
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const importData = urlParams.get("import");
-    console.log("[Stride Import] useEffect fired", { importData: importData?.substring(0, 80), isAuthenticated, isLoading });
-    if (importData && isAuthenticated && !isLoading) {
-      const params = new URLSearchParams(importData);
-      const title = params.get("title");
-      const start = params.get("start");
-      console.log("[Stride Import] parsed", { title, start });
-      if (title && start) {
-        const startTime = new Date(start);
-        const end = params.get("end");
-        const endTime = end ? new Date(end) : new Date(startTime.getTime() + 60 * 60 * 1000);
-        const description = params.get("description") || undefined;
+    let importData = urlParams.get("import");
 
-        setImportedEvent({ title, description, startTime, endTime });
-        setSelectedEventId(undefined);
-        setEventModalOpen(true);
-        console.log("[Stride Import] modal opened with", { title, startTime, endTime });
-
-        // Clean the URL without reloading
-        window.history.replaceState({}, "", "/");
+    // If no import param in URL, check sessionStorage (preserved through login)
+    if (!importData) {
+      const saved = sessionStorage.getItem("stride_import");
+      if (saved) {
+        importData = saved;
+        sessionStorage.removeItem("stride_import");
       }
+    }
+
+    if (!importData) return;
+
+    // If not yet authenticated, save for after login and bail
+    if (!isAuthenticated || isLoading) {
+      sessionStorage.setItem("stride_import", importData);
+      return;
+    }
+
+    const params = new URLSearchParams(importData);
+    const title = params.get("title");
+    const start = params.get("start");
+    if (title && start) {
+      const startTime = new Date(start);
+      const end = params.get("end");
+      const endTime = end ? new Date(end) : new Date(startTime.getTime() + 60 * 60 * 1000);
+      const description = params.get("description") || undefined;
+
+      setImportedEvent({ title, description, startTime, endTime });
+      setSelectedEventId(undefined);
+      setEventModalOpen(true);
+
+      // Clean the URL without reloading
+      window.history.replaceState({}, "", "/");
     }
   }, [isAuthenticated, isLoading]);
 
