@@ -49,6 +49,9 @@ export default function Home() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     let importData = urlParams.get("import");
+    if (importData || sessionStorage.getItem("stride_import")) {
+      alert("Stride import detected: " + (importData || sessionStorage.getItem("stride_import"))?.substring(0, 60));
+    }
 
     // If no import param in URL, check sessionStorage (preserved through login)
     if (!importData) {
