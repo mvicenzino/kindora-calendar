@@ -12,6 +12,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Preserve Stride import params through auth redirects
+      (function() {
+        var p = new URLSearchParams(window.location.search);
+        var imp = p.get("import");
+        if (imp) {
+          sessionStorage.setItem("stride_import", imp);
+          window.history.replaceState({}, "", "/");
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

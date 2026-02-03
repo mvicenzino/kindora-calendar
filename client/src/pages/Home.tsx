@@ -44,31 +44,13 @@ export default function Home() {
     endTime: Date;
   } | undefined>();
 
-  // Detect Stride import params in URL and auto-open event modal
-  // Preserves import data through login redirect via sessionStorage
+  // Detect Stride import from sessionStorage (saved by inline script in index.html)
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    let importData = urlParams.get("import");
-    if (importData || sessionStorage.getItem("stride_import")) {
-      alert("Stride import detected: " + (importData || sessionStorage.getItem("stride_import"))?.substring(0, 60));
-    }
+    if (!isAuthenticated || isLoading) return;
 
-    // If no import param in URL, check sessionStorage (preserved through login)
-    if (!importData) {
-      const saved = sessionStorage.getItem("stride_import");
-      if (saved) {
-        importData = saved;
-        sessionStorage.removeItem("stride_import");
-      }
-    }
-
+    const importData = sessionStorage.getItem("stride_import");
     if (!importData) return;
-
-    // If not yet authenticated, save for after login and bail
-    if (!isAuthenticated || isLoading) {
-      sessionStorage.setItem("stride_import", importData);
-      return;
-    }
+    sessionStorage.removeItem("stride_import");
 
     const params = new URLSearchParams(importData);
     const title = params.get("title");
@@ -82,9 +64,6 @@ export default function Home() {
       setImportedEvent({ title, description, startTime, endTime });
       setSelectedEventId(undefined);
       setEventModalOpen(true);
-
-      // Clean the URL without reloading
-      window.history.replaceState({}, "", "/");
     }
   }, [isAuthenticated, isLoading]);
 
