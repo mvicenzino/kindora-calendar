@@ -58,7 +58,22 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      let page = await vite.transformIndexHtml(url, template);
+
+      // Inject Stride import handler script after Vite transforms HTML
+      const strideScript = `<script>
+(function() {
+  var p = new URLSearchParams(window.location.search);
+  var imp = p.get("import");
+  console.log("[Stride] import param =", imp ? imp.substring(0, 50) : null);
+  if (imp) {
+    sessionStorage.setItem("stride_import", imp);
+    console.log("[Stride] Saved to sessionStorage");
+  }
+})();
+</script>`;
+      page = page.replace('</head>', strideScript + '</head>');
+
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
