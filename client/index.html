@@ -17,9 +17,14 @@
       (function() {
         var p = new URLSearchParams(window.location.search);
         var imp = p.get("import");
+        console.log("[Stride] index.html script: import param =", imp ? imp.substring(0, 50) : null);
         if (imp) {
           sessionStorage.setItem("stride_import", imp);
+          console.log("[Stride] Saved to sessionStorage, clearing URL");
           window.history.replaceState({}, "", "/");
+        } else {
+          var saved = sessionStorage.getItem("stride_import");
+          console.log("[Stride] No import param, sessionStorage has:", saved ? saved.substring(0, 50) : null);
         }
       })();
     </script>
