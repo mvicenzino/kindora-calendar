@@ -65,10 +65,8 @@ export async function setupVite(app: Express, server: Server) {
 (function() {
   var p = new URLSearchParams(window.location.search);
   var imp = p.get("import");
-  console.log("[Stride] import param =", imp ? imp.substring(0, 50) : null);
   if (imp) {
     sessionStorage.setItem("stride_import", imp);
-    console.log("[Stride] Saved to sessionStorage");
   }
 })();
 </script>`;
