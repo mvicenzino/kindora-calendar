@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
+import { drizzle } from "drizzle-orm/neon-http";
+import { families, familyMemberships, users as usersTable } from "@shared/schema";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -140,6 +142,27 @@ async function createRecurringEvents(
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
+
+  // Admin: list families (API key only, for setup/discovery)
+  app.get("/api/admin/families", async (req: any, res) => {
+    const apiKey = req.headers['x-api-key'] as string;
+    if (!apiKey || !process.env.LANGLY_API_KEY || apiKey !== process.env.LANGLY_API_KEY) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    try {
+      if (!process.env.DATABASE_URL) {
+        return res.status(500).json({ error: "No DATABASE_URL configured" });
+      }
+      const db = drizzle(process.env.DATABASE_URL);
+      const allFamilies = await db.select().from(families);
+      const allMemberships = await db.select().from(familyMemberships);
+      const allUsers = await db.select({ id: usersTable.id, firstName: usersTable.firstName, email: usersTable.email }).from(usersTable);
+      res.json({ families: allFamilies, memberships: allMemberships, users: allUsers });
+    } catch (error) {
+      console.error("Admin families error:", error);
+      res.status(500).json({ error: "Failed to query families" });
+    }
+  });
 
   // Auth user endpoint
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
