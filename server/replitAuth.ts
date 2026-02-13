@@ -259,7 +259,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const apiKey = req.headers['x-api-key'] as string;
   if (apiKey && process.env.LANGLY_API_KEY && apiKey === process.env.LANGLY_API_KEY) {
     (req as any).user = {
-      claims: { sub: 'langly-service' },
+      claims: { sub: '21601610' },
       expires_at: Math.floor(Date.now() / 1000) + 86400,
     };
     return next();
