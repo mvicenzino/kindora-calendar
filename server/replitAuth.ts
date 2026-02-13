@@ -255,6 +255,16 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // API key bypass for server-to-server calls (e.g., Langly)
+  const apiKey = req.headers['x-api-key'] as string;
+  if (apiKey && process.env.LANGLY_API_KEY && apiKey === process.env.LANGLY_API_KEY) {
+    (req as any).user = {
+      claims: { sub: 'langly-service' },
+      expires_at: Math.floor(Date.now() / 1000) + 86400,
+    };
+    return next();
+  }
+
   const user = req.user as any;
 
   if (!req.isAuthenticated() || !user.expires_at) {
