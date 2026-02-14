@@ -17,7 +17,7 @@ export async function getUserFamilyRole(
 ): Promise<FamilyRole | null> {
   // API key users (e.g. Langly, OpenClaw) get admin access to all families
   if (userId === API_KEY_USER_ID) {
-    return 'admin' as FamilyRole;
+    return 'owner' as FamilyRole;
   }
 
   const membership = await storage.getUserFamilyMembership(userId, familyId);
