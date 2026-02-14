@@ -46,7 +46,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             <Button
               size="sm"
               variant="outline"
-              className="text-white border-white/50 bg-gradient-to-r from-orange-500/30 to-amber-500/30 hover:from-orange-500/50 hover:to-amber-500/50 h-8 px-2 sm:px-3 gap-1"
+              className="text-white border-orange-400/50 bg-gradient-to-r from-orange-500/30 to-amber-500/30 px-2 sm:px-3 gap-1"
               onClick={() => setLocation('/import')}
               data-testid="button-bulk-upload"
             >
@@ -58,7 +58,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
               <Button
                 size="sm"
                 variant="outline"
-                className="text-white border-white/50 bg-red-500/20 hover:bg-red-500/30 h-8 px-2 sm:px-3 gap-1"
+                className="text-white border-red-400/50 bg-red-500/20 px-2 sm:px-3 gap-1"
                 onClick={handleExitDemo}
                 data-testid="button-exit-demo"
               >
@@ -69,52 +69,52 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9"
+              className="text-white border border-white/20"
               aria-label="Messages"
               onClick={() => setLocation('/messages')}
               data-testid="button-messages"
             >
-              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <MessageCircle className="w-4 h-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9"
+              className="text-white border border-white/20"
               aria-label="Documents"
               onClick={() => setLocation('/documents')}
               data-testid="button-documents"
             >
-              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+              <FileText className="w-4 h-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9"
+              className="text-white border border-white/20"
               aria-label="Invoices"
               onClick={() => setLocation('/invoices')}
               data-testid="button-invoices"
             >
-              <Receipt className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Receipt className="w-4 h-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9"
+              className="text-white border border-white/20"
               aria-label="Memories"
               onClick={() => setLocation('/memories')}
               data-testid="button-memories"
             >
-              <Image className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Image className="w-4 h-4" />
             </Button>
             <Button
               size="icon"
               variant="ghost"
-              className="text-white border border-white/20 h-8 w-8 sm:h-9 sm:w-9 hidden sm:flex"
+              className="text-white border border-white/20 hidden sm:flex"
               aria-label="Search events"
               onClick={onSearchClick}
               data-testid="button-search"
             >
-              <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Search className="w-4 h-4" />
             </Button>
             <ProfileMenu 
               members={members} 
