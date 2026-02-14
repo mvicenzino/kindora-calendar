@@ -7,17 +7,25 @@ export interface PermissionContext {
   role: FamilyRole;
 }
 
+// User ID set by API key bypass in replitAuth.ts for server-to-server calls
+const API_KEY_USER_ID = '21601610';
+
 export async function getUserFamilyRole(
   storage: IStorage,
   userId: string,
   familyId: string
 ): Promise<FamilyRole | null> {
+  // API key users (e.g. Langly, OpenClaw) get admin access to all families
+  if (userId === API_KEY_USER_ID) {
+    return 'admin' as FamilyRole;
+  }
+
   const membership = await storage.getUserFamilyMembership(userId, familyId);
-  
+
   if (!membership) {
     return null;
   }
-  
+
   return (membership.role as FamilyRole) || null;
 }
 
