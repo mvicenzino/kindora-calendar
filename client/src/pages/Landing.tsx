@@ -12,12 +12,21 @@ export default function Landing() {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
-  // Check for invite code in URL and store it
+  // Check for invite code or auth errors in URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('invite');
     if (inviteCode) {
       localStorage.setItem('pendingInviteCode', inviteCode);
+    }
+    const authError = urlParams.get('auth_error');
+    if (authError) {
+      toast({
+        title: "Sign-in issue",
+        description: "There was a problem signing in. Please try again. If it keeps happening, try a different browser or clear your cookies.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, '', '/');
     }
   }, []);
 
