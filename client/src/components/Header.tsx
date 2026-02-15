@@ -1,4 +1,4 @@
-import { Search, Image, MessageCircle, FileText, X, Receipt, Upload } from "lucide-react";
+import { Search, Image, MessageCircle, FileText, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
@@ -86,16 +86,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
             >
               <FileText className="w-4 h-4" />
             </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/20"
-              aria-label="Invoices"
-              onClick={() => setLocation('/invoices')}
-              data-testid="button-invoices"
-            >
-              <Receipt className="w-4 h-4" />
-            </Button>
+
             <Button
               size="icon"
               variant="ghost"

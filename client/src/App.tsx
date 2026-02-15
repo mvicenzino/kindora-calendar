@@ -16,7 +16,7 @@ import CaregiverDashboard from "@/pages/CaregiverDashboard";
 import Messages from "@/pages/Messages";
 import Documents from "@/pages/Documents";
 import EmergencyBridge from "@/pages/EmergencyBridge";
-import Invoices from "@/pages/Invoices";
+
 import ImportSchedule from "@/pages/ImportSchedule";
 
 function Router() {
@@ -42,7 +42,7 @@ function Router() {
           <Route path="/care" component={CaregiverDashboard} />
           <Route path="/messages" component={Messages} />
           <Route path="/documents" component={Documents} />
-          <Route path="/invoices" component={Invoices} />
+
           <Route path="/import" component={ImportSchedule} />
           <Route path="/memories" component={Memories} />
           <Route path="/family" component={FamilySettings} />
