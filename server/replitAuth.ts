@@ -6,7 +6,7 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import pg from "pg";
+import { Pool as NeonPool } from "@neondatabase/serverless";
 import { storage } from "./storage";
 import { seedDemoAccount } from "./demoSeed";
 
@@ -23,20 +23,16 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
-  const sessionPool = new pg.Pool({
+  const sessionPool = new NeonPool({
     connectionString: process.env.DATABASE_URL,
     max: 2,
-    min: 0,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 5000,
-    allowExitOnIdle: true,
   });
   const sessionStore = new pgStore({
-    pool: sessionPool,
+    pool: sessionPool as any,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
-    pruneSessionInterval: 120,
+    pruneSessionInterval: false,
   });
   return session({
     secret: process.env.SESSION_SECRET!,
