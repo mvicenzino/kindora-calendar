@@ -25,15 +25,18 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    max: 3,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000,
+    max: 2,
+    min: 0,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 5000,
+    allowExitOnIdle: true,
   });
   const sessionStore = new pgStore({
     pool: sessionPool,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
+    pruneSessionInterval: 120,
   });
   return session({
     secret: process.env.SESSION_SECRET!,
