@@ -25,11 +25,14 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    max: 2,
+    max: 1,
     min: 0,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 5000,
+    idleTimeoutMillis: 5000,
+    connectionTimeoutMillis: 3000,
     allowExitOnIdle: true,
+  });
+  sessionPool.on('error', (err: Error) => {
+    console.error('Session pool error (non-fatal):', err.message);
   });
   const sessionStore = new pgStore({
     pool: sessionPool,
@@ -37,6 +40,9 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
     pruneSessionInterval: false,
+    errorLog: (err: Error) => {
+      console.error('Session store error:', err.message);
+    },
   });
   return session({
     secret: process.env.SESSION_SECRET!,
