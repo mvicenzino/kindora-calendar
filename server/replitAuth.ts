@@ -23,8 +23,13 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
+  const dbUrl = process.env.DATABASE_URL!;
+  const poolerUrl = dbUrl.replace(
+    /(@ep-[^.]+)(\.)/,
+    '$1-pooler$2'
+  );
   const sessionPool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: poolerUrl,
     max: 1,
     min: 0,
     idleTimeoutMillis: 5000,
