@@ -2,6 +2,7 @@ import { Search, Image, MessageCircle, FileText, X, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
 import FamilySelector from "@/components/FamilySelector";
+import AlertsPanel from "@/components/AlertsPanel";
 import type { UiFamilyMember } from "@shared/types";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
@@ -66,6 +67,7 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
                 <span className="hidden sm:inline text-xs font-medium">Exit Demo</span>
               </Button>
             )}
+            <AlertsPanel />
             <Button
               size="icon"
               variant="ghost"
