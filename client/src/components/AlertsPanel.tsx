@@ -96,8 +96,8 @@ export default function AlertsPanel() {
 
       {isOpen && (
         <div
-          className="fixed right-4 top-14 w-[calc(100vw-2rem)] max-w-sm bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl overflow-hidden"
-          style={{ zIndex: 9999 }}
+          className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-sm bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl overflow-hidden"
+          style={{ zIndex: 99999 }}
           data-testid="panel-alerts"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
