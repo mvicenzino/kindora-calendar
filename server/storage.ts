@@ -49,6 +49,7 @@ export interface IStorage {
 
   // Event Notes
   getEventNotes(eventId: string, familyId: string): Promise<EventNote[]>;
+  getAllEventNotesForFamily(familyId: string): Promise<EventNote[]>;
   createEventNote(familyId: string, note: InsertEventNote): Promise<EventNote>;
   deleteEventNote(id: string, familyId: string): Promise<void>;
 
@@ -505,6 +506,12 @@ export class MemStorage implements IStorage {
   async getEventNotes(eventId: string, familyId: string): Promise<EventNote[]> {
     return Array.from(this.eventNotesMap.values())
       .filter(n => n.eventId === eventId && n.familyId === familyId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  async getAllEventNotesForFamily(familyId: string): Promise<EventNote[]> {
+    return Array.from(this.eventNotesMap.values())
+      .filter(n => n.familyId === familyId)
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }
 
@@ -976,7 +983,12 @@ class DrizzleStorage implements IStorage {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL is required for DrizzleStorage");
     }
-    this.db = drizzle(process.env.DATABASE_URL);
+    const dbUrl = process.env.DATABASE_URL;
+    const poolerUrl = dbUrl.replace(
+      /(@ep-[^.]+)(\.)/,
+      '$1-pooler$2'
+    );
+    this.db = drizzle(poolerUrl);
   }
 
   private generateInviteCode(): string {
@@ -1300,6 +1312,12 @@ class DrizzleStorage implements IStorage {
   async getEventNotes(eventId: string, familyId: string): Promise<EventNote[]> {
     return await this.db.select().from(eventNotes)
       .where(and(eq(eventNotes.eventId, eventId), eq(eventNotes.familyId, familyId)))
+      .orderBy(eventNotes.createdAt);
+  }
+
+  async getAllEventNotesForFamily(familyId: string): Promise<EventNote[]> {
+    return await this.db.select().from(eventNotes)
+      .where(eq(eventNotes.familyId, familyId))
       .orderBy(eventNotes.createdAt);
   }
 
@@ -1913,6 +1931,11 @@ class DemoAwareStorage implements IStorage {
   async getEventNotes(eventId: string, familyId: string): Promise<EventNote[]> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.getEventNotes(eventId, familyId);
+  }
+
+  async getAllEventNotesForFamily(familyId: string): Promise<EventNote[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getAllEventNotesForFamily(familyId);
   }
 
   async createEventNote(familyId: string, note: InsertEventNote): Promise<EventNote> {

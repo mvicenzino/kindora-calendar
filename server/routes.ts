@@ -1135,18 +1135,30 @@ Visit Kindora Calendar: ${joinUrl}
       }
       const events = await storage.getEvents(familyId);
       
-      // Add note counts and latest note to each event
+      const allNotes = await storage.getAllEventNotesForFamily(familyId);
+      
+      const notesByEvent = new Map<string, typeof allNotes>();
+      for (const note of allNotes) {
+        const arr = notesByEvent.get(note.eventId) || [];
+        arr.push(note);
+        notesByEvent.set(note.eventId, arr);
+      }
+      
+      const authorCache = new Map<string, any>();
       const eventsWithNotes = await Promise.all(
         events.map(async (event) => {
-          const notes = await storage.getEventNotes(event.id, familyId);
-          const sortedNotes = notes.sort((a, b) => 
+          const notes = notesByEvent.get(event.id) || [];
+          const sortedNotes = [...notes].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
           const latestNote = sortedNotes[0];
           let latestNoteData = undefined;
           
           if (latestNote) {
-            const author = await storage.getUser(latestNote.authorUserId);
+            if (!authorCache.has(latestNote.authorUserId)) {
+              authorCache.set(latestNote.authorUserId, await storage.getUser(latestNote.authorUserId));
+            }
+            const author = authorCache.get(latestNote.authorUserId);
             latestNoteData = {
               id: latestNote.id,
               content: latestNote.content,
@@ -1635,33 +1647,36 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Get all events for the family
-      const events = await storage.getEvents(familyId);
+      const [events, allFamilyNotes] = await Promise.all([
+        storage.getEvents(familyId),
+        storage.getAllEventNotesForFamily(familyId),
+      ]);
       
-      // Collect notes from all events
-      const allNotes: any[] = [];
-      for (const event of events) {
-        const notes = await storage.getEventNotes(event.id, familyId);
-        for (const note of notes) {
-          allNotes.push({
+      const eventMap = new Map(events.map(e => [e.id, e]));
+      
+      const allNotes = allFamilyNotes
+        .map(note => {
+          const event = eventMap.get(note.eventId);
+          return event ? {
             ...note,
             eventTitle: event.title,
             eventColor: event.color,
             eventStartTime: event.startTime,
-          });
-        }
-      }
+          } : null;
+        })
+        .filter(Boolean) as any[];
       
-      // Sort by createdAt descending (most recent first)
       allNotes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      
-      // Limit to most recent 50 notes
       const recentNotes = allNotes.slice(0, 50);
       
-      // Enrich with author information
-      const enrichedNotes = await Promise.all(recentNotes.map(async (note) => {
-        const author = await storage.getUser(note.authorUserId);
-        return {
+      const authorCache = new Map<string, any>();
+      const enrichedNotes = [];
+      for (const note of recentNotes) {
+        if (!authorCache.has(note.authorUserId)) {
+          authorCache.set(note.authorUserId, await storage.getUser(note.authorUserId));
+        }
+        const author = authorCache.get(note.authorUserId);
+        enrichedNotes.push({
           ...note,
           author: author ? {
             id: author.id,
@@ -1669,8 +1684,8 @@ Visit Kindora Calendar: ${joinUrl}
             lastName: author.lastName,
             profileImageUrl: author.profileImageUrl,
           } : null,
-        };
-      }));
+        });
+      }
       
       res.json(enrichedNotes);
     } catch (error) {
