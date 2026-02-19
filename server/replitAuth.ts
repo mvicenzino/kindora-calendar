@@ -1,11 +1,25 @@
+import * as client from "openid-client";
+import { Strategy, type VerifyFunction } from "openid-client/passport";
+import passport from "passport";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
+import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import pg from "pg";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { seedDemoAccount } from "./demoSeed";
 import { randomUUID } from "crypto";
+
+const getOidcConfig = memoize(
+  async () => {
+    return await client.discovery(
+      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
+      process.env.REPL_ID!
+    );
+  },
+  { maxAge: 3600 * 1000 }
+);
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -50,7 +64,7 @@ export function getSession() {
   });
 }
 
-function createUserSession(userId: string, email: string, firstName: string, lastName: string, profileImageUrl?: string | null) {
+function createLocalUserSession(userId: string, email: string, firstName: string, lastName: string, profileImageUrl?: string | null) {
   return {
     claims: {
       sub: userId,
@@ -66,9 +80,80 @@ function createUserSession(userId: string, email: string, firstName: string, las
   };
 }
 
+function updateUserSession(
+  user: any,
+  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
+) {
+  user.claims = tokens.claims();
+  user.access_token = tokens.access_token;
+  user.refresh_token = tokens.refresh_token;
+  user.expires_at = user.claims?.exp;
+}
+
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+  const config = await getOidcConfig();
+  const registeredStrategies = new Set<string>();
+
+  const ensureStrategy = (domain: string) => {
+    const strategyName = `replitauth:${domain}`;
+    if (!registeredStrategies.has(strategyName)) {
+      const verify: VerifyFunction = async (
+        tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
+        verified: passport.AuthenticateCallback
+      ) => {
+        const claims = tokens.claims() as any;
+        const user: any = {};
+        updateUserSession(user, tokens);
+
+        await storage.upsertUser({
+          id: claims["sub"],
+          email: claims["email"],
+          firstName: claims["first_name"],
+          lastName: claims["last_name"],
+          profileImageUrl: claims["profile_image_url"],
+          authProvider: "google",
+        });
+
+        verified(null, user);
+      };
+
+      const strategy = new Strategy(
+        {
+          name: strategyName,
+          config,
+          scope: "openid email profile offline_access",
+          callbackURL: `https://${domain}/api/callback`,
+        },
+        verify
+      );
+      passport.use(strategy);
+      registeredStrategies.add(strategyName);
+    }
+  };
+
+  app.get("/api/login", (req, res, next) => {
+    ensureStrategy(req.hostname);
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      prompt: "login consent",
+      scope: ["openid", "email", "profile", "offline_access"],
+    })(req, res, next);
+  });
+
+  app.get("/api/callback", (req, res, next) => {
+    ensureStrategy(req.hostname);
+    passport.authenticate(`replitauth:${req.hostname}`, {
+      successReturnToOrRedirect: "/",
+      failureRedirect: "/landing",
+    })(req, res, next);
+  });
 
   app.post("/api/auth/register", async (req, res) => {
     try {
@@ -99,7 +184,7 @@ export async function setupAuth(app: Express) {
         authProvider: "local",
       });
 
-      const sessionUser = createUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
+      const sessionUser = createLocalUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
 
       (req as any).session.passport = { user: sessionUser };
       (req as any).session.save((err: any) => {
@@ -138,7 +223,7 @@ export async function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      const sessionUser = createUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
+      const sessionUser = createLocalUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
 
       (req as any).session.passport = { user: sessionUser };
       (req as any).session.save((err: any) => {
@@ -160,12 +245,26 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Logout error:", err);
-      }
-      res.redirect("/");
-    });
+    const user = (req as any).user || (req as any).session?.passport?.user;
+    const isOidcUser = user?.access_token && user.access_token !== "local-auth";
+
+    if (isOidcUser) {
+      req.logout(() => {
+        res.redirect(
+          client.buildEndSessionUrl(config, {
+            client_id: process.env.REPL_ID!,
+            post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          }).href
+        );
+      });
+    } else {
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Logout error:", err);
+        }
+        res.redirect("/");
+      });
+    }
   });
 
   app.post("/api/logout", (req, res) => {
@@ -191,7 +290,7 @@ export async function setupAuth(app: Express) {
 
       await seedDemoAccount(storage, demoUserId);
 
-      const sessionUser = createUserSession(demoUserId, `${demoUserId}@example.com`, "Demo", "User");
+      const sessionUser = createLocalUserSession(demoUserId, `${demoUserId}@example.com`, "Demo", "User");
 
       (req as any).session.passport = { user: sessionUser };
       (req as any).session.save((saveErr: any) => {
@@ -220,7 +319,7 @@ export async function setupAuth(app: Express) {
         return res.status(404).json({ message: "Demo user not found" });
       }
 
-      const sessionUser = createUserSession(user.id, user.email || `${demoToken}@example.com`, user.firstName || "Demo", user.lastName || "User");
+      const sessionUser = createLocalUserSession(user.id, user.email || `${demoToken}@example.com`, user.firstName || "Demo", user.lastName || "User");
 
       (req as any).session.passport = { user: sessionUser };
       (req as any).session.save((saveErr: any) => {
@@ -247,16 +346,35 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return next();
   }
 
+  const user = (req as any).user;
+  if (user && user.claims?.sub) {
+    const now = Math.floor(Date.now() / 1000);
+    if (!user.expires_at || now <= user.expires_at) {
+      return next();
+    }
+
+    if (user.refresh_token && user.access_token !== "local-auth") {
+      try {
+        const config = await getOidcConfig();
+        const tokenResponse = await client.refreshTokenGrant(config, user.refresh_token);
+        updateUserSession(user, tokenResponse);
+        return next();
+      } catch (error) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+    }
+
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   const sessionData = (req as any).session?.passport?.user;
-  if (!sessionData || !sessionData.claims?.sub) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (sessionData && sessionData.claims?.sub) {
+    const now = Math.floor(Date.now() / 1000);
+    if (!sessionData.expires_at || now <= sessionData.expires_at) {
+      (req as any).user = sessionData;
+      return next();
+    }
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  if (sessionData.expires_at && now > sessionData.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  (req as any).user = sessionData;
-  return next();
+  return res.status(401).json({ message: "Unauthorized" });
 };
