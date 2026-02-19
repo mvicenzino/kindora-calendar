@@ -15,6 +15,7 @@ export class NotFoundError extends Error {
 export interface IStorage {
   // User operations (MANDATORY for auth)
   getUser(id: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
 
   // Family operations
@@ -170,6 +171,10 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.email === email);
+  }
+
   async upsertUser(user: UpsertUser): Promise<User> {
     const id = user.id;
     const existingUser = this.users.get(id);
@@ -179,6 +184,8 @@ export class MemStorage implements IStorage {
       firstName: user.firstName ?? existingUser?.firstName ?? null,
       lastName: user.lastName ?? existingUser?.lastName ?? null,
       profileImageUrl: user.profileImageUrl ?? existingUser?.profileImageUrl ?? null,
+      passwordHash: user.passwordHash ?? existingUser?.passwordHash ?? null,
+      authProvider: user.authProvider ?? existingUser?.authProvider ?? "local",
       createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -1017,6 +1024,11 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result[0];
+  }
+
   async upsertUser(userData: UpsertUser): Promise<User> {
     // First check if user exists by email (to handle email uniqueness constraint)
     let existingUser;
@@ -1785,6 +1797,12 @@ class DemoAwareStorage implements IStorage {
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     return this.getStorage(id).getUser(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const demoUser = await this.demoStorage.getUserByEmail(email);
+    if (demoUser) return demoUser;
+    return this.persistentStorage.getUserByEmail(email);
   }
 
   async upsertUser(user: UpsertUser): Promise<User> {
