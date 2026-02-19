@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /emergency-bridge/
+
+Sitemap: https://calendora.replit.app/sitemap.xml
