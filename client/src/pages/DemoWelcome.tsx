@@ -602,7 +602,7 @@ export default function DemoWelcome() {
             </span>
           </div>
           <p className="text-sm text-white/40">
-            © 2025 Kindora Family, Inc. Keeping families connected and coordinated.
+            © 2026 Kindora Family, Inc. Keeping families connected and coordinated.
           </p>
         </div>
       </footer>

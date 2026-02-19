@@ -577,7 +577,7 @@ export default function Landing() {
                 <Link href="/privacy" className="text-white/60 hover:text-white text-sm transition-colors" data-testid="link-privacy">Privacy Policy</Link>
               </div>
               <p className="text-white/60 text-sm">
-                © 2025 Kindora Family, Inc. Keeping families connected and coordinated.
+                © 2026 Kindora Family, Inc. Keeping families connected and coordinated.
               </p>
               <p className="text-white/60 text-sm">
                 Visit <a href="https://kindora.ai" target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-white underline decoration-white/40 hover:decoration-white transition-colors" data-testid="link-kindora-ai">Kindora.ai</a> for instant coaching guidance for your kiddos.
