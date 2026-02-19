@@ -222,6 +222,7 @@ export default function Home() {
     startTime: Date;
     endTime: Date;
     memberIds: string[];
+    rrule?: string | null;
   }) => {
     if (eventData.memberIds.length === 0) return;
     
@@ -229,7 +230,6 @@ export default function Home() {
     if (!firstMember) return;
 
     if (eventData.id) {
-      // Update existing event
       await updateEventMutation.mutateAsync({
         id: eventData.id,
         data: {
@@ -242,7 +242,6 @@ export default function Home() {
         },
       });
     } else {
-      // Create new event
       await createEventMutation.mutateAsync({
         title: eventData.title,
         description: eventData.description || undefined,
@@ -250,12 +249,14 @@ export default function Home() {
         endTime: eventData.endTime,
         memberIds: eventData.memberIds,
         color: firstMember.color,
+        ...(eventData.rrule && { rrule: eventData.rrule, isRecurringParent: true }),
       });
     }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    await deleteEventMutation.mutateAsync(eventId);
+    const realId = eventId.includes('_occ_') ? eventId.split('_occ_')[0] : eventId;
+    await deleteEventMutation.mutateAsync(realId);
   };
 
   const handleAddEvent = () => {
@@ -296,7 +297,15 @@ export default function Home() {
     .filter(e => isSameMonth(e.startTime, currentDate))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
+  const selectedEvent = selectedEventId ? (() => {
+    const found = events.find(e => e.id === selectedEventId);
+    if (found) return found;
+    const parentId = selectedEventId.includes('_occ_') ? selectedEventId.split('_occ_')[0] : null;
+    if (parentId) {
+      return events.find(e => e.id === parentId) || events.find(e => (e as any)._parentEventId === parentId);
+    }
+    return undefined;
+  })() : undefined;
 
   // Show loading state while authenticating, hydrating family, or fetching initial data
   if (isLoading || isLoadingFamily || membersLoading || eventsLoading) {
@@ -414,7 +423,9 @@ export default function Home() {
           ...selectedEvent,
           description: selectedEvent.description || undefined,
           startTime: new Date(selectedEvent.startTime),
-          endTime: new Date(selectedEvent.endTime)
+          endTime: new Date(selectedEvent.endTime),
+          recurrenceRule: (selectedEvent.recurrenceRule as 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly') || undefined,
+          isRecurringParent: selectedEvent.isRecurringParent ?? undefined,
         } : importedEvent ? {
           title: importedEvent.title,
           description: importedEvent.description,

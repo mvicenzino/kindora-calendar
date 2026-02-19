@@ -21,7 +21,7 @@ The application utilizes PostgreSQL for persistent data storage. A `DemoAwareSto
 
 **Key Features:**
 - **User and Family Management**: Tables for users, sessions, families, and family memberships with roles (owner/member/caregiver).
-- **Event Management**: Events with completion tracking, recurring event support (daily, weekly, monthly, yearly patterns, with end conditions), and threaded `eventNotes`.
+- **Event Management**: Events with completion tracking, recurring event support via RFC 5545 RRULE strings (daily, weekly, biweekly, monthly, yearly patterns, with COUNT or UNTIL end conditions). RRULE parent events are stored once with `isRecurringParent=true` and `rrule` column; occurrences are expanded virtually on query with date-range filtering. Legacy pre-generated recurring events (using `recurrenceRule` column) remain backwards-compatible. Threaded `eventNotes` support.
 - **Messaging Systems**: Legacy `messages` for event-specific communication and global `familyMessages` for real-time family coordination with threading.
 - **Caregiver & Medical Management**: `medications` with `medicationLogs` for tracking administration, `caregiverPayRates` and `caregiverTimeEntries` for time tracking and automated pay calculation.
 - **Care Documentation Vault**: Secure storage for `careDocuments` (medical, insurance, legal) with role-based access and presigned URL uploads.

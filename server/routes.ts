@@ -31,69 +31,108 @@ async function getFamilyId(req: any, userId: string): Promise<string | null> {
   return familyId ?? null;
 }
 
-// Helper function to calculate next occurrence date based on recurrence rule
+import rruleLib from 'rrule';
+const { RRule } = rruleLib;
+
+function legacyRuleToRRule(rule: string, startTime: Date, endDate?: Date | null, count?: string | null): string {
+  const freqMap: Record<string, string> = {
+    'daily': 'DAILY',
+    'weekly': 'WEEKLY',
+    'biweekly': 'WEEKLY',
+    'monthly': 'MONTHLY',
+    'yearly': 'YEARLY',
+  };
+  const freq = freqMap[rule];
+  if (!freq) return '';
+  
+  let parts = [`FREQ=${freq}`];
+  if (rule === 'biweekly') parts.push('INTERVAL=2');
+  if (count) parts.push(`COUNT=${count}`);
+  else if (endDate) parts.push(`UNTIL=${endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')}`);
+  
+  return parts.join(';');
+}
+
+function expandRRuleOccurrences(
+  parentEvent: any,
+  rangeStart: Date,
+  rangeEnd: Date,
+  maxOccurrences: number = 500
+): any[] {
+  const rruleString = parentEvent.rrule;
+  if (!rruleString) return [];
+
+  try {
+    const dtstart = new Date(parentEvent.startTime);
+    const rule = RRule.fromString(rruleString);
+    const fullRule = new RRule({
+      ...rule.origOptions,
+      dtstart,
+    });
+
+    const occurrences = fullRule.between(rangeStart, rangeEnd, true).slice(0, maxOccurrences);
+    const duration = new Date(parentEvent.endTime).getTime() - dtstart.getTime();
+
+    return occurrences.map((occDate, index) => ({
+      ...parentEvent,
+      id: `${parentEvent.id}_occ_${index}`,
+      startTime: occDate,
+      endTime: new Date(occDate.getTime() + duration),
+      recurringEventId: parentEvent.id,
+      _isVirtualOccurrence: true,
+      _occurrenceIndex: index,
+      _parentEventId: parentEvent.id,
+    }));
+  } catch (err) {
+    console.error("Error expanding RRULE:", err, "for event:", parentEvent.id);
+    return [];
+  }
+}
+
 function getNextDate(currentDate: Date, rule: string): Date {
   const next = new Date(currentDate);
   switch (rule) {
-    case 'daily':
-      next.setDate(next.getDate() + 1);
-      break;
-    case 'weekly':
-      next.setDate(next.getDate() + 7);
-      break;
-    case 'biweekly':
-      next.setDate(next.getDate() + 14);
-      break;
-    case 'monthly':
-      next.setMonth(next.getMonth() + 1);
-      break;
-    case 'yearly':
-      next.setFullYear(next.getFullYear() + 1);
-      break;
+    case 'daily': next.setDate(next.getDate() + 1); break;
+    case 'weekly': next.setDate(next.getDate() + 7); break;
+    case 'biweekly': next.setDate(next.getDate() + 14); break;
+    case 'monthly': next.setMonth(next.getMonth() + 1); break;
+    case 'yearly': next.setFullYear(next.getFullYear() + 1); break;
   }
   return next;
 }
 
-// Helper function to create recurring events
 async function createRecurringEvents(
-  storageInstance: typeof storage, 
-  familyId: string, 
+  storageInstance: typeof storage,
+  familyId: string,
   eventData: any
 ): Promise<any[]> {
   const createdEvents: any[] = [];
   const { recurrenceRule, recurrenceEndDate, recurrenceCount, ...baseEventData } = eventData;
-  
-  // Guard: if no valid recurrence rule, just create a single event
+
   if (!recurrenceRule || typeof recurrenceRule !== 'string') {
     const event = await storageInstance.createEvent(familyId, baseEventData);
     return [event];
   }
-  
-  // Validate count if provided
+
   const parsedCount = recurrenceCount ? parseInt(recurrenceCount, 10) : null;
   if (parsedCount !== null && (isNaN(parsedCount) || parsedCount < 2)) {
     throw new Error("Recurrence count must be at least 2");
   }
-  
-  // Determine limits based on end condition
+
   const hasCount = parsedCount !== null;
   const hasEndDate = recurrenceEndDate !== null && recurrenceEndDate !== undefined;
   const maxYearsAhead = 2;
   const absoluteMaxDate = new Date(new Date().setFullYear(new Date().getFullYear() + maxYearsAhead));
   const endDateLimit = hasEndDate ? new Date(recurrenceEndDate) : absoluteMaxDate;
-  
-  // Max occurrences: use count if specified, otherwise use a high number for date-limited or default
-  const maxIterations = hasCount ? parsedCount : 500; // 500 is safety cap for date-limited
-  
-  // Create the first event with all recurrence metadata
+  const maxIterations = hasCount ? parsedCount : 500;
+
   const firstEvent = await storageInstance.createEvent(familyId, {
     ...baseEventData,
     recurrenceRule,
     recurrenceEndDate: recurrenceEndDate || null,
     recurrenceCount: recurrenceCount || null,
   });
-  
-  // Update the first event to set its own recurringEventId while preserving all recurrence metadata
+
   await storageInstance.updateEvent(firstEvent.id, familyId, {
     recurringEventId: firstEvent.id,
     recurrenceRule: recurrenceRule as 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly',
@@ -102,26 +141,17 @@ async function createRecurringEvents(
   });
   firstEvent.recurringEventId = firstEvent.id;
   createdEvents.push(firstEvent);
-  
-  // Use persisted firstEvent timestamps to ensure storage-normalized times are used
+
   let currentStartTime = new Date(firstEvent.startTime);
   let currentEndTime = new Date(firstEvent.endTime);
   const duration = currentEndTime.getTime() - currentStartTime.getTime();
-  
+
   for (let i = 1; i < maxIterations; i++) {
     currentStartTime = getNextDate(currentStartTime, recurrenceRule);
     currentEndTime = new Date(currentStartTime.getTime() + duration);
-    
-    // Check end date limit BEFORE creating the event (use >= to honor "end on date" precisely)
-    if (hasEndDate && currentStartTime >= endDateLimit) {
-      break;
-    }
-    
-    // Enforce absolute max date to prevent runaway generation
-    if (currentStartTime > absoluteMaxDate) {
-      break;
-    }
-    
+    if (hasEndDate && currentStartTime >= endDateLimit) break;
+    if (currentStartTime > absoluteMaxDate) break;
+
     const recurringEvent = await storageInstance.createEvent(familyId, {
       ...baseEventData,
       startTime: currentStartTime,
@@ -129,11 +159,11 @@ async function createRecurringEvents(
       recurrenceRule,
       recurrenceEndDate: recurrenceEndDate || null,
       recurrenceCount: recurrenceCount || null,
-      recurringEventId: firstEvent.id, // Link to first event in series
+      recurringEventId: firstEvent.id,
     });
     createdEvents.push(recurringEvent);
   }
-  
+
   return createdEvents;
 }
 
@@ -1140,6 +1170,21 @@ Visit Kindora Calendar: ${joinUrl}
       }
       const events = await storage.getEvents(familyId);
       
+      const rangeStartParam = req.query.start as string | undefined;
+      const rangeEndParam = req.query.end as string | undefined;
+      const rangeStart = rangeStartParam ? new Date(rangeStartParam) : new Date(new Date().setMonth(new Date().getMonth() - 3));
+      const rangeEnd = rangeEndParam ? new Date(rangeEndParam) : new Date(new Date().setFullYear(new Date().getFullYear() + 2));
+
+      const expandedEvents: any[] = [];
+      for (const event of events) {
+        if (event.isRecurringParent && event.rrule) {
+          const occurrences = expandRRuleOccurrences(event, rangeStart, rangeEnd);
+          expandedEvents.push(...occurrences);
+        } else if (!event.isRecurringParent) {
+          expandedEvents.push(event);
+        }
+      }
+      
       const allNotes = await storage.getAllEventNotesForFamily(familyId);
       
       const notesByEvent = new Map<string, typeof allNotes>();
@@ -1151,8 +1196,9 @@ Visit Kindora Calendar: ${joinUrl}
       
       const authorCache = new Map<string, any>();
       const eventsWithNotes = await Promise.all(
-        events.map(async (event) => {
-          const notes = notesByEvent.get(event.id) || [];
+        expandedEvents.map(async (event) => {
+          const parentId = event._parentEventId || event.id;
+          const notes = notesByEvent.get(parentId) || [];
           const sortedNotes = [...notes].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
@@ -1213,10 +1259,20 @@ Visit Kindora Calendar: ${joinUrl}
       
       const eventData = result.data;
       
-      // Handle recurring events
-      if (eventData.recurrenceRule) {
+      if (eventData.rrule) {
+        const parentEvent = await storage.createEvent(familyId, {
+          ...eventData,
+          isRecurringParent: true,
+          recurringEventId: undefined,
+        });
+        await storage.updateEvent(parentEvent.id, familyId, {
+          recurringEventId: parentEvent.id,
+        });
+        parentEvent.recurringEventId = parentEvent.id;
+        res.status(201).json(parentEvent);
+      } else if (eventData.recurrenceRule) {
         const createdEvents = await createRecurringEvents(storage, familyId, eventData);
-        res.status(201).json(createdEvents[0]); // Return the first event
+        res.status(201).json(createdEvents[0]);
       } else {
         const event = await storage.createEvent(familyId, eventData);
         res.status(201).json(event);

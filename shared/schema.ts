@@ -68,10 +68,12 @@ export const events = pgTable("events", {
   photoUrl: text("photo_url"),
   completed: boolean("completed").notNull().default(false),
   completedAt: timestamp("completed_at"),
-  recurrenceRule: varchar("recurrence_rule"), // 'daily', 'weekly', 'biweekly', 'monthly', 'yearly', or null for non-recurring
-  recurrenceEndDate: timestamp("recurrence_end_date"), // When the recurrence ends (optional)
-  recurrenceCount: varchar("recurrence_count"), // Number of occurrences (stored as string, optional)
+  recurrenceRule: varchar("recurrence_rule"), // Legacy: 'daily', 'weekly', 'biweekly', 'monthly', 'yearly'
+  recurrenceEndDate: timestamp("recurrence_end_date"), // Legacy: end date
+  recurrenceCount: varchar("recurrence_count"), // Legacy: occurrence count
   recurringEventId: varchar("recurring_event_id"), // Links instances to the parent/first event in the series
+  rrule: text("rrule"), // RFC 5545 RRULE string (e.g. "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10")
+  isRecurringParent: boolean("is_recurring_parent").default(false), // True if this is the template event for a series
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -269,6 +271,8 @@ export const insertEventSchema = createInsertSchema(events).omit({
   recurrenceEndDate: z.coerce.date().nullable().optional(),
   recurrenceCount: z.string().nullable().optional(),
   recurringEventId: z.string().nullable().optional(),
+  rrule: z.string().nullable().optional(),
+  isRecurringParent: z.boolean().nullable().optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({

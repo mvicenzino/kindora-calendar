@@ -26,6 +26,10 @@ interface Event {
   recurrenceRule?: RecurrenceRule;
   recurrenceEndDate?: Date | null;
   recurrenceCount?: string | null;
+  rrule?: string | null;
+  isRecurringParent?: boolean;
+  _isVirtualOccurrence?: boolean;
+  _parentEventId?: string;
 }
 
 interface EventModalProps {
@@ -181,25 +185,41 @@ export default function EventModal({
     m.name.toLowerCase().includes(memberSearch.toLowerCase())
   );
 
+  const buildRRuleString = (): string | null => {
+    if (!recurrenceRule) return null;
+    
+    const freqMap: Record<string, string> = {
+      'daily': 'DAILY',
+      'weekly': 'WEEKLY',
+      'biweekly': 'WEEKLY',
+      'monthly': 'MONTHLY',
+      'yearly': 'YEARLY',
+    };
+    
+    const freq = freqMap[recurrenceRule];
+    if (!freq) return null;
+    
+    const parts = [`FREQ=${freq}`];
+    if (recurrenceRule === 'biweekly') parts.push('INTERVAL=2');
+    
+    if (endCondition === 'after' && recurrenceCount) {
+      parts.push(`COUNT=${recurrenceCount}`);
+    } else if (endCondition === 'on' && recurrenceEndDate) {
+      const untilDate = new Date(`${recurrenceEndDate}T23:59:59`);
+      parts.push(`UNTIL=${untilDate.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z/, 'Z')}`);
+    }
+    
+    return parts.join(';');
+  };
+
   const handleSave = () => {
-    // If "Sometime Today", use end of day times
     const actualStartTime = isSometimeToday ? '23:58' : startTime;
     const actualEndTime = isSometimeToday ? '23:59' : endTime;
     
     const startDateTime = new Date(`${startDate}T${actualStartTime}`);
     const endDateTime = new Date(`${startDate}T${actualEndTime}`);
 
-    // Calculate recurrence end based on end condition
-    let finalRecurrenceEndDate: Date | null = null;
-    let finalRecurrenceCount: string | null = null;
-    
-    if (recurrenceRule) {
-      if (endCondition === 'after') {
-        finalRecurrenceCount = recurrenceCount;
-      } else if (endCondition === 'on' && recurrenceEndDate) {
-        finalRecurrenceEndDate = new Date(`${recurrenceEndDate}T23:59:59`);
-      }
-    }
+    const rruleString = buildRRuleString();
 
     onSave({
       ...(event?.id && { id: event.id }),
@@ -208,9 +228,7 @@ export default function EventModal({
       startTime: startDateTime,
       endTime: endDateTime,
       memberIds: selectedMemberIds,
-      recurrenceRule: recurrenceRule,
-      recurrenceEndDate: finalRecurrenceEndDate,
-      recurrenceCount: finalRecurrenceCount,
+      rrule: rruleString,
     });
     onClose();
   };
@@ -570,6 +588,35 @@ export default function EventModal({
                         />
                       </div>
                     )}
+
+                    {/* Preview of next occurrences */}
+                    {recurrenceRule && (() => {
+                      const previewDates: Date[] = [];
+                      const base = new Date(`${startDate}T${isSometimeToday ? '12:00' : startTime}`);
+                      let current = new Date(base);
+                      for (let i = 0; i < 3; i++) {
+                        switch (recurrenceRule) {
+                          case 'daily': current = addDays(current, 1); break;
+                          case 'weekly': current = addWeeks(current, 1); break;
+                          case 'biweekly': current = addWeeks(current, 2); break;
+                          case 'monthly': current = addMonths(current, 1); break;
+                          case 'yearly': current = addYears(current, 1); break;
+                        }
+                        previewDates.push(new Date(current));
+                      }
+                      return (
+                        <div className="bg-white/5 rounded-xl p-3 border border-white/10" data-testid="recurrence-preview">
+                          <p className="text-white/50 text-xs mb-1.5">Next occurrences:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {previewDates.map((d, i) => (
+                              <span key={i} className="text-white/70 text-xs bg-white/10 px-2 py-0.5 rounded-full">
+                                {format(d, 'MMM d, yyyy')}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

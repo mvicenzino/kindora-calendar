@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { Check, Trash2, Clock, Image as ImageIcon, MessageSquare } from "lucide-react";
+import { Check, Trash2, Clock, Image as ImageIcon, MessageSquare, Repeat } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -36,9 +36,11 @@ export default function EventCard({
   const { user } = useAuth();
   const [notesModalOpen, setNotesModalOpen] = useState(false);
 
+  const realEventId = event.id.includes('_occ_') ? event.id.split('_occ_')[0] : event.id;
+
   const toggleCompletionMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('POST', `/api/events/${event.id}/toggle-completion`);
+      return await apiRequest('POST', `/api/events/${realEventId}/toggle-completion`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
@@ -58,7 +60,7 @@ export default function EventCard({
 
   const deleteEventMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest('DELETE', `/api/events/${event.id}`);
+      return await apiRequest('DELETE', `/api/events/${realEventId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
@@ -177,10 +179,13 @@ export default function EventCard({
 
         {/* Title */}
         <h3 
-          className={`font-semibold mb-2 ${variant === 'grid' ? 'text-base' : 'text-xl'} ${needsDarkText ? 'text-gray-900' : 'text-white'}`}
+          className={`font-semibold mb-2 flex items-center gap-1.5 flex-wrap ${variant === 'grid' ? 'text-base' : 'text-xl'} ${needsDarkText ? 'text-gray-900' : 'text-white'}`}
           data-testid={`text-title-${event.id}`}
         >
           {event.title}
+          {(event.rrule || event.recurringEventId) && (
+            <Repeat className={`w-3.5 h-3.5 ${needsDarkText ? 'text-gray-600' : 'text-white/70'}`} data-testid={`icon-recurring-${event.id}`} />
+          )}
         </h3>
 
         {/* Time/Description */}
