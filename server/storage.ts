@@ -1,6 +1,8 @@
 import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { drizzle } from "drizzle-orm/neon-http";
+import pg from "pg";
+const { Pool } = pg;
+import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, and, inArray, isNull, desc } from "drizzle-orm";
 
 export class NotFoundError extends Error {
@@ -983,12 +985,13 @@ class DrizzleStorage implements IStorage {
     if (!process.env.DATABASE_URL) {
       throw new Error("DATABASE_URL is required for DrizzleStorage");
     }
-    const dbUrl = process.env.DATABASE_URL;
-    const poolerUrl = dbUrl.replace(
-      /(@ep-[^.]+)(\.)/,
-      '$1-pooler$2'
-    );
-    this.db = drizzle(poolerUrl);
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 5,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+    this.db = drizzle(pool);
   }
 
   private generateInviteCode(): string {

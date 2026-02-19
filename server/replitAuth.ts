@@ -101,9 +101,12 @@ export async function setupAuth(app: Express) {
     updateUserSession(user, tokens);
     const claims = tokens.claims();
     if (claims) {
-      await upsertUser(claims);
+      try {
+        await upsertUser(claims);
+      } catch (error) {
+        console.error("Error upserting user during auth (non-fatal):", error);
+      }
       
-      // Seed demo account if this is a demo user (for testing)
       const userId = String(claims["sub"]);
       if (userId.startsWith("demo-")) {
         try {
