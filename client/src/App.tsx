@@ -21,6 +21,16 @@ import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 
 import ImportSchedule from "@/pages/ImportSchedule";
+import AppFooter from "@/components/AppFooter";
+
+function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col min-h-screen">
+      <div className="flex-1">{children}</div>
+      <AppFooter />
+    </div>
+  );
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -41,19 +51,20 @@ function Router() {
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
-        <>
-          <Route path="/demo-welcome" component={DemoWelcome} />
-          <Route path="/" component={Home} />
-          <Route path="/care" component={CaregiverDashboard} />
-          <Route path="/messages" component={Messages} />
-          <Route path="/documents" component={Documents} />
-
-          <Route path="/import" component={ImportSchedule} />
-          <Route path="/memories" component={Memories} />
-          <Route path="/family" component={FamilySettings} />
-          <Route path="/onboarding" component={Onboarding} />
-          <Route path="/onboarding/wizard" component={EventWizard} />
-        </>
+        <AuthenticatedLayout>
+          <Switch>
+            <Route path="/demo-welcome" component={DemoWelcome} />
+            <Route path="/" component={Home} />
+            <Route path="/care" component={CaregiverDashboard} />
+            <Route path="/messages" component={Messages} />
+            <Route path="/documents" component={Documents} />
+            <Route path="/import" component={ImportSchedule} />
+            <Route path="/memories" component={Memories} />
+            <Route path="/family" component={FamilySettings} />
+            <Route path="/onboarding" component={Onboarding} />
+            <Route path="/onboarding/wizard" component={EventWizard} />
+          </Switch>
+        </AuthenticatedLayout>
       )}
     </Switch>
   );
