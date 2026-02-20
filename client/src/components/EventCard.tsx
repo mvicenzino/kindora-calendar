@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import NotesModal from "@/components/NotesModal";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
+import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 
 interface EventCardProps {
   event: UiEvent;
@@ -179,7 +180,7 @@ export default function EventCard({
 
         {/* Title */}
         <h3 
-          className={`font-semibold mb-2 flex items-center gap-1.5 flex-wrap ${variant === 'grid' ? 'text-base' : 'text-xl'} ${needsDarkText ? 'text-gray-900' : 'text-white'}`}
+          className={`font-semibold mb-1 flex items-center gap-1.5 flex-wrap ${variant === 'grid' ? 'text-base' : 'text-xl'} ${needsDarkText ? 'text-gray-900' : 'text-white'}`}
           data-testid={`text-title-${event.id}`}
         >
           {event.title}
@@ -187,6 +188,14 @@ export default function EventCard({
             <Repeat className={`w-3.5 h-3.5 ${needsDarkText ? 'text-gray-600' : 'text-white/70'}`} data-testid={`icon-recurring-${event.id}`} />
           )}
         </h3>
+        {event.category && event.category !== 'other' && (
+          <span
+            className={`inline-block text-[10px] font-semibold uppercase tracking-wider mb-2 ${needsDarkText ? 'text-gray-600' : 'text-white/60'}`}
+            data-testid={`text-category-${event.id}`}
+          >
+            {CATEGORY_CONFIG[event.category as EventCategory]?.label || event.category}
+          </span>
+        )}
 
         {/* Time/Description */}
         {showTime && (

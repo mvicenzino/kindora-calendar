@@ -26,7 +26,8 @@ import {
   AlertCircle
 } from "lucide-react";
 import { format, parseISO, eachDayOfInterval, isWeekend } from "date-fns";
-import type { FamilyMember } from "@shared/schema";
+import type { FamilyMember, EventCategory } from "@shared/schema";
+import { EVENT_CATEGORIES, CATEGORY_CONFIG } from "@shared/schema";
 import Header from "@/components/Header";
 
 interface ParsedScheduleEvent {
@@ -47,15 +48,6 @@ interface ParseResult {
   error?: string;
 }
 
-const EVENT_COLORS = [
-  "#F59E0B", // Amber
-  "#10B981", // Emerald
-  "#3B82F6", // Blue
-  "#8B5CF6", // Violet
-  "#EF4444", // Red
-  "#EC4899", // Pink
-  "#06B6D4", // Cyan
-];
 
 export default function ImportSchedule() {
   const [, setLocation] = useLocation();
@@ -68,7 +60,8 @@ export default function ImportSchedule() {
   const [textInput, setTextInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string>("");
-  const [selectedColor, setSelectedColor] = useState(EVENT_COLORS[0]);
+  const [selectedCategory, setSelectedCategory] = useState<EventCategory>('other');
+  const selectedColor = CATEGORY_CONFIG[selectedCategory].color;
   const [parsedEvents, setParsedEvents] = useState<ParsedScheduleEvent[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -192,6 +185,7 @@ export default function ImportSchedule() {
             startTime: startTime.toISOString(),
             endTime: endTime.toISOString(),
             memberIds: selectedMemberId && selectedMemberId !== "none" ? [selectedMemberId] : [],
+            category: selectedCategory,
             color: selectedColor,
           };
         });
@@ -507,18 +501,25 @@ export default function ImportSchedule() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-white/80">Event Color</Label>
-                      <div className="flex gap-2">
-                        {EVENT_COLORS.map((color) => (
+                      <Label className="text-white/80">Category</Label>
+                      <div className="flex gap-2 flex-wrap">
+                        {EVENT_CATEGORIES.map((cat) => (
                           <button
-                            key={color}
-                            onClick={() => setSelectedColor(color)}
-                            className={`w-8 h-8 rounded-full border-2 transition-all ${
-                              selectedColor === color ? "border-white scale-110" : "border-transparent"
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                              selectedCategory === cat
+                                ? "border-white text-white bg-white/20"
+                                : "border-white/20 text-white/60 hover:bg-white/10"
                             }`}
-                            style={{ backgroundColor: color }}
-                            data-testid={`color-${color}`}
-                          />
+                            data-testid={`category-${cat}`}
+                          >
+                            <div
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: CATEGORY_CONFIG[cat].color }}
+                            />
+                            {CATEGORY_CONFIG[cat].label}
+                          </button>
                         ))}
                       </div>
                     </div>

@@ -14,10 +14,12 @@ import EventModal from "@/components/EventModal";
 import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
 import DayEventsDialog from "@/components/DayEventsDialog";
+import CategoryLegend from "@/components/CategoryLegend";
 import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
+import type { FamilyMember, Event, InsertEvent, EventCategory } from "@shared/schema";
+import { CATEGORY_CONFIG } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
 
@@ -222,12 +224,13 @@ export default function Home() {
     startTime: Date;
     endTime: Date;
     memberIds: string[];
+    category?: EventCategory;
     rrule?: string | null;
   }) => {
     if (eventData.memberIds.length === 0) return;
-    
-    const firstMember = members.find(m => m.id === eventData.memberIds[0]);
-    if (!firstMember) return;
+
+    const cat = eventData.category || 'other';
+    const color = CATEGORY_CONFIG[cat].color;
 
     if (eventData.id) {
       await updateEventMutation.mutateAsync({
@@ -238,7 +241,8 @@ export default function Home() {
           startTime: eventData.startTime,
           endTime: eventData.endTime,
           memberIds: eventData.memberIds,
-          color: firstMember.color,
+          category: cat,
+          color,
         },
       });
     } else {
@@ -248,7 +252,8 @@ export default function Home() {
         startTime: eventData.startTime,
         endTime: eventData.endTime,
         memberIds: eventData.memberIds,
-        color: firstMember.color,
+        category: cat,
+        color,
         ...(eventData.rrule && { rrule: eventData.rrule, isRecurringParent: true }),
       });
     }
@@ -340,6 +345,10 @@ export default function Home() {
         />
         <ViewSwitcherBar currentView={view} onViewChange={setView} />
       </div>
+
+      <div className="px-3 sm:px-4 md:px-6 py-2 border-b border-white/5">
+        <CategoryLegend />
+      </div>
       
       <SearchPanel
         isOpen={searchOpen}
@@ -424,6 +433,7 @@ export default function Home() {
           description: selectedEvent.description || undefined,
           startTime: new Date(selectedEvent.startTime),
           endTime: new Date(selectedEvent.endTime),
+          category: (selectedEvent.category as EventCategory) || 'other',
           recurrenceRule: (selectedEvent.recurrenceRule as 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly') || undefined,
           isRecurringParent: selectedEvent.isRecurringParent ?? undefined,
         } : importedEvent ? {

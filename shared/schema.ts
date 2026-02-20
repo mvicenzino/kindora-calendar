@@ -3,6 +3,32 @@ import { pgTable, text, varchar, timestamp, boolean, index, numeric, integer } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const EVENT_CATEGORIES = [
+  'medical',
+  'school',
+  'activities',
+  'errands',
+  'financial',
+  'social',
+  'caregiving',
+  'work',
+  'other',
+] as const;
+
+export type EventCategory = typeof EVENT_CATEGORIES[number];
+
+export const CATEGORY_CONFIG: Record<EventCategory, { label: string; color: string; description: string }> = {
+  medical:    { label: 'Medical',     color: '#E53E3E', description: 'Doctor visits, medications, health' },
+  school:     { label: 'School',      color: '#3B82F6', description: 'School drop-offs, classes, homework' },
+  activities: { label: 'Activities',  color: '#8B5CF6', description: 'Sports, lessons, hobbies' },
+  errands:    { label: 'Errands',     color: '#F59E0B', description: 'Shopping, chores, to-dos' },
+  financial:  { label: 'Financial',   color: '#10B981', description: 'Bills, payments, budgeting' },
+  social:     { label: 'Social',      color: '#EC4899', description: 'Parties, playdates, gatherings' },
+  caregiving: { label: 'Caregiving',  color: '#F97316', description: 'Eldercare, therapy, respite' },
+  work:       { label: 'Work',        color: '#6366F1', description: 'Meetings, deadlines, work tasks' },
+  other:      { label: 'Other',       color: '#64748B', description: 'Everything else' },
+};
+
 // Sessions table (MANDATORY for auth)
 export const sessions = pgTable(
   "sessions",
@@ -65,6 +91,7 @@ export const events = pgTable("events", {
   endTime: timestamp("end_time").notNull(),
   memberIds: text("member_ids").array().notNull(),
   color: text("color").notNull(),
+  category: varchar("category").notNull().default("other"),
   photoUrl: text("photo_url"),
   completed: boolean("completed").notNull().default(false),
   completedAt: timestamp("completed_at"),
@@ -264,9 +291,10 @@ export const insertEventSchema = createInsertSchema(events).omit({
   createdAt: true,
 }).extend({
   title: z.string().min(1, "Title is required").trim(),
-  memberIds: z.array(z.string()), // Allow empty arrays for imported events
+  memberIds: z.array(z.string()),
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
+  category: z.enum(EVENT_CATEGORIES).default('other'),
   recurrenceRule: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly']).nullable().optional(),
   recurrenceEndDate: z.coerce.date().nullable().optional(),
   recurrenceCount: z.string().nullable().optional(),

@@ -4,8 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Calendar, PartyPopper, Users, AlertCircle, Loader2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { InsertEvent, FamilyMember } from "@shared/schema";
-import { insertEventSchema } from "@shared/schema";
+import type { InsertEvent, FamilyMember, EventCategory } from "@shared/schema";
+import { insertEventSchema, EVENT_CATEGORIES, CATEGORY_CONFIG } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -47,7 +47,8 @@ export default function EventWizard() {
       memberIds: [],
       startTime: defaultTimes.start,
       endTime: defaultTimes.end,
-      color: "",
+      category: "other",
+      color: CATEGORY_CONFIG.other.color,
     },
   });
 
@@ -84,13 +85,15 @@ export default function EventWizard() {
     }
 
     try {
+      const category = (data.category || 'other') as EventCategory;
       await createEventMutation.mutateAsync({
         title: data.title,
         description: data.description || null,
         startTime: data.startTime,
         endTime: data.endTime,
         memberIds: memberIds,
-        color: member.color,
+        category,
+        color: CATEGORY_CONFIG[category].color,
       });
 
       toast({
@@ -307,6 +310,41 @@ export default function EventWizard() {
                   </FormItem>
                 )}
               />
+
+              <div className="space-y-2">
+                <FormLabel className="text-white">Category</FormLabel>
+                <Select
+                  value={form.watch('category') || 'other'}
+                  onValueChange={(value) => {
+                    form.setValue('category', value);
+                    form.setValue('color', CATEGORY_CONFIG[value as EventCategory].color);
+                  }}
+                >
+                  <SelectTrigger
+                    className="bg-white/10 border-white/20 text-white"
+                    data-testid="select-category"
+                  >
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-white/20">
+                    {EVENT_CATEGORIES.map((cat) => (
+                      <SelectItem
+                        key={cat}
+                        value={cat}
+                        className="text-white"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: CATEGORY_CONFIG[cat].color }}
+                          />
+                          {CATEGORY_CONFIG[cat].label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField

@@ -1,5 +1,6 @@
 import { type IStorage } from "./storage";
 import { addDays, subDays, setHours, setMinutes, startOfToday } from "date-fns";
+import { CATEGORY_CONFIG } from "@shared/schema";
 
 // Sample memory photos for demo events - Family with Kids
 const FAMILY_PHOTOS = {
@@ -135,7 +136,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(subDays(today, 3), 14), 0),
         endTime: setMinutes(setHours(subDays(today, 3), 16), 0),
         memberIds: [daughter.id, mom.id, dad.id],
-        color: daughter.color,
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: FAMILY_PHOTOS.soccerGame,
       },
       {
@@ -144,7 +146,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(subDays(today, 5), 19), 0),
         endTime: setMinutes(setHours(subDays(today, 5), 21), 30),
         memberIds: [mom.id, dad.id, daughter.id, son.id],
-        color: mom.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.movieNight,
       },
       {
@@ -153,7 +156,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(subDays(today, 7), 15), 0),
         endTime: setMinutes(setHours(subDays(today, 7), 16), 30),
         memberIds: [son.id, mom.id, dad.id, daughter.id],
-        color: son.color,
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: FAMILY_PHOTOS.pianoRecital,
       },
       {
@@ -162,7 +166,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(subDays(today, 10), 17), 0),
         endTime: setMinutes(setHours(subDays(today, 10), 22), 0),
         memberIds: [babysitter.id, daughter.id, son.id],
-        color: babysitter.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
         completed: true,
       },
@@ -174,7 +179,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 7), 30),
         endTime: setMinutes(setHours(today, 8), 15),
         memberIds: [mom.id, daughter.id, son.id],
-        color: mom.color,
+        color: CATEGORY_CONFIG['school'].color,
+        category: 'school' as const,
         photoUrl: null,
         completed: true,
       },
@@ -184,7 +190,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 10), 0),
         endTime: setMinutes(setHours(today, 11), 30),
         memberIds: [mom.id],
-        color: mom.color,
+        color: CATEGORY_CONFIG['errands'].color,
+        category: 'errands' as const,
         photoUrl: null,
       },
       {
@@ -193,7 +200,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 16), 0),
         endTime: setMinutes(setHours(today, 17), 30),
         memberIds: [son.id, dad.id],
-        color: son.color,
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: null,
       },
 
@@ -204,7 +212,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 1), 9), 0),
         endTime: setMinutes(setHours(addDays(today, 1), 10), 0),
         memberIds: [daughter.id, mom.id],
-        color: daughter.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
@@ -213,7 +222,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 2), 16), 0),
         endTime: setMinutes(setHours(addDays(today, 2), 17), 0),
         memberIds: [mom.id, dad.id],
-        color: son.color,
+        color: CATEGORY_CONFIG['school'].color,
+        category: 'school' as const,
         photoUrl: null,
       },
       {
@@ -222,7 +232,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
         endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
         memberIds: [mom.id, dad.id, daughter.id, son.id],
-        color: mom.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.familyDinner,
       },
       {
@@ -231,7 +242,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 4), 16), 0),
         endTime: setMinutes(setHours(addDays(today, 4), 18), 0),
         memberIds: [daughter.id, mom.id],
-        color: daughter.color,
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: null,
       },
       {
@@ -240,7 +252,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 5), 18), 0),
         endTime: setMinutes(setHours(addDays(today, 5), 23), 0),
         memberIds: [mom.id, dad.id, babysitter.id, daughter.id, son.id],
-        color: babysitter.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: null,
       },
       {
@@ -249,7 +262,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 6), 9), 0),
         endTime: setMinutes(setHours(addDays(today, 6), 16), 0),
         memberIds: [son.id, dad.id, mom.id],
-        color: son.color,
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: null,
       },
       {
@@ -258,7 +272,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 7), 10), 0),
         endTime: setMinutes(setHours(addDays(today, 7), 17), 0),
         memberIds: [mom.id, dad.id, daughter.id, son.id],
-        color: dad.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.beachDay,
       },
       {
@@ -267,7 +282,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 8), 15), 0),
         endTime: setMinutes(setHours(addDays(today, 8), 18), 0),
         memberIds: [babysitter.id, daughter.id, son.id],
-        color: babysitter.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
     ];
@@ -414,7 +430,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(subDays(today, 2), 10), 0),
         endTime: setMinutes(setHours(subDays(today, 2), 11), 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: CARE_PHOTOS.physicalTherapy,
         completed: true,
       },
@@ -424,7 +441,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(subDays(today, 4), 14), 0),
         endTime: setMinutes(setHours(subDays(today, 4), 15), 30),
         memberIds: [grandma.id, coordinator.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: CARE_PHOTOS.doctorVisit,
         completed: true,
       },
@@ -434,7 +452,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(subDays(today, 5), 15), 0),
         endTime: setMinutes(setHours(subDays(today, 5), 18), 0),
         memberIds: [grandma.id, coordinator.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: CARE_PHOTOS.familyVisit,
         completed: true,
       },
@@ -446,7 +465,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 8), 0),
         endTime: setMinutes(setHours(today, 8), 30),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
         completed: true,
       },
@@ -456,7 +476,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 9), 0),
         endTime: setMinutes(setHours(today, 12), 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: CARE_PHOTOS.nurseVisit,
       },
       {
@@ -465,7 +486,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 12), 0),
         endTime: setMinutes(setHours(today, 13), 0),
         memberIds: [grandma.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
@@ -474,7 +496,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 14), 0),
         endTime: setMinutes(setHours(today, 14), 30),
         memberIds: [grandma.id, brother.id],
-        color: brother.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
@@ -483,7 +506,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(today, 18), 0),
         endTime: setMinutes(setHours(today, 19), 0),
         memberIds: [grandma.id, coordinator.id],
-        color: coordinator.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
 
@@ -494,7 +518,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 1), 10), 0),
         endTime: setMinutes(setHours(addDays(today, 1), 11), 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
@@ -503,7 +528,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 1), 9), 0),
         endTime: setMinutes(setHours(addDays(today, 1), 12), 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
@@ -512,7 +538,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 2), 11), 0),
         endTime: setMinutes(setHours(addDays(today, 2), 12), 0),
         memberIds: [grandma.id, brother.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
@@ -521,7 +548,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 3), 14), 0),
         endTime: setMinutes(setHours(addDays(today, 3), 15), 0),
         memberIds: [grandma.id, coordinator.id],
-        color: coordinator.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
@@ -530,7 +558,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
         endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
         memberIds: [grandma.id, coordinator.id, brother.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: null,
       },
       {
@@ -539,7 +568,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 5), 9), 0),
         endTime: setMinutes(setHours(addDays(today, 5), 10), 30),
         memberIds: [grandma.id, coordinator.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
@@ -548,7 +578,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 4), 10), 0),
         endTime: setMinutes(setHours(addDays(today, 4), 11), 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
@@ -557,7 +588,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 6), 10), 0),
         endTime: setMinutes(setHours(addDays(today, 6), 10), 30),
         memberIds: [coordinator.id],
-        color: coordinator.color,
+        color: CATEGORY_CONFIG['errands'].color,
+        category: 'errands' as const,
         photoUrl: null,
       },
       {
@@ -566,7 +598,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         startTime: setMinutes(setHours(addDays(today, 6), 8), 0),
         endTime: setMinutes(setHours(addDays(today, 6), 18), 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
     ];

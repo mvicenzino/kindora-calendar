@@ -5,13 +5,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile } from "lucide-react";
+import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile, Tag } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
 import type { UiFamilyMember } from "@shared/types";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import EventNotesSection from "./EventNotesSection";
+import { EVENT_CATEGORIES, CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 
 type RecurrenceRule = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | null;
 type EndCondition = 'never' | 'after' | 'on';
@@ -23,6 +24,7 @@ interface Event {
   startTime: Date;
   endTime: Date;
   memberIds: string[];
+  category?: EventCategory;
   recurrenceRule?: RecurrenceRule;
   recurrenceEndDate?: Date | null;
   recurrenceCount?: string | null;
@@ -77,10 +79,13 @@ export default function EventModal({
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
   const [startTime, setStartTime] = useState(defaultTimes.start);
   const [endTime, setEndTime] = useState(defaultTimes.end);
+  const [category, setCategory] = useState<EventCategory>('other');
   const [isSometimeToday, setIsSometimeToday] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
   
   // Recurrence state
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>(null);
@@ -97,8 +102,10 @@ export default function EventModal({
       setDescription("");
       setMemberId("");
       setSelectedMemberIds([]);
+      setCategory('other');
       setMemberSearch("");
       setShowMemberDropdown(false);
+      setShowCategoryDropdown(false);
       setRecurrenceRule(null);
       setEndCondition('never');
       setRecurrenceCount("10");
@@ -112,12 +119,12 @@ export default function EventModal({
     if (!isOpen) return;
     
     if (event) {
-      // Editing existing event
       setTitle(event.title || "");
       setDescription(event.description || "");
       const eventMemberIds = event.memberIds || [];
       setSelectedMemberIds(eventMemberIds);
       setMemberId(eventMemberIds[0] || members[0]?.id || "");
+      setCategory(event.category || 'other');
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
@@ -140,7 +147,6 @@ export default function EventModal({
     }
   }, [event, selectedDate, isOpen, members]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -149,13 +155,16 @@ export default function EventModal({
       if (recurrenceDropdownRef.current && !recurrenceDropdownRef.current.contains(e.target as Node)) {
         setShowRecurrenceDropdown(false);
       }
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
     };
     
-    if (showMemberDropdown || showRecurrenceDropdown) {
+    if (showMemberDropdown || showRecurrenceDropdown || showCategoryDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showMemberDropdown, showRecurrenceDropdown]);
+  }, [showMemberDropdown, showRecurrenceDropdown, showCategoryDropdown]);
 
   const toggleMember = (id: string) => {
     setSelectedMemberIds(prev => {
@@ -228,6 +237,7 @@ export default function EventModal({
       startTime: startDateTime,
       endTime: endDateTime,
       memberIds: selectedMemberIds,
+      category,
       rrule: rruleString,
     });
     onClose();
@@ -310,6 +320,61 @@ export default function EventModal({
                 rows={3}
                 disabled={isReadOnly}
               />
+            </div>
+
+            {/* Category Selector */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-white flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Category
+              </Label>
+              <div className="relative" ref={categoryDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => !isReadOnly && setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="w-full bg-white/15 border border-white/40 rounded-2xl px-4 py-3 h-12 flex items-center justify-between text-left text-white transition-all hover:bg-white/20"
+                  data-testid="button-category-select"
+                  disabled={isReadOnly}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: CATEGORY_CONFIG[category].color }}
+                    />
+                    <span className="text-sm font-medium">{CATEGORY_CONFIG[category].label}</span>
+                    <span className="text-xs text-white/50 hidden sm:inline">{CATEGORY_CONFIG[category].description}</span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-white/60 transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showCategoryDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-gradient-to-br from-[#4A5A6A] to-[#5A6A7A] border border-white/40 rounded-2xl shadow-lg z-50 max-h-64 overflow-y-auto">
+                    {EVENT_CATEGORIES.map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          setCategory(cat);
+                          setShowCategoryDropdown(false);
+                        }}
+                        className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/10 transition-all border-b border-white/10 last:border-0 ${category === cat ? 'bg-white/15' : ''}`}
+                        data-testid={`option-category-${cat}`}
+                      >
+                        <div
+                          className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: CATEGORY_CONFIG[cat].color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-white text-sm font-medium">{CATEGORY_CONFIG[cat].label}</span>
+                          <span className="text-white/50 text-xs ml-2">{CATEGORY_CONFIG[cat].description}</span>
+                        </div>
+                        {category === cat && (
+                          <div className="w-4 h-4 rounded-full border-2 border-white bg-white/30 flex-shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Date and Family Members */}

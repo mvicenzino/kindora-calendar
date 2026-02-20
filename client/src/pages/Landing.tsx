@@ -107,7 +107,7 @@ export default function Landing() {
     {
       icon: Users,
       title: "Family Profiles",
-      description: "Custom colors for each family member. See at a glance who has what scheduled."
+      description: "Color-coded categories so you can see at a glance what type of event is coming up."
     },
     {
       icon: Heart,
