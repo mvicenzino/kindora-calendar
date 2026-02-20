@@ -89,17 +89,10 @@ type TimeEntryFormValues = z.infer<typeof timeEntryFormSchema>;
 export default function CaregiverDashboard() {
   const { user } = useAuth();
   const { activeFamilyId } = useActiveFamily();
-  const { isCaregiver: isCaregiverRole, isLoading: isLoadingRole } = useUserRole();
+  const { isCaregiver: isCaregiverRole, isOwner, isLoading: isLoadingRole } = useUserRole();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("today");
-  
-  // Redirect non-caregivers to the calendar view
-  useEffect(() => {
-    if (!isLoadingRole && !isCaregiverRole && activeFamilyId) {
-      setLocation('/');
-    }
-  }, [isCaregiverRole, isLoadingRole, activeFamilyId, setLocation]);
   
   // Time tracking dialog state
   const [showLogHoursDialog, setShowLogHoursDialog] = useState(false);
