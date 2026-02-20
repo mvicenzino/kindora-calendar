@@ -378,7 +378,7 @@ export default function CaregiverDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
-      <Header currentView="day" onViewChange={() => {}} />
+      <Header />
       
       <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
