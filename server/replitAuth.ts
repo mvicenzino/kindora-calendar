@@ -11,6 +11,10 @@ import { storage } from "./storage";
 import { seedDemoAccount } from "./demoSeed";
 import { randomUUID } from "crypto";
 
+function sanitizeInput(input: string): string {
+  return input.replace(/[<>]/g, '').trim();
+}
+
 const getOidcConfig = memoize(
   async () => {
     return await client.discovery(
@@ -167,7 +171,20 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
       }
 
-      const existingUser = await storage.getUserByEmail(email);
+      const cleanEmail = sanitizeInput(email).toLowerCase();
+      const cleanFirstName = sanitizeInput(firstName);
+      const cleanLastName = lastName ? sanitizeInput(lastName) : null;
+
+      if (!cleanFirstName) {
+        return res.status(400).json({ message: "First name cannot be empty" });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(cleanEmail)) {
+        return res.status(400).json({ message: "Please enter a valid email address" });
+      }
+
+      const existingUser = await storage.getUserByEmail(cleanEmail);
       if (existingUser) {
         return res.status(409).json({ message: "An account with this email already exists" });
       }
@@ -177,9 +194,9 @@ export async function setupAuth(app: Express) {
 
       const user = await storage.upsertUser({
         id: userId,
-        email,
-        firstName,
-        lastName: lastName || null,
+        email: cleanEmail,
+        firstName: cleanFirstName,
+        lastName: cleanLastName,
         passwordHash,
         authProvider: "local",
       });
