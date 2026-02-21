@@ -13,6 +13,9 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
+  Plus,
+  X,
+  UserPlus,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -24,6 +27,7 @@ type OnboardingStep =
   | "welcome"
   | "role"
   | "owner-name"
+  | "add-members"
   | "owner-success"
   | "aide-code"
   | "aide-success";
@@ -39,6 +43,8 @@ export default function Onboarding() {
   const [careContext, setCareContext] = useState<CareContextOption[]>([]);
   const [inviteCode, setInviteCode] = useState("");
   const [joinedFamily, setJoinedFamily] = useState<Family | null>(null);
+  const [memberEntries, setMemberEntries] = useState<{ name: string }[]>([]);
+  const [newMemberName, setNewMemberName] = useState("");
 
   const { data: families = [] } = useQuery<Family[]>({
     queryKey: ["/api/families"],
@@ -77,21 +83,74 @@ export default function Onboarding() {
     },
   });
 
+  const createMemberMutation = useMutation({
+    mutationFn: async ({ name, color, familyId }: { name: string; color: string; familyId: string }) => {
+      const res = await apiRequest("POST", "/api/family-members", { name, color, familyId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/family-members"] });
+    },
+  });
+
+  const MEMBER_COLORS = [
+    '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#EF4444', '#14B8A6', '#F97316',
+  ];
+
   const handleOwnerSubmit = async () => {
     const name = familyName.trim();
     if (!name) {
       toast({ title: "Please enter a family name", variant: "destructive" });
       return;
     }
+    const ownerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Me";
+    setMemberEntries([{ name: ownerName }]);
+    setNewMemberName("");
     if (families.length > 0) {
       try {
         await renameFamilyMutation.mutateAsync({ familyId: families[0].id, name });
-        setStep("owner-success");
+        setStep("add-members");
       } catch {
         toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
       }
     } else {
+      setStep("add-members");
+    }
+  };
+
+  const handleAddMember = () => {
+    const trimmed = newMemberName.trim();
+    if (!trimmed) return;
+    if (memberEntries.some(m => m.name.toLowerCase() === trimmed.toLowerCase())) {
+      toast({ title: "Already added", description: `${trimmed} is already in the list.`, variant: "destructive" });
+      return;
+    }
+    setMemberEntries(prev => [...prev, { name: trimmed }]);
+    setNewMemberName("");
+  };
+
+  const handleRemoveMember = (index: number) => {
+    if (index === 0) return;
+    setMemberEntries(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMembersSubmit = async () => {
+    if (!families.length) {
       setStep("owner-success");
+      return;
+    }
+    const familyId = families[0].id;
+    try {
+      for (let i = 0; i < memberEntries.length; i++) {
+        await createMemberMutation.mutateAsync({
+          name: memberEntries[i].name,
+          color: MEMBER_COLORS[i % MEMBER_COLORS.length],
+          familyId,
+        });
+      }
+      setStep("owner-success");
+    } catch {
+      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
     }
   };
 
@@ -214,6 +273,102 @@ export default function Onboarding() {
           </Card>
         )}
 
+        {step === "add-members" && (
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
+                  <UserPlus className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Who's in your family?
+                </h2>
+                <p className="text-white/60 text-sm">
+                  Add the people you'll be scheduling for. You can always edit this later.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {memberEntries.map((entry, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-3 rounded-lg bg-white/10 border border-white/20"
+                    data-testid={`member-entry-${index}`}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-semibold flex-shrink-0"
+                      style={{ backgroundColor: MEMBER_COLORS[index % MEMBER_COLORS.length] }}
+                    >
+                      {entry.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{entry.name}</p>
+                    </div>
+                    {index === 0 ? (
+                      <span className="text-xs text-white/40 flex-shrink-0">You</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(index)}
+                        className="text-white/40 hover:text-white/70 transition-colors flex-shrink-0"
+                        data-testid={`button-remove-member-${index}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-white/70 text-xs">Add a family member</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                    placeholder="Name (e.g., Carolyn, Sebby)"
+                    className="bg-white/10 border-white/30 text-white placeholder:text-white/40 text-sm flex-1"
+                    data-testid="input-new-member-name"
+                    onKeyDown={(e) => e.key === "Enter" && handleAddMember()}
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={handleAddMember}
+                    disabled={!newMemberName.trim()}
+                    className="border-white/30 text-white bg-white/5 self-start mt-0"
+                    data-testid="button-add-member"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <Button
+                  onClick={handleMembersSubmit}
+                  disabled={createMemberMutation.isPending || memberEntries.length === 0}
+                  className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                  data-testid="button-save-members"
+                >
+                  {createMemberMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : null}
+                  {memberEntries.length <= 1 ? "Continue" : `Add ${memberEntries.length} members & continue`}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setStep("owner-success")}
+                  className="text-white/50 text-sm hover:text-white/70 transition-colors py-1"
+                  data-testid="button-skip-members"
+                >
+                  Skip for now
+                </button>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {step === "owner-success" && (
           <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
             <div className="space-y-6 text-center">
@@ -224,7 +379,9 @@ export default function Onboarding() {
                 You're all set, {user?.firstName || "there"}!
               </h2>
               <p className="text-white/70">
-                Your family calendar is ready. Let's add the people who need access.
+                {memberEntries.length > 1
+                  ? `Your family calendar is ready with ${memberEntries.length} members. Now let's add caregivers who need access.`
+                  : "Your family calendar is ready. Let's add the people who need access."}
               </p>
 
               <div className="flex flex-col gap-3 pt-2">
