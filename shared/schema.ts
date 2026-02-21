@@ -41,6 +41,9 @@ export const sessions = pgTable(
 );
 
 // Users table (MANDATORY for auth)
+export const SUBSCRIPTION_TIERS = ['free', 'family', 'professional'] as const;
+export type SubscriptionTier = typeof SUBSCRIPTION_TIERS[number];
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey(),
   email: varchar("email").unique(),
@@ -49,6 +52,10 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"),
   authProvider: varchar("auth_provider").default("local"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionTier: varchar("subscription_tier").default("free"),
+  subscriptionStatus: varchar("subscription_status").default("inactive"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

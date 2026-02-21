@@ -17,6 +17,8 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
 
   // Family operations
   createFamily(userId: string, family: InsertFamily): Promise<Family>;
@@ -186,6 +188,10 @@ export class MemStorage implements IStorage {
       profileImageUrl: user.profileImageUrl ?? existingUser?.profileImageUrl ?? null,
       passwordHash: user.passwordHash ?? existingUser?.passwordHash ?? null,
       authProvider: user.authProvider ?? existingUser?.authProvider ?? "local",
+      stripeCustomerId: existingUser?.stripeCustomerId ?? null,
+      stripeSubscriptionId: existingUser?.stripeSubscriptionId ?? null,
+      subscriptionTier: existingUser?.subscriptionTier ?? "free",
+      subscriptionStatus: existingUser?.subscriptionStatus ?? "inactive",
       createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -194,6 +200,25 @@ export class MemStorage implements IStorage {
     await this.ensureUserFamily(id);
     
     return userData;
+  }
+
+  async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    const updated: User = {
+      ...user,
+      stripeCustomerId: data.stripeCustomerId ?? user.stripeCustomerId,
+      stripeSubscriptionId: data.stripeSubscriptionId !== undefined ? data.stripeSubscriptionId : user.stripeSubscriptionId,
+      subscriptionTier: data.subscriptionTier ?? user.subscriptionTier,
+      subscriptionStatus: data.subscriptionStatus ?? user.subscriptionStatus,
+      updatedAt: new Date(),
+    };
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.stripeCustomerId === stripeCustomerId);
   }
 
   // Family operations
@@ -423,6 +448,11 @@ export class MemStorage implements IStorage {
       familyId,
       description: insertEvent.description || null,
       photoUrl: insertEvent.photoUrl || null,
+      recurrenceRule: insertEvent.recurrenceRule ?? null,
+      recurrenceEndDate: insertEvent.recurrenceEndDate ?? null,
+      recurringEventId: insertEvent.recurringEventId ?? null,
+      rrule: insertEvent.rrule ?? null,
+      isRecurringParent: insertEvent.isRecurringParent ?? null,
       completed: false,
       completedAt: null,
       createdAt: new Date(),
@@ -1065,6 +1095,23 @@ class DrizzleStorage implements IStorage {
     
     await this.ensureUserFamily(result[0].id);
     
+    return result[0];
+  }
+
+  async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
+    const result = await this.db
+      .update(users)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId)).limit(1);
     return result[0];
   }
 
@@ -1807,6 +1854,16 @@ class DemoAwareStorage implements IStorage {
 
   async upsertUser(user: UpsertUser): Promise<User> {
     return this.getStorage(user.id).upsertUser(user);
+  }
+
+  async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
+    return this.getStorage(userId).updateUserSubscription(userId, data);
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const demoUser = await this.demoStorage.getUserByStripeCustomerId(stripeCustomerId);
+    if (demoUser) return demoUser;
+    return this.persistentStorage.getUserByStripeCustomerId(stripeCustomerId);
   }
 
   // Family operations
