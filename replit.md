@@ -57,3 +57,4 @@ A two-tier sticky navigation system featuring a `Header` (Kindora logo, FamilySe
 
 ### Integrations
 - **Email Services**: Resend (recommended) or SendGrid for sending family invite codes and weekly summary emails. Configured via `RESEND_API_KEY`/`SENDGRID_API_KEY` and `EMAIL_FROM_ADDRESS` environment variables.
+- **Stripe Payments**: Subscription billing via `stripe-replit-sync`. Product: Kindora Family Plan (prod_U1KiKUnNheVeG7), Price: $9/month (price_1T3I35QiL2ZGFBUjx2Q6WxHA). Webhook route at `/api/stripe/webhook` (registered BEFORE express.json for raw body). Key files: `server/stripeClient.ts`, `server/webhookHandlers.ts`. Subscription fields on users table: `stripeCustomerId`, `stripeSubscriptionId`, `subscriptionTier`, `subscriptionStatus`. Account settings page at `/settings`.
