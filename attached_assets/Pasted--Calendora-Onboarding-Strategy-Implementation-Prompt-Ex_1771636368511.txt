@@ -1,0 +1,497 @@
+# Calendora Onboarding Strategy & Implementation Prompt
+
+## Executive Summary
+
+This prompt defines a **frictionless, role-aware onboarding experience** for Calendora that takes new users from signup → calendar owner setup OR caregiver invite in 3-5 minutes. The flow uses **progressive disclosure** to introduce features based on user context and immediately demonstrates value through family creation and caregiver coordination.
+
+**Target outcome:** New users either create their first family group or join an existing one within their first session, establishing momentum and habit formation.
+
+-----
+
+## Core Onboarding Principles
+
+### 1. **One Thing at a Time**
+
+- No overwhelming lists or feature tours
+- Each screen has a single, clear CTA (Call To Action)
+- Information revealed in context, not all upfront
+
+### 2. **Immediate Value**
+
+- Users see tangible progress within 2 screens
+- Creating a family group or joining one should feel fast and rewarding
+- Social proof: “You’re all set! Sarah is now receiving updates about family events”
+
+### 3. **Role Emerges Through Actions, Not Questions**
+
+- Don’t ask “Are you a parent or caregiver?” — let behavior reveal role
+- A user who creates a family → assumes owner role
+- A user who joins an invite → assumes caregiver/aide role
+- Adapt guidance and prompts based on detected role
+
+### 4. **Mobile-First Mindset**
+
+- Assume 50%+ will onboard on mobile initially
+- Vertical stack, thumb-friendly buttons (min 48px height)
+- No horizontal scrolling; readable type (16px minimum)
+- Short, scannable copy; avoid walls of text
+
+### 5. **Conversational, Reassuring Tone**
+
+- Use “you” language: “Let’s get your family organized”
+- Acknowledge the use case: “Managing schedules for kids AND parents is a lot”
+- Avoid jargon; use familiar terms over technical ones
+- Brief, friendly micro-copy in buttons and labels
+
+-----
+
+## Onboarding Flow Architecture
+
+### **Phase 1: Welcome & Context Setting (Post-Signup)**
+
+**Duration:** 15-30 seconds  
+**Goal:** Orient new user and set expectations
+
+**Screen 1: Welcome Splash**
+
+- **Copy:** “Welcome to Calendora — Family scheduling that works for caregivers”
+- **Visual:** Your Liquid Glass design, icon suggesting family/calendar
+- **CTA:** “Let’s get started” (primary button)
+- **Sub-copy:** “Takes about 2 minutes”
+- **No friction:** Single button to proceed; no option to skip (we want them through onboarding)
+
+-----
+
+### **Phase 2: Role Discovery Through Action**
+
+**Duration:** 1-2 minutes  
+**Goal:** Let user choose their entry point (creates role context implicitly)
+
+**Screen 2: “What brings you here?”** (Two clear options)
+
+**Option A: “I’m managing family schedules”**
+
+- Subtitle: “Parents, guardians, or adult children coordinating family activities”
+- Icon: Calendar + people
+- Next action: Proceed to “Create Family” flow
+
+**Option B: “I’m helping care for a family member”**
+
+- Subtitle: “Health aides, caregivers, or family members joining an existing household”
+- Icon: Heart + hands
+- Next action: Proceed to “Join Family with Invite Code” flow
+
+**Design notes:**
+
+- Both options are equally prominent (no “primary/secondary” visual hierarchy)
+- Cards or large buttons, not radio buttons
+- Mobile: Full-width stacked buttons
+- Clear, empathetic language that validates both roles
+
+**Behind the scenes:**
+
+- Tag user with detected role (owner vs. aide) for future UX adaptation
+- Use this to customize next screens’ copy and prompts
+- Store choice; allow user to switch roles later in settings
+
+-----
+
+### **Phase 3A: Calendar Owner Flow — Create Family**
+
+**Triggered by:** “I’m managing family schedules” selection  
+**Duration:** 1-2 minutes  
+**Goal:** Get first family created with minimal friction
+
+**Screen 3A: Family Name & Description**
+
+- **Label:** “What should we call your family group?”
+- **Input:** Text field, placeholder “e.g., The Johnsons, Garcia Household”
+- **Sub-label (optional):** “This will appear when inviting others to join”
+- **Field 2 (optional):** “Who do you care for?” (optional, helps with targeting)
+  - Buttons: “Kids”, “Parent/Grandparent”, “Extended family”, “Multiple generations”
+  - This is for guidance only — not required to proceed
+- **CTA:** “Create family” (primary)
+- **Design notes:**
+  - Pre-fill with user’s last name if you have it from signup
+  - Allow editing after creation
+  - Mobile: Vertical stack, large input fields
+
+**Behind the scenes:**
+
+- Create family record with user as owner
+- Immediately transition to success state
+
+**Screen 3B: Family Created! (Success Moment)**
+
+- **Headline:** “You’re all set, [Name]!”
+- **Copy:** “Your family calendar is ready. Let’s add the people who need access.”
+- **Visual:** Checkmark or brief animation confirming completion
+- **Two CTAs (equal weight):**
+  - Primary: “Invite your first caregiver” → Proceed to invite flow
+  - Secondary: “I’ll do this later” → Skip to calendar view
+
+**Design notes:**
+
+- This is the momentum moment — celebrate it visually
+- Offer invitation as next step, but don’t require it
+- If they skip, show subtle prompt in calendar UI later
+
+-----
+
+### **Phase 3B: Caregiver/Aide Flow — Join Family with Invite**
+
+**Triggered by:** “I’m helping care for a family member” selection  
+**Duration:** 30-45 seconds  
+**Goal:** Get caregiver joined to family with minimal steps
+
+**Screen 3B: “Do you have a family invite code?”**
+
+- **Copy:** “Your family sent you a code or link to join. Do you have it?”
+- **Two options:**
+  - “Yes, I have the code” → Text input for 6-8 character code
+  - “No, I’ll ask them to send it” → Show helpful message + email/share instructions
+- **Design notes:**
+  - Make code input prominent; large, clear font
+  - Accept code with or without formatting (handles dashes, spaces)
+  - If they proceed without code, show friendly message and exit onboarding
+
+**Screen 3C: Enter Invite Code**
+
+- **Input field:** Large, monospace font, all-caps
+- **Helper text:** “Family sent you a 6-character code”
+- **CTA:** “Join family” (primary)
+- **Error handling:** “That code isn’t valid. Check with your family and try again.”
+- **Design notes:**
+  - Auto-focus input field
+  - Highlight field on focus; clear visual feedback
+  - Mobile: Full-width input
+
+**Screen 3D: Joined! (Success Moment)**
+
+- **Headline:** “Welcome to [Family Name]!”
+- **Copy:** “You’re now receiving updates about family schedules and medications.”
+- **Visual:** Checkmark or brief animation
+- **CTA:** “See calendar” (primary) → Jump to calendar filtered to family events
+- **Design notes:**
+  - Show family members’ names if available
+  - Emphasize they can now see shared events/medications
+  - This is their value proposition moment
+
+-----
+
+### **Phase 4: Quick Feature Highlights (Optional Progressive Disclosure)**
+
+**Triggered by:** After Phase 3 completion  
+**Duration:** 30-45 seconds  
+**Goal:** Show 2-3 key features without overwhelming  
+**Activation:** Especially relevant for owners; optional for aides
+
+**Option A: Tooltip/Highlight Tour (Lightweight)**
+
+- As user lands on calendar, subtle highlights appear:
+  - “Add your first event” → Points to + button
+  - “Invite family members” → Points to people/settings
+  - “Medication reminders” → If applicable, points to medication section
+- Each tooltip has a “Got it” dismiss button; can skip all
+- Non-intrusive; doesn’t block interaction
+
+**Option B: 3-Screen Feature Carousel (Only if you want more engagement)**
+
+- **Screen 1:** “Calendar — See everyone’s schedule at a glance”
+  - Copy: “Color-coded by person, filterable by type (appointments, activities, meds)”
+  - Visual: Small screenshot or icon
+  - CTA: “Next”
+- **Screen 2:** “Medication Tracking — Never miss a dose”
+  - Copy: “Track medications for multiple family members. Aides get reminders.”
+  - Visual: Icon or screenshot
+  - CTA: “Next”
+- **Screen 3:** “Messaging — Stay connected across your care team”
+  - Copy: “Quick updates without leaving the calendar”
+  - Visual: Icon or screenshot
+  - CTA: “Done — go to calendar”
+
+**Recommendation:** Start with Option A (lightweight tooltips). Option B can feel heavy for users who just want to use the calendar.
+
+-----
+
+### **Phase 5: Landing in the App**
+
+**Triggered by:** After onboarding completion  
+**Goal:** User sees value immediately; next action is clear
+
+**For Calendar Owners:**
+
+- **Calendar view** with empty state messaging:
+  - “Your family calendar is empty. Ready to add your first event?”
+  - CTA: “Add event” button prominent
+  - Secondary: Show invite prompt: “Invite family members to see shared events”
+- **Sidebar or header** shows family name and member count
+- If no members invited yet: Subtle prompt “Invite your care team to stay synchronized”
+
+**For Aides/Caregivers:**
+
+- **Filtered calendar view** showing only their family’s events
+- **Clear labeling:** “You’re viewing [Family Name]’s calendar”
+- Prominent “Medications” section if user is tracking medications
+- If messaging available: Show unread messages badge
+
+-----
+
+## Edge Cases & Conditional Flows
+
+### **Edge Case 1: User Already Has Account but No Family**
+
+- Returning user who didn’t complete onboarding
+- Show quick prompt: “Let’s set up your family” with option to dismiss
+- Not required; offer in non-intrusive UI element
+
+### **Edge Case 2: Aide/Caregiver Code Doesn’t Exist**
+
+- User selected “I’m helping care for a family member” but has no invite code
+- Don’t force them into a dead end
+- Show: “That’s okay! Ask the family member to send you an invite code or settings link”
+- Provide instructions for families on how to generate/share codes
+- Option to proceed to calendar view as individual user (no family yet)
+
+### **Edge Case 3: Multiple Role Switching**
+
+- User created a family (owner), but later joins another family as an aide
+- Tagging system identifies both roles
+- Calendar should allow switching between “My Family” and “Care for [Other Family]”
+- Onboarding for second role is abbreviated; skip welcome/role selection
+
+### **Edge Case 4: Mobile App vs. Web**
+
+- Same onboarding flow, but:
+- Mobile: Larger touch targets, no hover states
+- Web: Keyboard navigation, tab support
+- Responsive breakpoints: adjust field widths, button sizing
+
+-----
+
+## Copy & Messaging Guidelines
+
+### **Tone: Warm, Competent, Reassuring**
+
+|Situation              |What NOT to Say                    |What TO Say                            |
+|-----------------------|-----------------------------------|---------------------------------------|
+|Explaining family group|“Enter your household designation” |“What should we call your family?”     |
+|Caregiver setup        |“Caregiver authentication protocol”|“You’re now part of the care team”     |
+|Medication tracking    |“Configure medication management”  |“Never miss a dose”                    |
+|Inviting aides         |“Grant access permissions”         |“Invite your care team to stay in sync”|
+|Joining via code       |“Input authorization token”        |“Enter the code your family sent”      |
+
+### **Micro-copy Examples:**
+
+- **Buttons:**
+  - ✅ “Create family” (not “Submit form”)
+  - ✅ “Join with code” (not “Authenticate”)
+  - ✅ “Send invite” (not “Generate link”)
+  - ✅ “See calendar” (not “Proceed to main view”)
+- **Labels:**
+  - ✅ “What should we call your family?” (not “Family entity name”)
+  - ✅ “Who do you care for?” (not “Care responsibilities”)
+- **Error messages:**
+  - ✅ “That code isn’t valid. Check with your family and try again.”
+  - ✅ “Looks like this family doesn’t have an open invite. Ask them to send you one.”
+- **Success messages:**
+  - ✅ “You’re all set! Your family calendar is ready.”
+  - ✅ “Welcome to [Family Name]! You’re now receiving updates.”
+
+-----
+
+## Visual Design System Integration
+
+### **Liquid Glass Design Elements to Use:**
+
+1. **Color palette:**
+- Primary CTA: Your brand primary color (prominent, high contrast)
+- Secondary CTA: Muted/outlined version
+- Success states: Green confirmation color
+- Error states: Red/warning color
+1. **Typography:**
+- Headlines: Space Grotesk, bold (700), 24-28px on mobile / 32-36px on web
+- Body: Inter, regular (400), 16px on mobile / 16-18px on web
+- Labels: Inter, medium (500), 14px
+1. **Spacing:**
+- Vertical padding between screens: 24-32px
+- Field height: 48-56px (thumb-friendly)
+- Button height: 48px (minimum touch target)
+- Margin around text: 16-24px
+1. **Visual feedback:**
+- Input focus: Subtle glow or underline in primary color
+- Button hover: Slight color shift, not heavy shadow
+- Loading states: Spinner or skeleton loader
+- Success animations: Checkmark pulse or slide-in confirmation
+
+-----
+
+## Implementation Checklist
+
+### **Phase 1: Initial Setup (Required for Launch)**
+
+- [ ] Welcome screen with branding
+- [ ] Role selection (“Managing schedules” vs. “Helping care”)
+- [ ] Family creation flow (owner path)
+- [ ] Invite code entry flow (caregiver path)
+- [ ] Success screens with clear next actions
+- [ ] Redirect to calendar after onboarding
+
+### **Phase 2: Polish & Progressive Disclosure (Post-Launch)**
+
+- [ ] Feature tooltip highlights (lightweight tour)
+- [ ] Empty state messaging in calendar
+- [ ] Onboarding analytics (track completion rates, drop-off points)
+- [ ] A/B test optional prompts (e.g., “Invite first” vs. “Explore calendar first”)
+
+### **Phase 3: Optimization (After user feedback)**
+
+- [ ] Optimize copy based on user research
+- [ ] Simplify or extend role selection based on confusion points
+- [ ] Adjust mobile responsive behavior based on real usage
+- [ ] Add conditional onboarding for returning users
+
+-----
+
+## Analytics & Success Metrics
+
+### **Key Metrics to Track:**
+
+1. **Completion rates:**
+- % of new users completing onboarding
+- % reaching “family created” or “invite code entered”
+- Drop-off points (which screens lose users?)
+1. **Time to value:**
+- Average time from signup to first family creation
+- Average time from signup to joining family via code
+1. **Post-onboarding behavior:**
+- % of owners who invite their first caregiver within 24 hours
+- % of aides who view a calendar event within 1 hour
+- Calendar event creation rate within first week
+1. **Engagement:**
+- Return rate (% active day 1, day 7, day 30)
+- Feature adoption (% who use medication tracking, messaging, etc.)
+
+### **Recommended Tracking Events:**
+
+```
+- onboarding_started
+- role_selected {role: "owner" | "aide"}
+- family_created {family_id, time_to_creation}
+- invite_code_entered {family_id, success: true|false}
+- onboarding_completed {role, time_to_completion}
+- first_event_created {event_type, time_since_completion}
+- first_invite_sent {family_id, time_since_completion}
+```
+
+-----
+
+## Prompt for Your Dev/Design Team
+
+Use this prompt when briefing implementation:
+
+-----
+
+### **DEVELOPMENT BRIEF: Calendora Onboarding v1.0**
+
+**Objective:** Build a frictionless onboarding flow that takes new users from signup → first family creation or caregiver join in under 3 minutes.
+
+**Scope:**
+
+1. Post-signup welcome screen (15 sec)
+1. Role selection screen — “Managing schedules” vs. “Helping care” (30 sec)
+1. Conditional flows:
+- **Owner path:** Family name input → Success confirmation → Calendar view
+- **Aide path:** Invite code entry → Success confirmation → Calendar view
+1. Success state redirects to calendar with contextual messaging
+1. Basic analytics tracking for completion and drop-off
+
+**Requirements:**
+
+- Mobile-first responsive design (assume 50%+ mobile traffic)
+- Accessibility: WCAG 2.1 AA (keyboard nav, color contrast, labels)
+- Copy as specified in messaging guidelines above
+- Use Liquid Glass design system (colors, typography, spacing)
+- No skipping onboarding; all steps required
+- After completion, show subtle feature highlights (tooltips) but don’t block interaction
+
+**Out of scope (Phase 2):**
+
+- Feature carousel/tour
+- Advanced invite methods (email/SMS share)
+- Multi-step family setup (member onboarding)
+- Role switching UI
+
+**Success criteria:**
+
+- 80%+ of new users complete onboarding to calendar view
+- Onboarding takes under 3 minutes for 90% of users
+- No console errors or accessibility violations
+- Mobile and web layouts pixel-perfect per Liquid Glass system
+
+-----
+
+## Risk Mitigation
+
+### **Risk 1: Too Many Steps = Drop-off**
+
+- **Mitigation:** Each screen has max 2 CTAs; no infinite scrolling
+- **Monitor:** Track drop-off at each screen; aim for >85% progression rate
+- **Backup:** If drop-off >20% at any screen, simplify that screen immediately
+
+### **Risk 2: Role Selection Confusion**
+
+- **Mitigation:** Use relatable language (“Managing schedules” vs. “Helping care”); include icons and brief context
+- **Monitor:** Track which option users select; survey a few to verify they chose correctly
+- **Backup:** Allow users to switch roles after onboarding in settings
+
+### **Risk 3: Caregiver Code Not Shared**
+
+- **Mitigation:** Provide clear instructions to family owners on how to generate/share codes; show helper message if code fails
+- **Monitor:** Track “invalid code” error rate; if high, provide more prominent help in family settings
+- **Backup:** Add email-based invite as fallback (Phase 2)
+
+### **Risk 4: Mobile UX Breaks**
+
+- **Mitigation:** Use large touch targets (48px), test on actual devices, no horizontal scrolling
+- **Monitor:** Track mobile vs. web completion rates; should be similar
+- **Backup:** Adjust font sizes, spacing, and button widths based on real mobile data
+
+-----
+
+## Future Enhancements (Post-Launch)
+
+1. **Personalization:** Tailor onboarding copy based on “care for” selection (kids vs. elderly parents vs. extended family)
+1. **Social proof:** “5,000+ families use Calendora to stay organized” on welcome screen
+1. **Multi-step setup:** Guide owners through inviting specific family members (first caregiver, first medication, etc.)
+1. **Email/SMS invites:** Send invite links instead of just codes
+1. **Setup wizard for features:** After family creation, optional “Set up medications?” or “Set up messaging?”
+1. **Onboarding for returning users:** Detect first-time logins and show feature highlights even after initial signup onboarding
+
+-----
+
+## Conclusion
+
+This onboarding flow is designed to:
+
+- **Minimize friction** by asking only essential questions
+- **Maximize clarity** through role-aware guidance and contextual copy
+- **Drive momentum** with immediate family creation and success moments
+- **Support both user types** (owners and caregivers) with their own entry paths
+- **Enable mobile-first usage** with responsive, touch-friendly design
+- **Establish habit formation** by guiding users to their first meaningful action
+
+The flow respects your users’ time and expertise while gently introducing them to Calendora’s unique value proposition: family scheduling + caregiver coordination, all in one place.
+
+-----
+
+## Questions for Refinement
+
+As you move toward implementation, consider:
+
+1. **Feature availability at launch:** Will all users see medication tracking, or is this behind a paywall? Adjust onboarding copy if features are premium-only.
+1. **Invite code format:** 6 characters? Alphanumeric or numeric only? Decide before implementation.
+1. **Family member limits:** Any constraints on how many people can join a family? Communicate clearly if so.
+1. **Returning user experience:** After onboarding, should dismissed users see hints to invite others, or is the calendar experience sufficient?
+1. **Analytics backend:** Set up tracking before launch; you’ll want data on day 1 to inform iterations.
+1. **A/B testing:** Which optional elements would you like to test? (e.g., feature carousel vs. none, skip option vs. required onboarding)
