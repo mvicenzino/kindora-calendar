@@ -28,7 +28,7 @@ type OnboardingStep =
   | "aide-code"
   | "aide-success";
 
-type CareContext = "kids" | "parent" | "extended" | "multi" | null;
+type CareContextOption = "kids" | "parent" | "extended" | "multi";
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
@@ -36,7 +36,7 @@ export default function Onboarding() {
   const { user } = useAuth();
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [familyName, setFamilyName] = useState("");
-  const [careContext, setCareContext] = useState<CareContext>(null);
+  const [careContext, setCareContext] = useState<CareContextOption[]>([]);
   const [inviteCode, setInviteCode] = useState("");
   const [joinedFamily, setJoinedFamily] = useState<Family | null>(null);
 
@@ -125,7 +125,7 @@ export default function Onboarding() {
     setLocation("/family");
   };
 
-  const careOptions: { id: CareContext; label: string }[] = [
+  const careOptions: { id: CareContextOption; label: string }[] = [
     { id: "kids", label: "Kids" },
     { id: "parent", label: "Parent / Grandparent" },
     { id: "extended", label: "Extended family" },
@@ -181,9 +181,13 @@ export default function Onboarding() {
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setCareContext(careContext === opt.id ? null : opt.id)}
+                      onClick={() => setCareContext(prev => 
+                        prev.includes(opt.id) 
+                          ? prev.filter(c => c !== opt.id) 
+                          : [...prev, opt.id]
+                      )}
                       className={`px-3 py-2 rounded-md text-sm font-medium border transition-all ${
-                        careContext === opt.id
+                        careContext.includes(opt.id)
                           ? "bg-white/20 border-white/50 text-white"
                           : "bg-white/5 border-white/20 text-white/60"
                       }`}
