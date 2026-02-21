@@ -153,11 +153,18 @@ export default function FamilySettings() {
       });
       return await res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Caregiver invited!",
-        description: "They'll receive an email with instructions to join.",
-      });
+    onSuccess: (data: any) => {
+      if (data.emailFailed) {
+        toast({
+          title: "Invitation created",
+          description: "The email couldn't be sent right now, but you can share the invite code manually using the Copy button above.",
+        });
+      } else {
+        toast({
+          title: "Caregiver invited!",
+          description: "They'll receive an email with instructions to join.",
+        });
+      }
       setCaregiverEmail("");
     },
     onError: (error: any) => {
@@ -174,11 +181,18 @@ export default function FamilySettings() {
       const res = await apiRequest('POST', '/api/family/send-invite', { email });
       return await res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Invitation sent!",
-        description: "They'll receive an email with your invite code.",
-      });
+    onSuccess: (data: any) => {
+      if (data.emailFailed) {
+        toast({
+          title: "Invitation created",
+          description: "The email couldn't be sent right now, but you can share the invite code manually using the Copy button below.",
+        });
+      } else {
+        toast({
+          title: "Invitation sent!",
+          description: "They'll receive an email with your invite code.",
+        });
+      }
       setFamilyMemberEmail("");
     },
     onError: (error: any) => {

@@ -668,19 +668,17 @@ Visit Kindora Calendar: ${joinUrl}
           const errorMessage = errorDetails.errors?.[0]?.message || errorDetails.message || errorText;
           
           if (response.status === 400 || response.status === 403) {
-            return res.status(400).json({
-              error: "Email sending failed: Sender verification or permission issue",
-              details: errorMessage,
-              provider: "sendgrid",
-              fix: "1. Verify your sender email (mvicenzino@gmail.com) in SendGrid dashboard. 2. Check that your API key has 'Mail Send' permissions."
-            });
+            console.warn('SendGrid email failed (permission/verification), returning invite code anyway');
+          } else {
+            console.warn('SendGrid email failed (credits/other), returning invite code anyway');
           }
           
-          return res.status(500).json({
-            error: "Failed to send email via SendGrid",
-            details: errorMessage,
-            provider: "sendgrid",
-            fix: "Check SendGrid dashboard for sender verification and API key status"
+          return res.json({ 
+            success: true,
+            message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
+            inviteCode: family.inviteCode,
+            emailFailed: true,
+            provider: "sendgrid"
           });
         }
 
@@ -689,6 +687,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.json({ 
           success: true,
           message: "Invitation email sent successfully",
+          inviteCode: family.inviteCode,
           provider: "sendgrid"
         });
       } else {
@@ -1000,19 +999,17 @@ Visit Kindora Calendar: ${joinUrl}
           const errorMessage = errorDetails.errors?.[0]?.message || errorDetails.message || errorText;
           
           if (response.status === 400 || response.status === 403) {
-            return res.status(400).json({
-              error: "Email sending failed: Sender verification or permission issue",
-              details: errorMessage,
-              provider: "sendgrid",
-              fix: "1. Verify your sender email (mvicenzino@gmail.com) in SendGrid dashboard. 2. Check that your API key has 'Mail Send' permissions."
-            });
+            console.warn('SendGrid forward-invite failed (permission/verification), returning invite code anyway');
+          } else {
+            console.warn('SendGrid forward-invite failed (credits/other), returning invite code anyway');
           }
           
-          return res.status(500).json({
-            error: "Failed to send email via SendGrid",
-            details: errorMessage,
-            provider: "sendgrid",
-            fix: "Check SendGrid dashboard for sender verification and API key status"
+          return res.json({ 
+            success: true,
+            message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
+            inviteCode,
+            emailFailed: true,
+            provider: "sendgrid"
           });
         }
 
@@ -1021,6 +1018,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.json({ 
           success: true,
           message: "Invitation email sent successfully",
+          inviteCode,
           provider: "sendgrid"
         });
       } else {
