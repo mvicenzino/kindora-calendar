@@ -622,7 +622,8 @@ export default function Landing() {
               )}
             </div>
 
-            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 flex flex-col" data-testid="card-pricing-pro">
+            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 flex flex-col relative" data-testid="card-pricing-pro">
+              <span className="absolute top-4 right-4 text-xs font-semibold uppercase tracking-wider text-teal-300 bg-teal-500/15 border border-teal-400/30 px-2.5 py-1 rounded-full" data-testid="badge-coming-soon">Coming Soon</span>
               <h3 className="text-xl font-bold text-white mb-1" data-testid="text-pricing-pro-name">Professional</h3>
               <p className="text-white/60 text-sm mb-4">For care agencies</p>
               <div className="mb-6">
