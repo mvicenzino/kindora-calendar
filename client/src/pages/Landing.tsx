@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 import { useAuth } from "@/hooks/useAuth";
@@ -96,23 +96,33 @@ export default function Landing() {
   const features = [
     {
       icon: Calendar,
-      title: "Unified Calendar",
-      description: "All family events in one beautiful view. No more conflicting schedules or missed appointments."
+      title: "Unified Family Calendar",
+      description: "One calendar for soccer practice, doctor visits, and grandma's physical therapy. Color-coded by category so nothing gets lost."
     },
     {
       icon: Zap,
-      title: "Real-Time Sync",
-      description: "Updates instantly across all devices. Everyone sees the same schedule, always."
+      title: "Smart Recurring Events",
+      description: "Set it once and forget it. Weekly tutoring, biweekly check-ups, monthly bill reminders—all auto-generated with flexible end dates."
     },
     {
       icon: Users,
-      title: "Family Profiles",
-      description: "Color-coded categories so you can see at a glance what type of event is coming up."
+      title: "Multi-Family Support",
+      description: "Manage separate calendars for your household, your parents' care team, and your in-laws. Switch between families in one tap."
     },
     {
-      icon: Heart,
-      title: "Memory Sharing",
-      description: "Capture and preserve special moments with photos attached to events. Build your family story."
+      icon: Pill,
+      title: "Medication Tracking",
+      description: "Log medications, dosages, and administration times. Caregivers confirm when meds are given. Nothing falls through the cracks."
+    },
+    {
+      icon: Clock,
+      title: "Caregiver Time & Pay",
+      description: "Professional caregivers clock in, track hours, and calculate pay—all in one dashboard families can review."
+    },
+    {
+      icon: Shield,
+      title: "Care Document Vault",
+      description: "Store insurance cards, prescriptions, and legal documents securely. Share with trusted providers when needed."
     }
   ];
 
@@ -362,30 +372,32 @@ export default function Landing() {
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
                 <Sparkles className="w-4 h-4 text-teal-300" />
-                <span className="text-sm font-medium text-white">Transform chaos into harmony</span>
+                <span className="text-sm font-medium text-white">Built for the Sandwich Generation</span>
               </div>
               
               <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight mb-6 bg-gradient-to-r from-white via-purple-100 to-teal-100 bg-clip-text text-transparent">
-                Keep Everyone Connected & Coordinated
+                Kids. Parents. Caregivers. One Calendar.
               </h1>
               
               <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-                For families, caregivers, and trusted providers. One calendar that keeps everyone on the same page—from daily schedules to medical appointments.
+                You're managing soccer practice and mom's doctor appointments. Kindora brings your whole care circle into one shared calendar—so nothing falls through the cracks.
               </p>
 
               {!isAuthenticated && (
                 <div className="flex flex-wrap gap-3 mb-8">
                   <Button
                     onClick={() => setAuthMode("register")}
-                    className="bg-white text-slate-900 text-base px-6"
+                    size="lg"
+                    className="bg-white text-slate-900"
                     data-testid="button-hero-signup"
                   >
                     Get Started Free
                   </Button>
                   <Button
+                    size="lg"
                     onClick={() => (window.location.href = "/api/login/demo")}
                     variant="outline"
-                    className="border-white/40 text-white bg-white/5 backdrop-blur-sm text-base px-6"
+                    className="border-white/40 text-white bg-white/5 backdrop-blur-sm"
                     data-testid="button-hero-demo"
                   >
                     Try Demo
@@ -418,14 +430,14 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-teal-200 via-white to-purple-200 bg-clip-text text-transparent mb-3">
-              Powerful Features Made Simple
+              Everything Your Family Needs
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
-              Everything you need to manage your family's schedule and memories in one beautiful app.
+              From school schedules to eldercare coordination—Kindora handles the logistics so you can focus on what matters.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-5 md:gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
               const iconColors = [
@@ -433,12 +445,16 @@ export default function Landing() {
                 'bg-gradient-to-br from-teal-500 to-teal-600',
                 'bg-gradient-to-br from-pink-500 to-pink-600',
                 'bg-gradient-to-br from-blue-500 to-blue-600',
+                'bg-gradient-to-br from-orange-500 to-orange-600',
+                'bg-gradient-to-br from-emerald-500 to-emerald-600',
               ];
               const glowColors = [
                 'group-hover:shadow-purple-500/50',
                 'group-hover:shadow-teal-500/50',
                 'group-hover:shadow-pink-500/50',
                 'group-hover:shadow-blue-500/50',
+                'group-hover:shadow-orange-500/50',
+                'group-hover:shadow-emerald-500/50',
               ];
               return (
                 <div
@@ -468,10 +484,10 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-200 via-white to-blue-200 bg-clip-text text-transparent mb-4">
-              Supporting Aging Parents & Loved Ones
+              Eldercare, Simplified
             </h2>
             <p className="text-lg text-white/70 max-w-3xl mx-auto">
-              Share calendars with trusted caregivers, health aides, and family coordinators. Everyone stays informed about medical appointments, medication schedules, and daily care needs.
+              53 million Americans care for aging parents while raising kids. Kindora gives your entire care team—family, aides, nurses—shared visibility into schedules, medications, and appointments.
             </p>
           </div>
 
@@ -533,6 +549,140 @@ export default function Landing() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative" data-testid="section-pricing">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-transparent to-teal-900/10" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-white to-teal-200 bg-clip-text text-transparent mb-3">
+              Simple, Family-Friendly Pricing
+            </h2>
+            <p className="text-lg text-white/70 max-w-2xl mx-auto">
+              Start free. Upgrade when your family needs more.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 flex flex-col" data-testid="card-pricing-free">
+              <h3 className="text-xl font-bold text-white mb-1" data-testid="text-pricing-free-name">Free</h3>
+              <p className="text-white/60 text-sm mb-4">For getting started</p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold text-white" data-testid="text-pricing-free-price">$0</span>
+                <span className="text-white/60 text-sm ml-1">/month</span>
+              </div>
+              <ul className="space-y-3 mb-6 flex-1">
+                {["1 family calendar", "Up to 3 members", "Basic event management", "Color-coded categories", "Mobile-friendly design"].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-white/80">
+                    <Check className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              {!isAuthenticated && (
+                <Button
+                  onClick={() => setAuthMode("register")}
+                  variant="outline"
+                  className="w-full border-white/30 text-white bg-white/5 backdrop-blur-sm"
+                  data-testid="button-pricing-free"
+                >
+                  Get Started
+                </Button>
+              )}
+            </div>
+
+            <div className="backdrop-blur-md bg-white/5 border-2 border-teal-400/50 rounded-2xl p-6 flex flex-col relative" data-testid="card-pricing-family">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-purple-500 to-teal-500 rounded-full text-xs font-semibold text-white">
+                Most Popular
+              </div>
+              <h3 className="text-xl font-bold text-white mb-1" data-testid="text-pricing-family-name">Family</h3>
+              <p className="text-white/60 text-sm mb-4">For active families</p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold text-white" data-testid="text-pricing-family-price">$9</span>
+                <span className="text-white/60 text-sm ml-1">/month</span>
+              </div>
+              <ul className="space-y-3 mb-6 flex-1">
+                {["Unlimited family calendars", "Up to 10 members", "Recurring events & RRULE", "Weekly email summaries", "Caregiver invitations", "Document vault", "AI schedule import"].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-white/80">
+                    <Check className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              {!isAuthenticated && (
+                <Button
+                  onClick={() => setAuthMode("register")}
+                  className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                  data-testid="button-pricing-family"
+                >
+                  Start Free Trial
+                </Button>
+              )}
+            </div>
+
+            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 flex flex-col" data-testid="card-pricing-pro">
+              <h3 className="text-xl font-bold text-white mb-1" data-testid="text-pricing-pro-name">Professional</h3>
+              <p className="text-white/60 text-sm mb-4">For care agencies</p>
+              <div className="mb-6">
+                <span className="text-4xl font-bold text-white" data-testid="text-pricing-pro-price">$29</span>
+                <span className="text-white/60 text-sm ml-1">/month</span>
+              </div>
+              <ul className="space-y-3 mb-6 flex-1">
+                {["Everything in Family", "Unlimited members", "Medication tracking & logs", "Caregiver time & pay tracking", "Emergency Bridge Mode", "Priority support", "Custom branding"].map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-white/80">
+                    <Check className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              {!isAuthenticated && (
+                <Button
+                  onClick={() => setAuthMode("register")}
+                  variant="outline"
+                  className="w-full border-white/30 text-white bg-white/5 backdrop-blur-sm"
+                  data-testid="button-pricing-pro"
+                >
+                  Contact Sales
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            Stop Juggling. Start Coordinating.
+          </h2>
+          <p className="text-lg text-white/70 mb-8 max-w-2xl mx-auto">
+            Join families who've traded sticky notes and group texts for one shared calendar that actually works. Free to start, no credit card needed.
+          </p>
+          {!isAuthenticated && (
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button
+                size="lg"
+                onClick={() => setAuthMode("register")}
+                className="bg-white text-slate-900"
+                data-testid="button-final-cta-signup"
+              >
+                Create Your Family Calendar
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+              <Button
+                size="lg"
+                onClick={() => (window.location.href = "/api/login/demo")}
+                variant="outline"
+                className="border-white/40 text-white bg-white/5 backdrop-blur-sm"
+                data-testid="button-final-cta-demo"
+              >
+                Try the Demo First
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
