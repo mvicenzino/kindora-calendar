@@ -76,16 +76,18 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading]);
 
-  // Redirect new users to onboarding if they haven't completed it
+  // Redirect new users to onboarding if they haven't completed it and have no families
   const isDemoMode = user?.id?.startsWith('demo-') ?? false;
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !isDemoMode) {
+    if (!isLoading && isAuthenticated && !isLoadingFamily && !isDemoMode) {
       const onboardingDone = localStorage.getItem("kindora_onboarding_complete");
-      if (!onboardingDone) {
+      if (!onboardingDone && !activeFamilyId) {
         setLocation("/onboarding");
+      } else if (activeFamilyId && !onboardingDone) {
+        localStorage.setItem("kindora_onboarding_complete", "true");
       }
     }
-  }, [isAuthenticated, isLoading, isDemoMode, setLocation]);
+  }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, setLocation]);
 
   // Redirect caregivers to the caregiver dashboard
   useEffect(() => {
