@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { UiFamilyMember } from "@shared/types";
 import type { FamilyMembership, User as UserType } from "@shared/schema";
-import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2, Bell, BellOff } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2, Bell, BellOff, CreditCard } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { queryClient } from "@/lib/queryClient";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -414,6 +414,26 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                     <div>
                       <div className="text-sm font-medium text-white">Family Settings</div>
                       <div className="text-xs text-white/50">Manage invites & sharing</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-white/40" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    setLocation('/settings');
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/10 transition-all text-left"
+                  data-testid="button-account-billing"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                      <CreditCard className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-white">Account & Billing</div>
+                      <div className="text-xs text-white/50">Manage subscription & plan</div>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-white/40" />

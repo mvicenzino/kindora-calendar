@@ -19,6 +19,7 @@ import Documents from "@/pages/Documents";
 import EmergencyBridge from "@/pages/EmergencyBridge";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
+import AccountSettings from "@/pages/AccountSettings";
 
 import ImportSchedule from "@/pages/ImportSchedule";
 import AppFooter from "@/components/AppFooter";
@@ -64,6 +65,7 @@ function Router() {
               <Route path="/import" component={ImportSchedule} />
               <Route path="/memories" component={Memories} />
               <Route path="/family" component={FamilySettings} />
+              <Route path="/settings" component={AccountSettings} />
             </Switch>
           </AuthenticatedLayout>
         </>
