@@ -238,6 +238,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/families/:familyId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.params.familyId;
+      const { name } = req.body;
+
+      const membership = await storage.getUserFamilyMembership(userId, familyId);
+      if (!membership || membership.role !== 'owner') {
+        return res.status(403).json({ error: "Only family owners can update family settings" });
+      }
+
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: "Family name is required" });
+      }
+
+      const sanitizedName = name.replace(/[<>]/g, '').trim().slice(0, 100);
+      const updated = await storage.updateFamily(familyId, { name: sanitizedName });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating family:", error);
+      res.status(500).json({ error: "Failed to update family" });
+    }
+  });
+
   app.post("/api/family/join", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

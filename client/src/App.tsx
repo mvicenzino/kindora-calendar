@@ -51,20 +51,22 @@ function Router() {
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
-        <AuthenticatedLayout>
-          <Switch>
-            <Route path="/demo-welcome" component={DemoWelcome} />
-            <Route path="/" component={Home} />
-            <Route path="/care" component={CaregiverDashboard} />
-            <Route path="/messages" component={Messages} />
-            <Route path="/documents" component={Documents} />
-            <Route path="/import" component={ImportSchedule} />
-            <Route path="/memories" component={Memories} />
-            <Route path="/family" component={FamilySettings} />
-            <Route path="/onboarding" component={Onboarding} />
-            <Route path="/onboarding/wizard" component={EventWizard} />
-          </Switch>
-        </AuthenticatedLayout>
+        <>
+          <Route path="/onboarding" component={Onboarding} />
+          <Route path="/onboarding/wizard" component={EventWizard} />
+          <AuthenticatedLayout>
+            <Switch>
+              <Route path="/demo-welcome" component={DemoWelcome} />
+              <Route path="/" component={Home} />
+              <Route path="/care" component={CaregiverDashboard} />
+              <Route path="/messages" component={Messages} />
+              <Route path="/documents" component={Documents} />
+              <Route path="/import" component={ImportSchedule} />
+              <Route path="/memories" component={Memories} />
+              <Route path="/family" component={FamilySettings} />
+            </Switch>
+          </AuthenticatedLayout>
+        </>
       )}
     </Switch>
   );

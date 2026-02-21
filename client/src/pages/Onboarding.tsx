@@ -1,342 +1,443 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Sparkles, Calendar, AlertCircle, Loader2 } from "lucide-react";
+import {
+  Users,
+  Calendar,
+  Heart,
+  ArrowRight,
+  Check,
+  Loader2,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { InsertFamilyMember, FamilyMember } from "@shared/schema";
-import { insertFamilyMemberSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { z } from "zod";
+import { useAuth } from "@/hooks/useAuth";
+import type { Family } from "@shared/schema";
 
-const PRESET_COLORS = [
-  { name: "Purple", value: "#9333EA" },
-  { name: "Blue", value: "#3B82F6" },
-  { name: "Teal", value: "#14B8A6" },
-  { name: "Green", value: "#22C55E" },
-  { name: "Orange", value: "#F97316" },
-  { name: "Pink", value: "#EC4899" },
-  { name: "Red", value: "#EF4444" },
-  { name: "Yellow", value: "#EAB308" },
-];
+type OnboardingStep =
+  | "welcome"
+  | "role"
+  | "owner-name"
+  | "owner-success"
+  | "aide-code"
+  | "aide-success";
+
+type CareContext = "kids" | "parent" | "extended" | "multi" | null;
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [familyModalOpen, setFamilyModalOpen] = useState(true); // Auto-open modal
-  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+  const { user } = useAuth();
+  const [step, setStep] = useState<OnboardingStep>("welcome");
+  const [familyName, setFamilyName] = useState("");
+  const [careContext, setCareContext] = useState<CareContext>(null);
+  const [inviteCode, setInviteCode] = useState("");
+  const [joinedFamily, setJoinedFamily] = useState<Family | null>(null);
 
-  // Fetch family members from server
-  const { data: members = [], isLoading: membersLoading, isError: membersError, refetch: refetchMembers } = useQuery<FamilyMember[]>({
-    queryKey: ['/api/family-members'],
+  const { data: families = [] } = useQuery<Family[]>({
+    queryKey: ["/api/families"],
   });
 
-  // Form for adding family member with validation (schema already extended in shared/schema.ts)
-  const form = useForm<InsertFamilyMember>({
-    resolver: zodResolver(insertFamilyMemberSchema),
-    defaultValues: {
-      name: "",
-      color: PRESET_COLORS[0].value,
-    },
-  });
+  useEffect(() => {
+    if (user?.lastName) {
+      setFamilyName(`The ${user.lastName} Family`);
+    } else if (user?.firstName) {
+      setFamilyName(`${user.firstName}'s Family`);
+    }
+  }, [user]);
 
-  // Create family member mutation
-  const createMemberMutation = useMutation({
-    mutationFn: async (member: InsertFamilyMember) => {
-      const res = await apiRequest('POST', '/api/family-members', member);
-      return await res.json();
+  const renameFamilyMutation = useMutation({
+    mutationFn: async ({ familyId, name }: { familyId: string; name: string }) => {
+      const res = await apiRequest("PUT", `/api/families/${familyId}`, { name });
+      return res.json() as Promise<Family>;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
     },
   });
 
-  const handleAddMember = async (data: InsertFamilyMember) => {
-    try {
-      // Store name for toast before form reset
-      const memberName = data.name;
-
-      // Wait for API to confirm success before proceeding
-      await createMemberMutation.mutateAsync(data);
-
-      // Reset form and close modal
-      form.reset();
-      setFamilyModalOpen(false);
-
-      toast({
-        title: "Family member added!",
-        description: `${memberName} has been added to your calendar`,
+  const joinFamilyMutation = useMutation({
+    mutationFn: async (code: string) => {
+      const res = await apiRequest("POST", "/api/family/join", {
+        inviteCode: code,
+        role: "caregiver",
       });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add family member. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+      return res.json() as Promise<Family>;
+    },
+    onSuccess: (family) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+      setJoinedFamily(family);
+      setStep("aide-success");
+    },
+  });
 
-  const handleContinue = () => {
-    // Verify members exist in database
-    if (members.length === 0) {
-      toast({
-        title: "Add at least one member",
-        description: "Add a family member to continue with onboarding",
-        variant: "destructive",
-      });
+  const handleOwnerSubmit = async () => {
+    const name = familyName.trim();
+    if (!name) {
+      toast({ title: "Please enter a family name", variant: "destructive" });
       return;
     }
-    setLocation('/onboarding/wizard');
+    if (families.length > 0) {
+      try {
+        await renameFamilyMutation.mutateAsync({ familyId: families[0].id, name });
+        setStep("owner-success");
+      } catch {
+        toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+      }
+    } else {
+      setStep("owner-success");
+    }
   };
 
-  const handleSkip = () => {
-    setSkipConfirmOpen(true);
+  const handleJoinSubmit = async () => {
+    const code = inviteCode.trim();
+    if (!code) {
+      toast({ title: "Please enter your invite code", variant: "destructive" });
+      return;
+    }
+    try {
+      await joinFamilyMutation.mutateAsync(code);
+    } catch {
+      toast({
+        title: "That code isn't valid",
+        description: "Check with your family and try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const confirmSkip = () => {
-    setSkipConfirmOpen(false);
-    setLocation('/');
+  const markOnboardingComplete = () => {
+    localStorage.setItem("kindora_onboarding_complete", "true");
   };
+
+  const goToCalendar = () => {
+    markOnboardingComplete();
+    setLocation("/");
+  };
+  const goToInvite = () => {
+    markOnboardingComplete();
+    setLocation("/family");
+  };
+
+  const careOptions: { id: CareContext; label: string }[] = [
+    { id: "kids", label: "Kids" },
+    { id: "parent", label: "Parent / Grandparent" },
+    { id: "extended", label: "Extended family" },
+    { id: "multi", label: "Multiple generations" },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center p-4">
-      <Card className="max-w-2xl w-full backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-12">
-        <div className="space-y-6">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
-              <Users className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-              Add Your Family Members
-            </h2>
-            <p className="text-white/70">
-              Each person gets a unique color for easy identification
-            </p>
-          </div>
+      <div className="max-w-lg w-full">
+        {step === "welcome" && (
+          <WelcomeStep onNext={() => setStep("role")} />
+        )}
 
-          {membersLoading ? (
-            <div className="text-center py-8">
-              <Loader2 className="w-8 h-8 text-white mx-auto animate-spin" />
-              <p className="text-white/70 mt-2">Loading members...</p>
-            </div>
-          ) : membersError ? (
-            <Alert className="mb-6 bg-red-500/10 border-red-500/30">
-              <AlertCircle className="h-4 w-4 text-red-400" />
-              <AlertDescription className="text-red-200 space-y-2">
-                <p>Failed to load family members.</p>
-                <Button
-                  onClick={() => refetchMembers()}
-                  variant="outline"
-                  size="sm"
-                  className="border-red-500/50 text-red-300 hover:bg-red-500/10"
-                  data-testid="button-retry-members"
-                >
-                  Try Again
-                </Button>
-              </AlertDescription>
-            </Alert>
-          ) : members.length > 0 ? (
-            <div className="space-y-3 mb-6">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/20"
-                  data-testid={`member-${member.id}`}
-                >
-                  <div
-                    className="w-10 h-10 rounded-full border-2"
-                    style={{ backgroundColor: member.color, borderColor: member.color }}
-                  />
-                  <span className="text-white font-medium">{member.name}</span>
+        {step === "role" && (
+          <RoleStep
+            onOwner={() => setStep("owner-name")}
+            onAide={() => setStep("aide-code")}
+          />
+        )}
+
+        {step === "owner-name" && (
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
+                  <Users className="w-7 h-7 text-white" />
                 </div>
-              ))}
-            </div>
-          ) : (
-            <Alert className="mb-6 bg-yellow-500/10 border-yellow-500/30">
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
-              <AlertDescription className="text-yellow-200">
-                Add at least one family member to get started with your calendar
-              </AlertDescription>
-            </Alert>
-          )}
+                <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  What should we call your family?
+                </h2>
+                <p className="text-white/60 text-sm">
+                  This will appear when inviting others to join
+                </p>
+              </div>
 
-          <div className="flex flex-col gap-3">
-            <Button
-              onClick={() => setFamilyModalOpen(true)}
-              className="bg-white/10 hover:bg-white/20 text-white border border-white/30"
-              data-testid="button-add-member"
-            >
-              <Users className="w-4 h-4 mr-2" />
-              Add Another Member
-            </Button>
-            
-            <div className="flex gap-3">
+              <div className="space-y-2">
+                <Label className="text-white/80 text-sm">Family name</Label>
+                <Input
+                  value={familyName}
+                  onChange={(e) => setFamilyName(e.target.value)}
+                  placeholder="e.g., The Johnsons, Garcia Household"
+                  className="bg-white/10 border-white/30 text-white placeholder:text-white/40 text-base"
+                  data-testid="input-family-name"
+                  autoFocus
+                  onKeyDown={(e) => e.key === "Enter" && handleOwnerSubmit()}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-white/60 text-xs">Who do you care for? (optional)</Label>
+                <div className="flex flex-wrap gap-2">
+                  {careOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCareContext(careContext === opt.id ? null : opt.id)}
+                      className={`px-3 py-2 rounded-md text-sm font-medium border transition-all ${
+                        careContext === opt.id
+                          ? "bg-white/20 border-white/50 text-white"
+                          : "bg-white/5 border-white/20 text-white/60"
+                      }`}
+                      data-testid={`tag-${opt.id}`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Button
-                onClick={handleContinue}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
-                disabled={members.length === 0 || membersLoading}
-                data-testid="button-continue"
+                onClick={handleOwnerSubmit}
+                disabled={renameFamilyMutation.isPending || !familyName.trim()}
+                className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                data-testid="button-create-family"
               >
-                Continue
-              </Button>
-              <Button
-                onClick={handleSkip}
-                variant="outline"
-                className="border-white/50 text-white hover:bg-white/10 bg-white/5"
-                data-testid="button-skip-family"
-              >
-                Skip
+                {renameFamilyMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                Create family
               </Button>
             </div>
-          </div>
-        </div>
-      </Card>
+          </Card>
+        )}
 
-      {/* Add Family Member Modal */}
-      <Dialog open={familyModalOpen} onOpenChange={setFamilyModalOpen}>
-        <DialogContent className="backdrop-blur-xl bg-slate-900/95 border-white/20 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">Add Family Member</DialogTitle>
-            <DialogDescription className="text-white/70">
-              Give them a name and pick a color for their events
-            </DialogDescription>
-          </DialogHeader>
-          
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleAddMember)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Mom, Dad, Sarah..."
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
-                        data-testid="input-member-name"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-red-400" />
-                  </FormItem>
-                )}
-              />
+        {step === "owner-success" && (
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+            <div className="space-y-6 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 mb-2">
+                <Check className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                You're all set, {user?.firstName || "there"}!
+              </h2>
+              <p className="text-white/70">
+                Your family calendar is ready. Let's add the people who need access.
+              </p>
 
-              <FormField
-                control={form.control}
-                name="color"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-white">Color</FormLabel>
-                    <FormControl>
-                      <div className="grid grid-cols-4 gap-3">
-                        {PRESET_COLORS.map((color) => (
-                          <button
-                            key={color.value}
-                            type="button"
-                            onClick={() => field.onChange(color.value)}
-                            className={`w-full aspect-square rounded-lg border-2 transition-all ${
-                              field.value === color.value
-                                ? 'border-white scale-110 shadow-lg'
-                                : 'border-white/30 hover:scale-105'
-                            }`}
-                            style={{ backgroundColor: color.value }}
-                            aria-label={`Select ${color.name}`}
-                            data-testid={`color-${color.name.toLowerCase()}`}
-                          />
-                        ))}
-                      </div>
-                    </FormControl>
-                    <FormMessage className="text-red-400" />
-                  </FormItem>
-                )}
-              />
-
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col gap-3 pt-2">
                 <Button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
-                  disabled={createMemberMutation.isPending}
-                  data-testid="button-save-member"
+                  onClick={goToInvite}
+                  className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                  data-testid="button-invite-caregiver"
                 >
-                  {createMemberMutation.isPending ? "Adding..." : "Add Member"}
+                  <Users className="w-4 h-4 mr-2" />
+                  Invite your first caregiver
                 </Button>
                 <Button
-                  type="button"
-                  onClick={() => {
-                    setFamilyModalOpen(false);
-                    form.reset();
-                  }}
+                  onClick={goToCalendar}
                   variant="outline"
-                  className="border-white/50 text-white hover:bg-white/10"
-                  data-testid="button-cancel"
+                  className="w-full border-white/40 text-white bg-white/5"
+                  data-testid="button-skip-to-calendar"
                 >
-                  Cancel
+                  I'll do this later
                 </Button>
               </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            </div>
+          </Card>
+        )}
 
-      {/* Skip Confirmation Dialog */}
-      <Dialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen}>
-        <DialogContent className="backdrop-blur-xl bg-slate-900/95 border-white/20 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white">Skip Onboarding?</DialogTitle>
-            <DialogDescription className="text-white/70">
-              Are you sure you want to skip the setup process?
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <p className="text-white/80 text-sm">
-              By completing the onboarding, you'll get:
-            </p>
-            <ul className="space-y-2 text-white/70 text-sm">
-              <li className="flex items-start gap-2">
-                <Sparkles className="w-4 h-4 mt-0.5 text-purple-400 flex-shrink-0" />
-                <span>Quick setup of family members with personalized colors</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Calendar className="w-4 h-4 mt-0.5 text-teal-400 flex-shrink-0" />
-                <span>Guided creation of your first event</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Users className="w-4 h-4 mt-0.5 text-pink-400 flex-shrink-0" />
-                <span>A better understanding of how Calendora works</span>
-              </li>
-            </ul>
-          </div>
+        {step === "aide-code" && (
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 mb-4">
+                  <Heart className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Enter your invite code
+                </h2>
+                <p className="text-white/60 text-sm">
+                  Your family sent you a code to join their calendar
+                </p>
+              </div>
 
-          <div className="flex gap-3">
-            <Button
-              onClick={() => setSkipConfirmOpen(false)}
-              className="flex-1 bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
-              data-testid="button-continue-onboarding"
-            >
-              Continue Setup
-            </Button>
-            <Button
-              onClick={confirmSkip}
-              variant="outline"
-              className="border-white/50 text-white hover:bg-white/10"
-              data-testid="button-confirm-skip"
-            >
-              Skip Anyway
-            </Button>
+              <div className="space-y-2">
+                <Label className="text-white/80 text-sm">Invite code</Label>
+                <Input
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="e.g., ABC123"
+                  className="bg-white/10 border-white/30 text-white placeholder:text-white/40 text-center text-xl tracking-[0.3em] font-mono uppercase"
+                  data-testid="input-invite-code"
+                  autoFocus
+                  maxLength={12}
+                  onKeyDown={(e) => e.key === "Enter" && handleJoinSubmit()}
+                />
+              </div>
+
+              {joinFamilyMutation.isError && (
+                <div className="flex items-start gap-2 p-3 rounded-md bg-red-500/10 border border-red-500/30 text-red-200 text-sm">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>That code isn't valid. Check with your family and try again.</span>
+                </div>
+              )}
+
+              <Button
+                onClick={handleJoinSubmit}
+                disabled={joinFamilyMutation.isPending || !inviteCode.trim()}
+                className="w-full bg-gradient-to-r from-orange-400 to-pink-500 text-white border-0"
+                data-testid="button-join-family"
+              >
+                {joinFamilyMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                Join family
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  toast({
+                    title: "No code yet?",
+                    description: "Ask the family member to send you an invite from their Family Settings page.",
+                  });
+                  goToCalendar();
+                }}
+                className="w-full text-white/50 text-sm hover:text-white/70 transition-colors py-2"
+                data-testid="button-no-code"
+              >
+                I don't have a code yet
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {step === "aide-success" && joinedFamily && (
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+            <div className="space-y-6 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 mb-2">
+                <Check className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Welcome to {joinedFamily.name}!
+              </h2>
+              <p className="text-white/70">
+                You're now receiving updates about family schedules and medications.
+              </p>
+
+              <Button
+                onClick={goToCalendar}
+                className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                data-testid="button-see-calendar"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                See calendar
+              </Button>
+            </div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WelcomeStep({ onNext }: { onNext: () => void }) {
+  return (
+    <div className="text-center space-y-8 py-8">
+      <div className="space-y-4">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-teal-500/30 border border-white/20 backdrop-blur-xl mb-2">
+          <Sparkles className="w-10 h-10 text-white" />
+        </div>
+        <h1
+          className="text-3xl md:text-4xl font-bold text-white"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          data-testid="text-welcome-title"
+        >
+          Welcome to Kindora
+        </h1>
+        <p className="text-white/70 text-lg max-w-sm mx-auto leading-relaxed">
+          Family scheduling that works for everyone — parents, caregivers, and the people they love.
+        </p>
+        <p className="text-white/40 text-sm">Takes about 2 minutes</p>
+      </div>
+
+      <Button
+        onClick={onNext}
+        className="bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0 px-8"
+        size="lg"
+        data-testid="button-get-started"
+      >
+        Let's get started
+        <ArrowRight className="w-4 h-4 ml-2" />
+      </Button>
+    </div>
+  );
+}
+
+function RoleStep({
+  onOwner,
+  onAide,
+}: {
+  onOwner: () => void;
+  onAide: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <h2
+          className="text-2xl md:text-3xl font-bold text-white mb-2"
+          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          data-testid="text-role-title"
+        >
+          What brings you here?
+        </h2>
+        <p className="text-white/60 text-sm">
+          Managing schedules for kids AND parents is a lot. We're here to help.
+        </p>
+      </div>
+
+      <div className="grid gap-4">
+        <Card
+          className="backdrop-blur-xl bg-white/10 border-white/20 p-6 cursor-pointer transition-all hover:bg-white/15 hover:border-white/30 group"
+          onClick={onOwner}
+          data-testid="card-role-owner"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-white mb-1">
+                I'm managing family schedules
+              </h3>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Parents, guardians, or adult children coordinating family activities
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-white/30 group-hover:text-white/60 mt-1 flex-shrink-0 transition-colors" />
           </div>
-        </DialogContent>
-      </Dialog>
+        </Card>
+
+        <Card
+          className="backdrop-blur-xl bg-white/10 border-white/20 p-6 cursor-pointer transition-all hover:bg-white/15 hover:border-white/30 group"
+          onClick={onAide}
+          data-testid="card-role-aide"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center">
+              <Heart className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-white mb-1">
+                I'm helping care for a family member
+              </h3>
+              <p className="text-white/50 text-sm leading-relaxed">
+                Health aides, caregivers, or family members joining an existing household
+              </p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-white/30 group-hover:text-white/60 mt-1 flex-shrink-0 transition-colors" />
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

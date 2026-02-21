@@ -24,7 +24,7 @@ import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMembe
 import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { activeFamilyId, isLoadingFamily } = useActiveFamily();
   const { isCaregiver, isLoading: isLoadingRole } = useUserRole();
   const [, setLocation] = useLocation();
@@ -75,6 +75,17 @@ export default function Home() {
       window.location.href = "/api/login";
     }
   }, [isAuthenticated, isLoading]);
+
+  // Redirect new users to onboarding if they haven't completed it
+  const isDemoMode = user?.id?.startsWith('demo-') ?? false;
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && !isDemoMode) {
+      const onboardingDone = localStorage.getItem("kindora_onboarding_complete");
+      if (!onboardingDone) {
+        setLocation("/onboarding");
+      }
+    }
+  }, [isAuthenticated, isLoading, isDemoMode, setLocation]);
 
   // Redirect caregivers to the caregiver dashboard
   useEffect(() => {
