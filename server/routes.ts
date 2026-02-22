@@ -3871,6 +3871,38 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // TEMPORARY: Admin cleanup endpoint - remove after use
+  app.delete("/api/admin/cleanup-user/:email", isAuthenticated, async (req: any, res) => {
+    try {
+      const requestingUserId = req.user?.claims?.sub || req.user?.id;
+      if (requestingUserId !== '21601610') {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      const email = decodeURIComponent(req.params.email);
+      const targetUser = await storage.getUserByEmail(email);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found", email });
+      }
+      if (targetUser.id === '21601610') {
+        return res.status(400).json({ message: "Cannot delete owner account" });
+      }
+      const families = await storage.getFamilies(targetUser.id);
+      for (const family of families) {
+        if (family.createdBy === targetUser.id) {
+          await storage.deleteFamily(family.id);
+        }
+      }
+      const { db } = await import("./db");
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.delete(users).where(eq(users.id, targetUser.id));
+      res.json({ message: "User deleted", email, userId: targetUser.id });
+    } catch (error: any) {
+      console.error("Cleanup error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
