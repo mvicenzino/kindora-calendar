@@ -3,12 +3,15 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import ViewSwitcherBar from "@/components/ViewSwitcherBar";
+import ViewSwitcherBar, { type CalendarLayout } from "@/components/ViewSwitcherBar";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
 import TimelineView from "@/components/TimelineView";
+import DayGridView from "@/components/DayGridView";
+import WeekGridView from "@/components/WeekGridView";
+import MonthGridView from "@/components/MonthGridView";
 import EventModal from "@/components/EventModal";
 import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
@@ -30,6 +33,7 @@ export default function Home() {
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
+  const [layout, setLayout] = useState<CalendarLayout>('grid');
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
@@ -346,7 +350,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-40">
-        <ViewSwitcherBar currentView={view} onViewChange={setView} />
+        <ViewSwitcherBar currentView={view} onViewChange={setView} layout={layout} onLayoutChange={setLayout} />
         {members.length > 0 && (
           <MemberFilterStrip
             members={members}
@@ -365,8 +369,20 @@ export default function Home() {
         onSelectEvent={handleEventClick}
       />
 
-      <div className="flex-1 overflow-y-auto">
-        {view === 'day' && (
+      <div className={`flex-1 ${layout === 'grid' && view !== 'timeline' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+        {view === 'day' && layout === 'grid' && (
+          <DayGridView
+            date={currentDate}
+            events={todayEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onAddEvent={handleAddEvent}
+            onAddEventForDate={handleAddEventForDate}
+            onDateChange={handleDateChange}
+          />
+        )}
+
+        {view === 'day' && layout === 'tile' && (
           <TodayView
             date={currentDate}
             events={todayEvents}
@@ -378,7 +394,20 @@ export default function Home() {
           />
         )}
 
-        {view === 'week' && (
+        {view === 'week' && layout === 'grid' && (
+          <WeekGridView
+            date={currentDate}
+            events={weekEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onAddEvent={handleAddEvent}
+            onAddEventForDate={handleAddEventForDate}
+            onDateChange={handleDateChange}
+            onWeekChange={handleWeekChange}
+          />
+        )}
+
+        {view === 'week' && layout === 'tile' && (
           <WeekView
             date={currentDate}
             events={weekEvents}
@@ -392,7 +421,20 @@ export default function Home() {
           />
         )}
 
-        {view === 'month' && (
+        {view === 'month' && layout === 'grid' && (
+          <MonthGridView
+            date={currentDate}
+            events={monthEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={handleAddEvent}
+            onAddEventForDate={handleDayClick}
+            onDateChange={handleDateChange}
+          />
+        )}
+
+        {view === 'month' && layout === 'tile' && (
           <MonthView
             date={currentDate}
             events={monthEvents}

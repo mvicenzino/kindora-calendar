@@ -1,11 +1,16 @@
 import { useRef, useEffect, useState } from "react";
+import { LayoutGrid, List } from "lucide-react";
+
+export type CalendarLayout = 'grid' | 'tile';
 
 interface ViewSwitcherBarProps {
   currentView: 'day' | 'week' | 'month' | 'timeline';
   onViewChange: (view: 'day' | 'week' | 'month' | 'timeline') => void;
+  layout: CalendarLayout;
+  onLayoutChange: (layout: CalendarLayout) => void;
 }
 
-export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitcherBarProps) {
+export default function ViewSwitcherBar({ currentView, onViewChange, layout, onLayoutChange }: ViewSwitcherBarProps) {
   const containerRef = useRef<HTMLElement>(null);
   const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -38,9 +43,11 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
     return () => window.removeEventListener('resize', updateIndicator);
   }, [currentView]);
 
+  const showLayoutToggle = currentView !== 'timeline';
+
   return (
     <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
-      <div className="flex items-center justify-center px-3 py-1">
+      <div className="flex items-center justify-center px-3 py-1 gap-2">
         <nav 
           ref={containerRef} 
           className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide"
@@ -85,6 +92,43 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
             </button>
           ))}
         </nav>
+
+        {showLayoutToggle && (
+          <div className="flex items-center gap-0.5 bg-muted/40 rounded-full p-0.5 border border-border/30" data-testid="layout-toggle">
+            <button
+              onClick={() => onLayoutChange('grid')}
+              data-testid="button-layout-grid"
+              aria-pressed={layout === 'grid'}
+              aria-label="Grid layout"
+              className={`
+                relative z-10 px-2 py-1 rounded-full text-xs font-medium flex items-center justify-center
+                transition-colors duration-300 ease-out
+                ${layout === 'grid'
+                  ? 'bg-primary/80 text-primary-foreground border border-primary'
+                  : 'text-muted-foreground'
+                }
+              `}
+            >
+              <LayoutGrid className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => onLayoutChange('tile')}
+              data-testid="button-layout-tile"
+              aria-pressed={layout === 'tile'}
+              aria-label="Tile layout"
+              className={`
+                relative z-10 px-2 py-1 rounded-full text-xs font-medium flex items-center justify-center
+                transition-colors duration-300 ease-out
+                ${layout === 'tile'
+                  ? 'bg-primary/80 text-primary-foreground border border-primary'
+                  : 'text-muted-foreground'
+                }
+              `}
+            >
+              <List className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
