@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { CalendarDays, LayoutGrid, Plus } from "lucide-react";
+import { CalendarDays, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type CalendarLayout = 'grid' | 'tile';
@@ -11,10 +11,9 @@ interface ViewSwitcherBarProps {
   onViewChange: (view: CalendarView) => void;
   layout: CalendarLayout;
   onLayoutChange: (layout: CalendarLayout) => void;
-  onAddEvent?: () => void;
 }
 
-export default function ViewSwitcherBar({ currentView, onViewChange, layout, onLayoutChange, onAddEvent }: ViewSwitcherBarProps) {
+export default function ViewSwitcherBar({ currentView, onViewChange, layout, onLayoutChange }: ViewSwitcherBarProps) {
   const containerRef = useRef<HTMLElement>(null);
   const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -124,18 +123,6 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
                 <LayoutGrid className="w-4 h-4" />
               </Button>
             </>
-          )}
-          {onAddEvent && (
-            <Button
-              size="icon"
-              variant="default"
-              onClick={onAddEvent}
-              data-testid="button-add-event"
-              aria-label="Add event"
-              className="rounded-full"
-            >
-              <Plus className="w-4 h-4" strokeWidth={2.5} />
-            </Button>
           )}
         </div>
       </div>

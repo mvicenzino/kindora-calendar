@@ -363,7 +363,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-40">
-        <ViewSwitcherBar currentView={view} onViewChange={setView} layout={layout} onLayoutChange={setLayout} onAddEvent={handleAddEvent} />
+        <ViewSwitcherBar currentView={view} onViewChange={setView} layout={layout} onLayoutChange={setLayout} />
         {members.length > 0 && (
           <MemberFilterStrip
             members={members}
