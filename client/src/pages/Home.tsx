@@ -13,8 +13,7 @@ import EventModal from "@/components/EventModal";
 import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
 import DayEventsDialog from "@/components/DayEventsDialog";
-import CategoryLegend from "@/components/CategoryLegend";
-import MemberFilterRail from "@/components/MemberFilterRail";
+import MemberFilterStrip from "@/components/MemberFilterStrip";
 import { isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -345,32 +344,28 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-full">
-      <MemberFilterRail
-        members={members}
-        selectedMemberIds={selectedMemberIds}
-        onToggleMember={handleToggleMember}
-        onSelectAllMembers={handleSelectAllMembers}
-        onAddMember={() => setMemberModalOpen(true)}
+    <div className="flex flex-col h-full">
+      <div className="sticky top-0 z-40">
+        <ViewSwitcherBar currentView={view} onViewChange={setView} />
+        {members.length > 0 && (
+          <MemberFilterStrip
+            members={members}
+            selectedMemberIds={selectedMemberIds}
+            onToggleMember={handleToggleMember}
+            onSelectAllMembers={handleSelectAllMembers}
+            onAddMember={() => setMemberModalOpen(true)}
+          />
+        )}
+      </div>
+
+      <SearchPanel
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        events={filteredEvents}
+        onSelectEvent={handleEventClick}
       />
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <div className="sticky top-0 z-40">
-          <ViewSwitcherBar currentView={view} onViewChange={setView} />
-        </div>
-
-        <div className="px-3 sm:px-4 md:px-6 py-1.5 border-b border-border/30">
-          <CategoryLegend />
-        </div>
-
-        <SearchPanel
-          isOpen={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          events={filteredEvents}
-          onSelectEvent={handleEventClick}
-        />
-
-        <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         {view === 'day' && (
           <TodayView
             date={currentDate}
@@ -417,7 +412,6 @@ export default function Home() {
             onAddEvent={handleAddEvent}
           />
         )}
-        </div>
       </div>
 
       {selectedEvent && (

@@ -190,9 +190,13 @@ export default function EventCard({
         </h3>
         {event.category && event.category !== 'other' && (
           <span
-            className={`inline-block text-[10px] font-semibold uppercase tracking-wider mb-2 ${needsDarkText ? 'text-gray-600' : 'text-white/60'}`}
+            className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider mb-2 px-2 py-0.5 rounded-full ${needsDarkText ? 'bg-black/10 text-gray-700 border border-black/10' : 'bg-white/15 text-white/80 border border-white/20'}`}
             data-testid={`text-category-${event.id}`}
           >
+            <span
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ backgroundColor: CATEGORY_CONFIG[event.category as EventCategory]?.color }}
+            />
             {CATEGORY_CONFIG[event.category as EventCategory]?.label || event.category}
           </span>
         )}
