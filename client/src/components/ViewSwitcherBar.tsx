@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
-import { LayoutGrid, List } from "lucide-react";
+import { CalendarDays, LayoutGrid, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export type CalendarLayout = 'grid' | 'tile';
 
@@ -8,9 +9,10 @@ interface ViewSwitcherBarProps {
   onViewChange: (view: 'day' | 'week' | 'month' | 'timeline') => void;
   layout: CalendarLayout;
   onLayoutChange: (layout: CalendarLayout) => void;
+  onAddEvent?: () => void;
 }
 
-export default function ViewSwitcherBar({ currentView, onViewChange, layout, onLayoutChange }: ViewSwitcherBarProps) {
+export default function ViewSwitcherBar({ currentView, onViewChange, layout, onLayoutChange, onAddEvent }: ViewSwitcherBarProps) {
   const containerRef = useRef<HTMLElement>(null);
   const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -47,7 +49,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
 
   return (
     <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
-      <div className="flex flex-col items-center px-3 py-1 gap-1">
+      <div className="flex items-center justify-between px-3 py-1.5 gap-2">
         <nav 
           ref={containerRef} 
           className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide"
@@ -93,44 +95,46 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
           ))}
         </nav>
 
-        {showLayoutToggle && (
-          <div className="flex items-center gap-0.5 bg-muted/40 rounded-full p-0.5 border border-border/30" data-testid="layout-toggle">
-            <button
-              onClick={() => onLayoutChange('grid')}
-              data-testid="button-layout-grid"
-              aria-pressed={layout === 'grid'}
-              aria-label="Schedule view"
-              className={`
-                relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
-                transition-colors duration-300 ease-out
-                ${layout === 'grid'
-                  ? 'bg-accent text-accent-foreground border border-accent-border'
-                  : 'text-muted-foreground'
-                }
-              `}
+        <div className="flex items-center gap-1">
+          {showLayoutToggle && (
+            <>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => onLayoutChange('grid')}
+                data-testid="button-layout-grid"
+                aria-pressed={layout === 'grid'}
+                aria-label="Schedule view"
+                className={`toggle-elevate ${layout === 'grid' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+              >
+                <CalendarDays className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => onLayoutChange('tile')}
+                data-testid="button-layout-tile"
+                aria-pressed={layout === 'tile'}
+                aria-label="Cards view"
+                className={`toggle-elevate ${layout === 'tile' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
+            </>
+          )}
+          {onAddEvent && (
+            <Button
+              size="icon"
+              variant="default"
+              onClick={onAddEvent}
+              data-testid="button-add-event"
+              aria-label="Add event"
+              className="rounded-full"
             >
-              <List className="w-2.5 h-2.5" />
-              <span>Schedule</span>
-            </button>
-            <button
-              onClick={() => onLayoutChange('tile')}
-              data-testid="button-layout-tile"
-              aria-pressed={layout === 'tile'}
-              aria-label="Cards view"
-              className={`
-                relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
-                transition-colors duration-300 ease-out
-                ${layout === 'tile'
-                  ? 'bg-accent text-accent-foreground border border-accent-border'
-                  : 'text-muted-foreground'
-                }
-              `}
-            >
-              <LayoutGrid className="w-2.5 h-2.5" />
-              <span>Cards</span>
-            </button>
-          </div>
-        )}
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

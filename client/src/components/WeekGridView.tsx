@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, isToday } from "date-fns";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEventDrag } from "@/hooks/useEventDrag";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
@@ -146,11 +146,6 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
             </h2>
           </div>
         </div>
-        {onAddEvent && (
-          <Button size="icon" onClick={onAddEvent} data-testid="button-add-event" className="rounded-full bg-primary text-primary-foreground">
-            <Plus className="w-4 h-4" strokeWidth={2.5} />
-          </Button>
-        )}
       </div>
 
       <div className="grid grid-cols-[48px_repeat(7,1fr)] border-b border-border/30">

@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useRef } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, addMonths, subMonths, isToday } from "date-fns";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
@@ -141,11 +141,6 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
             {format(date, 'MMMM yyyy')}
           </h2>
         </div>
-        {onAddEvent && (
-          <Button size="icon" onClick={onAddEvent} data-testid="button-add-event" className="rounded-full bg-primary text-primary-foreground">
-            <Plus className="w-4 h-4" strokeWidth={2.5} />
-          </Button>
-        )}
       </div>
 
       <div className="grid grid-cols-7 border-b border-border/20">

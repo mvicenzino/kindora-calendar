@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback } from "react";
 import { format, isToday, isSameDay, addDays, subDays } from "date-fns";
-import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEventDrag } from "@/hooks/useEventDrag";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
@@ -145,11 +145,6 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
             <p className="text-[11px] text-muted-foreground">{format(date, 'MMMM d, yyyy')}</p>
           </div>
         </div>
-        {onAddEvent && (
-          <Button size="icon" onClick={onAddEvent} data-testid="button-add-event" className="rounded-full bg-primary text-primary-foreground">
-            <Plus className="w-4 h-4" strokeWidth={2.5} />
-          </Button>
-        )}
       </div>
 
       <div
