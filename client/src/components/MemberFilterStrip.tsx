@@ -1,6 +1,5 @@
 import { Users, Plus, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { UiFamilyMember } from "@shared/types";
 
@@ -12,8 +11,8 @@ interface MemberFilterStripProps {
   onAddMember?: () => void;
 }
 
-function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+function getFirstInitial(name: string): string {
+  return (name[0] || '').toUpperCase();
 }
 
 export default function MemberFilterStrip({
@@ -59,29 +58,19 @@ export default function MemberFilterStrip({
                 className="flex-shrink-0 gap-1.5"
                 data-testid={`button-filter-member-${member.id}`}
               >
-                {isCaregiver ? (
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center"
-                    style={{
-                      backgroundColor: member.color + '30',
-                      color: member.color,
-                    }}
-                  >
-                    <HeartHandshake className="w-3 h-3" />
-                  </div>
-                ) : (
-                  <Avatar className="w-5 h-5">
-                    <AvatarFallback
-                      className="text-[9px] font-semibold"
-                      style={{
-                        backgroundColor: member.color + '30',
-                        color: member.color,
-                      }}
-                    >
-                      {getInitials(member.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                  style={{
+                    backgroundColor: member.color,
+                    color: '#fff',
+                  }}
+                >
+                  {isCaregiver ? (
+                    <HeartHandshake className="w-3.5 h-3.5" />
+                  ) : (
+                    getFirstInitial(member.name)
+                  )}
+                </div>
                 <span className="text-xs font-medium whitespace-nowrap">
                   {member.name.split(' ')[0]}
                 </span>
