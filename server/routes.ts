@@ -3872,6 +3872,29 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
 
+  app.delete("/api/admin/cleanup-user/:email", async (req: Request, res: Response) => {
+    try {
+      const email = decodeURIComponent(req.params.email);
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userFamilies = await storage.getUserFamilies(user.id);
+      for (const family of userFamilies) {
+        await storage.leaveFamily(user.id, family.id);
+        const remainingMembers = await storage.getFamilyMembershipsWithUsers(family.id);
+        if (remainingMembers.length === 0) {
+          await storage.deleteFamily(family.id);
+        }
+      }
+      await storage.deleteUser(user.id);
+      res.json({ message: `Cleaned up user ${email} and ${userFamilies.length} families` });
+    } catch (error: any) {
+      console.error("Cleanup error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

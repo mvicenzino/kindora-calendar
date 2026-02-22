@@ -19,6 +19,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
 
   // Family operations
   createFamily(userId: string, family: InsertFamily): Promise<Family>;
@@ -219,6 +220,10 @@ export class MemStorage implements IStorage {
 
   async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(u => u.stripeCustomerId === stripeCustomerId);
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    this.users.delete(id);
   }
 
   // Family operations
@@ -1115,6 +1120,10 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
+  async deleteUser(id: string): Promise<void> {
+    await this.db.delete(users).where(eq(users.id, id));
+  }
+
   // Family operations
   async createFamily(userId: string, familyData: InsertFamily): Promise<Family> {
     let inviteCode = this.generateInviteCode();
@@ -1864,6 +1873,10 @@ class DemoAwareStorage implements IStorage {
     const demoUser = await this.demoStorage.getUserByStripeCustomerId(stripeCustomerId);
     if (demoUser) return demoUser;
     return this.persistentStorage.getUserByStripeCustomerId(stripeCustomerId);
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    return this.getStorage(id).deleteUser(id);
   }
 
   // Family operations
