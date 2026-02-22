@@ -186,6 +186,7 @@ export async function setupAuth(app: Express) {
 
       const existingUser = await storage.getUserByEmail(cleanEmail);
       if (existingUser) {
+        console.log(`Register blocked: email=${cleanEmail} existingUserId=${existingUser.id} provider=${existingUser.authProvider}`);
         return res.status(409).json({ message: "An account with this email already exists" });
       }
 
