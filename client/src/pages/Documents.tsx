@@ -391,7 +391,7 @@ export default function Documents() {
       <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3" data-testid="text-documents-title">
+              <h1 className="text-xl font-semibold tracking-tight text-foreground flex items-center gap-3" data-testid="text-documents-title">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
                   <FolderOpen className="w-6 h-6 text-white" />
                 </div>

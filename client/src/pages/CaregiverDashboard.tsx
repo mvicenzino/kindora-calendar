@@ -367,7 +367,7 @@ export default function CaregiverDashboard() {
               <TimeIcon className="h-5 w-5" />
               <span className="text-sm font-medium">{timeOfDay.label}</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground" data-testid="text-dashboard-title">
+            <h1 className="text-lg md:text-xl font-semibold text-foreground" data-testid="text-dashboard-title">
               Today's Care Dashboard
             </h1>
             <p className="text-muted-foreground" data-testid="text-dashboard-date">

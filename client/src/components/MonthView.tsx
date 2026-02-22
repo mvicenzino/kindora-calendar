@@ -33,14 +33,14 @@ export default function MonthView({ date, events, members, onEventClick, onViewC
     .slice(0, 3);
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="w-full max-w-2xl mx-auto space-y-6">
-        <div className="flex items-start justify-between gap-4">
+    <div className="p-3 sm:p-4">
+      <div className="w-full max-w-2xl mx-auto space-y-4">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 mb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-0.5">
               MONTH
             </p>
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
               {format(date, 'MMMM yyyy')}
             </h1>
           </div>

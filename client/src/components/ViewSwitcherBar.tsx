@@ -40,10 +40,10 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
 
   return (
     <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
-      <div className="flex items-center justify-center px-4 py-2">
+      <div className="flex items-center justify-center px-3 py-1">
         <nav 
           ref={containerRef} 
-          className="relative flex items-center gap-1 bg-muted/50 backdrop-blur-xl rounded-full p-1 border border-border/30 overflow-x-auto scrollbar-hide"
+          className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide"
           data-testid="nav-view-switcher"
         >
           <div
@@ -51,9 +51,9 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
             style={{
               left: `${indicatorStyle.left}px`,
               width: `${indicatorStyle.width}px`,
-              top: '4px',
-              bottom: '4px',
-              boxShadow: '0 0 12px hsl(var(--primary) / 0.3)',
+              top: '2px',
+              bottom: '2px',
+              boxShadow: '0 0 10px hsl(var(--primary) / 0.25)',
             }}
           />
           {views.map((view) => (
@@ -71,7 +71,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
               aria-pressed={currentView === view.value}
               aria-label={`Switch to ${view.label} view`}
               className={`
-                relative z-10 min-w-[70px] sm:min-w-[80px] px-3 sm:px-4 py-2 rounded-full text-sm font-medium 
+                relative z-10 min-w-[56px] sm:min-w-[64px] px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium 
                 flex items-center justify-center whitespace-nowrap
                 transition-colors duration-300 ease-out
                 focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none

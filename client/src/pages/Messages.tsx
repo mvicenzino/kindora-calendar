@@ -184,7 +184,7 @@ export default function Messages() {
     <div className="p-4 md:p-6">
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <MessageCircle className="h-6 w-6" />
             Messages
           </h1>

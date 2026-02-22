@@ -351,7 +351,7 @@ export default function AccountSettings({ initialTab }: { initialTab?: string })
     <div className="p-4 md:p-6">
       <div className="max-w-4xl mx-auto space-y-4">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-settings-title">Settings</h1>
+          <h1 className="text-lg font-semibold" data-testid="text-settings-title">Settings</h1>
           <p className="text-sm text-muted-foreground">Manage your account, family, and preferences</p>
         </div>
 

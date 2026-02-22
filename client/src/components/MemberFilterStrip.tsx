@@ -27,7 +27,7 @@ export default function MemberFilterStrip({
 
   return (
     <div
-      className="flex items-center gap-1.5 px-3 sm:px-4 md:px-6 py-1.5 border-b border-border/30 bg-background/40 backdrop-blur-sm overflow-x-auto scrollbar-hide"
+      className="flex items-center gap-1 px-3 sm:px-4 md:px-6 py-1 border-b border-border/30 bg-background/40 backdrop-blur-sm overflow-x-auto scrollbar-hide"
       data-testid="member-filter-strip"
     >
       <Tooltip>

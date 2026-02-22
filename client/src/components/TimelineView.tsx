@@ -34,13 +34,12 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
   });
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-6">
+    <div className="min-h-screen p-3 sm:p-4">
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-5xl font-bold text-foreground">Timeline</h1>
-            <p className="text-lg text-muted-foreground mt-1">Your events in time</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">Timeline</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Your events in time</p>
           </div>
           {onAddEvent && (
             <button

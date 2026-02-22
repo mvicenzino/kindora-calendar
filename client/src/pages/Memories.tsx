@@ -65,7 +65,7 @@ export default function Memories() {
               <Image className="w-7 h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Memories</h1>
+              <h1 className="text-xl font-semibold text-foreground">Memories</h1>
               <p className="text-sm text-muted-foreground">Your photo scrapbook from special moments</p>
             </div>
           </div>
@@ -82,7 +82,7 @@ export default function Memories() {
             {groupedByMonth.map(([month, monthEvents]) => (
               <div key={month} className="space-y-4">
                 <div className="bg-card border border-border rounded-2xl p-4">
-                  <h2 className="text-2xl font-bold text-foreground">{month}</h2>
+                  <h2 className="text-base font-semibold text-foreground">{month}</h2>
                   <p className="text-sm text-muted-foreground">{monthEvents.length} {monthEvents.length === 1 ? 'memory' : 'memories'}</p>
                 </div>
 

@@ -26,8 +26,8 @@ import FamilySelector from "@/components/FamilySelector";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 
 const sidebarStyle = {
-  "--sidebar-width": "14rem",
-  "--sidebar-width-icon": "3.5rem",
+  "--sidebar-width": "12rem",
+  "--sidebar-width-icon": "3rem",
 };
 
 function AppShell({ children }: { children: React.ReactNode }) {
@@ -36,7 +36,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex h-screen w-full bg-background">
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1 min-w-0">
-          <header className="sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-2 border-b border-border/50 bg-background/80 backdrop-blur-xl" data-testid="header-main">
+          <header className="sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40 bg-background/90 backdrop-blur-xl" data-testid="header-main">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <FamilySelector />

@@ -23,9 +23,9 @@ export default function CalendarHeader({
 }: CalendarHeaderProps) {
   return (
     <div className="backdrop-blur-xl bg-card/50 border-b border-card-border shadow-lg sticky top-0 z-50">
-      <div className="p-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+      <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <Button
               size="icon"
               variant="ghost"
@@ -33,7 +33,7 @@ export default function CalendarHeader({
               data-testid="button-previous-month"
               className="hover-elevate active-elevate-2"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button
               size="icon"
@@ -42,11 +42,11 @@ export default function CalendarHeader({
               data-testid="button-next-month"
               className="hover-elevate active-elevate-2"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
           
-          <h1 className="text-4xl font-bold tracking-tight font-mono" data-testid="text-current-month">
+          <h1 className="text-lg font-semibold tracking-tight font-mono" data-testid="text-current-month">
             {format(currentDate, "MMMM yyyy")}
           </h1>
         </div>

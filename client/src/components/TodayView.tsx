@@ -23,12 +23,12 @@ export default function TodayView({ date, events, members = [], onEventClick, on
   const hasEvents = events.length > 0;
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="w-full max-w-2xl mx-auto space-y-6">
-        <div className="flex items-start justify-between gap-4">
+    <div className="p-3 sm:p-4">
+      <div className="w-full max-w-2xl mx-auto space-y-4">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-foreground" data-testid="text-day-title">{dayTitle}</h1>
-            <p className="text-base sm:text-lg text-muted-foreground mt-1">{daySubtitle}</p>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground" data-testid="text-day-title">{dayTitle}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{daySubtitle}</p>
           </div>
           {onAddEvent && (
             <Button
