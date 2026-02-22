@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Edit2, X, Upload, Trash2, Pencil } from "lucide-react";
+import { Clock, Edit3, X, Upload, Trash2, CalendarDays, MapPin, Users, Tag, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -9,6 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import EventNotesSection from "./EventNotesSection";
+import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 import type { UiEvent } from "@shared/types";
 import type { User } from "@shared/schema";
 
@@ -28,76 +29,49 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
     queryKey: ['/api/auth/user'],
   });
 
+  const categoryConfig = CATEGORY_CONFIG[(event.category as EventCategory) || 'other'];
+  const eventColor = categoryConfig?.color || '#64748B';
+
   const uploadPhotoMutation = useMutation({
     mutationFn: async (file: File) => {
-      // Get upload URL
       const uploadRes = await apiRequest('POST', '/api/objects/upload');
       const { uploadURL } = await uploadRes.json();
-
-      // Upload file to signed URL
       const uploadFileRes = await fetch(uploadURL, {
         method: 'PUT',
         body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
+        headers: { 'Content-Type': file.type },
       });
-
-      if (!uploadFileRes.ok) {
-        throw new Error('Failed to upload file');
-      }
-
-      // Update event with photo URL
-      const updateRes = await apiRequest('PUT', `/api/events/${event.id}/photo`, {
-        photoURL: uploadURL,
-      });
+      if (!uploadFileRes.ok) throw new Error('Failed to upload file');
+      const updateRes = await apiRequest('PUT', `/api/events/${event.id}/photo`, { photoURL: uploadURL });
       return await updateRes.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
-      toast({
-        title: "Photo added",
-        description: "Your memory has been saved to this event.",
-      });
+      toast({ title: "Photo added", description: "Your memory has been saved to this event." });
     },
     onError: () => {
-      toast({
-        title: "Upload failed",
-        description: "Could not upload photo. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Upload failed", description: "Could not upload photo. Please try again.", variant: "destructive" });
     },
   });
 
   const deletePhotoMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('PUT', `/api/events/${event.id}/photo`, {
-        photoURL: null,
-      });
+      const res = await apiRequest('PUT', `/api/events/${event.id}/photo`, { photoURL: null });
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
-      toast({
-        title: "Photo removed",
-        description: "The photo has been removed from this event.",
-      });
+      toast({ title: "Photo removed", description: "The photo has been removed from this event." });
     },
   });
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file",
-        description: "Please select an image file.",
-        variant: "destructive",
-      });
+      toast({ title: "Invalid file", description: "Please select an image file.", variant: "destructive" });
       return;
     }
-
     setUploading(true);
     try {
       await uploadPhotoMutation.mutateAsync(file);
@@ -106,89 +80,172 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
     }
   };
 
-  const handleDeletePhoto = () => {
-    deletePhotoMutation.mutate();
-  };
-
-  const memberNames = event.members?.map(m => m.name).join(', ') || '';
+  const isMultiDay = format(event.startTime, 'yyyy-MM-dd') !== format(event.endTime, 'yyyy-MM-dd');
+  const isSameAmPm = format(event.startTime, 'a') === format(event.endTime, 'a');
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl bg-card max-h-[90vh] flex flex-col">
+      <DialogContent
+        className="sm:max-w-md p-0 border-0 overflow-hidden rounded-2xl max-h-[85vh] flex flex-col gap-0"
+        style={{
+          background: 'transparent',
+          boxShadow: `0 0 0 1px rgba(255,255,255,0.06), 0 25px 60px -12px rgba(0,0,0,0.5), 0 0 40px -8px ${eventColor}15`,
+        }}
+      >
         <DialogTitle className="sr-only">Event Details</DialogTitle>
-        <DialogDescription className="sr-only">
-          View event details, photo memories, date and time, and notes
-        </DialogDescription>
-        
-        <div className="p-6 space-y-6 overflow-y-auto flex-1">
-          {/* Header */}
-          <div className="flex items-center justify-between">
+        <DialogDescription className="sr-only">View and manage event details</DialogDescription>
+
+        {/* Color accent header bar */}
+        <div
+          className="relative px-4 pt-3.5 pb-3"
+          style={{
+            background: `linear-gradient(135deg, ${eventColor}18, ${eventColor}08)`,
+            borderBottom: `1px solid ${eventColor}20`,
+          }}
+        >
+          <div
+            className="absolute inset-0 backdrop-blur-2xl"
+            style={{ background: 'hsl(var(--card) / 0.85)' }}
+          />
+          <div className="relative flex items-center justify-between gap-3">
             <button
               onClick={onEdit}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/50 border border-border text-foreground hover:bg-muted transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: `${eventColor}18`,
+                color: eventColor,
+                border: `1px solid ${eventColor}25`,
+              }}
               data-testid="button-edit-event"
             >
-              <Pencil className="w-4 h-4" />
-              <span className="text-sm font-medium">Edit Details</span>
+              <Edit3 className="w-3 h-3" />
+              Edit
             </button>
-            <button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-foreground hover:bg-muted transition-all"
-              data-testid="button-close-details"
-            >
-              <X className="w-5 h-5" />
-            </button>
+
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wider"
+                style={{ color: eventColor, background: `${eventColor}12` }}
+              >
+                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: eventColor }} />
+                {categoryConfig?.label || 'Event'}
+              </div>
+              <button
+                onClick={onClose}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                style={{ background: 'hsl(var(--muted) / 0.4)' }}
+                data-testid="button-close-details"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div
+          className="flex-1 overflow-y-auto"
+          style={{ background: 'hsl(var(--card) / 0.92)', backdropFilter: 'blur(40px)' }}
+        >
+          {/* Title section */}
+          <div className="px-4 pt-4 pb-3">
+            <h3 className="text-base font-bold text-foreground leading-snug">{event.title}</h3>
+            {event.description && (
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{event.description}</p>
+            )}
           </div>
 
-          {/* Event Title Card with Members */}
-          <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
-            <div className="flex items-center gap-4">
-              <div className="flex -space-x-2">
-                {event.members?.slice(0, 3).map((member) => (
-                  <Avatar key={member.id} className="h-12 w-12 border-2 border-border">
-                    <AvatarFallback
-                      className="text-white font-semibold"
-                      style={{ backgroundColor: member.color }}
-                    >
-                      {member.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
+          {/* Info grid */}
+          <div className="px-4 pb-3">
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{
+                background: 'hsl(var(--muted) / 0.3)',
+                border: '1px solid hsl(var(--border) / 0.5)',
+              }}
+            >
+              {/* Date row */}
+              <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid hsl(var(--border) / 0.3)' }}>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${eventColor}15` }}>
+                  <CalendarDays className="w-3.5 h-3.5" style={{ color: eventColor }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Date</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {format(event.startTime, 'EEE, MMM d, yyyy')}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-foreground">{event.title}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Assigned to {memberNames}
-                </p>
+
+              {/* Time row */}
+              <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid hsl(var(--border) / 0.3)' }}>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${eventColor}15` }}>
+                  <Clock className="w-3.5 h-3.5" style={{ color: eventColor }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Time</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {isSameAmPm
+                      ? `${format(event.startTime, 'h:mm')} - ${format(event.endTime, 'h:mm a')}`
+                      : `${format(event.startTime, 'h:mm a')} - ${format(event.endTime, 'h:mm a')}`
+                    }
+                  </p>
+                </div>
               </div>
+
+              {/* Members row */}
+              {event.members && event.members.length > 0 && (
+                <div className="flex items-center gap-3 px-3 py-2.5">
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${eventColor}15` }}>
+                    <Users className="w-3.5 h-3.5" style={{ color: eventColor }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">With</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div className="flex -space-x-1.5">
+                        {event.members.slice(0, 4).map((member) => (
+                          <Avatar key={member.id} className="h-5 w-5 border border-card">
+                            <AvatarFallback
+                              className="text-[9px] text-white font-bold"
+                              style={{ backgroundColor: member.color }}
+                            >
+                              {member.initials?.[0] || member.name?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                      </div>
+                      <span className="text-xs text-foreground font-medium truncate">
+                        {event.members.map(m => m.name).join(', ')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Photo Section */}
-          <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
+          {/* Photo section */}
+          <div className="px-4 pb-3">
             {event.photoUrl ? (
-              <div className="relative">
+              <div className="relative rounded-xl overflow-hidden" style={{ border: '1px solid hsl(var(--border) / 0.5)' }}>
                 <img
                   src={event.photoUrl}
                   alt={event.title}
-                  className="w-full rounded-lg object-cover max-h-96"
+                  className="w-full object-cover max-h-48"
                   data-testid="event-photo"
-                  onError={(e) => {
-                    console.error('Failed to load image:', event.photoUrl);
-                    e.currentTarget.style.display = 'none';
-                  }}
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
                 />
                 <button
-                  onClick={handleDeletePhoto}
-                  className="absolute top-2 left-2 w-8 h-8 rounded-full bg-destructive flex items-center justify-center text-destructive-foreground hover-elevate transition-all"
+                  onClick={() => deletePhotoMutation.mutate()}
+                  className="absolute top-2 right-2 w-6 h-6 rounded-md bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white transition-colors"
                   data-testid="button-delete-photo"
                   disabled={deletePhotoMutation.isPending}
                 >
-                  <X className="w-5 h-5" />
+                  <Trash2 className="w-3 h-3" />
                 </button>
               </div>
             ) : (
-              <label className="cursor-pointer">
+              <label className="cursor-pointer block">
                 <input
                   type="file"
                   accept="image/*"
@@ -197,65 +254,69 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
                   data-testid="input-photo-upload"
                   disabled={uploading}
                 />
-                <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground transition-all">
-                  <Upload className="w-12 h-12 text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground text-sm">
-                    {uploading ? 'Uploading...' : 'Click to add a photo memory'}
-                  </p>
+                <div
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all"
+                  style={{
+                    background: 'hsl(var(--muted) / 0.25)',
+                    border: '1px dashed hsl(var(--border) / 0.6)',
+                  }}
+                >
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${eventColor}12` }}>
+                    <Upload className="w-3.5 h-3.5" style={{ color: eventColor }} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-foreground">
+                      {uploading ? 'Uploading...' : 'Add a photo memory'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">Tap to capture this moment</p>
+                  </div>
                 </div>
               </label>
             )}
           </div>
 
-          {/* Date and Time Cards */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                <Calendar className="w-4 h-4" />
-                <span className="text-sm font-medium">Date</span>
-              </div>
-              <p className="text-lg font-bold text-foreground">
-                {format(event.startTime, 'MMMM do, yyyy')}
-              </p>
-            </div>
-
-            <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2 text-muted-foreground">
-                <Clock className="w-4 h-4" />
-                <span className="text-sm font-medium">Time</span>
-              </div>
-              <p className="text-lg font-bold text-foreground">
-                {format(event.startTime, 'h:mm a')} - {format(event.endTime, 'h:mm a')}
-              </p>
-            </div>
-          </div>
-
           {/* Notes Section */}
           {event.id && activeFamilyId && (
-            <EventNotesSection
-              eventId={event.id}
-              familyId={activeFamilyId}
-              currentUserId={currentUser?.id}
-            />
+            <div className="px-4 pb-3">
+              <EventNotesSection
+                eventId={event.id}
+                familyId={activeFamilyId}
+                currentUserId={currentUser?.id}
+              />
+            </div>
           )}
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <Button
-              onClick={onEdit}
-              className="flex-1 bg-primary text-primary-foreground border border-border rounded-lg h-12 font-medium"
-              data-testid="button-edit-event-bottom"
-            >
-              Edit Event
-            </Button>
-            <Button
-              onClick={onClose}
-              className="flex-1 bg-muted/50 hover:bg-muted text-foreground border border-border rounded-lg h-12 font-medium"
-              data-testid="button-close-bottom"
-            >
-              Close
-            </Button>
-          </div>
+        {/* Bottom action bar */}
+        <div
+          className="px-4 py-3 flex gap-2"
+          style={{
+            background: 'hsl(var(--card) / 0.95)',
+            borderTop: '1px solid hsl(var(--border) / 0.4)',
+            backdropFilter: 'blur(20px)',
+          }}
+        >
+          <Button
+            onClick={onEdit}
+            className="flex-1 h-9 rounded-lg text-xs font-semibold"
+            style={{
+              background: eventColor,
+              color: '#fff',
+              border: `1px solid ${eventColor}`,
+            }}
+            data-testid="button-edit-event-bottom"
+          >
+            <Edit3 className="w-3 h-3 mr-1.5" />
+            Edit Event
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onClose}
+            className="flex-1 h-9 rounded-lg text-xs font-semibold"
+            data-testid="button-close-bottom"
+          >
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
