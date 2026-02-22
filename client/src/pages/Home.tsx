@@ -24,12 +24,14 @@ import type { FamilyMember, Event, InsertEvent, EventCategory } from "@shared/sc
 import { CATEGORY_CONFIG } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Home() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { activeFamilyId, isLoadingFamily } = useActiveFamily();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isCaregiver, isLoading: isRoleLoading } = useUserRole();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('day');
   const [layout, setLayout] = useState<CalendarLayout>('grid');
@@ -76,6 +78,12 @@ export default function Home() {
       window.location.href = "/api/login";
     }
   }, [isAuthenticated, isLoading]);
+
+  useEffect(() => {
+    if (!isRoleLoading && isCaregiver) {
+      setLocation("/care");
+    }
+  }, [isCaregiver, isRoleLoading, setLocation]);
 
   const isDemoMode = user?.id?.startsWith('demo-') ?? false;
   useEffect(() => {
