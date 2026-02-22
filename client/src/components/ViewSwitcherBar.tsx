@@ -47,7 +47,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
 
   return (
     <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
-      <div className="flex items-center justify-center px-3 py-1 gap-2">
+      <div className="flex flex-col items-center px-3 py-1 gap-1">
         <nav 
           ref={containerRef} 
           className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide"
@@ -101,7 +101,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
               aria-pressed={layout === 'grid'}
               aria-label="Grid layout"
               className={`
-                relative z-10 px-2 py-1 rounded-full text-xs font-medium flex items-center justify-center
+                relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
                 transition-colors duration-300 ease-out
                 ${layout === 'grid'
                   ? 'bg-primary/80 text-primary-foreground border border-primary'
@@ -109,7 +109,8 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
                 }
               `}
             >
-              <LayoutGrid className="w-3 h-3" />
+              <LayoutGrid className="w-2.5 h-2.5" />
+              <span>Grid</span>
             </button>
             <button
               onClick={() => onLayoutChange('tile')}
@@ -117,7 +118,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
               aria-pressed={layout === 'tile'}
               aria-label="Tile layout"
               className={`
-                relative z-10 px-2 py-1 rounded-full text-xs font-medium flex items-center justify-center
+                relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
                 transition-colors duration-300 ease-out
                 ${layout === 'tile'
                   ? 'bg-primary/80 text-primary-foreground border border-primary'
@@ -125,7 +126,8 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
                 }
               `}
             >
-              <List className="w-3 h-3" />
+              <List className="w-2.5 h-2.5" />
+              <span>List</span>
             </button>
           </div>
         )}
