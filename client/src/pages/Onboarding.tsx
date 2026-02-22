@@ -205,7 +205,7 @@ export default function Onboarding() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-lg w-full">
         {step === "welcome" && (
           <WelcomeStep onNext={() => setStep("role")} />
@@ -219,27 +219,27 @@ export default function Onboarding() {
         )}
 
         {step === "owner-name" && (
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+          <Card className="p-8 md:p-10">
             <div className="space-y-6">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
                   <Users className="w-7 h-7 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h2 className="text-2xl font-bold text-foreground mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   What should we call your family?
                 </h2>
-                <p className="text-white/60 text-sm">
+                <p className="text-muted-foreground text-sm">
                   This will appear when inviting others to join
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white/80 text-sm">Family name</Label>
+                <Label className="text-sm">Family name</Label>
                 <Input
                   value={familyName}
                   onChange={(e) => setFamilyName(e.target.value)}
                   placeholder="e.g., The Johnsons, Garcia Household"
-                  className="bg-white/10 border-white/30 text-white placeholder:text-white/40 text-base"
+                  className="text-base"
                   data-testid="input-family-name"
                   autoFocus
                   onKeyDown={(e) => e.key === "Enter" && handleOwnerSubmit()}
@@ -247,7 +247,7 @@ export default function Onboarding() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white/60 text-xs">Who do you care for? (optional)</Label>
+                <Label className="text-xs text-muted-foreground">Who do you care for? (optional)</Label>
                 <div className="flex flex-wrap gap-2">
                   {careOptions.map((opt) => (
                     <button
@@ -258,10 +258,10 @@ export default function Onboarding() {
                           ? prev.filter(c => c !== opt.id) 
                           : [...prev, opt.id]
                       )}
-                      className={`px-3 py-2 rounded-md text-sm font-medium border transition-all ${
+                      className={`px-3 py-2 rounded-md text-sm font-medium border transition-all toggle-elevate ${
                         careContext.includes(opt.id)
-                          ? "bg-white/20 border-white/50 text-white"
-                          : "bg-white/5 border-white/20 text-white/60"
+                          ? "bg-muted border-border text-foreground toggle-elevated"
+                          : "bg-muted/50 border-border text-muted-foreground"
                       }`}
                       data-testid={`tag-${opt.id}`}
                     >
@@ -274,7 +274,7 @@ export default function Onboarding() {
               <Button
                 onClick={handleOwnerSubmit}
                 disabled={createFamilyMutation.isPending || renameFamilyMutation.isPending || !familyName.trim()}
-                className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                className="w-full"
                 data-testid="button-create-family"
               >
                 {(createFamilyMutation.isPending || renameFamilyMutation.isPending) ? (
@@ -287,16 +287,16 @@ export default function Onboarding() {
         )}
 
         {step === "add-members" && (
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+          <Card className="p-8 md:p-10">
             <div className="space-y-6">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
                   <UserPlus className="w-7 h-7 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h2 className="text-2xl font-bold text-foreground mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Who's in your family?
                 </h2>
-                <p className="text-white/60 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Add the people you'll be scheduling for. You can always edit this later.
                 </p>
               </div>
@@ -305,7 +305,7 @@ export default function Onboarding() {
                 {memberEntries.map((entry, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-2 p-3 rounded-lg bg-white/10 border border-white/20"
+                    className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border"
                     data-testid={`member-entry-${index}`}
                   >
                     <div
@@ -315,15 +315,15 @@ export default function Onboarding() {
                       {entry.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{entry.name}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{entry.name}</p>
                     </div>
                     {index === 0 ? (
-                      <span className="text-xs text-white/40 flex-shrink-0">You</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">You</span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => handleRemoveMember(index)}
-                        className="text-white/40 hover:text-white/70 transition-colors flex-shrink-0"
+                        className="text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
                         data-testid={`button-remove-member-${index}`}
                       >
                         <X className="w-4 h-4" />
@@ -334,13 +334,13 @@ export default function Onboarding() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white/70 text-xs">Add a family member</Label>
+                <Label className="text-xs">Add a family member</Label>
                 <div className="flex gap-2">
                   <Input
                     value={newMemberName}
                     onChange={(e) => setNewMemberName(e.target.value)}
                     placeholder="Name (e.g., Carolyn, Sebby)"
-                    className="bg-white/10 border-white/30 text-white placeholder:text-white/40 text-sm flex-1"
+                    className="text-sm flex-1"
                     data-testid="input-new-member-name"
                     onKeyDown={(e) => e.key === "Enter" && handleAddMember()}
                   />
@@ -349,7 +349,7 @@ export default function Onboarding() {
                     variant="outline"
                     onClick={handleAddMember}
                     disabled={!newMemberName.trim()}
-                    className="border-white/30 text-white bg-white/5 self-start mt-0"
+                    className="self-start mt-0"
                     data-testid="button-add-member"
                   >
                     <Plus className="w-4 h-4" />
@@ -361,7 +361,7 @@ export default function Onboarding() {
                 <Button
                   onClick={handleMembersSubmit}
                   disabled={createMemberMutation.isPending || memberEntries.length === 0}
-                  className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                  className="w-full"
                   data-testid="button-save-members"
                 >
                   {createMemberMutation.isPending ? (
@@ -372,7 +372,7 @@ export default function Onboarding() {
                 <button
                   type="button"
                   onClick={() => setStep("owner-success")}
-                  className="text-white/50 text-sm hover:text-white/70 transition-colors py-1"
+                  className="text-muted-foreground text-sm hover:text-foreground transition-colors py-1"
                   data-testid="button-skip-members"
                 >
                   Skip for now
@@ -383,15 +383,15 @@ export default function Onboarding() {
         )}
 
         {step === "owner-success" && (
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+          <Card className="p-8 md:p-10">
             <div className="space-y-6 text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 mb-2">
                 <Check className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 You're all set, {user?.firstName || "there"}!
               </h2>
-              <p className="text-white/70">
+              <p className="text-muted-foreground">
                 {memberEntries.length > 1
                   ? `Your family calendar is ready with ${memberEntries.length} members. Now let's add caregivers who need access.`
                   : "Your family calendar is ready. Let's add the people who need access."}
@@ -400,7 +400,7 @@ export default function Onboarding() {
               <div className="flex flex-col gap-3 pt-2">
                 <Button
                   onClick={goToInvite}
-                  className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                  className="w-full"
                   data-testid="button-invite-caregiver"
                 >
                   <Users className="w-4 h-4 mr-2" />
@@ -409,7 +409,7 @@ export default function Onboarding() {
                 <Button
                   onClick={goToCalendar}
                   variant="outline"
-                  className="w-full border-white/40 text-white bg-white/5"
+                  className="w-full"
                   data-testid="button-skip-to-calendar"
                 >
                   I'll do this later
@@ -420,27 +420,27 @@ export default function Onboarding() {
         )}
 
         {step === "aide-code" && (
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+          <Card className="p-8 md:p-10">
             <div className="space-y-6">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 mb-4">
                   <Heart className="w-7 h-7 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h2 className="text-2xl font-bold text-foreground mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Enter your invite code
                 </h2>
-                <p className="text-white/60 text-sm">
+                <p className="text-muted-foreground text-sm">
                   Your family sent you a code to join their calendar
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-white/80 text-sm">Invite code</Label>
+                <Label className="text-sm">Invite code</Label>
                 <Input
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                   placeholder="e.g., ABC123"
-                  className="bg-white/10 border-white/30 text-white placeholder:text-white/40 text-center text-xl tracking-[0.3em] font-mono uppercase"
+                  className="text-center text-xl tracking-[0.3em] font-mono uppercase"
                   data-testid="input-invite-code"
                   autoFocus
                   maxLength={12}
@@ -476,7 +476,7 @@ export default function Onboarding() {
                   });
                   goToCalendar();
                 }}
-                className="w-full text-white/50 text-sm hover:text-white/70 transition-colors py-2"
+                className="w-full text-muted-foreground text-sm hover:text-foreground transition-colors py-2"
                 data-testid="button-no-code"
               >
                 I don't have a code yet
@@ -486,21 +486,21 @@ export default function Onboarding() {
         )}
 
         {step === "aide-success" && joinedFamily && (
-          <Card className="backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-10">
+          <Card className="p-8 md:p-10">
             <div className="space-y-6 text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 mb-2">
                 <Check className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                 Welcome to {joinedFamily.name}!
               </h2>
-              <p className="text-white/70">
+              <p className="text-muted-foreground">
                 You're now receiving updates about family schedules and medications.
               </p>
 
               <Button
                 onClick={goToCalendar}
-                className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                className="w-full"
                 data-testid="button-see-calendar"
               >
                 <Calendar className="w-4 h-4 mr-2" />
@@ -518,25 +518,25 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <div className="text-center space-y-8 py-8">
       <div className="space-y-4">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-teal-500/30 border border-white/20 backdrop-blur-xl mb-2">
-          <Sparkles className="w-10 h-10 text-white" />
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/30 to-teal-500/30 border border-border backdrop-blur-xl mb-2">
+          <Sparkles className="w-10 h-10 text-foreground" />
         </div>
         <h1
-          className="text-3xl md:text-4xl font-bold text-white"
+          className="text-3xl md:text-4xl font-bold text-foreground"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           data-testid="text-welcome-title"
         >
           Welcome to Kindora
         </h1>
-        <p className="text-white/70 text-lg max-w-sm mx-auto leading-relaxed">
+        <p className="text-muted-foreground text-lg max-w-sm mx-auto leading-relaxed">
           Family scheduling that works for everyone — parents, caregivers, and the people they love.
         </p>
-        <p className="text-white/40 text-sm">Takes about 2 minutes</p>
+        <p className="text-muted-foreground text-sm">Takes about 2 minutes</p>
       </div>
 
       <Button
         onClick={onNext}
-        className="bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0 px-8"
+        className="px-8"
         size="lg"
         data-testid="button-get-started"
       >
@@ -558,20 +558,20 @@ function RoleStep({
     <div className="space-y-6">
       <div className="text-center mb-4">
         <h2
-          className="text-2xl md:text-3xl font-bold text-white mb-2"
+          className="text-2xl md:text-3xl font-bold text-foreground mb-2"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           data-testid="text-role-title"
         >
           What brings you here?
         </h2>
-        <p className="text-white/60 text-sm">
+        <p className="text-muted-foreground text-sm">
           Managing schedules for kids AND parents is a lot. We're here to help.
         </p>
       </div>
 
       <div className="grid gap-4">
         <Card
-          className="backdrop-blur-xl bg-white/10 border-white/20 p-6 cursor-pointer transition-all hover:bg-white/15 hover:border-white/30 group"
+          className="p-6 cursor-pointer transition-all hover-elevate group"
           onClick={onOwner}
           data-testid="card-role-owner"
         >
@@ -580,19 +580,19 @@ function RoleStep({
               <Calendar className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-semibold text-foreground mb-1">
                 I'm managing family schedules
               </h3>
-              <p className="text-white/50 text-sm leading-relaxed">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Parents, guardians, or adult children coordinating family activities
               </p>
             </div>
-            <ArrowRight className="w-5 h-5 text-white/30 group-hover:text-white/60 mt-1 flex-shrink-0 transition-colors" />
+            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground mt-1 flex-shrink-0 transition-colors" />
           </div>
         </Card>
 
         <Card
-          className="backdrop-blur-xl bg-white/10 border-white/20 p-6 cursor-pointer transition-all hover:bg-white/15 hover:border-white/30 group"
+          className="p-6 cursor-pointer transition-all hover-elevate group"
           onClick={onAide}
           data-testid="card-role-aide"
         >
@@ -601,14 +601,14 @@ function RoleStep({
               <Heart className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-semibold text-foreground mb-1">
                 I'm helping care for a family member
               </h3>
-              <p className="text-white/50 text-sm leading-relaxed">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Health aides, caregivers, or family members joining an existing household
               </p>
             </div>
-            <ArrowRight className="w-5 h-5 text-white/30 group-hover:text-white/60 mt-1 flex-shrink-0 transition-colors" />
+            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground mt-1 flex-shrink-0 transition-colors" />
           </div>
         </Card>
       </div>

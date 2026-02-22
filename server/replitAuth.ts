@@ -305,6 +305,11 @@ export async function setupAuth(app: Express) {
         authProvider: "demo",
       });
 
+      const existingFamilies = await storage.getUserFamilies(demoUserId);
+      if (existingFamilies.length === 0) {
+        await storage.createFamily(demoUserId, { name: "Your Family", createdBy: demoUserId });
+      }
+
       await seedDemoAccount(storage, demoUserId);
 
       const sessionUser = createLocalUserSession(demoUserId, `${demoUserId}@example.com`, "Demo", "User");

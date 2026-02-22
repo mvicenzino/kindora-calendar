@@ -21,12 +21,10 @@ export default function EventWizard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Fetch family members
   const { data: members = [], isLoading, isError, error, refetch } = useQuery<FamilyMember[]>({
     queryKey: ['/api/family-members'],
   });
 
-  // Helper to get current time rounded to nearest 15 min
   const getDefaultTimes = () => {
     const now = new Date();
     const minutes = now.getMinutes();
@@ -38,7 +36,6 @@ export default function EventWizard() {
 
   const defaultTimes = getDefaultTimes();
 
-  // Form for creating event with validation
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
     defaultValues: {
@@ -52,7 +49,6 @@ export default function EventWizard() {
     },
   });
 
-  // Create event mutation
   const createEventMutation = useMutation({
     mutationFn: async (event: InsertEvent) => {
       const res = await apiRequest('POST', '/api/events', event);
@@ -101,7 +97,6 @@ export default function EventWizard() {
         description: "Your first event has been added to the calendar",
       });
 
-      // Redirect to calendar
       setLocation('/');
     } catch (error) {
       toast({
@@ -116,37 +111,34 @@ export default function EventWizard() {
     setLocation('/');
   };
 
-  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center p-4">
-        <Card className="max-w-2xl w-full backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-12">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full p-8 md:p-12">
           <div className="text-center space-y-4">
-            <Loader2 className="w-12 h-12 text-white mx-auto animate-spin" data-testid="loading-spinner" />
-            <p className="text-white/70">Loading family members...</p>
+            <Loader2 className="w-12 h-12 text-foreground mx-auto animate-spin" data-testid="loading-spinner" />
+            <p className="text-muted-foreground">Loading family members...</p>
           </div>
         </Card>
       </div>
     );
   }
 
-  // Error state
   if (isError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center p-4">
-        <Card className="max-w-2xl w-full backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-12">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full p-8 md:p-12">
           <div className="text-center space-y-6">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 mb-4">
               <AlertCircle className="w-8 h-8 text-red-400" />
             </div>
-            <h2 className="text-2xl font-bold text-white">Failed to Load Members</h2>
-            <p className="text-white/70">
+            <h2 className="text-2xl font-bold text-foreground">Failed to Load Members</h2>
+            <p className="text-muted-foreground">
               We couldn't load your family members. Please try again.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
               <Button
                 onClick={() => refetch()}
-                className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
                 data-testid="button-retry"
               >
                 Try Again
@@ -154,7 +146,6 @@ export default function EventWizard() {
               <Button
                 onClick={() => setLocation('/onboarding')}
                 variant="outline"
-                className="border-white/50 text-white hover:bg-white/10 bg-white/5"
                 data-testid="button-back-to-onboarding"
               >
                 Back to Onboarding
@@ -166,17 +157,16 @@ export default function EventWizard() {
     );
   }
 
-  // No members state
   if (members.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center p-4">
-        <Card className="max-w-2xl w-full backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-12">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-2xl w-full p-8 md:p-12">
           <div className="text-center space-y-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary mb-4">
               <Users className="w-8 h-8 text-white" />
             </div>
-            <h2 className="text-2xl font-bold text-white">No Family Members Yet</h2>
-            <p className="text-white/70">
+            <h2 className="text-2xl font-bold text-foreground">No Family Members Yet</h2>
+            <p className="text-muted-foreground">
               You need to add at least one family member before creating events.
             </p>
             <Alert className="bg-yellow-500/10 border-yellow-500/30 text-left">
@@ -188,7 +178,6 @@ export default function EventWizard() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
               <Button
                 onClick={() => setLocation('/onboarding')}
-                className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
                 data-testid="button-add-members"
               >
                 <Users className="w-4 h-4 mr-2" />
@@ -197,7 +186,6 @@ export default function EventWizard() {
               <Button
                 onClick={handleSkip}
                 variant="outline"
-                className="border-white/50 text-white hover:bg-white/10 bg-white/5"
                 data-testid="button-skip-to-calendar"
               >
                 Skip to Calendar
@@ -210,17 +198,17 @@ export default function EventWizard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center p-4">
-      <Card className="max-w-2xl w-full backdrop-blur-xl bg-white/10 border-white/20 p-8 md:p-12">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="max-w-2xl w-full p-8 md:p-12">
         <div className="space-y-6">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-teal-500 mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary mb-4">
               <Calendar className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
               Create Your First Event
             </h1>
-            <p className="text-white/70">
+            <p className="text-muted-foreground">
               Let's add something to your calendar!
             </p>
           </div>
@@ -232,16 +220,15 @@ export default function EventWizard() {
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-white">Event Title</FormLabel>
+                    <FormLabel>Event Title</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., Family Dinner, Soccer Practice..."
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                         data-testid="input-event-title"
                         {...field}
                       />
                     </FormControl>
-                    <FormMessage className="text-red-400" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -251,11 +238,11 @@ export default function EventWizard() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-white">Description (Optional)</FormLabel>
+                    <FormLabel>Description (Optional)</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Add any details..."
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 resize-none"
+                        className="resize-none"
                         rows={3}
                         data-testid="input-event-description"
                         value={field.value || ""}
@@ -265,7 +252,7 @@ export default function EventWizard() {
                         ref={field.ref}
                       />
                     </FormControl>
-                    <FormMessage className="text-red-400" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -275,24 +262,22 @@ export default function EventWizard() {
                 name="memberIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-white">Assign To</FormLabel>
+                    <FormLabel>Assign To</FormLabel>
                     <FormControl>
                       <Select 
                         value={field.value?.[0] || ""} 
                         onValueChange={(value) => field.onChange([value])}
                       >
                         <SelectTrigger 
-                          className="bg-white/10 border-white/20 text-white"
                           data-testid="select-member"
                         >
                           <SelectValue placeholder="Select a family member" />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-900 border-white/20">
+                        <SelectContent>
                           {members.map((member) => (
                             <SelectItem 
                               key={member.id} 
                               value={member.id}
-                              className="text-white hover:bg-white/10"
                             >
                               <div className="flex items-center gap-2">
                                 <div
@@ -306,13 +291,13 @@ export default function EventWizard() {
                         </SelectContent>
                       </Select>
                     </FormControl>
-                    <FormMessage className="text-red-400" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
 
               <div className="space-y-2">
-                <FormLabel className="text-white">Category</FormLabel>
+                <FormLabel>Category</FormLabel>
                 <Select
                   value={form.watch('category') || 'other'}
                   onValueChange={(value) => {
@@ -321,17 +306,15 @@ export default function EventWizard() {
                   }}
                 >
                   <SelectTrigger
-                    className="bg-white/10 border-white/20 text-white"
                     data-testid="select-category"
                   >
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-white/20">
+                  <SelectContent>
                     {EVENT_CATEGORIES.map((cat) => (
                       <SelectItem
                         key={cat}
                         value={cat}
-                        className="text-white"
                       >
                         <div className="flex items-center gap-2">
                           <div
@@ -352,17 +335,16 @@ export default function EventWizard() {
                   name="startTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">Start Time</FormLabel>
+                      <FormLabel>Start Time</FormLabel>
                       <FormControl>
                         <Input
                           type="datetime-local"
-                          className="bg-white/10 border-white/20 text-white"
                           data-testid="input-event-start-time"
                           value={field.value instanceof Date ? format(field.value, "yyyy-MM-dd'T'HH:mm") : ""}
                           onChange={(e) => field.onChange(new Date(e.target.value))}
                         />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -372,17 +354,16 @@ export default function EventWizard() {
                   name="endTime"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-white">End Time</FormLabel>
+                      <FormLabel>End Time</FormLabel>
                       <FormControl>
                         <Input
                           type="datetime-local"
-                          className="bg-white/10 border-white/20 text-white"
                           data-testid="input-event-end-time"
                           value={field.value instanceof Date ? format(field.value, "yyyy-MM-dd'T'HH:mm") : ""}
                           onChange={(e) => field.onChange(new Date(e.target.value))}
                         />
                       </FormControl>
-                      <FormMessage className="text-red-400" />
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -391,7 +372,7 @@ export default function EventWizard() {
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <Button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
+                  className="flex-1"
                   disabled={createEventMutation.isPending}
                   data-testid="button-create-event"
                 >
@@ -408,7 +389,6 @@ export default function EventWizard() {
                   type="button"
                   onClick={handleSkip}
                   variant="outline"
-                  className="border-white/50 text-white hover:bg-white/10 bg-white/5"
                   data-testid="button-skip-event"
                 >
                   Skip to Calendar

@@ -66,12 +66,12 @@ export default function EmergencyBridge() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full bg-slate-800/50 backdrop-blur border-slate-700">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-            <h1 className="text-2xl font-bold text-white mb-2">Access Unavailable</h1>
-            <p className="text-slate-400">
+            <h1 className="text-2xl font-bold text-foreground mb-2">Access Unavailable</h1>
+            <p className="text-muted-foreground">
               This emergency access link has expired or is invalid. Please contact the family for a new link.
             </p>
           </CardContent>
@@ -111,13 +111,13 @@ export default function EmergencyBridge() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="bg-white/10 backdrop-blur-md border-white/20">
+          <Card className="bg-card/80 backdrop-blur-md border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-400" />
                 Upcoming Schedule
               </CardTitle>
-              <CardDescription className="text-white/70">
+              <CardDescription>
                 Next 7 days of events
               </CardDescription>
             </CardHeader>
@@ -126,37 +126,37 @@ export default function EmergencyBridge() {
                 upcomingEvents.slice(0, 10).map((event) => (
                   <div
                     key={event.id}
-                    className="p-3 bg-white/5 rounded-lg border border-white/10"
+                    className="p-3 bg-muted/50 rounded-lg border border-border"
                     data-testid={`event-${event.id}`}
                   >
-                    <div className="font-medium text-white">{event.title}</div>
-                    <div className="text-sm text-white/70 mt-1">
+                    <div className="font-medium text-foreground">{event.title}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
                       {formatEventDate(event.startTime)}
                     </div>
                     {event.location && (
-                      <div className="flex items-center gap-1 text-sm text-white/60 mt-1">
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
                         <MapPin className="w-3 h-3" />
                         {event.location}
                       </div>
                     )}
                     {event.notes && (
-                      <div className="text-sm text-white/50 mt-2 italic">{event.notes}</div>
+                      <div className="text-sm text-muted-foreground mt-2 italic">{event.notes}</div>
                     )}
                   </div>
                 ))
               ) : (
-                <p className="text-white/50 text-center py-4">No upcoming events</p>
+                <p className="text-muted-foreground text-center py-4">No upcoming events</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-md border-white/20">
+          <Card className="bg-card/80 backdrop-blur-md border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2">
                 <Pill className="w-5 h-5 text-pink-400" />
                 Medications
               </CardTitle>
-              <CardDescription className="text-white/70">
+              <CardDescription>
                 Current medication schedules
               </CardDescription>
             </CardHeader>
@@ -165,48 +165,48 @@ export default function EmergencyBridge() {
                 data.medications.map((med) => (
                   <div
                     key={med.id}
-                    className="p-3 bg-white/5 rounded-lg border border-white/10"
+                    className="p-3 bg-muted/50 rounded-lg border border-border"
                     data-testid={`medication-${med.id}`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="font-medium text-white">{med.name}</div>
+                      <div className="font-medium text-foreground">{med.name}</div>
                       <Badge variant="secondary" className="bg-pink-500/20 text-pink-200">
                         {med.familyMemberName}
                       </Badge>
                     </div>
                     {med.dosage && (
-                      <div className="text-sm text-white/70 mt-1">Dosage: {med.dosage}</div>
+                      <div className="text-sm text-muted-foreground mt-1">Dosage: {med.dosage}</div>
                     )}
                     {med.frequency && (
-                      <div className="text-sm text-white/70">Frequency: {med.frequency}</div>
+                      <div className="text-sm text-muted-foreground">Frequency: {med.frequency}</div>
                     )}
                     {med.timeOfDay && med.timeOfDay.length > 0 && (
                       <div className="flex gap-1 mt-2 flex-wrap">
                         {med.timeOfDay.map((time, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-white/30 text-white/70">
+                          <Badge key={i} variant="outline" className="text-xs">
                             {time}
                           </Badge>
                         ))}
                       </div>
                     )}
                     {med.notes && (
-                      <div className="text-sm text-white/50 mt-2 italic">{med.notes}</div>
+                      <div className="text-sm text-muted-foreground mt-2 italic">{med.notes}</div>
                     )}
                   </div>
                 ))
               ) : (
-                <p className="text-white/50 text-center py-4">No medications on file</p>
+                <p className="text-muted-foreground text-center py-4">No medications on file</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-md border-white/20">
+          <Card className="bg-card/80 backdrop-blur-md border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-green-400" />
                 Family Members
               </CardTitle>
-              <CardDescription className="text-white/70">
+              <CardDescription>
                 Important information and contacts
               </CardDescription>
             </CardHeader>
@@ -215,11 +215,11 @@ export default function EmergencyBridge() {
                 data.familyMembers.map((member) => (
                   <div
                     key={member.id}
-                    className="p-3 bg-white/5 rounded-lg border border-white/10"
+                    className="p-3 bg-muted/50 rounded-lg border border-border"
                     data-testid={`member-${member.id}`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="font-medium text-white">{member.name}</div>
+                      <div className="font-medium text-foreground">{member.name}</div>
                       {member.role && (
                         <Badge variant="secondary" className="bg-green-500/20 text-green-200">
                           {member.role}
@@ -233,14 +233,14 @@ export default function EmergencyBridge() {
                       </div>
                     )}
                     {member.medicalNotes && (
-                      <div className="text-sm text-white/60 mt-2">
+                      <div className="text-sm text-muted-foreground mt-2">
                         Medical notes: {member.medicalNotes}
                       </div>
                     )}
                     {member.emergencyContact && (
                       <div className="flex items-center gap-2 mt-2 text-sm">
                         <Phone className="w-4 h-4 text-blue-400" />
-                        <span className="text-white/80">{member.emergencyContact}</span>
+                        <span className="text-muted-foreground">{member.emergencyContact}</span>
                         {member.emergencyPhone && (
                           <a
                             href={`tel:${member.emergencyPhone}`}
@@ -254,18 +254,18 @@ export default function EmergencyBridge() {
                   </div>
                 ))
               ) : (
-                <p className="text-white/50 text-center py-4">No family member information</p>
+                <p className="text-muted-foreground text-center py-4">No family member information</p>
               )}
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-md border-white/20">
+          <Card className="bg-card/80 backdrop-blur-md border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-white">
+              <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-purple-400" />
                 Care Documents
               </CardTitle>
-              <CardDescription className="text-white/70">
+              <CardDescription>
                 Available care documentation
               </CardDescription>
             </CardHeader>
@@ -274,25 +274,25 @@ export default function EmergencyBridge() {
                 data.documents.map((doc, index) => (
                   <div
                     key={index}
-                    className="p-3 bg-white/5 rounded-lg border border-white/10"
+                    className="p-3 bg-muted/50 rounded-lg border border-border"
                     data-testid={`document-${index}`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="font-medium text-white">{doc.title}</div>
+                      <div className="font-medium text-foreground">{doc.title}</div>
                       <Badge variant="secondary" className="bg-purple-500/20 text-purple-200">
                         {doc.category}
                       </Badge>
                     </div>
                     {doc.familyMemberName && (
-                      <div className="text-sm text-white/70 mt-1">For: {doc.familyMemberName}</div>
+                      <div className="text-sm text-muted-foreground mt-1">For: {doc.familyMemberName}</div>
                     )}
                     {doc.notes && (
-                      <div className="text-sm text-white/50 mt-2 italic">{doc.notes}</div>
+                      <div className="text-sm text-muted-foreground mt-2 italic">{doc.notes}</div>
                     )}
                   </div>
                 ))
               ) : (
-                <p className="text-white/50 text-center py-4">No documents available</p>
+                <p className="text-muted-foreground text-center py-4">No documents available</p>
               )}
             </CardContent>
           </Card>

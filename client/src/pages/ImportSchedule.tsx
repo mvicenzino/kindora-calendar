@@ -268,53 +268,53 @@ export default function ImportSchedule() {
   const totalCost = parsedEvents.reduce((sum, e) => sum + (e.cost || 0), 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
+    <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container mx-auto px-4 py-6 max-w-4xl">
         <div className="flex flex-col gap-6">
           <nav className="flex items-center gap-2 text-sm">
             <Link href="/">
-              <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="button-back">
+              <Button variant="ghost" size="icon" data-testid="button-back">
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-white" data-testid="text-import-title">
+              <h1 className="text-2xl font-bold text-foreground" data-testid="text-import-title">
                 Import Schedule
               </h1>
-              <p className="text-white/60 text-sm">
+              <p className="text-muted-foreground text-sm">
                 Use AI to extract events from text, images, or PDFs
               </p>
             </div>
           </nav>
 
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-amber-400" />
                 AI Schedule Parser
               </CardTitle>
-              <CardDescription className="text-white/60">
+              <CardDescription>
                 Paste text, upload an image, or upload a PDF containing your schedule
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="bg-white/10 border border-white/20">
-                  <TabsTrigger value="ical" className="data-[state=active]:bg-white/20" data-testid="tab-ical">
+                <TabsList>
+                  <TabsTrigger value="ical" data-testid="tab-ical">
                     <Calendar className="w-4 h-4 mr-2" />
                     iCal
                   </TabsTrigger>
-                  <TabsTrigger value="text" className="data-[state=active]:bg-white/20" data-testid="tab-text">
+                  <TabsTrigger value="text" data-testid="tab-text">
                     <Type className="w-4 h-4 mr-2" />
                     Text
                   </TabsTrigger>
-                  <TabsTrigger value="image" className="data-[state=active]:bg-white/20" data-testid="tab-image">
+                  <TabsTrigger value="image" data-testid="tab-image">
                     <Image className="w-4 h-4 mr-2" />
                     Image
                   </TabsTrigger>
-                  <TabsTrigger value="file" className="data-[state=active]:bg-white/20" data-testid="tab-pdf">
+                  <TabsTrigger value="file" data-testid="tab-pdf">
                     <FileText className="w-4 h-4 mr-2" />
                     PDF
                   </TabsTrigger>
@@ -323,7 +323,7 @@ export default function ImportSchedule() {
                 <TabsContent value="ical" className="mt-4">
                   <div className="space-y-4">
                     <div 
-                      className="border-2 border-dashed border-white/30 rounded-lg p-8 text-center cursor-pointer hover:border-white/50 transition-colors"
+                      className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
                       onClick={() => icalInputRef.current?.click()}
                       data-testid="dropzone-ical"
                     >
@@ -348,19 +348,19 @@ export default function ImportSchedule() {
                       {selectedFile && (selectedFile.name.endsWith('.ics') || selectedFile.name.endsWith('.ical')) ? (
                         <div className="space-y-2">
                           <Calendar className="w-12 h-12 mx-auto text-emerald-400" />
-                          <p className="text-white font-medium">{selectedFile.name}</p>
-                          <p className="text-white/60 text-sm">Click to change file</p>
+                          <p className="text-foreground font-medium">{selectedFile.name}</p>
+                          <p className="text-muted-foreground text-sm">Click to change file</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          <Calendar className="w-12 h-12 mx-auto text-white/40" />
-                          <p className="text-white/70">Click to upload a calendar file</p>
-                          <p className="text-white/50 text-sm">.ics or .ical from Google Calendar or Apple Calendar</p>
+                          <Calendar className="w-12 h-12 mx-auto text-muted-foreground" />
+                          <p className="text-muted-foreground">Click to upload a calendar file</p>
+                          <p className="text-muted-foreground text-sm">.ics or .ical from Google Calendar or Apple Calendar</p>
                         </div>
                       )}
                     </div>
-                    <div className="bg-white/5 rounded-lg p-4 text-sm text-white/70">
-                      <p className="font-medium text-white mb-2">How to export:</p>
+                    <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+                      <p className="font-medium text-foreground mb-2">How to export:</p>
                       <ul className="space-y-1 list-disc list-inside">
                         <li><strong>Google Calendar:</strong> Settings → Import & Export → Export</li>
                         <li><strong>Apple Calendar:</strong> File → Export → Export...</li>
@@ -375,14 +375,14 @@ export default function ImportSchedule() {
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     placeholder="Paste your schedule here...&#10;&#10;Example:&#10;Week 1: June 22-26, 5 full days, $380&#10;Week 2: June 29-July 3, 3 half days (holiday week), $240&#10;..."
-                    className="min-h-[200px] bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                    className="min-h-[200px]"
                     data-testid="input-text"
                   />
                 </TabsContent>
 
                 <TabsContent value="image" className="mt-4">
                   <div 
-                    className="border-2 border-dashed border-white/30 rounded-lg p-8 text-center cursor-pointer hover:border-white/50 transition-colors"
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                     data-testid="dropzone-image"
                   >
@@ -396,14 +396,14 @@ export default function ImportSchedule() {
                     {selectedFile && selectedFile.type.startsWith("image/") ? (
                       <div className="space-y-2">
                         <Image className="w-12 h-12 mx-auto text-emerald-400" />
-                        <p className="text-white font-medium">{selectedFile.name}</p>
-                        <p className="text-white/60 text-sm">Click to change file</p>
+                        <p className="text-foreground font-medium">{selectedFile.name}</p>
+                        <p className="text-muted-foreground text-sm">Click to change file</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <Image className="w-12 h-12 mx-auto text-white/40" />
-                        <p className="text-white/70">Click to upload an image</p>
-                        <p className="text-white/50 text-sm">PNG, JPG, or WEBP</p>
+                        <Image className="w-12 h-12 mx-auto text-muted-foreground" />
+                        <p className="text-muted-foreground">Click to upload an image</p>
+                        <p className="text-muted-foreground text-sm">PNG, JPG, or WEBP</p>
                       </div>
                     )}
                   </div>
@@ -411,7 +411,7 @@ export default function ImportSchedule() {
 
                 <TabsContent value="file" className="mt-4">
                   <div 
-                    className="border-2 border-dashed border-white/30 rounded-lg p-8 text-center cursor-pointer hover:border-white/50 transition-colors"
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                     data-testid="dropzone-pdf"
                   >
@@ -425,14 +425,14 @@ export default function ImportSchedule() {
                     {selectedFile && selectedFile.type === "application/pdf" ? (
                       <div className="space-y-2">
                         <FileText className="w-12 h-12 mx-auto text-emerald-400" />
-                        <p className="text-white font-medium">{selectedFile.name}</p>
-                        <p className="text-white/60 text-sm">Click to change file</p>
+                        <p className="text-foreground font-medium">{selectedFile.name}</p>
+                        <p className="text-muted-foreground text-sm">Click to change file</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <FileText className="w-12 h-12 mx-auto text-white/40" />
-                        <p className="text-white/70">Click to upload a PDF</p>
-                        <p className="text-white/50 text-sm">PDF files only</p>
+                        <FileText className="w-12 h-12 mx-auto text-muted-foreground" />
+                        <p className="text-muted-foreground">Click to upload a PDF</p>
+                        <p className="text-muted-foreground text-sm">PDF files only</p>
                       </div>
                     )}
                   </div>
@@ -475,9 +475,9 @@ export default function ImportSchedule() {
 
           {parsedEvents.length > 0 && (
             <>
-              <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2">
                     <Calendar className="w-5 h-5" />
                     Event Settings
                   </CardTitle>
@@ -485,9 +485,9 @@ export default function ImportSchedule() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label className="text-white/80">Assign to Family Member</Label>
+                      <Label>Assign to Family Member</Label>
                       <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-                        <SelectTrigger className="bg-white/10 border-white/20 text-white" data-testid="select-member">
+                        <SelectTrigger data-testid="select-member">
                           <SelectValue placeholder="No specific member" />
                         </SelectTrigger>
                         <SelectContent>
@@ -501,16 +501,16 @@ export default function ImportSchedule() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-white/80">Category</Label>
+                      <Label>Category</Label>
                       <div className="flex gap-2 flex-wrap">
                         {EVENT_CATEGORIES.map((cat) => (
                           <button
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all toggle-elevate ${
                               selectedCategory === cat
-                                ? "border-white text-white bg-white/20"
-                                : "border-white/20 text-white/60 hover:bg-white/10"
+                                ? "border-border text-foreground bg-muted toggle-elevated"
+                                : "border-border text-muted-foreground"
                             }`}
                             data-testid={`category-${cat}`}
                           >
@@ -527,13 +527,13 @@ export default function ImportSchedule() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2">
                     <Check className="w-5 h-5 text-emerald-400" />
                     Parsed Events ({totalEvents})
                   </CardTitle>
-                  <CardDescription className="text-white/60">
+                  <CardDescription>
                     Review the events below before importing
                     {totalCost > 0 && ` (Total cost: $${totalCost})`}
                   </CardDescription>
@@ -543,7 +543,7 @@ export default function ImportSchedule() {
                     {parsedEvents.map((event, index) => (
                       <div 
                         key={index}
-                        className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10"
+                        className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
                       >
                         <div className="flex items-center gap-3">
                           <div 
@@ -551,8 +551,8 @@ export default function ImportSchedule() {
                             style={{ backgroundColor: selectedColor }}
                           />
                           <div>
-                            <div className="text-white font-medium">{event.title}</div>
-                            <div className="text-white/60 text-sm flex items-center gap-2">
+                            <div className="text-foreground font-medium">{event.title}</div>
+                            <div className="text-muted-foreground text-sm flex items-center gap-2">
                               <span>
                                 {format(parseISO(event.startDate), "MMM d")}
                                 {event.endDate !== event.startDate && ` - ${format(parseISO(event.endDate), "MMM d")}`}
@@ -576,7 +576,7 @@ export default function ImportSchedule() {
                             variant="ghost"
                             size="icon"
                             onClick={() => removeEvent(index)}
-                            className="text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                            className="text-muted-foreground hover:text-red-400"
                             data-testid={`button-remove-${index}`}
                           >
                             <X className="w-4 h-4" />
@@ -596,7 +596,7 @@ export default function ImportSchedule() {
                     setTextInput("");
                     setSelectedFile(null);
                   }}
-                  className="border-white/20 text-white hover:bg-white/10"
+                  className=""
                   data-testid="button-clear"
                 >
                   Clear All

@@ -106,9 +106,9 @@ function getBubbleStyle(role: string, isOwn: boolean): string {
   }
   switch (role) {
     case 'caregiver':
-      return 'bg-emerald-500/25 text-white border border-emerald-400/40';
+      return 'bg-emerald-500/25 text-foreground border border-emerald-400/40';
     default:
-      return 'bg-white/20 text-white';
+      return 'bg-muted/50 text-foreground';
   }
 }
 
@@ -184,31 +184,31 @@ export default function Messages() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
+    <div className="min-h-screen bg-background">
       <Header />
       <div className="container mx-auto px-4 py-6 max-w-3xl">
         <div className="flex items-center gap-3 mb-6">
           <Link href="/">
-            <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10" data-testid="button-back-home">
+            <Button variant="ghost" size="icon" data-testid="button-back-home">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
               <MessageCircle className="h-6 w-6" />
               Messages
             </h1>
-            <p className="text-white/70 text-sm">
+            <p className="text-muted-foreground text-sm">
               Family conversations and event notes
             </p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100vh-200px)]">
-          <TabsList className="w-full bg-white/10 border border-white/20 rounded-xl mb-4 p-1">
+          <TabsList className="w-full rounded-xl mb-4 p-1">
             <TabsTrigger 
               value="conversations" 
-              className="flex-1 data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/70 rounded-lg"
+              className="flex-1 rounded-lg"
               data-testid="tab-conversations"
             >
               <Users className="w-4 h-4 mr-2" />
@@ -216,7 +216,7 @@ export default function Messages() {
             </TabsTrigger>
             <TabsTrigger 
               value="event-notes" 
-              className="flex-1 data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/70 rounded-lg"
+              className="flex-1 rounded-lg"
               data-testid="tab-event-notes"
             >
               <Calendar className="w-4 h-4 mr-2" />
@@ -225,17 +225,17 @@ export default function Messages() {
           </TabsList>
 
           <TabsContent value="conversations" className="mt-0 h-[calc(100%-60px)]">
-            <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl h-full flex flex-col">
-              <CardHeader className="border-b border-white/10 pb-4 flex flex-row items-center justify-between gap-2">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="border-b border-border pb-4 flex flex-row items-center justify-between gap-2">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
                     <Users className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-white text-lg" data-testid="text-family-name">
+                    <CardTitle className="text-lg" data-testid="text-family-name">
                       {family?.name || 'Family Chat'}
                     </CardTitle>
-                    <p className="text-white/60 text-sm">
+                    <p className="text-muted-foreground text-sm">
                       {messages.length} message{messages.length !== 1 ? 's' : ''}
                     </p>
                   </div>
@@ -247,13 +247,13 @@ export default function Messages() {
               <div className="py-4 space-y-4">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="text-white/60">Loading messages...</div>
+                    <div className="text-muted-foreground">Loading messages...</div>
                   </div>
                 ) : sortedMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <MessageCircle className="h-12 w-12 text-white/30 mb-4" />
-                    <h3 className="text-white/80 font-medium mb-2">No messages yet</h3>
-                    <p className="text-white/50 text-sm max-w-xs">
+                    <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-foreground font-medium mb-2">No messages yet</h3>
+                    <p className="text-muted-foreground text-sm max-w-xs">
                       Start a conversation with your family members. Everyone can see and reply to messages here.
                     </p>
                   </div>
@@ -268,7 +268,7 @@ export default function Messages() {
                       <div key={message.id}>
                         {showDateDivider && (
                           <div className="flex items-center justify-center my-4">
-                            <div className="bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-white/70 text-xs font-medium">
+                            <div className="bg-muted/50 px-4 py-1.5 rounded-full text-muted-foreground text-xs font-medium">
                               {formatDateDivider(message.createdAt)}
                             </div>
                           </div>
@@ -278,8 +278,7 @@ export default function Messages() {
                           className={`flex items-end gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
                           data-testid={`message-${message.id}`}
                         >
-                          {/* Avatar - always visible */}
-                          <Avatar className={`h-8 w-8 flex-shrink-0 ${isOwnMessage ? 'ring-2 ring-blue-400/50' : 'ring-2 ring-white/20'}`}>
+                          <Avatar className={`h-8 w-8 flex-shrink-0 ${isOwnMessage ? 'ring-2 ring-blue-400/50' : 'ring-2 ring-border'}`}>
                             {message.author?.profileImageUrl && (
                               <AvatarImage src={message.author.profileImageUrl} />
                             )}
@@ -288,12 +287,10 @@ export default function Messages() {
                             </AvatarFallback>
                           </Avatar>
 
-                          {/* Message bubble */}
                           <div className={`max-w-[70%] flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
-                            {/* Author name - show for other people's messages */}
                             {!isOwnMessage && message.author && (
                               <span className={`text-xs font-medium mb-1 ml-2 ${
-                                authorRole === 'caregiver' ? 'text-emerald-300' : 'text-white/70'
+                                authorRole === 'caregiver' ? 'text-emerald-300' : 'text-muted-foreground'
                               }`}>
                                 {message.author.firstName}
                                 {authorRole === 'caregiver' && <span className="ml-1 opacity-75">(Caregiver)</span>}
@@ -308,7 +305,7 @@ export default function Messages() {
                               </p>
                               <div className={`text-[10px] mt-1 ${
                                 isOwnMessage ? 'text-blue-100/70' : 
-                                authorRole === 'caregiver' ? 'text-emerald-200/60' : 'text-white/40'
+                                authorRole === 'caregiver' ? 'text-emerald-200/60' : 'text-muted-foreground'
                               }`}>
                                 {formatMessageTime(message.createdAt)}
                               </div>
@@ -325,14 +322,14 @@ export default function Messages() {
 
               <form 
                 onSubmit={handleSendMessage}
-                className="p-4 border-t border-white/10 flex gap-3"
+                className="p-4 border-t border-border flex gap-3"
               >
                 <Textarea
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Type a message..."
-                  className="flex-1 min-h-[44px] max-h-32 resize-none bg-white/10 border-white/20 text-white placeholder:text-white/50 focus-visible:ring-white/30"
+                  className="flex-1 min-h-[44px] max-h-32 resize-none"
                   data-testid="input-message"
                 />
                 <Button
@@ -349,15 +346,15 @@ export default function Messages() {
         </TabsContent>
 
         <TabsContent value="event-notes" className="mt-0 h-[calc(100%-60px)]">
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20 shadow-2xl h-full flex flex-col">
-            <CardHeader className="border-b border-white/10 pb-4">
+          <Card className="h-full flex flex-col">
+            <CardHeader className="border-b border-border pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                   <MessageSquare className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-white text-lg">Event Notes</CardTitle>
-                  <p className="text-white/60 text-sm">
+                  <CardTitle className="text-lg">Event Notes</CardTitle>
+                  <p className="text-muted-foreground text-sm">
                     Notes and updates from calendar events
                   </p>
                 </div>
@@ -369,13 +366,13 @@ export default function Messages() {
                 <div className="py-4 space-y-3">
                   {notesLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <div className="text-white/60">Loading event notes...</div>
+                      <div className="text-muted-foreground">Loading event notes...</div>
                     </div>
                   ) : eventNotes.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
-                      <MessageSquare className="h-12 w-12 text-white/30 mb-4" />
-                      <h3 className="text-white/80 font-medium mb-2">No event notes yet</h3>
-                      <p className="text-white/50 text-sm max-w-xs">
+                      <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+                      <h3 className="text-foreground font-medium mb-2">No event notes yet</h3>
+                      <p className="text-muted-foreground text-sm max-w-xs">
                         Notes added to calendar events will appear here for easy reference.
                       </p>
                     </div>
@@ -383,7 +380,7 @@ export default function Messages() {
                     eventNotes.map((note) => (
                       <div 
                         key={note.id} 
-                        className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-colors"
+                        className="bg-muted/50 border border-border rounded-xl p-4 hover-elevate transition-colors"
                         data-testid={`event-note-${note.id}`}
                       >
                         <div className="flex items-start gap-3">
@@ -393,15 +390,15 @@ export default function Messages() {
                           />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-white font-medium text-sm truncate">
+                              <span className="text-foreground font-medium text-sm truncate">
                                 {note.eventTitle}
                               </span>
-                              <span className="text-white/40 text-xs">
+                              <span className="text-muted-foreground text-xs">
                                 {format(parseISO(note.eventStartTime), 'MMM d')}
                               </span>
                             </div>
-                            <p className="text-white/90 text-sm mb-2">{note.content}</p>
-                            <div className="flex items-center gap-2 text-white/50 text-xs">
+                            <p className="text-foreground text-sm mb-2">{note.content}</p>
+                            <div className="flex items-center gap-2 text-muted-foreground text-xs">
                               {note.author && (
                                 <div className="flex items-center gap-1">
                                   <Avatar className="h-4 w-4">

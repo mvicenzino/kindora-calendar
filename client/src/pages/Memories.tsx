@@ -12,7 +12,6 @@ export default function Memories() {
   const [, setLocation] = useLocation();
   const { activeFamilyId } = useActiveFamily();
 
-  // Fetch events with photos
   const { data: rawEvents = [] } = useQuery<Event[]>({
     queryKey: ['/api/events?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId,
@@ -29,21 +28,18 @@ export default function Memories() {
     members: members.filter(m => e.memberIds.includes(m.id))
   })), [rawEvents, members]);
 
-  // Generate consistent random rotation for each event
   const getRotation = (id: string) => {
     let hash = 0;
     for (let i = 0; i < id.length; i++) {
       hash = ((hash << 5) - hash) + id.charCodeAt(i);
       hash = hash & hash;
     }
-    const rotation = (hash % 7) - 3; // -3 to +3 degrees
+    const rotation = (hash % 7) - 3;
     return rotation;
   };
 
-  // Filter events that have photos
   const eventsWithPhotos = events.filter(e => e.photoUrl);
 
-  // Group by month
   const groupedByMonth = useMemo(() => {
     const groups: { [key: string]: typeof eventsWithPhotos } = {};
     
@@ -61,23 +57,22 @@ export default function Memories() {
   }, [eventsWithPhotos]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 mb-6">
+        <div className="bg-card border border-border rounded-3xl p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-2xl bg-purple-500 flex items-center justify-center">
                 <Image className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-white">Memories</h1>
-                <p className="text-sm text-white/70">Your photo scrapbook from special moments</p>
+                <h1 className="text-3xl font-bold text-foreground">Memories</h1>
+                <p className="text-sm text-muted-foreground">Your photo scrapbook from special moments</p>
               </div>
             </div>
             <button
               onClick={() => setLocation('/')}
-              className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+              className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-foreground hover-elevate transition-all"
               data-testid="button-close-memories"
             >
               <X className="w-5 h-5" />
@@ -85,24 +80,21 @@ export default function Memories() {
           </div>
         </div>
 
-        {/* Memory Groups */}
         {groupedByMonth.length === 0 ? (
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-12 text-center">
-            <Image className="w-16 h-16 text-white/30 mx-auto mb-4" />
-            <p className="text-white/70 text-lg">No memories yet</p>
-            <p className="text-white/50 text-sm mt-2">Add photos to your events to create your scrapbook</p>
+          <div className="bg-card border border-border rounded-3xl p-12 text-center">
+            <Image className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground text-lg">No memories yet</p>
+            <p className="text-muted-foreground text-sm mt-2">Add photos to your events to create your scrapbook</p>
           </div>
         ) : (
           <div className="space-y-6">
             {groupedByMonth.map(([month, monthEvents]) => (
               <div key={month} className="space-y-4">
-                {/* Month Header */}
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                  <h2 className="text-2xl font-bold text-white">{month}</h2>
-                  <p className="text-sm text-white/70">{monthEvents.length} {monthEvents.length === 1 ? 'memory' : 'memories'}</p>
+                <div className="bg-card border border-border rounded-2xl p-4">
+                  <h2 className="text-2xl font-bold text-foreground">{month}</h2>
+                  <p className="text-sm text-muted-foreground">{monthEvents.length} {monthEvents.length === 1 ? 'memory' : 'memories'}</p>
                 </div>
 
-                {/* Memory Grid - Scrapbook Style */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {monthEvents.map((event) => (
                     <div
@@ -114,9 +106,7 @@ export default function Memories() {
                       onClick={() => setLocation('/')}
                       data-testid={`memory-card-${event.id}`}
                     >
-                      {/* Polaroid Card */}
-                      <div className="bg-white rounded-sm p-5 pb-16 shadow-2xl">
-                        {/* Tape on corners */}
+                      <div className="bg-white dark:bg-card rounded-sm p-5 pb-16 shadow-2xl">
                         <div className="absolute -top-3 left-8 w-16 h-8 bg-gradient-to-br from-amber-50/90 to-amber-100/80 backdrop-blur-sm rotate-[-5deg] shadow-sm" 
                           style={{
                             clipPath: 'polygon(0% 20%, 100% 0%, 100% 80%, 0% 100%)',
@@ -128,8 +118,7 @@ export default function Memories() {
                           }}
                         />
 
-                        {/* Photo */}
-                        <div className="bg-gray-100 mb-4 overflow-hidden aspect-[4/3]">
+                        <div className="bg-muted mb-4 overflow-hidden aspect-[4/3]">
                           {event.photoUrl ? (
                             <img
                               src={event.photoUrl}
@@ -138,21 +127,19 @@ export default function Memories() {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
-                              <Image className="w-12 h-12 text-gray-300" />
+                              <Image className="w-12 h-12 text-muted-foreground" />
                             </div>
                           )}
                         </div>
 
-                        {/* Event Info */}
                         <div className="space-y-2">
-                          <h3 className="font-semibold text-gray-900 text-base">{event.title}</h3>
-                          <p className="text-xs text-gray-500 font-medium">{format(event.startTime, 'MMM d, yyyy')}</p>
+                          <h3 className="font-semibold text-foreground text-base">{event.title}</h3>
+                          <p className="text-xs text-muted-foreground font-medium">{format(event.startTime, 'MMM d, yyyy')}</p>
 
-                          {/* Member Avatars */}
                           {event.members && event.members.length > 0 && (
                             <div className="flex -space-x-2 pt-1">
                               {event.members.map((member) => (
-                                <Avatar key={member.id} className="h-6 w-6 border-2 border-white">
+                                <Avatar key={member.id} className="h-6 w-6 border-2 border-white dark:border-card">
                                   <AvatarFallback
                                     className="text-white text-xs font-semibold"
                                     style={{ backgroundColor: member.color }}
