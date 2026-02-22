@@ -52,7 +52,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
 
   return (
     <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
-      <div className="flex items-center justify-center px-3 py-1.5 gap-2 relative">
+      <div className="flex items-center justify-center px-3 py-1.5 pb-3 gap-2 relative">
         <nav 
           ref={containerRef} 
           className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide"
