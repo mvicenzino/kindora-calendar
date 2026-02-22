@@ -61,16 +61,20 @@ export default function MemberFilterStrip({
                 onClick={() => onToggleMember(member.id)}
                 className={`
                   flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium
-                  transition-colors flex-shrink-0 cursor-pointer
+                  transition-all flex-shrink-0 cursor-pointer
                   ${isSelected
-                    ? 'bg-muted/60 text-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                    ? 'text-foreground'
+                    : 'text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/20 opacity-60 hover:opacity-80'
                   }
                 `}
+                style={isSelected ? {
+                  backgroundColor: `${member.color}15`,
+                  boxShadow: `inset 0 0 0 1px ${member.color}30`,
+                } : undefined}
                 data-testid={`button-filter-member-${member.id}`}
               >
                 <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0"
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold flex-shrink-0 transition-all ${!isSelected ? 'grayscale-[50%]' : ''}`}
                   style={{
                     backgroundColor: member.color,
                     color: '#fff',
