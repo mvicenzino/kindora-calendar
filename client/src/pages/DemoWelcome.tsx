@@ -37,7 +37,7 @@ export default function DemoWelcome() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const demoToken = urlParams.get("demo_token");
-    const nextPath = urlParams.get("next") || "/care"; // Default to Caregiver Dashboard
+    const nextPath = urlParams.get("next") || "/";
     
     if (demoToken) {
       // Store the token and destination

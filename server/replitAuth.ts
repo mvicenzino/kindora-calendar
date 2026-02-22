@@ -320,7 +320,7 @@ export async function setupAuth(app: Express) {
           console.error("Session save error:", saveErr);
           return res.redirect("/");
         }
-        res.redirect(`/demo-welcome?demo_token=${demoUserId}&next=/care`);
+        res.redirect(`/demo-welcome?demo_token=${demoUserId}&next=/`);
       });
     } catch (error) {
       console.error("Demo login error:", error);
