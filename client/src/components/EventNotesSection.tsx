@@ -196,7 +196,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                     size="icon"
                     variant="ghost"
                     onClick={() => deleteNoteMutation.mutate(note.id)}
-                    className="h-6 w-6 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
+                    className="h-6 w-6 text-destructive"
                     disabled={deleteNoteMutation.isPending}
                     data-testid={`button-delete-note-${note.id}`}
                   >
@@ -288,7 +288,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                   size="icon"
                   onClick={() => handleSubmitReply(note.id)}
                   disabled={!replyContent.trim() || createNoteMutation.isPending}
-                  className="bg-purple-600 hover:bg-purple-700 flex-1 w-10"
+                  className="bg-primary flex-1 w-10"
                   data-testid={`button-submit-reply-${note.id}`}
                 >
                   <Send className="h-4 w-4" />
@@ -371,7 +371,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
               size="icon"
               onClick={handleSubmitNote}
               disabled={!newNote.trim() || createNoteMutation.isPending}
-              className="bg-purple-600 hover:bg-purple-700 flex-1 w-10"
+              className="bg-primary flex-1 w-10"
               data-testid="button-submit-note"
             >
               <Send className="h-4 w-4" />

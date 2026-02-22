@@ -163,7 +163,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
 
       {isOpen && (
         <div 
-          className="fixed right-4 top-14 w-[calc(100vw-2rem)] max-w-80 bg-card border border-border rounded-2xl shadow-xl overflow-hidden pointer-events-auto"
+          className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] max-w-80 bg-card border border-border rounded-2xl shadow-xl overflow-hidden pointer-events-auto"
           style={{ zIndex: 9999 }}
         >
           {/* Header with tabs */}
@@ -324,7 +324,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                                     setEditingMemberId(null);
                                   }}
                                   className={`h-8 rounded-lg transition-all ${
-                                    member.color === color ? 'ring-2 ring-white' : 'hover:scale-110'
+                                    member.color === color ? 'ring-2 ring-primary' : 'hover:scale-110'
                                   }`}
                                   style={{ backgroundColor: color }}
                                   data-testid={`button-color-${member.id}-${color}`}
@@ -363,7 +363,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                                           onDeleteMember(member.id);
                                         }
                                       }}
-                                      className="text-xs px-2 py-1 rounded-md bg-red-500/20 text-red-300 hover:text-red-100 hover:bg-red-500/30 transition-all"
+                                      className="text-xs px-2 py-1 rounded-md bg-destructive/20 text-destructive hover-elevate transition-all"
                                       data-testid={`button-delete-member-${member.id}`}
                                     >
                                       <Trash2 className="w-3 h-3" />

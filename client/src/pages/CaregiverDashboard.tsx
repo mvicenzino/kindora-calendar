@@ -41,8 +41,7 @@ import {
   Trash2,
   Settings
 } from "lucide-react";
-import { Link, useLocation } from "wouter";
-import Header from "@/components/Header";
+import { useLocation } from "wouter";
 import { useUserRole } from "@/hooks/useUserRole";
 
 type MedicationWithMember = {
@@ -360,10 +359,8 @@ export default function CaregiverDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -376,15 +373,6 @@ export default function CaregiverDashboard() {
             <p className="text-muted-foreground" data-testid="text-dashboard-date">
               {format(new Date(), "EEEE, MMMM d, yyyy")}
             </p>
-          </div>
-          
-          <div className="flex gap-2">
-            <Link href="/">
-              <Button variant="outline" data-testid="link-calendar">
-                <Calendar className="h-4 w-4 mr-2" />
-                Calendar View
-              </Button>
-            </Link>
           </div>
         </div>
 
@@ -413,7 +401,7 @@ export default function CaregiverDashboard() {
               </div>
               {pendingMeds.length > 0 && (
                 <Button
-                  className="bg-amber-500/30 hover:bg-amber-500/40 text-amber-100 border border-amber-400/40 min-h-11"
+                  className="bg-amber-500/30 text-amber-100 border border-amber-400/40 min-h-11"
                   onClick={() => document.getElementById('medications-section')?.scrollIntoView({ behavior: 'smooth' })}
                   data-testid="button-view-pending-meds"
                 >
@@ -565,7 +553,7 @@ export default function CaregiverDashboard() {
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
-                                    className="bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 min-h-[44px]"
+                                    className="bg-green-500/20 text-green-300 border border-green-500/30 min-h-[44px]"
                                     onClick={() => logMedicationMutation.mutate({ medicationId: med.id, status: 'given', medicationName: med.name })}
                                     disabled={logMedicationMutation.isPending}
                                     data-testid={`button-log-med-${med.id}`}
@@ -998,7 +986,7 @@ export default function CaregiverDashboard() {
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+                                className="text-destructive"
                                 onClick={() => deleteTimeEntryMutation.mutate(entry.id)}
                                 disabled={deleteTimeEntryMutation.isPending}
                                 data-testid={`button-delete-entry-${entry.id}`}
@@ -1016,7 +1004,7 @@ export default function CaregiverDashboard() {
             )}
           </CardContent>
         </Card>}
-      </main>
+      </div>
     </div>
   );
 }

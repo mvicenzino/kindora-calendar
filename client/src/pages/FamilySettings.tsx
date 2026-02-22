@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, ArrowLeft, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X } from "lucide-react";
+import { Copy, Users, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -449,28 +449,18 @@ export default function FamilySettings() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex items-center justify-center h-full">
         <div className="text-foreground">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate("/")}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Family Settings</h1>
-            <p className="text-muted-foreground">{family?.name || "Manage your calendar"}</p>
-          </div>
+    <div className="p-4 md:p-6">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Family Settings</h1>
+          <p className="text-muted-foreground">{family?.name || "Manage your calendar"}</p>
         </div>
 
         <Card className="mb-6">
@@ -1052,7 +1042,7 @@ function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting 
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-red-500/10 border-red-500/30 text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                className="bg-destructive/10 border-destructive/30 text-destructive"
                 disabled={isDeleting}
                 data-testid={`button-delete-family-${family.id}`}
               >
@@ -1074,7 +1064,7 @@ function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting 
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={onDelete}
-                  className="bg-red-500 text-white hover:bg-red-600"
+                  className="bg-destructive text-destructive-foreground"
                 >
                   Delete Forever
                 </AlertDialogAction>
@@ -1087,7 +1077,7 @@ function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting 
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-orange-500/10 border-orange-500/30 text-orange-300 hover:bg-orange-500/20 hover:text-orange-200"
+                className="bg-primary/10 border-primary/30 text-primary"
                 disabled={isLeaving}
                 data-testid={`button-leave-family-${family.id}`}
               >
@@ -1108,7 +1098,7 @@ function FamilyRow({ family, isActive, onLeave, onDelete, isLeaving, isDeleting 
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={onLeave}
-                  className="bg-orange-500 text-white hover:bg-orange-600"
+                  className="bg-primary text-primary-foreground"
                 >
                   Leave Calendar
                 </AlertDialogAction>

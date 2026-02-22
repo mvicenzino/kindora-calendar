@@ -15,12 +15,9 @@ import {
   Send, 
   MessageCircle,
   Users,
-  ArrowLeft,
   Calendar,
   MessageSquare
 } from "lucide-react";
-import { Link } from "wouter";
-import Header from "@/components/Header";
 import type { Family } from "@shared/schema";
 
 type MessageAuthor = {
@@ -102,7 +99,7 @@ function getAvatarGradient(role: string): string {
 
 function getBubbleStyle(role: string, isOwn: boolean): string {
   if (isOwn) {
-    return 'bg-blue-500 text-white';
+    return 'bg-primary text-primary-foreground';
   }
   switch (role) {
     case 'caregiver':
@@ -184,24 +181,16 @@ export default function Messages() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="container mx-auto px-4 py-6 max-w-3xl">
-        <div className="flex items-center gap-3 mb-6">
-          <Link href="/">
-            <Button variant="ghost" size="icon" data-testid="button-back-home">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <MessageCircle className="h-6 w-6" />
-              Messages
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Family conversations and event notes
-            </p>
-          </div>
+    <div className="p-4 md:p-6">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <MessageCircle className="h-6 w-6" />
+            Messages
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Family conversations and event notes
+          </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100vh-200px)]">
@@ -335,7 +324,7 @@ export default function Messages() {
                 <Button
                   type="submit"
                   disabled={!newMessage.trim() || sendMessageMutation.isPending}
-                  className="h-11 w-11 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-0"
+                  className="h-11 w-11 rounded-full p-0"
                   data-testid="button-send-message"
                 >
                   <Send className="h-5 w-5" />

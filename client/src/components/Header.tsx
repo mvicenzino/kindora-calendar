@@ -36,15 +36,17 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
         </Button>
       )}
       <AlertsPanel />
-      <Button
-        size="icon"
-        variant="ghost"
-        aria-label="Search events"
-        onClick={onSearchClick}
-        data-testid="button-search"
-      >
-        <Search className="w-4 h-4" />
-      </Button>
+      {onSearchClick && (
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Search events"
+          onClick={onSearchClick}
+          data-testid="button-search"
+        >
+          <Search className="w-4 h-4" />
+        </Button>
+      )}
       <ProfileMenu
         members={members}
         onMemberColorChange={onMemberColorChange || (() => {})}

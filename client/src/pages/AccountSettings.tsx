@@ -7,9 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, CreditCard, Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw } from "lucide-react";
+import { CreditCard, Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import Header from "@/components/Header";
 
 interface SubscriptionStatus {
   tier: string;
@@ -156,22 +155,11 @@ export default function AccountSettings() {
   const isActive = sub?.status === "active";
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/")}
-            data-testid="button-back-settings"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold" data-testid="text-settings-title">Account Settings</h1>
-            <p className="text-sm text-muted-foreground">Manage your subscription and billing</p>
-          </div>
+    <div className="p-4 md:p-6">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold" data-testid="text-settings-title">Account Settings</h1>
+          <p className="text-sm text-muted-foreground">Manage your subscription and billing</p>
         </div>
 
         <Card>

@@ -95,7 +95,7 @@ export default function DayEventsDialog({
               <p className="text-muted-foreground mb-4">No events scheduled</p>
               <Button
                 onClick={handleAddEvent}
-                className="bg-purple-500 hover:bg-purple-600 text-white"
+                className="bg-primary text-primary-foreground"
                 data-testid="button-add-event-empty"
               >
                 <Plus className="w-4 h-4 mr-2" />

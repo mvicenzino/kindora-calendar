@@ -10,12 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { 
   Calendar, 
   Upload, 
   Loader2, 
-  ArrowLeft, 
   FileText, 
   Image, 
   Type, 
@@ -28,7 +27,6 @@ import {
 import { format, parseISO, eachDayOfInterval, isWeekend } from "date-fns";
 import type { FamilyMember, EventCategory } from "@shared/schema";
 import { EVENT_CATEGORIES, CATEGORY_CONFIG } from "@shared/schema";
-import Header from "@/components/Header";
 
 interface ParsedScheduleEvent {
   title: string;
@@ -268,26 +266,16 @@ export default function ImportSchedule() {
   const totalCost = parsedEvents.reduce((sum, e) => sum + (e.cost || 0), 0);
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-6 max-w-4xl">
-        <div className="flex flex-col gap-6">
-          <nav className="flex items-center gap-2 text-sm">
-            <Link href="/">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-import-title">
-                Import Schedule
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                Use AI to extract events from text, images, or PDFs
-              </p>
-            </div>
-          </nav>
+    <div className="p-4 md:p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground" data-testid="text-import-title">
+            Import Schedule
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Use AI to extract events from text, images, or PDFs
+          </p>
+        </div>
 
           <Card>
             <CardHeader>
@@ -443,7 +431,7 @@ export default function ImportSchedule() {
                 <Button
                   onClick={handleParse}
                   disabled={isParsing || (activeTab === "text" ? !textInput.trim() : !selectedFile)}
-                  className="bg-amber-500 hover:bg-amber-600 text-black font-medium"
+                  className="bg-primary text-primary-foreground font-medium"
                   data-testid="button-parse"
                 >
                   {isParsing ? (
@@ -604,7 +592,7 @@ export default function ImportSchedule() {
                 <Button
                   onClick={() => importMutation.mutate()}
                   disabled={importMutation.isPending || parsedEvents.length === 0}
-                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium"
+                  className="bg-primary text-primary-foreground font-medium"
                   data-testid="button-import"
                 >
                   {importMutation.isPending ? (
@@ -623,7 +611,6 @@ export default function ImportSchedule() {
             </>
           )}
         </div>
-      </main>
-    </div>
+      </div>
   );
 }

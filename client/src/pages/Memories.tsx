@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { format, parseISO, startOfMonth } from "date-fns";
-import { X, Image } from "lucide-react";
+import { Image } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import type { Event, FamilyMember } from "@shared/schema";
@@ -57,26 +57,17 @@ export default function Memories() {
   }, [eventsWithPhotos]);
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-card border border-border rounded-3xl p-6 mb-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-purple-500 flex items-center justify-center">
-                <Image className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-foreground">Memories</h1>
-                <p className="text-sm text-muted-foreground">Your photo scrapbook from special moments</p>
-              </div>
+    <div className="p-4 md:p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="bg-card border border-border rounded-3xl p-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-purple-500 flex items-center justify-center">
+              <Image className="w-7 h-7 text-white" />
             </div>
-            <button
-              onClick={() => setLocation('/')}
-              className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-foreground hover-elevate transition-all"
-              data-testid="button-close-memories"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Memories</h1>
+              <p className="text-sm text-muted-foreground">Your photo scrapbook from special moments</p>
+            </div>
           </div>
         </div>
 

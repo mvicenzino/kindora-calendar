@@ -312,7 +312,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                     {!isReadOnly && (
                       <button
                         onClick={handleDeletePhoto}
-                        className="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-500/95 border border-white/40 flex items-center justify-center text-white hover:bg-red-600 transition-all shadow-lg"
+                        className="absolute top-3 right-3 w-9 h-9 rounded-full bg-destructive border border-destructive/40 flex items-center justify-center text-destructive-foreground hover-elevate transition-all shadow-lg"
                         data-testid="button-delete-photo"
                       >
                         <Trash2 className="w-4 h-4" />

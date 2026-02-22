@@ -728,7 +728,7 @@ export default function EventModal({
                     onClose();
                   }}
                   data-testid="button-delete-event"
-                  className="bg-red-600 hover:bg-red-700 text-white border border-border rounded-lg"
+                  className="bg-destructive text-destructive-foreground border border-border rounded-lg"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete
@@ -740,7 +740,7 @@ export default function EventModal({
                   variant="ghost"
                   onClick={onClose}
                   data-testid="button-cancel"
-                  className="text-foreground border border-border rounded-lg hover:bg-muted/50"
+                  className="text-foreground border border-border rounded-lg"
                 >
                   Cancel
                 </Button>
@@ -748,7 +748,7 @@ export default function EventModal({
                   onClick={handleSave}
                   disabled={!title.trim() || selectedMemberIds.length === 0 || isReadOnly}
                   data-testid="button-save-event"
-                  className="bg-purple-600 hover:bg-purple-700 text-white border border-border rounded-lg disabled:opacity-50"
+                  className="bg-primary text-primary-foreground border border-border rounded-lg disabled:opacity-50"
                   title={isReadOnly ? 'You cannot create or edit events' : !title.trim() ? 'Please enter an event title' : selectedMemberIds.length === 0 ? 'Please select at least one family member' : ''}
                 >
                   {event?.id ? 'Update Event' : 'Create Event'}

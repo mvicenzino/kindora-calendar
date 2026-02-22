@@ -180,7 +180,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
                 />
                 <button
                   onClick={handleDeletePhoto}
-                  className="absolute top-2 left-2 w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white hover:bg-red-700 transition-all"
+                  className="absolute top-2 left-2 w-8 h-8 rounded-full bg-destructive flex items-center justify-center text-destructive-foreground hover-elevate transition-all"
                   data-testid="button-delete-photo"
                   disabled={deletePhotoMutation.isPending}
                 >
@@ -243,7 +243,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
           <div className="flex gap-3">
             <Button
               onClick={onEdit}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white border border-border rounded-lg h-12 font-medium"
+              className="flex-1 bg-primary text-primary-foreground border border-border rounded-lg h-12 font-medium"
               data-testid="button-edit-event-bottom"
             >
               Edit Event

@@ -40,12 +40,9 @@ import {
   ExternalLink,
   CloudDownload,
   Folder,
-  ArrowLeft,
   Loader2
 } from "lucide-react";
 import { SiGoogledrive } from "react-icons/si";
-import { Link } from "wouter";
-import Header from "@/components/Header";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const DOCUMENT_TYPE_CONFIG = {
@@ -375,34 +372,23 @@ export default function Documents() {
   
   if (!activeFamilyId) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <Card className="w-full max-w-md mx-4">
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">Please select a family to view documents.</p>
-            </CardContent>
-          </Card>
+      <div className="p-4 md:p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <Card className="w-full max-w-md">
+              <CardContent className="pt-6">
+                <p className="text-center text-muted-foreground">Please select a family to view documents.</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background" data-testid="documents-page">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-6 max-w-6xl">
-        <div className="flex flex-col gap-6">
-          {/* Breadcrumb Navigation */}
-          <nav className="flex items-center gap-2 text-sm" data-testid="breadcrumb-documents">
-            <Link href="/">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </Link>
-          </nav>
-
+    <div className="p-4 md:p-6" data-testid="documents-page">
+      <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3" data-testid="text-documents-title">
@@ -431,7 +417,7 @@ export default function Documents() {
                 )}
                 <Button 
                   onClick={() => setShowUploadDialog(true)}
-                  className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white"
+                  className="gap-2 bg-primary text-primary-foreground"
                   data-testid="button-upload-document"
                 >
                   <Upload className="w-4 h-4" />
@@ -629,7 +615,6 @@ export default function Documents() {
             </div>
           )}
         </div>
-      </main>
       
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent className="sm:max-w-lg" data-testid="dialog-upload-document">

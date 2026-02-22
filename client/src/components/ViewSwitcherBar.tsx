@@ -53,7 +53,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
               width: `${indicatorStyle.width}px`,
               top: '4px',
               bottom: '4px',
-              boxShadow: '0 0 12px rgba(249, 115, 22, 0.3)',
+              boxShadow: '0 0 12px hsl(var(--primary) / 0.3)',
             }}
           />
           {views.map((view) => (

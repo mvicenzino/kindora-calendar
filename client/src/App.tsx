@@ -20,16 +20,40 @@ import EmergencyBridge from "@/pages/EmergencyBridge";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import AccountSettings from "@/pages/AccountSettings";
-
 import ImportSchedule from "@/pages/ImportSchedule";
-import AppFooter from "@/components/AppFooter";
+import AppSidebar from "@/components/AppSidebar";
+import Header from "@/components/Header";
+import ThemeToggle from "@/components/ThemeToggle";
+import FamilySelector from "@/components/FamilySelector";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 
-function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
+const sidebarStyle = {
+  "--sidebar-width": "14rem",
+  "--sidebar-width-icon": "3.5rem",
+};
+
+function AppShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="flex-1">{children}</div>
-      <AppFooter />
-    </div>
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex h-screen w-full bg-background">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col flex-1 min-w-0">
+          <header className="sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-2 border-b border-border/50 bg-background/80 backdrop-blur-xl" data-testid="header-main">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <FamilySelector />
+            </div>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Header />
+            </div>
+          </header>
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }
 
@@ -58,9 +82,9 @@ function Router() {
         <>
           <Route path="/onboarding" component={Onboarding} />
           <Route path="/onboarding/wizard" component={EventWizard} />
-          <AuthenticatedLayout>
+          <Route path="/demo-welcome" component={DemoWelcome} />
+          <AppShell>
             <Switch>
-              <Route path="/demo-welcome" component={DemoWelcome} />
               <Route path="/" component={Home} />
               <Route path="/care" component={CaregiverDashboard} />
               <Route path="/messages" component={Messages} />
@@ -70,7 +94,7 @@ function Router() {
               <Route path="/family" component={FamilySettings} />
               <Route path="/settings" component={AccountSettings} />
             </Switch>
-          </AuthenticatedLayout>
+          </AppShell>
         </>
       )}
     </Switch>

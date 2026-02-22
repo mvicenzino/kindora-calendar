@@ -3,9 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import Header from "@/components/Header";
 import ViewSwitcherBar from "@/components/ViewSwitcherBar";
-import AppSidebar from "@/components/AppSidebar";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
@@ -16,9 +14,6 @@ import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
 import DayEventsDialog from "@/components/DayEventsDialog";
 import CategoryLegend from "@/components/CategoryLegend";
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import ThemeToggle from "@/components/ThemeToggle";
-import FamilySelector from "@/components/FamilySelector";
 import { isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -339,7 +334,7 @@ export default function Home() {
 
   if (isLoading || isLoadingFamily || membersLoading || eventsLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
           <div className="w-14 h-14 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">Loading your calendar...</p>
@@ -348,110 +343,70 @@ export default function Home() {
     );
   }
 
-  const handleMemberColorChange = async (memberId: string, color: string) => {
-    await updateMemberColorMutation.mutateAsync({ memberId, color });
-  };
-
-  const handleDeleteMember = async (memberId: string) => {
-    await deleteMemberMutation.mutateAsync(memberId);
-  };
-
-  const sidebarStyle = {
-    "--sidebar-width": "14rem",
-    "--sidebar-width-icon": "3.5rem",
-  };
-
   return (
-    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full bg-background">
-        <AppSidebar
-          members={members}
-          selectedMemberIds={selectedMemberIds}
-          onToggleMember={handleToggleMember}
-          onSelectAllMembers={handleSelectAllMembers}
-        />
-        <SidebarInset className="flex flex-col flex-1 min-w-0">
-          <header className="sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-2 border-b border-border/50 bg-background/80 backdrop-blur-xl" data-testid="header-main">
-            <div className="flex items-center gap-2">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <FamilySelector />
-            </div>
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <Header
-                members={members}
-                onMemberColorChange={handleMemberColorChange}
-                onSearchClick={() => setSearchOpen(true)}
-                onAddMember={() => setMemberModalOpen(true)}
-                onDeleteMember={handleDeleteMember}
-              />
-            </div>
-          </header>
+    <div className="flex flex-col h-full">
+      <div className="sticky top-0 z-40">
+        <ViewSwitcherBar currentView={view} onViewChange={setView} />
+      </div>
 
-          <div className="sticky top-[49px] z-40">
-            <ViewSwitcherBar currentView={view} onViewChange={setView} />
-          </div>
+      <div className="px-3 sm:px-4 md:px-6 py-1.5 border-b border-border/30">
+        <CategoryLegend />
+      </div>
 
-          <div className="px-3 sm:px-4 md:px-6 py-1.5 border-b border-border/30">
-            <CategoryLegend />
-          </div>
+      <SearchPanel
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        events={filteredEvents}
+        onSelectEvent={handleEventClick}
+      />
 
-          <SearchPanel
-            isOpen={searchOpen}
-            onClose={() => setSearchOpen(false)}
-            events={filteredEvents}
-            onSelectEvent={handleEventClick}
+      <div className="flex-1 overflow-y-auto">
+        {view === 'day' && (
+          <TodayView
+            date={currentDate}
+            events={todayEvents}
+            tasks={tasks}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={handleAddEvent}
           />
+        )}
 
-          <main className="flex-1 overflow-y-auto">
-            {view === 'day' && (
-              <TodayView
-                date={currentDate}
-                events={todayEvents}
-                tasks={tasks}
-                members={members}
-                onEventClick={handleEventClick}
-                onViewChange={setView}
-                onAddEvent={handleAddEvent}
-              />
-            )}
+        {view === 'week' && (
+          <WeekView
+            date={currentDate}
+            events={weekEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={handleAddEvent}
+            onAddEventForDate={handleAddEventForDate}
+            onDateChange={handleDateChange}
+            onWeekChange={handleWeekChange}
+          />
+        )}
 
-            {view === 'week' && (
-              <WeekView
-                date={currentDate}
-                events={weekEvents}
-                members={members}
-                onEventClick={handleEventClick}
-                onViewChange={setView}
-                onAddEvent={handleAddEvent}
-                onAddEventForDate={handleAddEventForDate}
-                onDateChange={handleDateChange}
-                onWeekChange={handleWeekChange}
-              />
-            )}
+        {view === 'month' && (
+          <MonthView
+            date={currentDate}
+            events={monthEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={handleAddEvent}
+            onAddEventForDate={handleDayClick}
+            onDateChange={handleDateChange}
+          />
+        )}
 
-            {view === 'month' && (
-              <MonthView
-                date={currentDate}
-                events={monthEvents}
-                members={members}
-                onEventClick={handleEventClick}
-                onViewChange={setView}
-                onAddEvent={handleAddEvent}
-                onAddEventForDate={handleDayClick}
-                onDateChange={handleDateChange}
-              />
-            )}
-
-            {view === 'timeline' && (
-              <TimelineView
-                events={filteredEvents}
-                onEventClick={handleEventClick}
-                onAddEvent={handleAddEvent}
-              />
-            )}
-          </main>
-        </SidebarInset>
+        {view === 'timeline' && (
+          <TimelineView
+            events={filteredEvents}
+            onEventClick={handleEventClick}
+            onAddEvent={handleAddEvent}
+          />
+        )}
       </div>
 
       {selectedEvent && (
@@ -512,6 +467,6 @@ export default function Home() {
         onEventClick={handleEventClick}
         onAddEvent={() => handleAddEventForDate(selectedDayDate)}
       />
-    </SidebarProvider>
+    </div>
   );
 }
