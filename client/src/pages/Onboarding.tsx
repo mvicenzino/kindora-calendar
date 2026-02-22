@@ -172,7 +172,9 @@ export default function Onboarding() {
   };
 
   const markOnboardingComplete = () => {
-    localStorage.setItem("kindora_onboarding_complete", "true");
+    if (user?.id) {
+      localStorage.setItem(`kindora_onboarding_complete_${user.id}`, "true");
+    }
   };
 
   const goToCalendar = () => {
