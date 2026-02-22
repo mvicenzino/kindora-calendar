@@ -1,5 +1,5 @@
 import { type IStorage } from "./storage";
-import { addDays, subDays, setHours, setMinutes, startOfToday } from "date-fns";
+import { addDays, subDays } from "date-fns";
 import { CATEGORY_CONFIG } from "@shared/schema";
 
 // Sample memory photos for demo events - Family with Kids
@@ -36,8 +36,18 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     }
     
     const now = new Date();
-    const serverMidnight = startOfToday();
-    const today = new Date(serverMidnight.getTime() + tzOffsetMinutes * 60 * 1000);
+    // Calculate the user's local "today" (their date may differ from server UTC date near midnight)
+    const userNow = new Date(now.getTime() - tzOffsetMinutes * 60 * 1000);
+    const today = new Date(Date.UTC(userNow.getUTCFullYear(), userNow.getUTCMonth(), userNow.getUTCDate()));
+
+    // Helper to create dates at specific hours in user's local timezone
+    // getTimezoneOffset() returns positive for west of UTC (e.g. 300 for EST = UTC-5)
+    // Creates the correct UTC time so the browser displays it at the intended local hour
+    const localTime = (baseDate: Date, hour: number, minute: number = 0): Date => {
+      const d = new Date(baseDate);
+      d.setUTCHours(hour, minute, 0, 0);
+      return new Date(d.getTime() + tzOffsetMinutes * 60 * 1000);
+    };
     
     // ============================================
     // CREATE DEMO USERS FOR OTHER FAMILY MEMBERS
@@ -129,8 +139,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Emma's Soccer Championship",
         description: "What a game! Emma scored the winning goal in overtime. The whole team celebrated!",
-        startTime: setMinutes(setHours(subDays(today, 3), 14), 0),
-        endTime: setMinutes(setHours(subDays(today, 3), 16), 0),
+        startTime: localTime(subDays(today, 3), 14, 0),
+        endTime: localTime(subDays(today, 3), 16, 0),
         memberIds: [daughter.id, mom.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
@@ -139,8 +149,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Family Movie Night",
         description: "Watched the new animated movie with homemade popcorn. Lucas picked the movie this time!",
-        startTime: setMinutes(setHours(subDays(today, 5), 19), 0),
-        endTime: setMinutes(setHours(subDays(today, 5), 21), 30),
+        startTime: localTime(subDays(today, 5), 19, 0),
+        endTime: localTime(subDays(today, 5), 21, 30),
         memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -149,8 +159,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Lucas's Piano Recital",
         description: "His first big performance! He played 'Für Elise' perfectly. So proud of his practice!",
-        startTime: setMinutes(setHours(subDays(today, 7), 15), 0),
-        endTime: setMinutes(setHours(subDays(today, 7), 16), 30),
+        startTime: localTime(subDays(today, 7), 15, 0),
+        endTime: localTime(subDays(today, 7), 16, 30),
         memberIds: [son.id, mom.id, daughter.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
@@ -159,8 +169,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Jenny Babysat - Anniversary Dinner",
         description: "Jenny took the kids to the park and made dinner. Kids loved it! We had a wonderful anniversary dinner.",
-        startTime: setMinutes(setHours(subDays(today, 10), 17), 0),
-        endTime: setMinutes(setHours(subDays(today, 10), 22), 0),
+        startTime: localTime(subDays(today, 10), 17, 0),
+        endTime: localTime(subDays(today, 10), 22, 0),
         memberIds: [babysitter.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -172,8 +182,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "School Drop-off",
         description: "Emma has early math club, Lucas regular drop-off",
-        startTime: setMinutes(setHours(today, 7), 30),
-        endTime: setMinutes(setHours(today, 8), 15),
+        startTime: localTime(today, 7, 30),
+        endTime: localTime(today, 8, 15),
         memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['school'].color,
         category: 'school' as const,
@@ -183,8 +193,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Grocery Run",
         description: "Need items for Sunday dinner at Grandma Marilyn's",
-        startTime: setMinutes(setHours(today, 10), 0),
-        endTime: setMinutes(setHours(today, 11), 30),
+        startTime: localTime(today, 10, 0),
+        endTime: localTime(today, 11, 30),
         memberIds: [mom.id],
         color: CATEGORY_CONFIG['errands'].color,
         category: 'errands' as const,
@@ -193,8 +203,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Work Call - Project Review",
         description: "Quarterly review with the team, dial in from home",
-        startTime: setMinutes(setHours(today, 9), 0),
-        endTime: setMinutes(setHours(today, 9), 45),
+        startTime: localTime(today, 9, 0),
+        endTime: localTime(today, 9, 45),
         memberIds: [mom.id],
         color: CATEGORY_CONFIG['work'].color,
         category: 'work' as const,
@@ -203,8 +213,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Lunch with Lisa",
         description: "Catching up at the cafe on Main St",
-        startTime: setMinutes(setHours(today, 12), 0),
-        endTime: setMinutes(setHours(today, 13), 0),
+        startTime: localTime(today, 12, 0),
+        endTime: localTime(today, 13, 0),
         memberIds: [mom.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -213,8 +223,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Emma - Art Class",
         description: "Watercolor session at the community center",
-        startTime: setMinutes(setHours(today, 14), 30),
-        endTime: setMinutes(setHours(today, 15), 30),
+        startTime: localTime(today, 14, 30),
+        endTime: localTime(today, 15, 30),
         memberIds: [daughter.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
@@ -223,8 +233,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Lucas Soccer Practice",
         description: "Don't forget shin guards! Coach mentioned early pickup today",
-        startTime: setMinutes(setHours(today, 16), 0),
-        endTime: setMinutes(setHours(today, 17), 30),
+        startTime: localTime(today, 16, 0),
+        endTime: localTime(today, 17, 30),
         memberIds: [son.id, mom.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
@@ -233,8 +243,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Family Dinner",
         description: "Taco Tuesday! Kids helping with prep tonight",
-        startTime: setMinutes(setHours(today, 18), 0),
-        endTime: setMinutes(setHours(today, 19), 0),
+        startTime: localTime(today, 18, 0),
+        endTime: localTime(today, 19, 0),
         memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -245,8 +255,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Emma's Dentist Checkup",
         description: "Regular 6-month cleaning at Dr. Chen's office",
-        startTime: setMinutes(setHours(addDays(today, 1), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 1), 10), 0),
+        startTime: localTime(addDays(today, 1), 9, 0),
+        endTime: localTime(addDays(today, 1), 10, 0),
         memberIds: [daughter.id, mom.id],
         color: CATEGORY_CONFIG['medical'].color,
         category: 'medical' as const,
@@ -255,8 +265,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Parent-Teacher Conference",
         description: "Meeting with Lucas's teacher Mrs. Rodriguez about his reading progress",
-        startTime: setMinutes(setHours(addDays(today, 2), 16), 0),
-        endTime: setMinutes(setHours(addDays(today, 2), 17), 0),
+        startTime: localTime(addDays(today, 2), 16, 0),
+        endTime: localTime(addDays(today, 2), 17, 0),
         memberIds: [mom.id],
         color: CATEGORY_CONFIG['school'].color,
         category: 'school' as const,
@@ -265,8 +275,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Family Dinner at Grandma's",
         description: "Sunday dinner with Grandma Marilyn - bringing her favorite apple pie!",
-        startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
-        endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
+        startTime: localTime(addDays(today, 3), 17, 0),
+        endTime: localTime(addDays(today, 3), 20, 0),
         memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -275,8 +285,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Emma's Ballet Dress Rehearsal",
         description: "Spring recital is next week - full costume required",
-        startTime: setMinutes(setHours(addDays(today, 4), 16), 0),
-        endTime: setMinutes(setHours(addDays(today, 4), 18), 0),
+        startTime: localTime(addDays(today, 4), 16, 0),
+        endTime: localTime(addDays(today, 4), 18, 0),
         memberIds: [daughter.id, mom.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
@@ -285,8 +295,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Date Night - Jenny Babysitting",
         description: "Jenny watching the kids! She'll do homework help and bedtime routine. Trying that new Italian place downtown.",
-        startTime: setMinutes(setHours(addDays(today, 5), 18), 0),
-        endTime: setMinutes(setHours(addDays(today, 5), 23), 0),
+        startTime: localTime(addDays(today, 5), 18, 0),
+        endTime: localTime(addDays(today, 5), 23, 0),
         memberIds: [mom.id, babysitter.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -295,8 +305,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Lucas's Basketball Tournament",
         description: "All-day tournament at Riverside Community Center. Pack snacks!",
-        startTime: setMinutes(setHours(addDays(today, 6), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 6), 16), 0),
+        startTime: localTime(addDays(today, 6), 9, 0),
+        endTime: localTime(addDays(today, 6), 16, 0),
         memberIds: [son.id, mom.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
@@ -305,8 +315,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Beach Day Adventure",
         description: "End of school year celebration! Sunscreen, towels, and sandcastle supplies",
-        startTime: setMinutes(setHours(addDays(today, 7), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 7), 17), 0),
+        startTime: localTime(addDays(today, 7), 10, 0),
+        endTime: localTime(addDays(today, 7), 17, 0),
         memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -315,8 +325,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Jenny - After School Pickup",
         description: "Jenny picking up both kids. Mom at work meeting. Snacks in pantry, homework before screen time!",
-        startTime: setMinutes(setHours(addDays(today, 8), 15), 0),
-        endTime: setMinutes(setHours(addDays(today, 8), 18), 0),
+        startTime: localTime(addDays(today, 8), 15, 0),
+        endTime: localTime(addDays(today, 8), 18, 0),
         memberIds: [babysitter.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -463,8 +473,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Physical Therapy Session",
         description: "Great progress today! Mom walked 50 feet with the walker. Maya supervised the exercises.",
-        startTime: setMinutes(setHours(subDays(today, 2), 10), 0),
-        endTime: setMinutes(setHours(subDays(today, 2), 11), 0),
+        startTime: localTime(subDays(today, 2), 10, 0),
+        endTime: localTime(subDays(today, 2), 11, 0),
         memberIds: [grandma.id, nurseAide.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -474,8 +484,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Cardiology Follow-up",
         description: "Dr. Patel is pleased with her heart rhythm. Medication is working well. Next checkup in 3 months.",
-        startTime: setMinutes(setHours(subDays(today, 4), 14), 0),
-        endTime: setMinutes(setHours(subDays(today, 4), 15), 30),
+        startTime: localTime(subDays(today, 4), 14, 0),
+        endTime: localTime(subDays(today, 4), 15, 30),
         memberIds: [grandma.id, coordinator.id],
         color: CATEGORY_CONFIG['medical'].color,
         category: 'medical' as const,
@@ -485,8 +495,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Grandkids Visit",
         description: "Emma and Lucas came to see Grandma! They played cards and she taught them to make cookies. Such precious memories.",
-        startTime: setMinutes(setHours(subDays(today, 5), 15), 0),
-        endTime: setMinutes(setHours(subDays(today, 5), 18), 0),
+        startTime: localTime(subDays(today, 5), 15, 0),
+        endTime: localTime(subDays(today, 5), 18, 0),
         memberIds: [grandma.id, coordinator.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -498,8 +508,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Morning Medication",
         description: "Blood pressure meds, heart medication, and vitamin D. Take with breakfast.",
-        startTime: setMinutes(setHours(today, 8), 0),
-        endTime: setMinutes(setHours(today, 8), 30),
+        startTime: localTime(today, 8, 0),
+        endTime: localTime(today, 8, 30),
         memberIds: [grandma.id, nurseAide.id],
         color: CATEGORY_CONFIG['medical'].color,
         category: 'medical' as const,
@@ -509,8 +519,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Maya - Morning Care",
         description: "Help with bathing, breakfast prep, and light housekeeping. Check medication box is organized.",
-        startTime: setMinutes(setHours(today, 9), 0),
-        endTime: setMinutes(setHours(today, 12), 0),
+        startTime: localTime(today, 9, 0),
+        endTime: localTime(today, 12, 0),
         memberIds: [grandma.id, nurseAide.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -519,8 +529,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Lunch + Afternoon Meds",
         description: "Light lunch, afternoon heart medication. Maya leaves at 12 - David checking in by phone at 2pm.",
-        startTime: setMinutes(setHours(today, 12), 0),
-        endTime: setMinutes(setHours(today, 13), 0),
+        startTime: localTime(today, 12, 0),
+        endTime: localTime(today, 13, 0),
         memberIds: [grandma.id],
         color: CATEGORY_CONFIG['medical'].color,
         category: 'medical' as const,
@@ -529,8 +539,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "David's Phone Check-in",
         description: "Brother calling to chat and make sure Mom is comfortable. She loves hearing about his garden!",
-        startTime: setMinutes(setHours(today, 14), 0),
-        endTime: setMinutes(setHours(today, 14), 30),
+        startTime: localTime(today, 14, 0),
+        endTime: localTime(today, 14, 30),
         memberIds: [grandma.id, brother.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -539,8 +549,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Evening Medication",
         description: "Evening heart meds and sleep aid. You'll stop by to help with dinner.",
-        startTime: setMinutes(setHours(today, 18), 0),
-        endTime: setMinutes(setHours(today, 19), 0),
+        startTime: localTime(today, 18, 0),
+        endTime: localTime(today, 19, 0),
         memberIds: [grandma.id, coordinator.id],
         color: CATEGORY_CONFIG['medical'].color,
         category: 'medical' as const,
@@ -551,8 +561,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Exercise Session with Maya",
         description: "Working on balance exercises and stair climbing. Goal: independent outdoor walking",
-        startTime: setMinutes(setHours(addDays(today, 1), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 1), 11), 0),
+        startTime: localTime(addDays(today, 1), 10, 0),
+        endTime: localTime(addDays(today, 1), 11, 0),
         memberIds: [grandma.id, nurseAide.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -561,8 +571,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Maya - Morning Care",
         description: "Regular morning routine. Will prep meals for the next two days.",
-        startTime: setMinutes(setHours(addDays(today, 1), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 1), 12), 0),
+        startTime: localTime(addDays(today, 1), 9, 0),
+        endTime: localTime(addDays(today, 1), 12, 0),
         memberIds: [grandma.id, nurseAide.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -571,8 +581,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Podiatrist Appointment",
         description: "Foot care checkup - important for diabetes management. David is driving.",
-        startTime: setMinutes(setHours(addDays(today, 2), 11), 0),
-        endTime: setMinutes(setHours(addDays(today, 2), 12), 0),
+        startTime: localTime(addDays(today, 2), 11, 0),
+        endTime: localTime(addDays(today, 2), 12, 0),
         memberIds: [grandma.id, brother.id],
         color: CATEGORY_CONFIG['medical'].color,
         category: 'medical' as const,
@@ -581,8 +591,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Social Worker Visit - Helen",
         description: "Quarterly check-in to review care plan and discuss any additional support needs.",
-        startTime: setMinutes(setHours(addDays(today, 3), 14), 0),
-        endTime: setMinutes(setHours(addDays(today, 3), 15), 0),
+        startTime: localTime(addDays(today, 3), 14, 0),
+        endTime: localTime(addDays(today, 3), 15, 0),
         memberIds: [grandma.id, coordinator.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -591,8 +601,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Family Dinner at Mom's",
         description: "Everyone coming over! Kids excited to see Grandma. Bringing the apple pie she loves.",
-        startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
-        endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
+        startTime: localTime(addDays(today, 3), 17, 0),
+        endTime: localTime(addDays(today, 3), 20, 0),
         memberIds: [grandma.id, coordinator.id, brother.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
@@ -601,8 +611,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Ophthalmologist - Glaucoma Check",
         description: "Annual eye exam. You're taking Mom. Bring current medication list.",
-        startTime: setMinutes(setHours(addDays(today, 5), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 5), 10), 30),
+        startTime: localTime(addDays(today, 5), 9, 0),
+        endTime: localTime(addDays(today, 5), 10, 30),
         memberIds: [grandma.id, coordinator.id],
         color: CATEGORY_CONFIG['medical'].color,
         category: 'medical' as const,
@@ -611,8 +621,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Exercise Session with Maya",
         description: "Continuing balance work. If weather is nice, will practice outdoor walking.",
-        startTime: setMinutes(setHours(addDays(today, 4), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 4), 11), 0),
+        startTime: localTime(addDays(today, 4), 10, 0),
+        endTime: localTime(addDays(today, 4), 11, 0),
         memberIds: [grandma.id, nurseAide.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -621,8 +631,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Pharmacy - Prescription Refills",
         description: "Pick up monthly medications. Blood pressure, heart meds, vitamin D, and sleep aid.",
-        startTime: setMinutes(setHours(addDays(today, 6), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 6), 10), 30),
+        startTime: localTime(addDays(today, 6), 10, 0),
+        endTime: localTime(addDays(today, 6), 10, 30),
         memberIds: [coordinator.id],
         color: CATEGORY_CONFIG['errands'].color,
         category: 'errands' as const,
@@ -631,8 +641,8 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         title: "Maya - Extended Care Day",
         description: "Maya staying longer so you can attend Lucas's tournament. Will handle all meals and meds.",
-        startTime: setMinutes(setHours(addDays(today, 6), 8), 0),
-        endTime: setMinutes(setHours(addDays(today, 6), 18), 0),
+        startTime: localTime(addDays(today, 6), 8, 0),
+        endTime: localTime(addDays(today, 6), 18, 0),
         memberIds: [grandma.id, nurseAide.id],
         color: CATEGORY_CONFIG['caregiving'].color,
         category: 'caregiving' as const,
@@ -775,24 +785,24 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: mayaId, // Maya gave morning meds
-        scheduledTime: setMinutes(setHours(today, 8), 0),
-        administeredAt: setMinutes(setHours(today, 8), 10),
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 10),
         status: "given",
         notes: "Blood pressure looked good this morning - 128/78",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(today, 8), 0),
-        administeredAt: setMinutes(setHours(today, 8), 12),
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 12),
         status: "given",
         notes: "Given with oatmeal and blueberries",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(today, 8), 0),
-        administeredAt: setMinutes(setHours(today, 8), 15),
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 15),
         status: "given",
       },
       
@@ -800,46 +810,46 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: userId, // Sarah (demo user)
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 5),
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
         status: "given",
         notes: "Visiting in the morning - gave meds before heading to work",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 5),
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 8),
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 8),
         status: "given",
       },
       {
         medicationId: getMedId("Baby Aspirin")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 12), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 12), 30),
+        scheduledTime: localTime(subDays(today, 1), 12, 0),
+        administeredAt: localTime(subDays(today, 1), 12, 30),
         status: "given",
         notes: "Took with lunch - chicken soup and crackers",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: davidId, // David (brother)
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 18), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 18), 15),
+        scheduledTime: localTime(subDays(today, 1), 18, 0),
+        administeredAt: localTime(subDays(today, 1), 18, 15),
         status: "given",
         notes: "Stopped by for dinner visit",
       },
       {
         medicationId: getMedId("Trazodone")!,
         administeredBy: davidId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 21), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 21), 0),
+        scheduledTime: localTime(subDays(today, 1), 21, 0),
+        administeredAt: localTime(subDays(today, 1), 21, 0),
         status: "skipped",
         notes: "Mom said she's been sleeping well, decided to skip tonight",
       },
@@ -848,37 +858,37 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 20),
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 20),
         status: "given",
         notes: "Slightly late - was helping with PT exercises first",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 22),
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 22),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 25),
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 25),
         status: "given",
       },
       {
         medicationId: getMedId("Baby Aspirin")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 12), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 12), 0),
+        scheduledTime: localTime(subDays(today, 2), 12, 0),
+        administeredAt: localTime(subDays(today, 2), 12, 0),
         status: "given",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 18), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 19), 0),
+        scheduledTime: localTime(subDays(today, 2), 18, 0),
+        administeredAt: localTime(subDays(today, 2), 19, 0),
         status: "given",
         notes: "Running late from work, gave as soon as I arrived",
       },
@@ -887,37 +897,37 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 10),
+        scheduledTime: localTime(subDays(today, 3), 8, 0),
+        administeredAt: localTime(subDays(today, 3), 8, 10),
         status: "given",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 10),
+        scheduledTime: localTime(subDays(today, 3), 8, 0),
+        administeredAt: localTime(subDays(today, 3), 8, 10),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 15),
+        scheduledTime: localTime(subDays(today, 3), 8, 0),
+        administeredAt: localTime(subDays(today, 3), 8, 15),
         status: "refused",
         notes: "Mom wasn't feeling well, said it was making her nauseous. Will try again tomorrow.",
       },
       {
         medicationId: getMedId("Baby Aspirin")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 12), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 12), 15),
+        scheduledTime: localTime(subDays(today, 3), 12, 0),
+        administeredAt: localTime(subDays(today, 3), 12, 15),
         status: "given",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: davidId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 18), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 18), 30),
+        scheduledTime: localTime(subDays(today, 3), 18, 0),
+        administeredAt: localTime(subDays(today, 3), 18, 30),
         status: "given",
         notes: "Picked up dinner, stayed to give evening meds",
       },
@@ -926,23 +936,23 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 45),
+        scheduledTime: localTime(subDays(today, 4), 8, 0),
+        administeredAt: localTime(subDays(today, 4), 7, 45),
         status: "given",
         notes: "Early dose before cardiology appointment",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 45),
+        scheduledTime: localTime(subDays(today, 4), 8, 0),
+        administeredAt: localTime(subDays(today, 4), 7, 45),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 50),
+        scheduledTime: localTime(subDays(today, 4), 8, 0),
+        administeredAt: localTime(subDays(today, 4), 7, 50),
         status: "given",
       },
     ];
@@ -958,7 +968,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
 
     // Helper to create timestamps at specific hours on specific days
     const msgTime = (daysAgo: number, hour: number, minute: number = 0) => 
-      setMinutes(setHours(subDays(today, daysAgo), hour), minute);
+      localTime(subDays(today, daysAgo), hour, minute);
 
     // ========================================
     // FAMILY 1: Your Family - Kids & Activities
