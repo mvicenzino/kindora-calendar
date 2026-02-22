@@ -104,7 +104,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
                 relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
                 transition-colors duration-300 ease-out
                 ${layout === 'grid'
-                  ? 'bg-primary/80 text-primary-foreground border border-primary'
+                  ? 'bg-accent text-accent-foreground border border-accent-border'
                   : 'text-muted-foreground'
                 }
               `}
@@ -121,7 +121,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
                 relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
                 transition-colors duration-300 ease-out
                 ${layout === 'tile'
-                  ? 'bg-primary/80 text-primary-foreground border border-primary'
+                  ? 'bg-accent text-accent-foreground border border-accent-border'
                   : 'text-muted-foreground'
                 }
               `}
