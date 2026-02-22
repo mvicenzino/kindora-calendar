@@ -19,12 +19,6 @@ export default function FamilySelector() {
     queryKey: ['/api/families'],
   });
 
-  // Helper to check if a family is a care/eldercare family
-  const isCareFamily = (family: Family) => {
-    const name = family.name.toLowerCase();
-    return name.includes('care') || name.includes('elder') || name.includes("mom's") || name.includes("dad's");
-  };
-
   useEffect(() => {
     if (families && families.length > 0) {
       // If no active family is selected, or selected family is not in the list, default to first one
@@ -48,14 +42,7 @@ export default function FamilySelector() {
       setActiveFamilyId(familyId);
       setActiveFamily(family);
       
-      // Navigate to appropriate default view based on family type
-      if (isCareFamily(family)) {
-        // Care families default to the caregiver dashboard
-        setLocation('/care');
-      } else {
-        // Standard families default to the calendar view
-        setLocation('/');
-      }
+      setLocation('/');
     }
   };
 

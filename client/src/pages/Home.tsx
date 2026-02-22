@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
-import { useUserRole } from "@/hooks/useUserRole";
 import ViewSwitcherBar, { type CalendarLayout, type CalendarView } from "@/components/ViewSwitcherBar";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
@@ -29,7 +28,6 @@ import { useToast } from "@/hooks/use-toast";
 export default function Home() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const { activeFamilyId, isLoadingFamily } = useActiveFamily();
-  const { isCaregiver, isLoading: isLoadingRole } = useUserRole();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -91,11 +89,6 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, setLocation]);
 
-  useEffect(() => {
-    if (!isLoadingRole && isCaregiver) {
-      setLocation('/care');
-    }
-  }, [isCaregiver, isLoadingRole, setLocation]);
 
   const joinFamilyMutation = useMutation({
     mutationFn: async (inviteCode: string) => {
