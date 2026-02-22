@@ -87,41 +87,41 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* DARK MODE - the star of the show */
+/* DARK MODE - deep navy console aesthetic */
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(255,255,255, .08);
+  --badge-outline: rgba(255,255,255, .04);
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-  --background: 220 20% 7%;
-  --foreground: 30 10% 95%;
-  --border: 220 15% 16%;
-  --card: 220 18% 10%;
-  --card-foreground: 30 10% 95%;
-  --card-border: 220 15% 14%;
-  --sidebar: 220 25% 6%;
-  --sidebar-foreground: 30 10% 92%;
-  --sidebar-border: 220 18% 12%;
+  --elevate-1: rgba(255,255,255, .03);
+  --elevate-2: rgba(255,255,255, .07);
+  --background: 216 28% 7%;
+  --foreground: 210 15% 90%;
+  --border: 215 20% 14%;
+  --card: 216 25% 9%;
+  --card-foreground: 210 15% 90%;
+  --card-border: 215 20% 13%;
+  --sidebar: 218 30% 5%;
+  --sidebar-foreground: 210 12% 75%;
+  --sidebar-border: 216 22% 11%;
   --sidebar-primary: 24 90% 55%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 24 25% 15%;
-  --sidebar-accent-foreground: 30 15% 92%;
+  --sidebar-accent: 216 22% 12%;
+  --sidebar-accent-foreground: 210 15% 88%;
   --sidebar-ring: 24 90% 55%;
-  --popover: 220 20% 10%;
-  --popover-foreground: 30 10% 95%;
-  --popover-border: 220 15% 18%;
+  --popover: 216 26% 9%;
+  --popover-foreground: 210 15% 90%;
+  --popover-border: 215 20% 16%;
   --primary: 24 90% 55%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 12% 16%;
-  --secondary-foreground: 30 12% 92%;
-  --muted: 220 15% 14%;
-  --muted-foreground: 220 12% 60%;
-  --accent: 220 18% 12%;
-  --accent-foreground: 30 18% 92%;
+  --secondary: 216 18% 14%;
+  --secondary-foreground: 210 14% 88%;
+  --muted: 216 18% 12%;
+  --muted-foreground: 215 14% 50%;
+  --accent: 216 20% 11%;
+  --accent-foreground: 210 18% 88%;
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 72% 98%;
-  --input: 220 15% 22%;
+  --input: 216 18% 18%;
   --ring: 24 90% 55%;
   --chart-1: 24 90% 60%;
   --chart-2: 35 85% 60%;
