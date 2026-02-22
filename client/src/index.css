@@ -287,34 +287,38 @@
     inset: -1px;
   }
 
-  /* Modern scrollbar styling for flip card back side */
-  .flip-card-back::-webkit-scrollbar {
-    width: 10px;
+  /* ========== Global Scrollbar Styling ========== */
+
+  /* Webkit (Chrome, Safari, Edge) */
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
   }
 
-  .flip-card-back::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    margin: 0.5rem;
+  *::-webkit-scrollbar-track {
+    background: transparent;
   }
 
-  .flip-card-back::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 9999px;
   }
 
-  .flip-card-back::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
-    background-clip: padding-box;
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.35);
   }
 
-  /* Firefox scrollbar styling */
-  .flip-card-back {
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Firefox */
+  * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+    scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
   }
+
+  /* Flip card back inherits global styles */
 
   /* Family-friendly app title font */
   .app-title {
