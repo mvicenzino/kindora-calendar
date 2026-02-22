@@ -18,7 +18,7 @@ export default function CategoryLegend({ className = '' }: CategoryLegendProps) 
             className="w-2.5 h-2.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: CATEGORY_CONFIG[cat].color }}
           />
-          <span className="text-[11px] text-white/60 font-medium whitespace-nowrap">
+          <span className="text-[11px] text-muted-foreground font-medium whitespace-nowrap">
             {CATEGORY_CONFIG[cat].label}
           </span>
         </div>

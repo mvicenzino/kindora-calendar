@@ -105,7 +105,7 @@ export default function EventCard({
   };
 
   const cardClasses = `
-    relative rounded-2xl overflow-hidden text-left cursor-pointer border border-white/20
+    relative rounded-2xl overflow-hidden text-left cursor-pointer border border-border
     transition-all duration-300 ease-out
     hover:shadow-xl hover:shadow-black/20
     active:scale-[0.98]
@@ -270,7 +270,7 @@ export default function EventCard({
               {members.map((m, index) => (
                 <Avatar
                   key={m.id}
-                  className="w-8 h-8 border-2 border-white/50"
+                  className="w-8 h-8 border-2 border-border"
                   style={{ 
                     backgroundColor: m.color,
                     zIndex: members.length - index 
@@ -288,7 +288,7 @@ export default function EventCard({
             </div>
           ) : member && (
             <Avatar
-              className="w-8 h-8 border-2 border-white/50"
+              className="w-8 h-8 border-2 border-border"
               style={{ backgroundColor: member.color }}
               data-testid={`avatar-member-${member.id}`}
             >

@@ -114,7 +114,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl bg-card max-h-[90vh] flex flex-col">
         <DialogTitle className="sr-only">Event Details</DialogTitle>
         <DialogDescription className="sr-only">
           View event details, photo memories, date and time, and notes
@@ -125,7 +125,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
           <div className="flex items-center justify-between">
             <button
               onClick={onEdit}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/15 border border-white/30 text-white hover:bg-white/20 transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/50 border border-border text-foreground hover:bg-muted transition-all"
               data-testid="button-edit-event"
             >
               <Pencil className="w-4 h-4" />
@@ -133,7 +133,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
             </button>
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all"
+              className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-foreground hover:bg-muted transition-all"
               data-testid="button-close-details"
             >
               <X className="w-5 h-5" />
@@ -141,11 +141,11 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
           </div>
 
           {/* Event Title Card with Members */}
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+          <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
             <div className="flex items-center gap-4">
               <div className="flex -space-x-2">
                 {event.members?.slice(0, 3).map((member) => (
-                  <Avatar key={member.id} className="h-12 w-12 border-2 border-white/30">
+                  <Avatar key={member.id} className="h-12 w-12 border-2 border-border">
                     <AvatarFallback
                       className="text-white font-semibold"
                       style={{ backgroundColor: member.color }}
@@ -156,8 +156,8 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
                 ))}
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-white">{event.title}</h3>
-                <p className="text-sm text-white/70">
+                <h3 className="text-xl font-bold text-foreground">{event.title}</h3>
+                <p className="text-sm text-muted-foreground">
                   Assigned to {memberNames}
                 </p>
               </div>
@@ -165,7 +165,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
           </div>
 
           {/* Photo Section */}
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
+          <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
             {event.photoUrl ? (
               <div className="relative">
                 <img
@@ -197,9 +197,9 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
                   data-testid="input-photo-upload"
                   disabled={uploading}
                 />
-                <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-white/30 rounded-lg hover:border-white/50 transition-all">
-                  <Upload className="w-12 h-12 text-white/50 mb-3" />
-                  <p className="text-white/70 text-sm">
+                <div className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-border rounded-lg hover:border-muted-foreground transition-all">
+                  <Upload className="w-12 h-12 text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground text-sm">
                     {uploading ? 'Uploading...' : 'Click to add a photo memory'}
                   </p>
                 </div>
@@ -209,22 +209,22 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
 
           {/* Date and Time Cards */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2 text-white/70">
+            <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2 text-muted-foreground">
                 <Calendar className="w-4 h-4" />
                 <span className="text-sm font-medium">Date</span>
               </div>
-              <p className="text-lg font-bold text-white">
+              <p className="text-lg font-bold text-foreground">
                 {format(event.startTime, 'MMMM do, yyyy')}
               </p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2 text-white/70">
+            <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2 text-muted-foreground">
                 <Clock className="w-4 h-4" />
                 <span className="text-sm font-medium">Time</span>
               </div>
-              <p className="text-lg font-bold text-white">
+              <p className="text-lg font-bold text-foreground">
                 {format(event.startTime, 'h:mm a')} - {format(event.endTime, 'h:mm a')}
               </p>
             </div>
@@ -243,14 +243,14 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
           <div className="flex gap-3">
             <Button
               onClick={onEdit}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white border border-white/30 rounded-lg h-12 font-medium"
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white border border-border rounded-lg h-12 font-medium"
               data-testid="button-edit-event-bottom"
             >
               Edit Event
             </Button>
             <Button
               onClick={onClose}
-              className="flex-1 bg-white/15 hover:bg-white/20 text-white border border-white/30 rounded-lg h-12 font-medium"
+              className="flex-1 bg-muted/50 hover:bg-muted text-foreground border border-border rounded-lg h-12 font-medium"
               data-testid="button-close-bottom"
             >
               Close

@@ -39,16 +39,16 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
         {/* Header */}
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-5xl font-bold text-white">Timeline</h1>
-            <p className="text-lg text-white/70 mt-1">Your events in time</p>
+            <h1 className="text-5xl font-bold text-foreground">Timeline</h1>
+            <p className="text-lg text-muted-foreground mt-1">Your events in time</p>
           </div>
           {onAddEvent && (
             <button
               onClick={onAddEvent}
               data-testid="button-add-event"
-              className="w-10 h-10 rounded-full backdrop-blur-xl bg-gradient-to-br from-white/40 to-white/10 flex items-center justify-center border-2 border-white/50 shadow-lg shadow-white/20 hover:from-white/50 hover:to-white/20 transition-all active:scale-[0.98]"
+              className="w-10 h-10 rounded-full backdrop-blur-xl bg-muted/50 flex items-center justify-center border-2 border-border shadow-lg hover-elevate transition-all active:scale-[0.98]"
             >
-              <Plus className="w-5 h-5 text-white drop-shadow-md" strokeWidth={2.5} />
+              <Plus className="w-5 h-5 text-foreground drop-shadow-md" strokeWidth={2.5} />
             </button>
           )}
         </div>
@@ -57,7 +57,7 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
         {groupedEvents.map((group, groupIndex) => (
           <div key={groupIndex} className="space-y-3">
             <div 
-              className="sticky top-20 z-10 rounded-full px-4 py-2 inline-block border-2 border-white/40 shadow-lg"
+              className="sticky top-20 z-10 rounded-full px-4 py-2 inline-block border-2 border-border shadow-lg"
               style={{ backgroundColor: '#8B5CF6' }}
               data-testid={`date-badge-${format(group.date, 'yyyy-MM-dd')}`}
             >
@@ -85,7 +85,7 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
 
         {events.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-white/70 text-lg" data-testid="text-empty-state">No events to display</p>
+            <p className="text-muted-foreground text-lg" data-testid="text-empty-state">No events to display</p>
           </div>
         )}
       </div>

@@ -168,14 +168,14 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
     const canDelete = currentUserId === note.authorUserId;
 
     return (
-      <div key={note.id} className={`${isReply ? 'ml-6 border-l-2 border-white/20 pl-4' : ''}`}>
-        <div className="bg-white/5 rounded-lg p-3 mb-2">
+      <div key={note.id} className={`${isReply ? 'ml-6 border-l-2 border-border pl-4' : ''}`}>
+        <div className="bg-muted/50 rounded-lg p-3 mb-2">
           <div className="flex items-start gap-3">
             <Avatar className="h-8 w-8 flex-shrink-0">
               {note.author?.profileImageUrl ? (
                 <AvatarImage src={note.author.profileImageUrl} />
               ) : null}
-              <AvatarFallback className="bg-purple-600 text-white text-xs">
+              <AvatarFallback className="bg-purple-600 text-white text-xs" >
                 {getAuthorInitials(note.author)}
               </AvatarFallback>
             </Avatar>
@@ -183,10 +183,10 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-white text-sm">
+                  <span className="font-medium text-foreground text-sm">
                     {getAuthorName(note.author)}
                   </span>
-                  <span className="text-white/50 text-xs">
+                  <span className="text-muted-foreground text-xs">
                     {formatDistanceToNow(new Date(note.createdAt), { addSuffix: true })}
                   </span>
                 </div>
@@ -196,7 +196,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                     size="icon"
                     variant="ghost"
                     onClick={() => deleteNoteMutation.mutate(note.id)}
-                    className="h-6 w-6 text-white/50 hover:text-red-400 hover:bg-red-400/10"
+                    className="h-6 w-6 text-muted-foreground hover:text-red-400 hover:bg-red-400/10"
                     disabled={deleteNoteMutation.isPending}
                     data-testid={`button-delete-note-${note.id}`}
                   >
@@ -205,7 +205,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                 )}
               </div>
               
-              <p className="text-white/90 text-sm mt-1 whitespace-pre-wrap break-words">
+              <p className="text-foreground text-sm mt-1 whitespace-pre-wrap break-words">
                 {note.content}
               </p>
               
@@ -213,7 +213,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                 {!isReply && (
                   <button
                     onClick={() => setReplyingTo(replyingTo === note.id ? null : note.id)}
-                    className="flex items-center gap-1 text-xs text-white/50 hover:text-white/80 transition-colors"
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     data-testid={`button-reply-note-${note.id}`}
                   >
                     <Reply className="h-3 w-3" />
@@ -253,7 +253,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write a reply..."
-                className="bg-white/10 border-white/30 text-white placeholder:text-white/50 text-sm min-h-[60px] resize-none flex-1"
+                className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground text-sm min-h-[60px] resize-none flex-1"
                 data-testid={`input-reply-${note.id}`}
               />
               <div className="flex flex-col gap-1">
@@ -263,19 +263,19 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-10 text-white/60 hover:text-white hover:bg-white/10"
+                        className="h-7 w-10 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         data-testid="button-reply-emoji-picker"
                       >
                         <Smile className="h-4 w-4" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-2 bg-[#4A5A6A] border-white/30" align="end">
+                    <PopoverContent className="w-64 p-2 bg-card border-border" align="end">
                       <div className="grid grid-cols-10 gap-1">
                         {EMOJI_LIST.map((emoji) => (
                           <button
                             key={emoji}
                             onClick={() => insertEmoji(emoji, true)}
-                            className="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded text-base"
+                            className="w-6 h-6 flex items-center justify-center hover:bg-muted rounded text-base"
                           >
                             {emoji}
                           </button>
@@ -309,12 +309,12 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
 
   if (isLoading) {
     return (
-      <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-3 text-white/70">
+      <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3 text-muted-foreground">
           <MessageCircle className="w-4 h-4" />
           <span className="text-sm font-medium">Notes</span>
         </div>
-        <div className="text-center py-4 text-white/50 text-sm">
+        <div className="text-center py-4 text-muted-foreground text-sm">
           Loading notes...
         </div>
       </div>
@@ -322,8 +322,8 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
   }
 
   return (
-    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-3 text-white/70">
+    <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-3 text-muted-foreground">
         <MessageCircle className="w-4 h-4" />
         <span className="text-sm font-medium">Notes ({notes.length})</span>
       </div>
@@ -335,7 +335,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             placeholder="Add a note for your family or caregivers..."
-            className="bg-white/10 border-white/30 text-white placeholder:text-white/50 text-sm min-h-[60px] resize-none flex-1"
+            className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground text-sm min-h-[60px] resize-none flex-1"
             data-testid="input-new-note"
           />
           <div className="flex flex-col gap-1">
@@ -345,19 +345,19 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="h-7 w-10 text-white/60 hover:text-white hover:bg-white/10"
+                    className="h-7 w-10 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     data-testid="button-emoji-picker"
                   >
                     <Smile className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-64 p-2 bg-[#4A5A6A] border-white/30" align="end">
+                <PopoverContent className="w-64 p-2 bg-card border-border" align="end">
                   <div className="grid grid-cols-10 gap-1">
                     {EMOJI_LIST.map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => insertEmoji(emoji)}
-                        className="w-6 h-6 flex items-center justify-center hover:bg-white/20 rounded text-base"
+                        className="w-6 h-6 flex items-center justify-center hover:bg-muted rounded text-base"
                         data-testid={`emoji-${emoji}`}
                       >
                         {emoji}
@@ -381,7 +381,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
       </div>
       
       {topLevelNotes.length === 0 ? (
-        <div className="text-center py-4 text-white/50 text-sm">
+        <div className="text-center py-4 text-muted-foreground text-sm">
           No notes yet. Add one to share updates with your family!
         </div>
       ) : (

@@ -78,9 +78,9 @@ export default function DayEventsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] border-white/20 text-white max-w-md">
+      <DialogContent className="bg-card border-border max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white text-xl">
+          <DialogTitle className="flex items-center gap-2 text-foreground text-xl">
             <Calendar className="w-5 h-5" />
             {format(date, 'EEEE, MMMM d')}
           </DialogTitle>
@@ -89,10 +89,10 @@ export default function DayEventsDialog({
         <div className="mt-2">
           {dayEvents.length === 0 ? (
             <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-8 h-8 text-white/40" />
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <Calendar className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-white/60 mb-4">No events scheduled</p>
+              <p className="text-muted-foreground mb-4">No events scheduled</p>
               <Button
                 onClick={handleAddEvent}
                 className="bg-purple-500 hover:bg-purple-600 text-white"
@@ -130,7 +130,7 @@ export default function DayEventsDialog({
                             </div>
                           </div>
                           {member && (
-                            <Avatar className="w-8 h-8 border-2 border-white/30 flex-shrink-0">
+                            <Avatar className="w-8 h-8 border-2 border-border flex-shrink-0">
                               <AvatarFallback 
                                 style={{ backgroundColor: member.color }}
                                 className="text-white text-xs font-bold"
@@ -146,10 +146,10 @@ export default function DayEventsDialog({
                 </div>
               </ScrollArea>
 
-              <div className="mt-4 pt-4 border-t border-white/20">
+              <div className="mt-4 pt-4 border-t border-border">
                 <Button
                   onClick={handleAddEvent}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                  className="w-full bg-muted/50 hover:bg-muted text-foreground border border-border"
                   data-testid="button-add-event-for-day"
                 >
                   <Plus className="w-4 h-4 mr-2" />

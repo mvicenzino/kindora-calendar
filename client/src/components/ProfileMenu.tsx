@@ -153,7 +153,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
       <Button
         size="icon"
         variant="ghost"
-        className="text-white border border-white/50"
+        className="text-foreground border border-border"
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Profile menu"
         data-testid="button-profile-menu"
@@ -163,18 +163,18 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
 
       {isOpen && (
         <div 
-          className="fixed right-4 top-14 w-[calc(100vw-2rem)] max-w-80 bg-slate-950/95 border border-white/20 rounded-2xl shadow-xl overflow-hidden pointer-events-auto"
+          className="fixed right-4 top-14 w-[calc(100vw-2rem)] max-w-80 bg-card border border-border rounded-2xl shadow-xl overflow-hidden pointer-events-auto"
           style={{ zIndex: 9999 }}
         >
           {/* Header with tabs */}
-          <div className="border-b border-white/10">
+          <div className="border-b border-border">
             <div className="flex items-center justify-between px-4 pt-3 pb-2">
-              <h3 className="text-sm font-semibold text-white">
+              <h3 className="text-sm font-semibold text-foreground">
                 {activeFamily?.name || 'Family'}
               </h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-white/50 hover:text-white p-1 rounded-md hover:bg-white/10"
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-muted/50"
                 data-testid="button-close-profile-menu"
               >
                 <X className="w-4 h-4" />
@@ -187,8 +187,8 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                 onClick={() => setActiveTab('profile')}
                 className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all ${
                   activeTab === 'profile'
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-muted/50 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
                 data-testid="tab-profile"
               >
@@ -199,8 +199,8 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                 onClick={() => setActiveTab('members')}
                 className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all ${
                   activeTab === 'members'
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-muted/50 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
                 data-testid="tab-members"
               >
@@ -211,8 +211,8 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                 onClick={() => setActiveTab('settings')}
                 className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg transition-all ${
                   activeTab === 'settings'
-                    ? 'bg-white/15 text-white'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-muted/50 text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                 }`}
                 data-testid="tab-settings"
               >
@@ -227,10 +227,10 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-3">
-                <h4 className="text-xs font-medium text-white/70 uppercase tracking-wide">User Accounts</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">User Accounts</h4>
                 {accountsLoading ? (
                   <div className="text-center py-4">
-                    <p className="text-sm text-white/50">Loading...</p>
+                    <p className="text-sm text-muted-foreground">Loading...</p>
                   </div>
                 ) : userAccounts.length > 0 ? (
                   <div className="space-y-2">
@@ -244,7 +244,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                       return (
                         <div
                           key={account.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10"
+                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
                           data-testid={`user-account-${account.userId}`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -254,13 +254,13 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-white truncate">
+                              <div className="text-sm font-medium text-foreground truncate">
                                 {account.user.firstName && account.user.lastName
                                   ? `${account.user.firstName} ${account.user.lastName}`
                                   : account.user.firstName || account.user.email}
                               </div>
                               {account.user.email && (
-                                <div className="text-xs text-white/50 truncate">{account.user.email}</div>
+                                <div className="text-xs text-muted-foreground truncate">{account.user.email}</div>
                               )}
                             </div>
                           </div>
@@ -278,7 +278,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                   </div>
                 ) : (
                   <div className="text-center py-4">
-                    <p className="text-sm text-white/50">No user accounts</p>
+                    <p className="text-sm text-muted-foreground">No user accounts</p>
                   </div>
                 )}
               </div>
@@ -287,13 +287,13 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
             {/* Members Tab */}
             {activeTab === 'members' && (
               <div className="space-y-3">
-                <h4 className="text-xs font-medium text-white/70 uppercase tracking-wide">Calendar Members</h4>
+                <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Calendar Members</h4>
                 <div className="space-y-2">
                   {members.length > 0 ? (
                     members.map((member) => (
                       <div
                         key={member.id}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-white/10 transition-all group"
+                        className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-all group"
                       >
                         {editingMemberId === member.id && !isReadOnly ? (
                           <div className="flex-1 space-y-2">
@@ -306,10 +306,10 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                                   {member.initials}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm font-medium text-white flex-1">{member.name}</span>
+                              <span className="text-sm font-medium text-foreground flex-1">{member.name}</span>
                               <button
                                 onClick={() => setEditingMemberId(null)}
-                                className="text-white/50 hover:text-white text-xs"
+                                className="text-muted-foreground hover:text-foreground text-xs"
                                 data-testid={`button-close-color-picker-${member.id}`}
                               >
                                 Done
@@ -344,14 +344,14 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                                   {member.initials}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-sm font-medium text-white">{member.name}</span>
+                              <span className="text-sm font-medium text-foreground">{member.name}</span>
                             </div>
                             <div className={`flex items-center gap-1 ${!isReadOnly ? 'opacity-0 group-hover:opacity-100' : 'opacity-0'} transition-opacity`}>
                               {!isReadOnly && (
                                 <>
                                   <button
                                     onClick={() => setEditingMemberId(member.id)}
-                                    className="text-xs px-2 py-1 rounded-md bg-white/10 text-white/70 hover:text-white hover:bg-white/20 transition-all"
+                                    className="text-xs px-2 py-1 rounded-md bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                                     data-testid={`button-edit-color-${member.id}`}
                                   >
                                     Edit
@@ -378,7 +378,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                     ))
                   ) : (
                     <div className="text-center py-6">
-                      <p className="text-sm text-white/50">No calendar members yet</p>
+                      <p className="text-sm text-muted-foreground">No calendar members yet</p>
                     </div>
                   )}
                 </div>
@@ -389,7 +389,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                       onAddMember();
                       setIsOpen(false);
                     }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white transition-all mt-2"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-muted/50 hover:bg-muted border border-border text-foreground transition-all mt-2"
                     data-testid="button-add-member"
                   >
                     <UserPlus className="w-4 h-4" />
@@ -404,19 +404,19 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
               <div className="space-y-2">
                 <button
                   onClick={handleNavigateToSettings}
-                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/10 transition-all text-left"
+                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-all text-left"
                   data-testid="button-family-settings"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                      <UsersIcon className="w-4 h-4 text-white" />
+                    <div className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center">
+                      <UsersIcon className="w-4 h-4 text-foreground" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Family Settings</div>
-                      <div className="text-xs text-white/50">Manage invites & sharing</div>
+                      <div className="text-sm font-medium text-foreground">Family Settings</div>
+                      <div className="text-xs text-muted-foreground">Manage invites & sharing</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
 
                 <button
@@ -424,7 +424,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                     setIsOpen(false);
                     setLocation('/settings');
                   }}
-                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/10 transition-all text-left"
+                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-all text-left"
                   data-testid="button-account-billing"
                 >
                   <div className="flex items-center gap-3">
@@ -432,11 +432,11 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                       <CreditCard className="w-4 h-4 text-amber-400" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Account & Billing</div>
-                      <div className="text-xs text-white/50">Manage subscription & plan</div>
+                      <div className="text-sm font-medium text-foreground">Account & Billing</div>
+                      <div className="text-xs text-muted-foreground">Manage subscription & plan</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
                 
                 {/* Weekly Summary Email */}
@@ -452,7 +452,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                     }
                   }}
                   disabled={sendWeeklySummaryMutation.isPending}
-                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-white/10 transition-all text-left disabled:opacity-50"
+                  className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-all text-left disabled:opacity-50"
                   data-testid="button-send-weekly-summary"
                 >
                   <div className="flex items-center gap-3">
@@ -464,26 +464,26 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                       )}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Send Weekly Summary</div>
-                      <div className="text-xs text-white/50">Email this week's agenda</div>
+                      <div className="text-sm font-medium text-foreground">Send Weekly Summary</div>
+                      <div className="text-xs text-muted-foreground">Email this week's agenda</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-white/40" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
                 
                 {/* Weekly Summary Opt-in Toggle */}
-                <div className="w-full flex items-center justify-between p-3 rounded-lg bg-white/5 text-left">
+                <div className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 text-left">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
                       {prefData?.preference.optedIn ? (
                         <Bell className="w-4 h-4 text-teal-400" />
                       ) : (
-                        <BellOff className="w-4 h-4 text-white/40" />
+                        <BellOff className="w-4 h-4 text-muted-foreground" />
                       )}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-white">Receive Weekly Emails</div>
-                      <div className="text-xs text-white/50">
+                      <div className="text-sm font-medium text-foreground">Receive Weekly Emails</div>
+                      <div className="text-xs text-muted-foreground">
                         {prefData?.preference.optedIn ? "Subscribed to automated summaries" : "Opt into weekly digest"}
                       </div>
                     </div>
@@ -509,7 +509,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
           </div>
 
           {/* Quick Logout / Exit Demo - Always visible at bottom */}
-          <div className="border-t border-white/10 p-3 space-y-2">
+          <div className="border-t border-border p-3 space-y-2">
             {isDemoMode && (
               <button
                 onClick={handleLogout}
