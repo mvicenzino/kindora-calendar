@@ -262,33 +262,42 @@ export default function EventModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl max-h-[90vh] flex flex-col">
+      <DialogContent
+        className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-2xl max-h-[90vh] flex flex-col gap-0"
+        style={{
+          background: 'transparent',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 25px 60px -12px rgba(0,0,0,0.5)',
+        }}
+      >
         <DialogTitle className="sr-only">
           {event?.id ? 'Edit Event' : 'Create New Event'}
         </DialogTitle>
         <DialogDescription className="sr-only">
           {event?.id ? 'Edit your event details' : 'Create a new calendar event'}
         </DialogDescription>
-        {/* Dark background container with scrollable content */}
-        <div className="bg-card flex flex-col flex-1 overflow-hidden">
-          {/* Scrollable form content */}
-          <div className="flex-1 overflow-y-auto px-6 md:px-8 pt-6 md:pt-8 pb-4 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl md:text-2xl font-bold text-foreground">
-                {event?.id ? 'Edit Event' : 'Create New Event'}
+        <div className="flex flex-col flex-1 overflow-hidden" style={{ background: 'hsl(var(--card) / 0.95)', backdropFilter: 'blur(40px)' }}>
+          {/* Header */}
+          <div className="px-5 md:px-6 pt-4 pb-3 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid hsl(var(--border) / 0.4)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
+                <Calendar className="w-4 h-4 text-primary" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">
+                {event?.id ? 'Edit Event' : 'New Event'}
               </h2>
-              <button
-                onClick={onClose}
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center text-foreground hover:bg-muted/50 transition-all flex-shrink-0"
-                data-testid="button-close-modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              style={{ background: 'hsl(var(--muted) / 0.4)' }}
+              data-testid="button-close-modal"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-            {/* Divider */}
-            <div className="h-px bg-border" />
+          {/* Scrollable form content */}
+          <div className="flex-1 overflow-y-auto px-5 md:px-6 pt-4 pb-4 space-y-4">
 
             {/* Form content */}
             <div className="space-y-4 md:space-y-5">
@@ -717,38 +726,44 @@ export default function EventModal({
             </div>
           </div>
 
-          {/* Sticky Footer with Action Buttons */}
-          <div className="border-t border-border px-6 md:px-8 py-4 bg-card flex-shrink-0">
+          {/* Footer */}
+          <div
+            className="px-5 md:px-6 py-3 flex-shrink-0"
+            style={{ borderTop: '1px solid hsl(var(--border) / 0.4)' }}
+          >
             <div className="flex items-center justify-between gap-3">
               {event?.id && onDelete && !isReadOnly && (
                 <Button
                   variant="destructive"
+                  size="sm"
                   onClick={() => {
                     onDelete(event.id!);
                     onClose();
                   }}
                   data-testid="button-delete-event"
-                  className="bg-destructive text-destructive-foreground border border-border rounded-lg"
+                  className="rounded-lg text-xs"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                   Delete
                 </Button>
               )}
               
-              <div className="flex gap-3 ml-auto">
+              <div className="flex gap-2 ml-auto">
                 <Button
                   variant="ghost"
+                  size="sm"
                   onClick={onClose}
                   data-testid="button-cancel"
-                  className="text-foreground border border-border rounded-lg"
+                  className="rounded-lg text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
+                  size="sm"
                   onClick={handleSave}
                   disabled={!title.trim() || selectedMemberIds.length === 0 || isReadOnly}
                   data-testid="button-save-event"
-                  className="bg-primary text-primary-foreground border border-border rounded-lg disabled:opacity-50"
+                  className="rounded-lg text-xs disabled:opacity-50"
                   title={isReadOnly ? 'You cannot create or edit events' : !title.trim() ? 'Please enter an event title' : selectedMemberIds.length === 0 ? 'Please select at least one family member' : ''}
                 >
                   {event?.id ? 'Update Event' : 'Create Event'}

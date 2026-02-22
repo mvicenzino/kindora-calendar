@@ -13,7 +13,7 @@ import WeekGridView from "@/components/WeekGridView";
 import MonthGridView from "@/components/MonthGridView";
 import YearGridView from "@/components/YearGridView";
 import EventModal from "@/components/EventModal";
-import FlipCardEventDetails from "@/components/FlipCardEventDetails";
+import EventDetailsDialog from "@/components/EventDetailsDialog";
 import MemberModal from "@/components/MemberModal";
 import DayEventsDialog from "@/components/DayEventsDialog";
 import MemberFilterStrip from "@/components/MemberFilterStrip";
@@ -489,7 +489,7 @@ export default function Home() {
       </div>
 
       {selectedEvent && (
-        <FlipCardEventDetails
+        <EventDetailsDialog
           isOpen={eventDetailsOpen}
           onClose={() => {
             setEventDetailsOpen(false);
