@@ -51,7 +51,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
   const showLayoutToggle = currentView !== 'timeline' && currentView !== 'year';
 
   return (
-    <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
+    <div className="w-full bg-muted/20 dark:bg-white/[0.02] backdrop-blur-xl border-b border-border/30">
       <div className="flex items-center justify-center px-3 py-1.5 pb-3 gap-2 relative">
         <nav 
           ref={containerRef} 
