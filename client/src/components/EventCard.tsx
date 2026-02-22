@@ -105,9 +105,9 @@ export default function EventCard({
   };
 
   const cardClasses = `
-    relative rounded-2xl overflow-hidden text-left cursor-pointer border border-white/30
+    relative rounded-2xl overflow-hidden text-left cursor-pointer border border-white/20
     transition-all duration-300 ease-out
-    hover:border-white/50 hover:shadow-xl hover:shadow-black/10
+    hover:shadow-xl hover:shadow-black/20
     active:scale-[0.98]
     ${variant === 'compact' ? 'p-3' : variant === 'grid' ? 'p-4' : 'p-5'}
     ${className}

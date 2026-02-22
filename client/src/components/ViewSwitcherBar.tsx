@@ -39,22 +39,21 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
   }, [currentView]);
 
   return (
-    <div className="relative z-[40] w-full titanium-glass border-b border-white/10">
+    <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
       <div className="flex items-center justify-center px-4 py-2">
         <nav 
           ref={containerRef} 
-          className="relative flex items-center gap-1 bg-white/5 backdrop-blur-xl rounded-full p-1 border border-white/15 overflow-x-auto scrollbar-hide shadow-inner"
+          className="relative flex items-center gap-1 bg-muted/50 backdrop-blur-xl rounded-full p-1 border border-border/30 overflow-x-auto scrollbar-hide"
           data-testid="nav-view-switcher"
         >
-          {/* Active indicator with amber glow - high contrast for accessibility */}
           <div
-            className="absolute rounded-full shadow-lg transition-all duration-300 ease-out z-0 bg-amber-400/60 border border-amber-300/80"
+            className="absolute rounded-full transition-all duration-300 ease-out z-0 bg-primary/80 border border-primary"
             style={{
               left: `${indicatorStyle.left}px`,
               width: `${indicatorStyle.width}px`,
               top: '4px',
               bottom: '4px',
-              boxShadow: '0 0 12px rgba(251, 191, 36, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 0 12px rgba(249, 115, 22, 0.3)',
             }}
           />
           {views.map((view) => (
@@ -75,10 +74,10 @@ export default function ViewSwitcherBar({ currentView, onViewChange }: ViewSwitc
                 relative z-10 min-w-[70px] sm:min-w-[80px] px-3 sm:px-4 py-2 rounded-full text-sm font-medium 
                 flex items-center justify-center whitespace-nowrap
                 transition-colors duration-300 ease-out
-                focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:outline-none
                 ${currentView === view.value
-                  ? 'text-white'
-                  : 'text-white/60 hover:text-white/90'
+                  ? 'text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
                 }
               `}
             >

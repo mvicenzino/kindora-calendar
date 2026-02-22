@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import Header from "@/components/Header";
 import ViewSwitcherBar from "@/components/ViewSwitcherBar";
+import AppSidebar from "@/components/AppSidebar";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
@@ -15,7 +16,10 @@ import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
 import DayEventsDialog from "@/components/DayEventsDialog";
 import CategoryLegend from "@/components/CategoryLegend";
-import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import ThemeToggle from "@/components/ThemeToggle";
+import FamilySelector from "@/components/FamilySelector";
+import { isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { FamilyMember, Event, InsertEvent, EventCategory } from "@shared/schema";
@@ -39,6 +43,7 @@ export default function Home() {
   const [eventModalDate, setEventModalDate] = useState<Date | undefined>();
   const [dayEventsOpen, setDayEventsOpen] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date>(new Date());
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [importedEvent, setImportedEvent] = useState<{
     title: string;
     description?: string;
@@ -46,7 +51,6 @@ export default function Home() {
     endTime: Date;
   } | undefined>();
 
-  // Detect Stride import from sessionStorage (saved by inline script in index.html)
   useEffect(() => {
     if (!isAuthenticated || isLoading) return;
 
@@ -69,14 +73,12 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       window.location.href = "/api/login";
     }
   }, [isAuthenticated, isLoading]);
 
-  // Redirect new users to onboarding if they haven't completed it and have no families
   const isDemoMode = user?.id?.startsWith('demo-') ?? false;
   useEffect(() => {
     if (!isLoading && isAuthenticated && !isLoadingFamily && !isDemoMode) {
@@ -89,14 +91,12 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, setLocation]);
 
-  // Redirect caregivers to the caregiver dashboard
   useEffect(() => {
     if (!isLoadingRole && isCaregiver) {
       setLocation('/care');
     }
   }, [isCaregiver, isLoadingRole, setLocation]);
 
-  // Auto-join family if there's a pending invite code
   const joinFamilyMutation = useMutation({
     mutationFn: async (inviteCode: string) => {
       const res = await apiRequest('POST', '/api/family/join', { inviteCode });
@@ -107,15 +107,15 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       toast({
-        title: "Welcome to the family! 🎉",
-        description: "You've successfully joined the calendar. Start sharing events and memories!",
+        title: "Welcome to the family!",
+        description: "You've successfully joined the calendar.",
       });
       localStorage.removeItem('pendingInviteCode');
     },
     onError: (error: any) => {
       toast({
         title: "Couldn't join family",
-        description: error.message || "The invite code may be invalid. Please try again.",
+        description: error.message || "The invite code may be invalid.",
         variant: "destructive",
       });
       localStorage.removeItem('pendingInviteCode');
@@ -126,7 +126,6 @@ export default function Home() {
     if (isAuthenticated && !isLoading) {
       const pendingInvite = localStorage.getItem('pendingInviteCode');
       if (pendingInvite) {
-        // Auto-join after a short delay to ensure everything is loaded
         setTimeout(() => {
           joinFamilyMutation.mutate(pendingInvite);
         }, 500);
@@ -134,26 +133,45 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading]);
 
-  // Fetch family members
   const { data: rawMembers = [], isLoading: membersLoading } = useQuery<FamilyMember[]>({
     queryKey: ['/api/family-members', activeFamilyId],
     enabled: isAuthenticated && !!activeFamilyId,
   });
 
-  // Fetch events
   const { data: rawEvents = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events?familyId=' + activeFamilyId],
     enabled: isAuthenticated && !!activeFamilyId,
   });
 
-  // Map to UI types
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
   const events = useMemo(() => rawEvents.map(e => ({
     ...mapEventFromDb(e),
     members: members.filter(m => e.memberIds.includes(m.id))
   })), [rawEvents, members]);
 
-  // Create event mutation
+  const filteredEvents = useMemo(() => {
+    if (selectedMemberIds.length === 0) return events;
+    return events.filter(e =>
+      e.members?.some(m => selectedMemberIds.includes(m.id)) ||
+      (e as any).memberIds?.some((id: string) => selectedMemberIds.includes(id))
+    );
+  }, [events, selectedMemberIds]);
+
+  const handleToggleMember = useCallback((memberId: string) => {
+    setSelectedMemberIds(prev => {
+      if (prev.includes(memberId)) {
+        const next = prev.filter(id => id !== memberId);
+        return next;
+      } else {
+        return [...prev, memberId];
+      }
+    });
+  }, []);
+
+  const handleSelectAllMembers = useCallback(() => {
+    setSelectedMemberIds([]);
+  }, []);
+
   const createEventMutation = useMutation({
     mutationFn: async (event: InsertEvent) => {
       const res = await apiRequest('POST', '/api/events', { ...event, familyId: activeFamilyId });
@@ -164,7 +182,6 @@ export default function Home() {
     },
   });
 
-  // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEvent> }) => {
       const res = await apiRequest('PUT', `/api/events/${id}`, { ...data, familyId: activeFamilyId });
@@ -175,7 +192,6 @@ export default function Home() {
     },
   });
 
-  // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest('DELETE', `/api/events/${id}`, { familyId: activeFamilyId });
@@ -185,7 +201,6 @@ export default function Home() {
     },
   });
 
-  // Create member mutation
   const createMemberMutation = useMutation({
     mutationFn: async (member: { name: string; color: string }) => {
       const res = await apiRequest('POST', '/api/family-members', { ...member, familyId: activeFamilyId });
@@ -196,7 +211,6 @@ export default function Home() {
     },
   });
 
-  // Update member color mutation
   const updateMemberColorMutation = useMutation({
     mutationFn: async ({ memberId, color }: { memberId: string; color: string }) => {
       const res = await apiRequest('PUT', `/api/family-members/${memberId}`, { color, familyId: activeFamilyId });
@@ -207,7 +221,6 @@ export default function Home() {
     },
   });
 
-  // Delete member mutation
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
       await apiRequest('DELETE', `/api/family-members/${memberId}`, { familyId: activeFamilyId });
@@ -302,16 +315,15 @@ export default function Home() {
     setCurrentDate(date);
   };
 
-  // Filter events for each view (already mapped to UI types)
-  const todayEvents = events
+  const todayEvents = filteredEvents
     .filter(e => isSameDay(e.startTime, currentDate))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  const weekEvents = events
+  const weekEvents = filteredEvents
     .filter(e => isSameWeek(e.startTime, currentDate, { weekStartsOn: 0 }))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  const monthEvents = events
+  const monthEvents = filteredEvents
     .filter(e => isSameMonth(e.startTime, currentDate))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
@@ -325,13 +337,12 @@ export default function Home() {
     return undefined;
   })() : undefined;
 
-  // Show loading state while authenticating, hydrating family, or fetching initial data
   if (isLoading || isLoadingFamily || membersLoading || eventsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" style={{ boxShadow: '0 0 20px rgba(180, 200, 220, 0.2)' }}></div>
-          <p className="text-white text-lg font-medium tesla-text-primary">Loading your calendar...</p>
+          <div className="w-14 h-14 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading your calendar...</p>
         </div>
       </div>
     );
@@ -345,79 +356,104 @@ export default function Home() {
     await deleteMemberMutation.mutateAsync(memberId);
   };
 
+  const sidebarStyle = {
+    "--sidebar-width": "14rem",
+    "--sidebar-width-icon": "3.5rem",
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
-      {/* Sticky container for both header and view switcher */}
-      <div className="sticky top-0 z-50">
-        <Header 
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex h-screen w-full bg-background">
+        <AppSidebar
           members={members}
-          onMemberColorChange={handleMemberColorChange}
-          onSearchClick={() => setSearchOpen(true)}
-          onAddMember={() => setMemberModalOpen(true)}
-          onDeleteMember={handleDeleteMember}
+          selectedMemberIds={selectedMemberIds}
+          onToggleMember={handleToggleMember}
+          onSelectAllMembers={handleSelectAllMembers}
         />
-        <ViewSwitcherBar currentView={view} onViewChange={setView} />
+        <SidebarInset className="flex flex-col flex-1 min-w-0">
+          <header className="sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-2 border-b border-border/50 bg-background/80 backdrop-blur-xl" data-testid="header-main">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <FamilySelector />
+            </div>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Header
+                members={members}
+                onMemberColorChange={handleMemberColorChange}
+                onSearchClick={() => setSearchOpen(true)}
+                onAddMember={() => setMemberModalOpen(true)}
+                onDeleteMember={handleDeleteMember}
+              />
+            </div>
+          </header>
+
+          <div className="sticky top-[49px] z-40">
+            <ViewSwitcherBar currentView={view} onViewChange={setView} />
+          </div>
+
+          <div className="px-3 sm:px-4 md:px-6 py-1.5 border-b border-border/30">
+            <CategoryLegend />
+          </div>
+
+          <SearchPanel
+            isOpen={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            events={filteredEvents}
+            onSelectEvent={handleEventClick}
+          />
+
+          <main className="flex-1 overflow-y-auto">
+            {view === 'day' && (
+              <TodayView
+                date={currentDate}
+                events={todayEvents}
+                tasks={tasks}
+                members={members}
+                onEventClick={handleEventClick}
+                onViewChange={setView}
+                onAddEvent={handleAddEvent}
+              />
+            )}
+
+            {view === 'week' && (
+              <WeekView
+                date={currentDate}
+                events={weekEvents}
+                members={members}
+                onEventClick={handleEventClick}
+                onViewChange={setView}
+                onAddEvent={handleAddEvent}
+                onAddEventForDate={handleAddEventForDate}
+                onDateChange={handleDateChange}
+                onWeekChange={handleWeekChange}
+              />
+            )}
+
+            {view === 'month' && (
+              <MonthView
+                date={currentDate}
+                events={monthEvents}
+                members={members}
+                onEventClick={handleEventClick}
+                onViewChange={setView}
+                onAddEvent={handleAddEvent}
+                onAddEventForDate={handleDayClick}
+                onDateChange={handleDateChange}
+              />
+            )}
+
+            {view === 'timeline' && (
+              <TimelineView
+                events={filteredEvents}
+                onEventClick={handleEventClick}
+                onAddEvent={handleAddEvent}
+              />
+            )}
+          </main>
+        </SidebarInset>
       </div>
 
-      <div className="px-3 sm:px-4 md:px-6 py-2 border-b border-white/5">
-        <CategoryLegend />
-      </div>
-      
-      <SearchPanel
-        isOpen={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        events={events}
-        onSelectEvent={handleEventClick}
-      />
-      
-      {view === 'day' && (
-        <TodayView
-          date={currentDate}
-          events={todayEvents}
-          tasks={tasks}
-          members={members}
-          onEventClick={handleEventClick}
-          onViewChange={setView}
-          onAddEvent={handleAddEvent}
-        />
-      )}
-      
-      {view === 'week' && (
-        <WeekView
-          date={currentDate}
-          events={weekEvents}
-          members={members}
-          onEventClick={handleEventClick}
-          onViewChange={setView}
-          onAddEvent={handleAddEvent}
-          onAddEventForDate={handleAddEventForDate}
-          onDateChange={handleDateChange}
-          onWeekChange={handleWeekChange}
-        />
-      )}
-
-      {view === 'month' && (
-        <MonthView
-          date={currentDate}
-          events={monthEvents}
-          members={members}
-          onEventClick={handleEventClick}
-          onViewChange={setView}
-          onAddEvent={handleAddEvent}
-          onAddEventForDate={handleDayClick}
-          onDateChange={handleDateChange}
-        />
-      )}
-
-      {view === 'timeline' && (
-        <TimelineView
-          events={events}
-          onEventClick={handleEventClick}
-          onAddEvent={handleAddEvent}
-        />
-      )}
-
-      {/* Event Details Dialog */}
       {selectedEvent && (
         <FlipCardEventDetails
           isOpen={eventDetailsOpen}
@@ -430,7 +466,6 @@ export default function Home() {
         />
       )}
 
-      {/* Event Modal */}
       <EventModal
         isOpen={eventModalOpen}
         onClose={() => {
@@ -468,16 +503,15 @@ export default function Home() {
         }}
       />
 
-      {/* Day Events Dialog - shows all events for a clicked date */}
       <DayEventsDialog
         isOpen={dayEventsOpen}
         onClose={() => setDayEventsOpen(false)}
         date={selectedDayDate}
-        events={events}
+        events={filteredEvents}
         members={members}
         onEventClick={handleEventClick}
         onAddEvent={() => handleAddEventForDate(selectedDayDate)}
       />
-    </div>
+    </SidebarProvider>
   );
 }

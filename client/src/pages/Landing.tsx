@@ -129,14 +129,13 @@ export default function Landing() {
   const isPending = loginMutation.isPending || registerMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-4 gap-2">
           <div className="flex items-center gap-2 sm:gap-3">
             <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
-            <span className="text-lg sm:text-xl font-bold text-white whitespace-nowrap">
-              <span className="text-orange-300">Kindora</span> Calendar
+            <span className="text-lg sm:text-xl font-bold text-foreground whitespace-nowrap">
+              <span className="text-primary">Kindora</span> Calendar
             </span>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -145,7 +144,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => setLocation("/")}
-                  className="bg-white text-slate-900 text-xs sm:text-sm px-2 sm:px-3"
+                  className="text-xs sm:text-sm"
                   data-testid="button-open-app"
                 >
                   Open Calendar
@@ -154,7 +153,7 @@ export default function Landing() {
                   size="sm"
                   onClick={() => (window.location.href = "/api/logout")}
                   variant="outline"
-                  className="border-white text-white bg-white/5 backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3"
+                  className="text-xs sm:text-sm"
                   data-testid="button-logout"
                 >
                   <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -167,7 +166,8 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => (window.location.href = "/api/login/demo")}
-                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0 text-xs sm:text-sm px-2 sm:px-3"
+                  variant="secondary"
+                  className="text-xs sm:text-sm"
                   data-testid="button-demo"
                 >
                   Try Demo
@@ -176,7 +176,7 @@ export default function Landing() {
                   size="sm"
                   onClick={() => setAuthMode("login")}
                   variant="outline"
-                  className="border-white text-white bg-white/5 backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3"
+                  className="text-xs sm:text-sm"
                   data-testid="button-login"
                 >
                   Sign In
@@ -184,7 +184,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => setAuthMode("register")}
-                  className="bg-white text-slate-900 text-xs sm:text-sm px-2 sm:px-3"
+                  className="text-xs sm:text-sm"
                   data-testid="button-register"
                 >
                   Sign Up
@@ -199,10 +199,10 @@ export default function Landing() {
       {authMode !== "none" && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setAuthMode("none")} />
-          <div className="relative w-full max-w-md bg-slate-800 border border-white/20 rounded-2xl shadow-2xl p-6 sm:p-8" data-testid="auth-modal">
+          <div className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 sm:p-8" data-testid="auth-modal">
             <button
               onClick={() => setAuthMode("none")}
-              className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
               data-testid="button-close-auth"
             >
               <X className="w-5 h-5" />
@@ -211,10 +211,10 @@ export default function Landing() {
             <div className="flex items-center gap-3 mb-6">
               <img src={calendoraIcon} alt="Kindora" className="w-10 h-10 rounded-lg" />
               <div>
-                <h2 className="text-xl font-bold text-white">
+                <h2 className="text-xl font-bold text-foreground">
                   {authMode === "login" ? "Welcome Back" : "Create Account"}
                 </h2>
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-muted-foreground">
                   {authMode === "login" ? "Sign in to your account" : "Join Kindora for free"}
                 </p>
               </div>
@@ -224,9 +224,9 @@ export default function Landing() {
               {authMode === "register" && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="firstName" className="text-sm text-white/80">First Name</Label>
+                    <Label htmlFor="firstName" className="text-sm text-muted-foreground">First Name</Label>
                     <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         id="firstName"
                         type="text"
@@ -234,20 +234,20 @@ export default function Landing() {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
+                        className="pl-9"
                         data-testid="input-first-name"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="lastName" className="text-sm text-white/80">Last Name</Label>
+                    <Label htmlFor="lastName" className="text-sm text-muted-foreground">Last Name</Label>
                     <Input
                       id="lastName"
                       type="text"
                       placeholder="Last name"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
+                      className=""
                       data-testid="input-last-name"
                     />
                   </div>
@@ -255,9 +255,9 @@ export default function Landing() {
               )}
 
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-sm text-white/80">Email</Label>
+                <Label htmlFor="email" className="text-sm text-muted-foreground">Email</Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
@@ -265,16 +265,16 @@ export default function Landing() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
+                    className="pl-9"
                     data-testid="input-email"
                   />
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm text-white/80">Password</Label>
+                <Label htmlFor="password" className="text-sm text-muted-foreground">Password</Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     id="password"
                     type="password"
@@ -283,7 +283,7 @@ export default function Landing() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={authMode === "register" ? 6 : undefined}
-                    className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
+                    className="pl-9"
                     data-testid="input-password"
                   />
                 </div>
@@ -292,7 +292,7 @@ export default function Landing() {
               <Button
                 type="submit"
                 disabled={isPending}
-                className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                className="w-full"
                 data-testid="button-submit-auth"
               >
                 {isPending ? "Please wait..." : authMode === "login" ? "Sign In" : "Create Account"}
@@ -301,17 +301,17 @@ export default function Landing() {
 
             <div className="relative my-5">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20" />
+                <div className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-slate-800 px-3 text-white/50">or</span>
+                <span className="bg-card px-3 text-muted-foreground">or</span>
               </div>
             </div>
 
             <Button
               variant="outline"
               onClick={() => { window.location.href = "/api/login"; }}
-              className="w-full border-white/20 text-white bg-white/5 backdrop-blur-sm"
+              className="w-full"
               data-testid="button-google-signin"
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -325,22 +325,22 @@ export default function Landing() {
 
             <div className="mt-5 text-center">
               {authMode === "login" ? (
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-muted-foreground">
                   Don't have an account?{" "}
                   <button
                     onClick={() => { setAuthMode("register"); setEmail(""); setPassword(""); }}
-                    className="text-teal-300 hover:text-teal-200 font-medium"
+                    className="text-primary hover:text-primary/80 font-medium"
                     data-testid="button-switch-to-register"
                   >
                     Sign up for free
                   </button>
                 </p>
               ) : (
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-muted-foreground">
                   Already have an account?{" "}
                   <button
                     onClick={() => { setAuthMode("login"); setEmail(""); setPassword(""); }}
-                    className="text-teal-300 hover:text-teal-200 font-medium"
+                    className="text-primary hover:text-primary/80 font-medium"
                     data-testid="button-switch-to-login"
                   >
                     Sign in
@@ -363,15 +363,15 @@ export default function Landing() {
             playsInline
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/70 to-slate-900/80" />
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-transparent to-teal-500/20" />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/70 to-black/80" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/10" />
         </div>
 
         <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
           <div className="max-w-6xl mx-auto">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
-                <Sparkles className="w-4 h-4 text-teal-300" />
+                <Sparkles className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium text-white">Built for the Sandwich Generation</span>
               </div>
               
@@ -388,7 +388,6 @@ export default function Landing() {
                   <Button
                     onClick={() => setAuthMode("register")}
                     size="lg"
-                    className="bg-white text-slate-900"
                     data-testid="button-hero-signup"
                   >
                     Get Started Free
@@ -397,7 +396,7 @@ export default function Landing() {
                     size="lg"
                     onClick={() => (window.location.href = "/api/login/demo")}
                     variant="outline"
-                    className="border-white/40 text-white bg-white/5 backdrop-blur-sm"
+                    className="backdrop-blur-sm bg-white/10"
                     data-testid="button-hero-demo"
                   >
                     Try Demo
@@ -407,15 +406,15 @@ export default function Landing() {
 
               <div className="flex flex-wrap gap-6 text-sm text-white/80">
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-teal-400" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
                   <span>No credit card required</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/70" />
                   <span>Works on all devices</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-pink-400" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-destructive/70" />
                   <span>Instant sync</span>
                 </div>
               </div>
@@ -426,13 +425,13 @@ export default function Landing() {
 
       {/* Features Section */}
       <section className="px-4 md:px-6 py-12 md:py-16 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-teal-900/10 via-transparent to-purple-900/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3" />
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-8 md:mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-teal-200 via-white to-purple-200 bg-clip-text text-transparent mb-3">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
               Everything Your Family Needs
             </h2>
-            <p className="text-lg text-white/70 max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               From school schedules to eldercare coordination—Kindora handles the logistics so you can focus on what matters.
             </p>
           </div>
@@ -459,7 +458,7 @@ export default function Landing() {
               return (
                 <div
                   key={index}
-                  className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-5 md:p-6 hover-elevate transition-all group"
+                  className="bg-card border border-border rounded-xl p-5 md:p-6 hover-elevate transition-all group"
                   data-testid={`card-feature-${index}`}
                 >
                   <div className="flex items-start gap-4">
@@ -467,8 +466,8 @@ export default function Landing() {
                       <IconComponent className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="text-lg font-bold text-white mb-2">{feature.title}</h3>
-                      <p className="text-white/70 leading-relaxed">{feature.description}</p>
+                      <h3 className="text-lg font-bold text-foreground mb-2">{feature.title}</h3>
+                      <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
                     </div>
                   </div>
                 </div>
@@ -480,70 +479,70 @@ export default function Landing() {
 
       {/* Caregiving Section */}
       <section className="px-4 md:px-6 py-16 md:py-20 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-orange-900/10 via-transparent to-blue-900/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3" />
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-200 via-white to-blue-200 bg-clip-text text-transparent mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
               Eldercare, Simplified
             </h2>
-            <p className="text-lg text-white/70 max-w-3xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               53 million Americans care for aging parents while raising kids. Kindora gives your entire care team—family, aides, nurses—shared visibility into schedules, medications, and appointments.
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+            <div className="bg-card border border-border rounded-xl p-6 hover-elevate transition-all group">
               <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 shadow-lg group-hover:shadow-orange-500/50 transition-shadow w-fit mb-4">
                 <HeartHandshake className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Trusted Access</h3>
-              <p className="text-white/70 leading-relaxed text-sm">
+              <h3 className="text-lg font-bold text-foreground mb-2">Trusted Access</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
                 Invite health aides, nurses, or social workers to view schedules without joining the family
               </p>
             </div>
 
-            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+            <div className="bg-card border border-border rounded-xl p-6 hover-elevate transition-all group">
               <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg group-hover:shadow-blue-500/50 transition-shadow w-fit mb-4">
                 <CalendarCheck className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Medical Coordination</h3>
-              <p className="text-white/70 leading-relaxed text-sm">
+              <h3 className="text-lg font-bold text-foreground mb-2">Medical Coordination</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
                 Track doctor appointments, physical therapy sessions, and medication schedules in one place
               </p>
             </div>
 
-            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+            <div className="bg-card border border-border rounded-xl p-6 hover-elevate transition-all group">
               <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 shadow-lg group-hover:shadow-teal-500/50 transition-shadow w-fit mb-4">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Caregiver Time Tracking</h3>
-              <p className="text-white/70 leading-relaxed text-sm">
+              <h3 className="text-lg font-bold text-foreground mb-2">Caregiver Time Tracking</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
                 Caregivers can log hours and track pay. Families see a clear record of care provided.
               </p>
             </div>
 
-            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 hover-elevate transition-all group">
+            <div className="bg-card border border-border rounded-xl p-6 hover-elevate transition-all group">
               <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 shadow-lg group-hover:shadow-purple-500/50 transition-shadow w-fit mb-4">
                 <Shield className="w-6 h-6 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Peace of Mind</h3>
-              <p className="text-white/70 leading-relaxed text-sm">
+              <h3 className="text-lg font-bold text-foreground mb-2">Peace of Mind</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">
                 Adult children can monitor care from anywhere, ensuring parents never miss critical appointments
               </p>
             </div>
           </div>
 
-          <div className="mt-10 p-6 bg-gradient-to-r from-orange-500/10 to-blue-500/10 border border-white/10 rounded-2xl">
+          <div className="mt-10 p-6 bg-card border border-border rounded-xl">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="text-center md:text-left">
-                <p className="text-white font-semibold mb-2">For Families</p>
-                <p className="text-white/70 text-sm leading-relaxed">
+                <p className="text-foreground font-semibold mb-2">For Families</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">
                   Invite caregivers to your calendar. Control what they see. Get peace of mind knowing care is coordinated.
                 </p>
               </div>
               <div className="text-center md:text-left">
-                <p className="text-white font-semibold mb-2">For Caregivers</p>
-                <p className="text-white/70 leading-relaxed text-sm">
+                <p className="text-foreground font-semibold mb-2">For Caregivers</p>
+                <p className="text-muted-foreground leading-relaxed text-sm">
                   See your schedule, log medications, track your hours, and calculate your pay—all in one dashboard.
                 </p>
               </div>
@@ -554,29 +553,29 @@ export default function Landing() {
 
       {/* Pricing Section */}
       <section className="px-4 md:px-6 py-16 md:py-20 relative" data-testid="section-pricing">
-        <div className="absolute inset-0 bg-gradient-to-br from-purple-900/10 via-transparent to-teal-900/10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/3" />
         <div className="max-w-6xl mx-auto relative">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-200 via-white to-teal-200 bg-clip-text text-transparent mb-3">
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
               Simple, Family-Friendly Pricing
             </h2>
-            <p className="text-lg text-white/70 max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Start free. Upgrade when your family needs more.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 flex flex-col" data-testid="card-pricing-free">
-              <h3 className="text-xl font-bold text-white mb-1" data-testid="text-pricing-free-name">Free</h3>
-              <p className="text-white/60 text-sm mb-4">For getting started</p>
+            <div className="bg-card border border-border rounded-xl p-6 flex flex-col" data-testid="card-pricing-free">
+              <h3 className="text-xl font-bold text-foreground mb-1" data-testid="text-pricing-free-name">Free</h3>
+              <p className="text-muted-foreground text-sm mb-4">For getting started</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-white" data-testid="text-pricing-free-price">$0</span>
-                <span className="text-white/60 text-sm ml-1">/month</span>
+                <span className="text-4xl font-bold text-foreground" data-testid="text-pricing-free-price">$0</span>
+                <span className="text-muted-foreground text-sm ml-1">/month</span>
               </div>
               <ul className="space-y-3 mb-6 flex-1">
                 {["1 family calendar", "Up to 3 members", "Basic event management", "Color-coded categories", "Mobile-friendly design"].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-white/80">
-                    <Check className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -585,7 +584,7 @@ export default function Landing() {
                 <Button
                   onClick={() => setAuthMode("register")}
                   variant="outline"
-                  className="w-full border-white/30 text-white bg-white/5 backdrop-blur-sm"
+                  className="w-full"
                   data-testid="button-pricing-free"
                 >
                   Get Started
@@ -593,20 +592,20 @@ export default function Landing() {
               )}
             </div>
 
-            <div className="backdrop-blur-md bg-white/5 border-2 border-teal-400/50 rounded-2xl p-6 flex flex-col relative" data-testid="card-pricing-family">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-purple-500 to-teal-500 rounded-full text-xs font-semibold text-white">
+            <div className="bg-card border-2 border-primary/50 rounded-xl p-6 flex flex-col relative" data-testid="card-pricing-family">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary rounded-full text-xs font-semibold text-primary-foreground">
                 Most Popular
               </div>
-              <h3 className="text-xl font-bold text-white mb-1" data-testid="text-pricing-family-name">Family</h3>
-              <p className="text-white/60 text-sm mb-4">For active families</p>
+              <h3 className="text-xl font-bold text-foreground mb-1" data-testid="text-pricing-family-name">Family</h3>
+              <p className="text-muted-foreground text-sm mb-4">For active families</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-white" data-testid="text-pricing-family-price">$9</span>
-                <span className="text-white/60 text-sm ml-1">/month</span>
+                <span className="text-4xl font-bold text-foreground" data-testid="text-pricing-family-price">$9</span>
+                <span className="text-muted-foreground text-sm ml-1">/month</span>
               </div>
               <ul className="space-y-3 mb-6 flex-1">
                 {["Unlimited family calendars", "Up to 10 members", "Recurring events & RRULE", "Weekly email summaries", "Caregiver invitations", "Document vault", "AI schedule import"].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-white/80">
-                    <Check className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -614,7 +613,7 @@ export default function Landing() {
               {!isAuthenticated && (
                 <Button
                   onClick={() => setAuthMode("register")}
-                  className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
+                  className="w-full"
                   data-testid="button-pricing-family"
                 >
                   Start Free Trial
@@ -622,18 +621,18 @@ export default function Landing() {
               )}
             </div>
 
-            <div className="backdrop-blur-md bg-white/5 border border-white/20 rounded-2xl p-6 flex flex-col relative" data-testid="card-pricing-pro">
-              <span className="absolute top-4 right-4 text-xs font-semibold uppercase tracking-wider text-teal-300 bg-teal-500/15 border border-teal-400/30 px-2.5 py-1 rounded-full" data-testid="badge-coming-soon">Coming Soon</span>
-              <h3 className="text-xl font-bold text-white mb-1" data-testid="text-pricing-pro-name">Professional</h3>
-              <p className="text-white/60 text-sm mb-4">For care agencies</p>
+            <div className="bg-card border border-border rounded-xl p-6 flex flex-col relative" data-testid="card-pricing-pro">
+              <span className="absolute top-4 right-4 text-xs font-semibold uppercase tracking-wider text-primary bg-primary/15 border border-primary/30 px-2.5 py-1 rounded-full" data-testid="badge-coming-soon">Coming Soon</span>
+              <h3 className="text-xl font-bold text-foreground mb-1" data-testid="text-pricing-pro-name">Professional</h3>
+              <p className="text-muted-foreground text-sm mb-4">For care agencies</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-white" data-testid="text-pricing-pro-price">$29</span>
-                <span className="text-white/60 text-sm ml-1">/month</span>
+                <span className="text-4xl font-bold text-foreground" data-testid="text-pricing-pro-price">$29</span>
+                <span className="text-muted-foreground text-sm ml-1">/month</span>
               </div>
               <ul className="space-y-3 mb-6 flex-1">
                 {["Everything in Family", "Unlimited members", "Medication tracking & logs", "Caregiver time & pay tracking", "Emergency Bridge Mode", "Priority support", "Custom branding"].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-white/80">
-                    <Check className="w-4 h-4 text-teal-400 mt-0.5 flex-shrink-0" />
+                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -642,7 +641,7 @@ export default function Landing() {
                 <Button
                   onClick={() => setAuthMode("register")}
                   variant="outline"
-                  className="w-full border-white/30 text-white bg-white/5 backdrop-blur-sm"
+                  className="w-full"
                   data-testid="button-pricing-pro"
                 >
                   Contact Sales
@@ -656,10 +655,10 @@ export default function Landing() {
       {/* Final CTA Section */}
       <section className="px-4 md:px-6 py-16 md:py-20 relative">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Stop Juggling. Start Coordinating.
           </h2>
-          <p className="text-lg text-white/70 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join families who've traded sticky notes and group texts for one shared calendar that actually works. Free to start, no credit card needed.
           </p>
           {!isAuthenticated && (
@@ -667,7 +666,6 @@ export default function Landing() {
               <Button
                 size="lg"
                 onClick={() => setAuthMode("register")}
-                className="bg-white text-slate-900"
                 data-testid="button-final-cta-signup"
               >
                 Create Your Family Calendar
@@ -677,7 +675,6 @@ export default function Landing() {
                 size="lg"
                 onClick={() => (window.location.href = "/api/login/demo")}
                 variant="outline"
-                className="border-white/40 text-white bg-white/5 backdrop-blur-sm"
                 data-testid="button-final-cta-demo"
               >
                 Try the Demo First
@@ -688,7 +685,7 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 px-4 md:px-6 py-8">
+      <footer className="border-t border-border px-4 md:px-6 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col items-center gap-4">
             <div className="flex items-center gap-4">
@@ -696,7 +693,7 @@ export default function Landing() {
                 href="#"
                 onClick={handleSocialClick}
                 aria-label="Facebook"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
+                className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all hover-elevate"
                 data-testid="link-facebook"
               >
                 <Facebook className="w-5 h-5" />
@@ -705,7 +702,7 @@ export default function Landing() {
                 href="#"
                 onClick={handleSocialClick}
                 aria-label="Instagram"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
+                className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all hover-elevate"
                 data-testid="link-instagram"
               >
                 <Instagram className="w-5 h-5" />
@@ -714,7 +711,7 @@ export default function Landing() {
                 href="#"
                 onClick={handleSocialClick}
                 aria-label="X (Twitter)"
-                className="w-10 h-10 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-all hover-elevate"
+                className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all hover-elevate"
                 data-testid="link-twitter"
               >
                 <Twitter className="w-5 h-5" />
@@ -723,15 +720,15 @@ export default function Landing() {
             
             <div className="text-center space-y-2">
               <div className="flex items-center justify-center gap-4 flex-wrap">
-                <Link href="/terms" className="text-white/60 hover:text-white text-sm transition-colors" data-testid="link-terms">Terms of Service</Link>
-                <span className="text-white/30">|</span>
-                <Link href="/privacy" className="text-white/60 hover:text-white text-sm transition-colors" data-testid="link-privacy">Privacy Policy</Link>
+                <Link href="/terms" className="text-muted-foreground hover:text-foreground text-sm transition-colors" data-testid="link-terms">Terms of Service</Link>
+                <span className="text-muted-foreground/50">|</span>
+                <Link href="/privacy" className="text-muted-foreground hover:text-foreground text-sm transition-colors" data-testid="link-privacy">Privacy Policy</Link>
               </div>
-              <p className="text-white/60 text-sm">
+              <p className="text-muted-foreground text-sm">
                 © 2026 Kindora Family, Inc. Keeping families connected and coordinated.
               </p>
-              <p className="text-white/60 text-sm">
-                Visit <a href="https://kindora.ai" target="_blank" rel="noopener noreferrer" className="text-white/90 hover:text-white underline decoration-white/40 hover:decoration-white transition-colors" data-testid="link-kindora-ai">Kindora.ai</a> for instant coaching guidance for your kiddos.
+              <p className="text-muted-foreground text-sm">
+                Visit <a href="https://kindora.ai" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-foreground/80 underline decoration-border hover:decoration-foreground transition-colors" data-testid="link-kindora-ai">Kindora.ai</a> for instant coaching guidance for your kiddos.
               </p>
             </div>
           </div>

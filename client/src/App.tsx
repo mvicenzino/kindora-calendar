@@ -38,8 +38,11 @@ function Router() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
-        <div className="text-white">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center">
+          <div className="w-12 h-12 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Loading...</p>
+        </div>
       </div>
     );
   }
