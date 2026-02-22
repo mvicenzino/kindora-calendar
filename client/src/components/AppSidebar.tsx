@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Shield, Users } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sidebar,
   SidebarContent,
@@ -18,15 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
-import type { UiFamilyMember } from "@shared/types";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
-
-interface AppSidebarProps {
-  members?: UiFamilyMember[];
-  selectedMemberIds?: string[];
-  onToggleMember?: (memberId: string) => void;
-  onSelectAllMembers?: () => void;
-}
 
 const navItems = [
   { title: "Calendar", url: "/", icon: Calendar },
@@ -37,17 +27,10 @@ const navItems = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
-function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
-
-export default function AppSidebar({ members = [], selectedMemberIds = [], onToggleMember, onSelectAllMembers }: AppSidebarProps) {
+export default function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { activeFamily } = useActiveFamily();
   const { user } = useAuth();
-
-  const showMemberFilter = members.length > 0 && onToggleMember && onSelectAllMembers;
-  const allSelected = selectedMemberIds.length === 0 || selectedMemberIds.length === members.length;
 
   return (
     <Sidebar collapsible="icon" data-testid="app-sidebar">
@@ -73,80 +56,6 @@ export default function AppSidebar({ members = [], selectedMemberIds = [], onTog
       <SidebarSeparator />
 
       <SidebarContent className="tesla-scrollbar">
-        {showMemberFilter && (
-          <>
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
-                Family
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                <div className="px-2 py-1 space-y-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={onSelectAllMembers}
-                        className={`
-                          flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm transition-colors
-                          group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0
-                          ${allSelected ? 'text-primary' : 'text-muted-foreground'}
-                        `}
-                        data-testid="button-filter-all-members"
-                      >
-                        <div className={`
-                          w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 transition-all
-                          ${allSelected
-                            ? 'bg-primary/20 text-primary member-avatar-ring active'
-                            : 'bg-muted text-muted-foreground'
-                          }
-                        `}>
-                          <Users className="w-4 h-4" />
-                        </div>
-                        <span className="truncate group-data-[collapsible=icon]:hidden">Everyone</span>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Show all members</TooltipContent>
-                  </Tooltip>
-
-                  {members.map((member) => {
-                    const isSelected = allSelected || selectedMemberIds.includes(member.id);
-                    return (
-                      <Tooltip key={member.id}>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => onToggleMember!(member.id)}
-                            className={`
-                              flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm transition-colors
-                              group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0
-                              ${isSelected ? 'text-foreground' : 'text-muted-foreground opacity-50'}
-                            `}
-                            data-testid={`button-filter-member-${member.id}`}
-                          >
-                            <Avatar className={`w-8 h-8 flex-shrink-0 transition-all ${isSelected ? 'member-avatar-ring active' : ''}`}>
-                              <AvatarFallback
-                                className="text-xs font-semibold"
-                                style={{
-                                  backgroundColor: member.color + '30',
-                                  color: member.color,
-                                }}
-                              >
-                                {getInitials(member.name)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="truncate group-data-[collapsible=icon]:hidden">{member.name}</span>
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">{member.name}</TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarSeparator />
-          </>
-        )}
-
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
             Navigate
