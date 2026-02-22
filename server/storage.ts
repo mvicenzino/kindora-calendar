@@ -383,6 +383,7 @@ export class MemStorage implements IStorage {
       name: insertMember.name,
       color: insertMember.color,
       avatar: insertMember.avatar ?? null,
+      role: insertMember.role ?? "family",
       familyId,
       createdAt: new Date(),
     };

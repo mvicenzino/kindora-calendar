@@ -1,4 +1,4 @@
-import { Users, Plus } from "lucide-react";
+import { Users, Plus, HeartHandshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -49,6 +49,7 @@ export default function MemberFilterStrip({
 
       {members.map((member) => {
         const isSelected = allSelected || selectedMemberIds.includes(member.id);
+        const isCaregiver = member.role === 'caregiver';
         return (
           <Tooltip key={member.id}>
             <TooltipTrigger asChild>
@@ -58,23 +59,35 @@ export default function MemberFilterStrip({
                 className="flex-shrink-0 gap-1.5"
                 data-testid={`button-filter-member-${member.id}`}
               >
-                <Avatar className="w-5 h-5">
-                  <AvatarFallback
-                    className="text-[9px] font-semibold"
+                {isCaregiver ? (
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center"
                     style={{
                       backgroundColor: member.color + '30',
                       color: member.color,
                     }}
                   >
-                    {getInitials(member.name)}
-                  </AvatarFallback>
-                </Avatar>
+                    <HeartHandshake className="w-3 h-3" />
+                  </div>
+                ) : (
+                  <Avatar className="w-5 h-5">
+                    <AvatarFallback
+                      className="text-[9px] font-semibold"
+                      style={{
+                        backgroundColor: member.color + '30',
+                        color: member.color,
+                      }}
+                    >
+                      {getInitials(member.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <span className="text-xs font-medium whitespace-nowrap">
                   {member.name.split(' ')[0]}
                 </span>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{member.name}</TooltipContent>
+            <TooltipContent>{isCaregiver ? `${member.name} (Caregiver)` : member.name}</TooltipContent>
           </Tooltip>
         );
       })}

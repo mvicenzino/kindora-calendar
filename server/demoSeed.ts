@@ -95,36 +95,30 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     await storage.addUserToFamily(michaelId, familyId, "member");
     await storage.addUserToFamily(jennyId, familyId, "member");
 
-    // Create family members - the core family
+    // Create family members - 3 family + 1 caregiver
     const mom = await storage.createFamilyMember(familyId, {
       name: "You (Sarah)",
-      color: "#E879F9", // Purple - represents the demo user
-      avatar: null,
-    });
-
-    const dad = await storage.createFamilyMember(familyId, {
-      name: "Michael",
-      color: "#2DD4BF", // Teal
+      color: "#E879F9",
       avatar: null,
     });
 
     const daughter = await storage.createFamilyMember(familyId, {
       name: "Emma",
-      color: "#F472B6", // Pink - 12 years old
+      color: "#F472B6",
       avatar: null,
     });
 
     const son = await storage.createFamilyMember(familyId, {
       name: "Lucas",
-      color: "#60A5FA", // Blue - 8 years old
+      color: "#60A5FA",
       avatar: null,
     });
 
-    // Add a caregiver to the family calendar - babysitter
     const babysitter = await storage.createFamilyMember(familyId, {
-      name: "Jenny (Babysitter)",
-      color: "#F97316", // Orange - trusted caregiver
+      name: "Jenny",
+      color: "#F97316",
       avatar: null,
+      role: "caregiver",
     });
 
     // Family events - mix of memories and upcoming activities
@@ -135,7 +129,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "What a game! Emma scored the winning goal in overtime. The whole team celebrated!",
         startTime: setMinutes(setHours(subDays(today, 3), 14), 0),
         endTime: setMinutes(setHours(subDays(today, 3), 16), 0),
-        memberIds: [daughter.id, mom.id, dad.id],
+        memberIds: [daughter.id, mom.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
         photoUrl: FAMILY_PHOTOS.soccerGame,
@@ -145,7 +139,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "Watched the new animated movie with homemade popcorn. Lucas picked the movie this time!",
         startTime: setMinutes(setHours(subDays(today, 5), 19), 0),
         endTime: setMinutes(setHours(subDays(today, 5), 21), 30),
-        memberIds: [mom.id, dad.id, daughter.id, son.id],
+        memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.movieNight,
@@ -155,7 +149,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "His first big performance! He played 'Für Elise' perfectly. So proud of his practice!",
         startTime: setMinutes(setHours(subDays(today, 7), 15), 0),
         endTime: setMinutes(setHours(subDays(today, 7), 16), 30),
-        memberIds: [son.id, mom.id, dad.id, daughter.id],
+        memberIds: [son.id, mom.id, daughter.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
         photoUrl: FAMILY_PHOTOS.pianoRecital,
@@ -229,7 +223,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "Don't forget shin guards! Coach mentioned early pickup today",
         startTime: setMinutes(setHours(today, 16), 0),
         endTime: setMinutes(setHours(today, 17), 30),
-        memberIds: [son.id, dad.id],
+        memberIds: [son.id, mom.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
         photoUrl: null,
@@ -239,7 +233,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "Taco Tuesday! Kids helping with prep tonight",
         startTime: setMinutes(setHours(today, 18), 0),
         endTime: setMinutes(setHours(today, 19), 0),
-        memberIds: [mom.id, dad.id, daughter.id, son.id],
+        memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
         photoUrl: null,
@@ -261,7 +255,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "Meeting with Lucas's teacher Mrs. Rodriguez about his reading progress",
         startTime: setMinutes(setHours(addDays(today, 2), 16), 0),
         endTime: setMinutes(setHours(addDays(today, 2), 17), 0),
-        memberIds: [mom.id, dad.id],
+        memberIds: [mom.id],
         color: CATEGORY_CONFIG['school'].color,
         category: 'school' as const,
         photoUrl: null,
@@ -271,7 +265,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "Sunday dinner with Grandma Marilyn - bringing her favorite apple pie!",
         startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
         endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
-        memberIds: [mom.id, dad.id, daughter.id, son.id],
+        memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.familyDinner,
@@ -291,7 +285,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "Jenny watching the kids! She'll do homework help and bedtime routine. Trying that new Italian place downtown.",
         startTime: setMinutes(setHours(addDays(today, 5), 18), 0),
         endTime: setMinutes(setHours(addDays(today, 5), 23), 0),
-        memberIds: [mom.id, dad.id, babysitter.id, daughter.id, son.id],
+        memberIds: [mom.id, babysitter.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
         photoUrl: null,
@@ -301,7 +295,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "All-day tournament at Riverside Community Center. Pack snacks!",
         startTime: setMinutes(setHours(addDays(today, 6), 9), 0),
         endTime: setMinutes(setHours(addDays(today, 6), 16), 0),
-        memberIds: [son.id, dad.id, mom.id],
+        memberIds: [son.id, mom.id],
         color: CATEGORY_CONFIG['activities'].color,
         category: 'activities' as const,
         photoUrl: null,
@@ -311,7 +305,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         description: "End of school year celebration! Sunscreen, towels, and sandcastle supplies",
         startTime: setMinutes(setHours(addDays(today, 7), 10), 0),
         endTime: setMinutes(setHours(addDays(today, 7), 17), 0),
-        memberIds: [mom.id, dad.id, daughter.id, son.id],
+        memberIds: [mom.id, daughter.id, son.id],
         color: CATEGORY_CONFIG['social'].color,
         category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.beachDay,
@@ -1284,7 +1278,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     });
 
     console.log(`Demo account seeded:`);
-    console.log(`   Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
+    console.log(`   Your Family: ${familyEvents.length} events, 4 members (3 family + 1 caregiver)`);
     console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
     console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
     console.log(`   Medication Logs: ${medicationLogs.length} dose records (given/skipped/refused)`);
