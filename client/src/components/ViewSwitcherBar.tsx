@@ -99,7 +99,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
               onClick={() => onLayoutChange('grid')}
               data-testid="button-layout-grid"
               aria-pressed={layout === 'grid'}
-              aria-label="Grid layout"
+              aria-label="Schedule view"
               className={`
                 relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
                 transition-colors duration-300 ease-out
@@ -109,14 +109,14 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
                 }
               `}
             >
-              <LayoutGrid className="w-2.5 h-2.5" />
-              <span>Grid</span>
+              <List className="w-2.5 h-2.5" />
+              <span>Schedule</span>
             </button>
             <button
               onClick={() => onLayoutChange('tile')}
               data-testid="button-layout-tile"
               aria-pressed={layout === 'tile'}
-              aria-label="Tile layout"
+              aria-label="Cards view"
               className={`
                 relative z-10 px-2 py-0.5 rounded-full text-[10px] font-medium flex items-center justify-center gap-1
                 transition-colors duration-300 ease-out
@@ -126,8 +126,8 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
                 }
               `}
             >
-              <List className="w-2.5 h-2.5" />
-              <span>List</span>
+              <LayoutGrid className="w-2.5 h-2.5" />
+              <span>Cards</span>
             </button>
           </div>
         )}
