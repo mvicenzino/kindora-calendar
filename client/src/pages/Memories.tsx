@@ -57,36 +57,36 @@ export default function Memories() {
   }, [eventsWithPhotos]);
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="bg-card border border-border rounded-3xl p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-purple-500 flex items-center justify-center">
-              <Image className="w-7 h-7 text-white" />
+    <div className="p-3 md:p-4">
+      <div className="max-w-4xl mx-auto space-y-4">
+        <div className="bg-card border border-border rounded-md p-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-md bg-purple-500 flex items-center justify-center">
+              <Image className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-foreground">Memories</h1>
-              <p className="text-sm text-muted-foreground">Your photo scrapbook from special moments</p>
+              <h1 className="text-sm font-semibold text-foreground">Memories</h1>
+              <p className="text-xs text-muted-foreground">Your photo scrapbook from special moments</p>
             </div>
           </div>
         </div>
 
         {groupedByMonth.length === 0 ? (
-          <div className="bg-card border border-border rounded-3xl p-12 text-center">
-            <Image className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground text-lg">No memories yet</p>
-            <p className="text-muted-foreground text-sm mt-2">Add photos to your events to create your scrapbook</p>
+          <div className="bg-card border border-border rounded-md p-3 text-center">
+            <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-muted-foreground text-xs font-medium">No memories yet</p>
+            <p className="text-muted-foreground text-xs mt-1">Add photos to your events to create your scrapbook</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {groupedByMonth.map(([month, monthEvents]) => (
-              <div key={month} className="space-y-4">
-                <div className="bg-card border border-border rounded-2xl p-4">
-                  <h2 className="text-base font-semibold text-foreground">{month}</h2>
-                  <p className="text-sm text-muted-foreground">{monthEvents.length} {monthEvents.length === 1 ? 'memory' : 'memories'}</p>
+              <div key={month} className="space-y-3">
+                <div className="bg-card border border-border rounded-md p-3">
+                  <h2 className="text-xs font-semibold text-foreground">{month}</h2>
+                  <p className="text-xs text-muted-foreground">{monthEvents.length} {monthEvents.length === 1 ? 'memory' : 'memories'}</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {monthEvents.map((event) => (
                     <div
                       key={event.id}
@@ -97,7 +97,7 @@ export default function Memories() {
                       onClick={() => setLocation('/')}
                       data-testid={`memory-card-${event.id}`}
                     >
-                      <div className="bg-white dark:bg-card rounded-sm p-5 pb-16 shadow-2xl">
+                      <div className="bg-white dark:bg-card rounded-md p-3 pb-12 shadow-2xl">
                         <div className="absolute -top-3 left-8 w-16 h-8 bg-gradient-to-br from-amber-50/90 to-amber-100/80 backdrop-blur-sm rotate-[-5deg] shadow-sm" 
                           style={{
                             clipPath: 'polygon(0% 20%, 100% 0%, 100% 80%, 0% 100%)',
@@ -123,9 +123,9 @@ export default function Memories() {
                           )}
                         </div>
 
-                        <div className="space-y-2">
-                          <h3 className="font-semibold text-foreground text-base">{event.title}</h3>
-                          <p className="text-xs text-muted-foreground font-medium">{format(event.startTime, 'MMM d, yyyy')}</p>
+                        <div className="space-y-1">
+                          <h3 className="font-semibold text-foreground text-xs">{event.title}</h3>
+                          <p className="text-[10px] text-muted-foreground font-medium">{format(event.startTime, 'MMM d, yyyy')}</p>
 
                           {event.members && event.members.length > 0 && (
                             <div className="flex -space-x-2 pt-1">

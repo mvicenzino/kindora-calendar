@@ -387,17 +387,17 @@ export default function Documents() {
   }
 
   return (
-    <div className="p-4 md:p-6" data-testid="documents-page">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="p-3 md:p-4" data-testid="documents-page">
+      <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold tracking-tight text-foreground flex items-center gap-3" data-testid="text-documents-title">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-                  <FolderOpen className="w-6 h-6 text-white" />
+              <h1 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-3" data-testid="text-documents-title">
+                <div className="w-8 h-8 rounded-md bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+                  <FolderOpen className="w-4 h-4 text-white" />
                 </div>
                 Care Documents
               </h1>
-              <p className="text-muted-foreground mt-2 ml-15">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Secure storage for medical records, insurance, and legal documents
               </p>
             </div>
@@ -408,7 +408,7 @@ export default function Documents() {
                   <Button 
                     variant="outline"
                     onClick={openDriveDialog}
-                    className="gap-2"
+                    className="gap-2 text-xs"
                     data-testid="button-import-drive"
                   >
                     <SiGoogledrive className="w-4 h-4" />
@@ -417,7 +417,7 @@ export default function Documents() {
                 )}
                 <Button 
                   onClick={() => setShowUploadDialog(true)}
-                  className="gap-2 bg-primary text-primary-foreground"
+                  className="gap-2 text-xs bg-primary text-primary-foreground"
                   data-testid="button-upload-document"
                 >
                   <Upload className="w-4 h-4" />
@@ -428,8 +428,8 @@ export default function Documents() {
           </div>
           
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-wrap gap-4">
+            <CardContent className="pt-3">
+              <div className="flex flex-wrap gap-3">
                 <div className="flex-1 min-w-[200px]">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -481,13 +481,13 @@ export default function Documents() {
             </div>
           ) : documents.length === 0 ? (
             <Card>
-              <CardContent className="pt-12 pb-12 flex flex-col items-center justify-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                  <FolderOpen className="w-8 h-8 text-muted-foreground" />
+              <CardContent className="pt-6 pb-6 flex flex-col items-center justify-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                  <FolderOpen className="w-4 h-4 text-muted-foreground" />
                 </div>
                 <div className="text-center">
-                  <h3 className="font-semibold text-lg text-foreground">No documents found</h3>
-                  <p className="text-muted-foreground mt-1">
+                  <h3 className="text-xs font-semibold text-foreground">No documents found</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
                     {searchQuery || filterType !== "all" || filterMember !== "all" 
                       ? "Try adjusting your filters"
                       : "Upload your first care document to get started"}
@@ -506,7 +506,7 @@ export default function Documents() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {Object.entries(DOCUMENT_TYPE_CONFIG).map(([type, config]) => {
                 const typeDocs = documentsByType[type as DocumentType];
                 if (typeDocs.length === 0) return null;
@@ -516,12 +516,12 @@ export default function Documents() {
                 return (
                   <div key={type}>
                     <div className="flex items-center gap-2 mb-3">
-                      <Icon className={`w-5 h-5 ${config.color}`} />
-                      <h2 className="text-lg font-semibold text-foreground">{config.label}</h2>
+                      <Icon className={`w-4 h-4 ${config.color}`} />
+                      <h2 className="text-sm font-semibold text-foreground">{config.label}</h2>
                       <Badge variant="secondary" className="ml-2">{typeDocs.length}</Badge>
                     </div>
                     
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                       {typeDocs.map(doc => {
                         const FileIcon = getFileIcon(doc.mimeType);
                         
@@ -531,17 +531,17 @@ export default function Documents() {
                             className="hover-elevate transition-colors group"
                             data-testid={`card-document-${doc.id}`}
                           >
-                            <CardContent className="pt-4 pb-4">
-                              <div className="flex items-start gap-3">
+                            <CardContent className="pt-3 pb-3">
+                              <div className="flex items-start gap-2">
                                 <div 
-                                  className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted"
-                                  style={{ borderLeft: `3px solid ${getMemberColor(doc.memberId)}` }}
+                                  className="w-8 h-8 rounded-md border-l-2 flex items-center justify-center bg-muted"
+                                  style={{ borderLeftColor: getMemberColor(doc.memberId) }}
                                 >
-                                  <FileIcon className="w-5 h-5 text-muted-foreground" />
+                                  <FileIcon className="w-4 h-4 text-muted-foreground" />
                                 </div>
                                 
                                 <div className="flex-1 min-w-0">
-                                  <h3 className="font-medium truncate text-foreground" data-testid={`text-document-title-${doc.id}`}>
+                                  <h3 className="text-xs font-medium truncate text-foreground" data-testid={`text-document-title-${doc.id}`}>
                                     {doc.title}
                                   </h3>
                                   <div className="flex items-center gap-2 mt-1">
@@ -600,7 +600,7 @@ export default function Documents() {
                               </div>
                               
                               {doc.description && (
-                                <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                                <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
                                   {doc.description}
                                 </p>
                               )}

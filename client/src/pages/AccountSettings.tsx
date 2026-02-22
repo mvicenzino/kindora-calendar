@@ -162,8 +162,8 @@ function AccountTab() {
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-amber-500" />
-              <CardTitle>Your Plan</CardTitle>
+              <Crown className="h-4 w-4 text-amber-500" />
+              <CardTitle className="text-sm">Your Plan</CardTitle>
             </div>
             {subscriptionQuery.isLoading ? (
               <Badge variant="secondary">
@@ -191,16 +191,16 @@ function AccountTab() {
             <div className="grid gap-4 md:grid-cols-2">
               <Card className="border-muted">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Free</CardTitle>
+                  <CardTitle className="text-sm">Free</CardTitle>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">$0</span>
-                    <span className="text-muted-foreground">/month</span>
+                    <span className="text-lg font-bold">$0</span>
+                    <span className="text-xs text-muted-foreground">/month</span>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-2">
                     {PLAN_FEATURES.free.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm">
+                      <li key={feature} className="flex items-start gap-2 text-xs">
                         <Check className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                         <span>{feature}</span>
                       </li>
@@ -216,16 +216,16 @@ function AccountTab() {
                   </Badge>
                 </div>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Family Plan</CardTitle>
+                  <CardTitle className="text-sm">Family Plan</CardTitle>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">$9</span>
-                    <span className="text-muted-foreground">/month</span>
+                    <span className="text-lg font-bold">$9</span>
+                    <span className="text-xs text-muted-foreground">/month</span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <ul className="space-y-2">
                     {PLAN_FEATURES.family.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm">
+                      <li key={feature} className="flex items-start gap-2 text-xs">
                         <Check className="h-4 w-4 mt-0.5 text-primary shrink-0" />
                         <span>{feature}</span>
                       </li>
@@ -348,11 +348,11 @@ export default function AccountSettings({ initialTab }: { initialTab?: string })
   const defaultTab = initialTab || "account";
 
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-3 md:p-4">
       <div className="max-w-4xl mx-auto space-y-4">
         <div>
-          <h1 className="text-lg font-semibold" data-testid="text-settings-title">Settings</h1>
-          <p className="text-sm text-muted-foreground">Manage your account, family, and preferences</p>
+          <h1 className="text-sm font-semibold" data-testid="text-settings-title">Settings</h1>
+          <p className="text-xs text-muted-foreground">Manage your account, family, and preferences</p>
         </div>
 
         <Tabs defaultValue={defaultTab} className="space-y-4">
