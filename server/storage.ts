@@ -198,8 +198,6 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, userData);
     
-    await this.ensureUserFamily(id);
-    
     return userData;
   }
 
@@ -1097,8 +1095,6 @@ class DrizzleStorage implements IStorage {
         })
         .returning();
     }
-    
-    await this.ensureUserFamily(result[0].id);
     
     return result[0];
   }

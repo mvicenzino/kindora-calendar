@@ -43,6 +43,7 @@ export default function Onboarding() {
   const [careContext, setCareContext] = useState<CareContextOption[]>([]);
   const [inviteCode, setInviteCode] = useState("");
   const [joinedFamily, setJoinedFamily] = useState<Family | null>(null);
+  const [createdFamilyId, setCreatedFamilyId] = useState<string | null>(null);
   const [memberEntries, setMemberEntries] = useState<{ name: string }[]>([]);
   const [newMemberName, setNewMemberName] = useState("");
 
@@ -57,6 +58,16 @@ export default function Onboarding() {
       setFamilyName(`${user.firstName}'s Family`);
     }
   }, [user]);
+
+  const createFamilyMutation = useMutation({
+    mutationFn: async ({ name }: { name: string }) => {
+      const res = await apiRequest("POST", "/api/families", { name });
+      return res.json() as Promise<Family>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+    },
+  });
 
   const renameFamilyMutation = useMutation({
     mutationFn: async ({ familyId, name }: { familyId: string; name: string }) => {
@@ -106,15 +117,17 @@ export default function Onboarding() {
     const ownerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Me";
     setMemberEntries([{ name: ownerName }]);
     setNewMemberName("");
-    if (families.length > 0) {
-      try {
+    try {
+      if (families.length > 0) {
         await renameFamilyMutation.mutateAsync({ familyId: families[0].id, name });
-        setStep("add-members");
-      } catch {
-        toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+        setCreatedFamilyId(families[0].id);
+      } else {
+        const newFamily = await createFamilyMutation.mutateAsync({ name });
+        setCreatedFamilyId(newFamily.id);
       }
-    } else {
       setStep("add-members");
+    } catch {
+      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
     }
   };
 
@@ -135,11 +148,11 @@ export default function Onboarding() {
   };
 
   const handleMembersSubmit = async () => {
-    if (!families.length) {
-      setStep("owner-success");
+    const familyId = createdFamilyId || (families.length > 0 ? families[0].id : null);
+    if (!familyId) {
+      toast({ title: "Family not created yet", description: "Please go back and create a family first.", variant: "destructive" });
       return;
     }
-    const familyId = families[0].id;
     try {
       for (let i = 0; i < memberEntries.length; i++) {
         await createMemberMutation.mutateAsync({
@@ -260,11 +273,11 @@ export default function Onboarding() {
 
               <Button
                 onClick={handleOwnerSubmit}
-                disabled={renameFamilyMutation.isPending || !familyName.trim()}
+                disabled={createFamilyMutation.isPending || renameFamilyMutation.isPending || !familyName.trim()}
                 className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
                 data-testid="button-create-family"
               >
-                {renameFamilyMutation.isPending ? (
+                {(createFamilyMutation.isPending || renameFamilyMutation.isPending) ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : null}
                 Create family

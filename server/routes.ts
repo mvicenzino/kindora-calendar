@@ -241,6 +241,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/families", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name } = req.body;
+
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: "Family name is required" });
+      }
+
+      const sanitizedName = name.replace(/[<>]/g, '').trim().slice(0, 100);
+      const family = await storage.createFamily(userId, { name: sanitizedName, createdBy: userId });
+      res.status(201).json(family);
+    } catch (error) {
+      console.error("Error creating family:", error);
+      res.status(500).json({ error: "Failed to create family" });
+    }
+  });
+
   app.put("/api/families/:familyId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -3872,8 +3890,12 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
 
-  app.delete("/api/admin/cleanup-user/:email", async (req: Request, res: Response) => {
+  app.delete("/api/admin/cleanup-user/:email", isAuthenticated, async (req: any, res: any) => {
     try {
+      const requestingUserId = req.user.claims.sub;
+      if (requestingUserId !== '21601610') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
       const email = decodeURIComponent(req.params.email);
       const user = await storage.getUserByEmail(email);
       if (!user) {
