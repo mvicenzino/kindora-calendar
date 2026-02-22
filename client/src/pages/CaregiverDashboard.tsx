@@ -41,7 +41,7 @@ import {
   Trash2,
   Settings
 } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useUserRole } from "@/hooks/useUserRole";
 
 type MedicationWithMember = {
