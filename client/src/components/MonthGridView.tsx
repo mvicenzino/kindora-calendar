@@ -12,7 +12,7 @@ interface MonthGridViewProps {
   onAddEvent?: () => void;
   onAddEventForDate?: (date: Date) => void;
   onDateChange?: (date: Date) => void;
-  onViewChange?: (view: 'day' | 'week' | 'month' | 'timeline') => void;
+  onViewChange?: (view: 'day' | 'week' | 'month' | 'year' | 'timeline') => void;
   onEventDrop?: (event: UiEvent, newStart: Date, newEnd: Date) => void;
 }
 
@@ -72,7 +72,7 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
     if (!dragState) return;
     e.preventDefault();
 
-    for (const [dateStr, el] of cellRefs.current.entries()) {
+    for (const [dateStr, el] of Array.from(cellRefs.current.entries())) {
       const rect = el.getBoundingClientRect();
       if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
         if (dateStr !== dragState.currentDateStr) {

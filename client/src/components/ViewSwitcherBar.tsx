@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 
 export type CalendarLayout = 'grid' | 'tile';
 
+export type CalendarView = 'day' | 'week' | 'month' | 'year' | 'timeline';
+
 interface ViewSwitcherBarProps {
-  currentView: 'day' | 'week' | 'month' | 'timeline';
-  onViewChange: (view: 'day' | 'week' | 'month' | 'timeline') => void;
+  currentView: CalendarView;
+  onViewChange: (view: CalendarView) => void;
   layout: CalendarLayout;
   onLayoutChange: (layout: CalendarLayout) => void;
   onAddEvent?: () => void;
@@ -17,10 +19,11 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
   const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   
-  const views: Array<{ value: 'day' | 'week' | 'month' | 'timeline'; label: string }> = [
+  const views: Array<{ value: CalendarView; label: string }> = [
     { value: 'day', label: 'Day' },
     { value: 'week', label: 'Week' },
     { value: 'month', label: 'Month' },
+    { value: 'year', label: 'Year' },
     { value: 'timeline', label: 'Timeline' },
   ];
 
@@ -45,11 +48,11 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
     return () => window.removeEventListener('resize', updateIndicator);
   }, [currentView]);
 
-  const showLayoutToggle = currentView !== 'timeline';
+  const showLayoutToggle = currentView !== 'timeline' && currentView !== 'year';
 
   return (
     <div className="w-full bg-background/60 backdrop-blur-xl border-b border-border/30">
-      <div className="flex items-center justify-between px-3 py-1.5 gap-2">
+      <div className="flex items-center justify-center px-3 py-1.5 gap-2 relative">
         <nav 
           ref={containerRef} 
           className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide"
@@ -95,7 +98,7 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
           ))}
         </nav>
 
-        <div className="flex items-center gap-1">
+        <div className="absolute right-3 flex items-center gap-1">
           {showLayoutToggle && (
             <>
               <Button

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useUserRole } from "@/hooks/useUserRole";
-import ViewSwitcherBar, { type CalendarLayout } from "@/components/ViewSwitcherBar";
+import ViewSwitcherBar, { type CalendarLayout, type CalendarView } from "@/components/ViewSwitcherBar";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
@@ -12,6 +12,7 @@ import TimelineView from "@/components/TimelineView";
 import DayGridView from "@/components/DayGridView";
 import WeekGridView from "@/components/WeekGridView";
 import MonthGridView from "@/components/MonthGridView";
+import YearGridView from "@/components/YearGridView";
 import EventModal from "@/components/EventModal";
 import FlipCardEventDetails from "@/components/FlipCardEventDetails";
 import MemberModal from "@/components/MemberModal";
@@ -32,7 +33,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
+  const [view, setView] = useState<CalendarView>('day');
   const [layout, setLayout] = useState<CalendarLayout>('grid');
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
@@ -380,7 +381,7 @@ export default function Home() {
         onSelectEvent={handleEventClick}
       />
 
-      <div className={`flex-1 ${layout === 'grid' && view !== 'timeline' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+      <div className={`flex-1 ${layout === 'grid' && view !== 'timeline' && view !== 'year' ? 'flex flex-col overflow-hidden' : view === 'year' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
         {view === 'day' && layout === 'grid' && (
           <DayGridView
             date={currentDate}
@@ -458,6 +459,22 @@ export default function Home() {
             onAddEvent={handleAddEvent}
             onAddEventForDate={handleDayClick}
             onDateChange={handleDateChange}
+          />
+        )}
+
+        {view === 'year' && (
+          <YearGridView
+            date={currentDate}
+            events={filteredEvents}
+            onDateChange={handleDateChange}
+            onMonthClick={(monthDate) => {
+              setCurrentDate(monthDate);
+              setView('month');
+            }}
+            onDayClick={(dayDate) => {
+              setCurrentDate(dayDate);
+              setView('day');
+            }}
           />
         )}
 
