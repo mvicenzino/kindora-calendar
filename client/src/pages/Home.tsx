@@ -79,16 +79,15 @@ export default function Home() {
   // Redirect new users to onboarding if they haven't completed it and have no families
   const isDemoMode = user?.id?.startsWith('demo-') ?? false;
   useEffect(() => {
-    if (!isLoading && isAuthenticated && !isLoadingFamily && !isDemoMode && user?.id) {
-      const onboardingKey = `kindora_onboarding_complete_${user.id}`;
-      const onboardingDone = localStorage.getItem(onboardingKey);
+    if (!isLoading && isAuthenticated && !isLoadingFamily && !isDemoMode) {
+      const onboardingDone = localStorage.getItem("kindora_onboarding_complete");
       if (!onboardingDone && !activeFamilyId) {
         setLocation("/onboarding");
       } else if (activeFamilyId && !onboardingDone) {
-        localStorage.setItem(onboardingKey, "true");
+        localStorage.setItem("kindora_onboarding_complete", "true");
       }
     }
-  }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, user?.id, setLocation]);
+  }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, setLocation]);
 
   // Redirect caregivers to the caregiver dashboard
   useEffect(() => {
