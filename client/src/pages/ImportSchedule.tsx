@@ -266,17 +266,7 @@ export default function ImportSchedule() {
   const totalCost = parsedEvents.reduce((sum, e) => sum + (e.cost || 0), 0);
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground" data-testid="text-import-title">
-            Import Schedule
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Use AI to extract events from text, images, or PDFs
-          </p>
-        </div>
-
+    <div className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -611,6 +601,5 @@ export default function ImportSchedule() {
             </>
           )}
         </div>
-      </div>
   );
 }

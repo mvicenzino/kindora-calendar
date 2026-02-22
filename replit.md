@@ -28,7 +28,7 @@ The application utilizes PostgreSQL for persistent data storage. A `DemoAwareSto
 - **Automated Weekly Summaries**: Cozi-style weekly digest emails of calendar events, configurable by family owners/members and opt-in for users.
 
 ### Navigation
-A two-tier sticky navigation system featuring a `Header` (Kindora logo, FamilySelector, Messages, Memories, Search, Profile) and a `ViewSwitcherBar` (Day/Week/Month/Timeline views) for intuitive content access.
+Sidebar navigation (`AppSidebar`) with links to: Calendar (`/`), Messages (`/messages`), Documents (`/documents`), Memories (`/memories`), Care (`/care`), Settings (`/settings`). The Settings page uses tabs for Account (subscription/billing), Family (members, invites, emergency bridge), and Import (AI schedule parser). Unified `Header` with FamilySelector, ThemeToggle, and profile actions. `ViewSwitcherBar` (Day/Week/Month/Timeline views) for calendar navigation.
 
 ## External Dependencies
 ### UI/Styling

@@ -456,13 +456,7 @@ export default function FamilySettings() {
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Family Settings</h1>
-          <p className="text-muted-foreground">{family?.name || "Manage your calendar"}</p>
-        </div>
-
+    <div className="space-y-6">
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
@@ -986,7 +980,6 @@ export default function FamilySettings() {
             </div>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }

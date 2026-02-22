@@ -12,7 +12,6 @@ import Memories from "@/pages/Memories";
 import Onboarding from "@/pages/Onboarding";
 import EventWizard from "@/pages/EventWizard";
 import DemoWelcome from "@/pages/DemoWelcome";
-import FamilySettings from "@/pages/FamilySettings";
 import CaregiverDashboard from "@/pages/CaregiverDashboard";
 import Messages from "@/pages/Messages";
 import Documents from "@/pages/Documents";
@@ -20,7 +19,6 @@ import EmergencyBridge from "@/pages/EmergencyBridge";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import AccountSettings from "@/pages/AccountSettings";
-import ImportSchedule from "@/pages/ImportSchedule";
 import AppSidebar from "@/components/AppSidebar";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -89,10 +87,10 @@ function Router() {
               <Route path="/care" component={CaregiverDashboard} />
               <Route path="/messages" component={Messages} />
               <Route path="/documents" component={Documents} />
-              <Route path="/import" component={ImportSchedule} />
               <Route path="/memories" component={Memories} />
-              <Route path="/family" component={FamilySettings} />
-              <Route path="/settings" component={AccountSettings} />
+              <Route path="/settings/family">{() => <AccountSettings initialTab="family" />}</Route>
+              <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
+              <Route path="/settings">{() => <AccountSettings />}</Route>
             </Switch>
           </AppShell>
         </>

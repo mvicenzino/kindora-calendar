@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Users, MessageCircle, FileText, Image, Heart, Settings, Upload, Shield } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Shield, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -34,8 +34,6 @@ const navItems = [
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Memories", url: "/memories", icon: Image },
   { title: "Care", url: "/care", icon: Heart },
-  { title: "Import", url: "/import", icon: Upload },
-  { title: "Family", url: "/family", icon: Users },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
@@ -156,7 +154,7 @@ export default function AppSidebar({ members = [], selectedMemberIds = [], onTog
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                const isActive = location === item.url || (item.url === '/' && location === '');
+                const isActive = location === item.url || (item.url === '/' && location === '') || (item.url !== '/' && location.startsWith(item.url + '/'));
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
