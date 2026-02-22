@@ -165,7 +165,7 @@ export default function Landing() {
               <>
                 <Button
                   size="sm"
-                  onClick={() => (window.location.href = "/api/login/demo")}
+                  onClick={() => (window.location.href = `/api/login/demo?tz=${new Date().getTimezoneOffset()}`)}
                   variant="secondary"
                   className="text-xs sm:text-sm"
                   data-testid="button-demo"
@@ -394,7 +394,7 @@ export default function Landing() {
                   </Button>
                   <Button
                     size="lg"
-                    onClick={() => (window.location.href = "/api/login/demo")}
+                    onClick={() => (window.location.href = `/api/login/demo?tz=${new Date().getTimezoneOffset()}`)}
                     variant="outline"
                     className="backdrop-blur-sm bg-white/10"
                     data-testid="button-hero-demo"
@@ -673,7 +673,7 @@ export default function Landing() {
               </Button>
               <Button
                 size="lg"
-                onClick={() => (window.location.href = "/api/login/demo")}
+                onClick={() => (window.location.href = `/api/login/demo?tz=${new Date().getTimezoneOffset()}`)}
                 variant="outline"
                 data-testid="button-final-cta-demo"
               >

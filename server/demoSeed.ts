@@ -27,7 +27,7 @@ const CARE_PHOTOS = {
  * This demonstrates the full spectrum of Kindora's features for families
  * who are caring for both children and elderly parents.
  */
-export async function seedDemoAccount(storage: IStorage, userId: string): Promise<void> {
+export async function seedDemoAccount(storage: IStorage, userId: string, tzOffsetMinutes: number = 0): Promise<void> {
   try {
     // Get the user's primary family (created automatically when user is upserted)
     const families = await storage.getUserFamilies(userId);
@@ -35,7 +35,9 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       throw new Error(`No families found for user ${userId}`);
     }
     
-    const today = startOfToday();
+    const now = new Date();
+    const serverMidnight = startOfToday();
+    const today = new Date(serverMidnight.getTime() + tzOffsetMinutes * 60 * 1000);
     
     // ============================================
     // CREATE DEMO USERS FOR OTHER FAMILY MEMBERS

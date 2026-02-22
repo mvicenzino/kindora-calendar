@@ -296,6 +296,7 @@ export async function setupAuth(app: Express) {
   app.get("/api/login/demo", async (req, res) => {
     try {
       const demoUserId = `demo-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const tzOffset = parseInt(req.query.tz as string) || 0;
 
       await storage.upsertUser({
         id: demoUserId,
@@ -310,7 +311,7 @@ export async function setupAuth(app: Express) {
         await storage.createFamily(demoUserId, { name: "Your Family", createdBy: demoUserId });
       }
 
-      await seedDemoAccount(storage, demoUserId);
+      await seedDemoAccount(storage, demoUserId, tzOffset);
 
       const sessionUser = createLocalUserSession(demoUserId, `${demoUserId}@example.com`, "Demo", "User");
 

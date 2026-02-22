@@ -94,7 +94,7 @@ export default function DemoWelcome() {
           <p className="text-xl mb-4">Something went wrong</p>
           <p className="text-muted-foreground mb-6">{verificationError}</p>
           <Button
-            onClick={() => window.location.href = "/api/login/demo"}
+            onClick={() => window.location.href = `/api/login/demo?tz=${new Date().getTimezoneOffset()}`}
           >
             Try Again
           </Button>
