@@ -160,7 +160,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
           {HOURS.map(hour => (
             <div
               key={hour}
-              className="absolute left-0 right-0 border-b border-border/20 cursor-pointer hover:bg-muted/20 transition-colors"
+              className="absolute left-0 right-0 border-b border-border/40 dark:border-white/[0.06] cursor-pointer hover:bg-muted/20 transition-colors"
               style={{ top: (hour - START_HOUR) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
               onClick={() => handleSlotClick(hour)}
               data-testid={`time-slot-${hour}`}

@@ -149,13 +149,13 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
       </div>
 
       <div className="grid grid-cols-[48px_repeat(7,1fr)] border-b border-border/30">
-        <div className="border-r border-border/20" />
+        <div className="border-r border-border/30 dark:border-white/[0.08]" />
         {days.map((day) => {
           const isTodayDate = isToday(day);
           return (
             <div
               key={day.toISOString()}
-              className={`text-center py-1.5 border-r border-border/20 last:border-r-0 ${isTodayDate ? 'bg-primary/5' : ''}`}
+              className={`text-center py-1.5 border-r border-border/30 dark:border-white/[0.08] last:border-r-0 ${isTodayDate ? 'bg-primary/5' : ''}`}
               data-testid={`week-col-header-${format(day, 'yyyy-MM-dd')}`}
             >
               <p className="text-[10px] text-muted-foreground uppercase">{format(day, 'EEE')}</p>
@@ -177,11 +177,11 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
         style={isDragging ? { cursor: 'grabbing', userSelect: 'none' } : undefined}
       >
         <div className="grid grid-cols-[48px_repeat(7,1fr)]" style={{ height: HOURS.length * HOUR_HEIGHT }}>
-          <div className="relative border-r border-border/20">
+          <div className="relative border-r border-border/30 dark:border-white/[0.08]">
             {HOURS.map(hour => (
               <div
                 key={hour}
-                className="absolute left-0 right-0 border-b border-border/10"
+                className="absolute left-0 right-0 border-b border-border/40 dark:border-white/[0.06]"
                 style={{ top: (hour - START_HOUR) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
               >
                 <span className="absolute left-1 top-0 text-[9px] text-muted-foreground/50 font-mono select-none">
@@ -197,12 +197,12 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
               <div
                 key={day.toISOString()}
                 ref={(el) => { if (el) dayColumnsRef.current[dayIdx] = el; }}
-                className={`relative border-r border-border/10 last:border-r-0 ${isTodayDate ? 'bg-primary/[0.02]' : ''}`}
+                className={`relative border-r border-border/30 dark:border-white/[0.08] last:border-r-0 ${isTodayDate ? 'bg-primary/[0.02]' : ''}`}
               >
                 {HOURS.map(hour => (
                   <div
                     key={hour}
-                    className="absolute left-0 right-0 border-b border-border/10 cursor-pointer hover:bg-muted/15 transition-colors"
+                    className="absolute left-0 right-0 border-b border-border/40 dark:border-white/[0.06] cursor-pointer hover:bg-muted/15 transition-colors"
                     style={{ top: (hour - START_HOUR) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
                     onClick={() => handleSlotClick(day, hour)}
                   />

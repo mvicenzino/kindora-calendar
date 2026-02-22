@@ -143,9 +143,9 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
         </div>
       </div>
 
-      <div className="grid grid-cols-7 border-b border-border/20">
+      <div className="grid grid-cols-7 border-b border-border/30 dark:border-white/[0.08]">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
-          <div key={idx} className="text-center py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-r border-border/10 last:border-r-0">
+          <div key={idx} className="text-center py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-r border-border/30 dark:border-white/[0.08] last:border-r-0">
             {day}
           </div>
         ))}
@@ -153,7 +153,7 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
 
       <div className="flex-1 grid" style={{ gridTemplateRows: `repeat(${weeks.length}, 1fr)` }}>
         {weeks.map((week, weekIdx) => (
-          <div key={weekIdx} className="grid grid-cols-7 border-b border-border/10 last:border-b-0 min-h-0">
+          <div key={weekIdx} className="grid grid-cols-7 border-b border-border/30 dark:border-white/[0.06] last:border-b-0 min-h-0">
             {week.map((day) => {
               const dayEvents = getEventsForDay(day);
               const isCurrentMonth = isSameMonth(day, date);
@@ -167,7 +167,7 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
                   key={day.toISOString()}
                   ref={(el) => setCellRef(dateStr, el)}
                   className={`
-                    border-r border-border/10 last:border-r-0 p-0.5 overflow-hidden cursor-pointer
+                    border-r border-border/30 dark:border-white/[0.06] last:border-r-0 p-0.5 overflow-hidden cursor-pointer
                     transition-colors flex flex-col min-h-0
                     ${!isCurrentMonth ? 'opacity-30' : ''}
                     ${isTodayDate ? 'bg-primary/[0.04]' : ''}
