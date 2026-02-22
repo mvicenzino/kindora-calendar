@@ -284,6 +284,17 @@ export default function Home() {
     }
   };
 
+  const handleEventDrop = useCallback(async (event: UiEvent, newStart: Date, newEnd: Date) => {
+    const realId = event.id.includes('_occ_') ? event.id.split('_occ_')[0] : event.id;
+    await updateEventMutation.mutateAsync({
+      id: realId,
+      data: {
+        startTime: newStart,
+        endTime: newEnd,
+      },
+    });
+  }, [updateEventMutation]);
+
   const handleDeleteEvent = async (eventId: string) => {
     const realId = eventId.includes('_occ_') ? eventId.split('_occ_')[0] : eventId;
     await deleteEventMutation.mutateAsync(realId);
@@ -379,6 +390,7 @@ export default function Home() {
             onAddEvent={handleAddEvent}
             onAddEventForDate={handleAddEventForDate}
             onDateChange={handleDateChange}
+            onEventDrop={handleEventDrop}
           />
         )}
 
@@ -404,6 +416,7 @@ export default function Home() {
             onAddEventForDate={handleAddEventForDate}
             onDateChange={handleDateChange}
             onWeekChange={handleWeekChange}
+            onEventDrop={handleEventDrop}
           />
         )}
 
@@ -431,6 +444,7 @@ export default function Home() {
             onAddEvent={handleAddEvent}
             onAddEventForDate={handleDayClick}
             onDateChange={handleDateChange}
+            onEventDrop={handleEventDrop}
           />
         )}
 

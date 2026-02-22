@@ -1,7 +1,8 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useCallback } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, isToday } from "date-fns";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useEventDrag } from "@/hooks/useEventDrag";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
 interface WeekGridViewProps {
@@ -13,6 +14,7 @@ interface WeekGridViewProps {
   onAddEventForDate?: (date: Date) => void;
   onDateChange?: (date: Date) => void;
   onWeekChange?: (date: Date) => void;
+  onEventDrop?: (event: UiEvent, newStart: Date, newEnd: Date) => void;
 }
 
 const HOUR_HEIGHT = 44;
@@ -56,11 +58,23 @@ function layoutOverlappingEvents(events: UiEvent[]) {
   return result;
 }
 
-export default function WeekGridView({ date, events, members, onEventClick, onAddEvent, onAddEventForDate, onDateChange, onWeekChange }: WeekGridViewProps) {
+export default function WeekGridView({ date, events, members, onEventClick, onAddEvent, onAddEventForDate, onDateChange, onWeekChange, onEventDrop }: WeekGridViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dayColumnsRef = useRef<HTMLDivElement[]>([]);
   const weekStart = startOfWeek(date);
   const weekEnd = endOfWeek(date);
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  const handleDrop = useCallback((event: UiEvent, newStart: Date, newEnd: Date) => {
+    if (onEventDrop) onEventDrop(event, newStart, newEnd);
+  }, [onEventDrop]);
+
+  const { dragState, isDragging, startDrag, onPointerMoveWeek, endDrag, cancelDrag } = useEventDrag({
+    hourHeight: HOUR_HEIGHT,
+    startHour: START_HOUR,
+    snapMinutes: 15,
+    onDrop: handleDrop,
+  });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -88,11 +102,28 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
   }, [events, days]);
 
   const handleSlotClick = (day: Date, hour: number) => {
+    if (isDragging) return;
     if (onAddEventForDate) {
       const d = new Date(day);
       d.setHours(hour, 0, 0, 0);
       onAddEventForDate(d);
     }
+  };
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (isDragging) onPointerMoveWeek(e, dayColumnsRef.current);
+  }, [isDragging, onPointerMoveWeek]);
+
+  const handlePointerUp = useCallback(() => {
+    if (isDragging) endDrag(undefined, days);
+  }, [isDragging, endDrag, days]);
+
+  const handlePointerCancel = useCallback(() => {
+    if (isDragging) cancelDrag();
+  }, [isDragging, cancelDrag]);
+
+  const findOriginalDayIndex = (event: UiEvent) => {
+    return days.findIndex(d => isSameDay(d, event.startTime));
   };
 
   return (
@@ -124,7 +155,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
 
       <div className="grid grid-cols-[48px_repeat(7,1fr)] border-b border-border/30">
         <div className="border-r border-border/20" />
-        {days.map((day, i) => {
+        {days.map((day) => {
           const isTodayDate = isToday(day);
           return (
             <div
@@ -141,7 +172,15 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
         })}
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden"
+        onPointerMove={isDragging ? handlePointerMove : undefined}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
+        onPointerLeave={handlePointerCancel}
+        style={isDragging ? { cursor: 'grabbing', userSelect: 'none' } : undefined}
+      >
         <div className="grid grid-cols-[48px_repeat(7,1fr)]" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           <div className="relative border-r border-border/20">
             {HOURS.map(hour => (
@@ -160,7 +199,11 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
           {eventsByDay.map(({ day, events: dayEvts, layout }, dayIdx) => {
             const isTodayDate = isToday(day);
             return (
-              <div key={day.toISOString()} className={`relative border-r border-border/10 last:border-r-0 ${isTodayDate ? 'bg-primary/[0.02]' : ''}`}>
+              <div
+                key={day.toISOString()}
+                ref={(el) => { if (el) dayColumnsRef.current[dayIdx] = el; }}
+                className={`relative border-r border-border/10 last:border-r-0 ${isTodayDate ? 'bg-primary/[0.02]' : ''}`}
+              >
                 {HOURS.map(hour => (
                   <div
                     key={hour}
@@ -185,30 +228,79 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                     const widthPct = 100 / totalCols;
                     const leftPct = colIdx * widthPct;
 
+                    const isBeingDragged = dragState?.eventId === event.id;
+                    const movedToOtherDay = isBeingDragged && dragState.currentDayIndex !== dayIdx;
+                    if (movedToOtherDay) return null;
+
+                    const displayTop = isBeingDragged ? dragState.currentTop : pos.top;
+                    const displayHeight = isBeingDragged ? dragState.currentHeight : pos.height;
+
                     return (
-                      <button
+                      <div
                         key={event.id}
-                        onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                        data-testid={`grid-event-${event.id}`}
-                        className="absolute rounded-sm px-1 py-0.5 text-left overflow-hidden transition-all cursor-pointer"
+                        className={`absolute rounded-sm text-left overflow-hidden ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : 'cursor-grab'}`}
                         style={{
-                          top: pos.top + 1,
-                          height: pos.height - 2,
+                          top: displayTop + 1,
+                          height: displayHeight - 2,
                           left: `${leftPct}%`,
                           width: `calc(${widthPct}% - 2px)`,
                           backgroundColor: event.color + '25',
-                          boxShadow: `inset 2px 0 0 ${event.color}`,
+                          boxShadow: isBeingDragged
+                            ? `inset 2px 0 0 ${event.color}, 0 4px 12px rgba(0,0,0,0.3)`
+                            : `inset 2px 0 0 ${event.color}`,
+                          transition: isBeingDragged ? 'none' : 'top 0.15s ease, height 0.15s ease',
                         }}
+                        data-testid={`grid-event-${event.id}`}
                       >
-                        <p className="text-[10px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
-                        {pos.height > 25 && (
-                          <p className="text-[9px] text-muted-foreground truncate">
-                            {format(event.startTime, 'h:mma').toLowerCase()}
-                          </p>
+                        <div
+                          className="absolute inset-0 px-1 py-0.5 cursor-grab active:cursor-grabbing"
+                          style={{ bottom: '5px' }}
+                          onPointerDown={(e) => {
+                            if (onEventDrop) startDrag(e, event, 'move', pos.top, pos.height, dayIdx);
+                          }}
+                          onClick={(e) => { e.stopPropagation(); if (!isDragging) onEventClick(event); }}
+                        >
+                          <p className="text-[10px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
+                          {displayHeight > 25 && (
+                            <p className="text-[9px] text-muted-foreground truncate">
+                              {format(event.startTime, 'h:mma').toLowerCase()}
+                            </p>
+                          )}
+                        </div>
+
+                        {onEventDrop && (
+                          <div
+                            className="absolute bottom-0 left-0 right-0 h-[5px] cursor-s-resize z-10"
+                            onPointerDown={(e) => startDrag(e, event, 'resize', pos.top, pos.height, dayIdx)}
+                            data-testid={`resize-handle-${event.id}`}
+                          >
+                            <div className="mx-auto w-4 h-0.5 rounded-full bg-foreground/20 mt-0.5" />
+                          </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
+
+                  {dragState && dragState.currentDayIndex === dayIdx && dragState.originalDayIndex !== dayIdx && (() => {
+                    const event = dragState.event;
+                    return (
+                      <div
+                        className="absolute rounded-sm text-left overflow-hidden z-30 opacity-90 shadow-lg"
+                        style={{
+                          top: dragState.currentTop + 1,
+                          height: dragState.currentHeight - 2,
+                          left: 0,
+                          width: 'calc(100% - 2px)',
+                          backgroundColor: event.color + '25',
+                          boxShadow: `inset 2px 0 0 ${event.color}, 0 4px 12px rgba(0,0,0,0.3)`,
+                        }}
+                      >
+                        <div className="px-1 py-0.5">
+                          <p className="text-[10px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             );
