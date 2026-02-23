@@ -14,6 +14,61 @@ import { parseICalData } from "./icalParser";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
+import type Stripe from "stripe";
+
+let cachedFamilyPlanPriceId: string | null = null;
+
+async function getOrCreateFamilyPlanPrice(stripe: Stripe): Promise<string> {
+  if (cachedFamilyPlanPriceId) return cachedFamilyPlanPriceId;
+
+  const knownPriceId = "price_1T3I35QiL2ZGFBUjx2Q6WxHA";
+  try {
+    const price = await stripe.prices.retrieve(knownPriceId);
+    if (price.active) {
+      cachedFamilyPlanPriceId = knownPriceId;
+      return knownPriceId;
+    }
+  } catch {}
+
+  const products = await stripe.products.search({
+    query: 'name~"Kindora Family Plan"',
+    limit: 1,
+  });
+
+  let productId: string;
+  if (products.data.length > 0) {
+    productId = products.data[0].id;
+  } else {
+    const product = await stripe.products.create({
+      name: "Kindora Family Plan",
+      description: "Family calendar with unlimited members, caregiver tools, weekly email summaries, and more.",
+    });
+    productId = product.id;
+    console.log("Created Stripe product:", productId);
+  }
+
+  const prices = await stripe.prices.list({
+    product: productId,
+    active: true,
+    type: "recurring",
+    limit: 1,
+  });
+
+  if (prices.data.length > 0) {
+    cachedFamilyPlanPriceId = prices.data[0].id;
+    return cachedFamilyPlanPriceId;
+  }
+
+  const price = await stripe.prices.create({
+    product: productId,
+    unit_amount: 900,
+    currency: "usd",
+    recurring: { interval: "month" },
+  });
+  cachedFamilyPlanPriceId = price.id;
+  console.log("Created Stripe price:", price.id);
+  return cachedFamilyPlanPriceId;
+}
 
 // Helper function to get familyId from request or fallback to user's first family
 async function getFamilyId(req: any, userId: string): Promise<string | null> {
@@ -3792,7 +3847,7 @@ Visit Kindora Calendar: ${joinUrl}
 
   app.get("/api/subscription/status", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
       const user = await storage.getUser(userId);
@@ -3812,15 +3867,16 @@ Visit Kindora Calendar: ${joinUrl}
 
   app.post("/api/checkout/create-session", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "User not found" });
 
       const stripe = await getUncachableStripeClient();
-      const priceId = "price_1T3I35QiL2ZGFBUjx2Q6WxHA";
       const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+
+      const priceId = await getOrCreateFamilyPlanPrice(stripe);
 
       let customerId = user.stripeCustomerId;
 
@@ -3857,7 +3913,7 @@ Visit Kindora Calendar: ${joinUrl}
 
   app.post("/api/subscription/cancel", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
       const user = await storage.getUser(userId);
@@ -3885,7 +3941,7 @@ Visit Kindora Calendar: ${joinUrl}
 
   app.post("/api/subscription/reactivate", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
       const user = await storage.getUser(userId);
@@ -3913,7 +3969,7 @@ Visit Kindora Calendar: ${joinUrl}
 
   app.post("/api/checkout/create-portal-session", isAuthenticated, async (req, res) => {
     try {
-      const userId = (req as any).user?.id;
+      const userId = (req as any).user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
       const user = await storage.getUser(userId);
