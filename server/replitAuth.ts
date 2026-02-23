@@ -376,7 +376,14 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       return next();
     }
 
-    if (user.refresh_token && user.access_token !== "local-auth") {
+    if (user.access_token === "local-auth") {
+      const newExpiry = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
+      user.expires_at = newExpiry;
+      if (user.claims) user.claims.exp = newExpiry;
+      return next();
+    }
+
+    if (user.refresh_token) {
       try {
         const config = await getOidcConfig();
         const tokenResponse = await client.refreshTokenGrant(config, user.refresh_token);
@@ -393,6 +400,13 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const sessionData = (req as any).session?.passport?.user;
   if (sessionData && sessionData.claims?.sub) {
     const now = Math.floor(Date.now() / 1000);
+    if (sessionData.access_token === "local-auth") {
+      const newExpiry = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
+      sessionData.expires_at = newExpiry;
+      if (sessionData.claims) sessionData.claims.exp = newExpiry;
+      (req as any).user = sessionData;
+      return next();
+    }
     if (!sessionData.expires_at || now <= sessionData.expires_at) {
       (req as any).user = sessionData;
       return next();
