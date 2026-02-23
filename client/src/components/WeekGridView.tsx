@@ -72,7 +72,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
     if (onEventDrop) onEventDrop(event, newStart, newEnd);
   }, [onEventDrop]);
 
-  const { dragState, isDragging, pendingEventId, startDrag, onPointerMoveWeek, endDrag, cancelDrag } = useEventDrag({
+  const { dragState, isDragging, justDraggedRef, pendingEventId, startDrag, onPointerMoveWeek, endDrag, cancelDrag } = useEventDrag({
     hourHeight: HOUR_HEIGHT,
     startHour: START_HOUR,
     snapMinutes: 15,
@@ -265,7 +265,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                           onPointerDown={(e) => {
                             if (onEventDrop) startDrag(e, event, 'move', pos.top, pos.height, dayIdx);
                           }}
-                          onClick={(e) => { e.stopPropagation(); if (!isDragging) onEventClick(event); }}
+                          onClick={(e) => { e.stopPropagation(); if (!isDragging && !justDraggedRef.current) onEventClick(event); }}
                         >
                           <p className="text-[9px] sm:text-[10px] font-semibold text-foreground truncate leading-tight pr-3">{event.title}</p>
                           {displayHeight > 25 && (

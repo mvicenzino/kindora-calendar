@@ -68,7 +68,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
     if (onEventDrop) onEventDrop(event, newStart, newEnd);
   }, [onEventDrop]);
 
-  const { dragState, isDragging, pendingEventId, startDrag, onPointerMove, endDrag, cancelDrag } = useEventDrag({
+  const { dragState, isDragging, justDraggedRef, pendingEventId, startDrag, onPointerMove, endDrag, cancelDrag } = useEventDrag({
     hourHeight: HOUR_HEIGHT,
     startHour: START_HOUR,
     snapMinutes: 15,
@@ -226,7 +226,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                     onPointerDown={(e) => {
                       if (onEventDrop) startDrag(e, event, 'move', pos.top, pos.height);
                     }}
-                    onClick={(e) => { e.stopPropagation(); if (!isDragging) onEventClick(event); }}
+                    onClick={(e) => { e.stopPropagation(); if (!isDragging && !justDraggedRef.current) onEventClick(event); }}
                   >
                     <p className="text-[11px] font-semibold text-foreground truncate leading-tight pr-4">{event.title}</p>
                     {displayHeight > 30 && (

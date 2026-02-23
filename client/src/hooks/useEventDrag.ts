@@ -49,6 +49,8 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     target: HTMLElement;
   } | null>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const justDraggedRef = useRef(false);
+  const justDraggedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const snapToGrid = useCallback((minutes: number) => {
     return Math.round(minutes / snapMinutes) * snapMinutes;
@@ -69,7 +71,7 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [dragState]);
 
-  const cleanupDrag = useCallback(() => {
+  const cleanupDrag = useCallback((wasDrag = false) => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -82,6 +84,11 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
       scrollContainerRef.current.style.touchAction = '';
       scrollContainerRef.current.style.overflowY = '';
       scrollContainerRef.current = null;
+    }
+    if (wasDrag) {
+      justDraggedRef.current = true;
+      if (justDraggedTimer.current) clearTimeout(justDraggedTimer.current);
+      justDraggedTimer.current = setTimeout(() => { justDraggedRef.current = false; }, 300);
     }
   }, []);
 
@@ -308,11 +315,12 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     const startChanged = newStart.getTime() !== state.event.startTime.getTime();
     const endChanged = newEnd.getTime() !== state.event.endTime.getTime();
 
-    if (startChanged || endChanged) {
+    const didMove = startChanged || endChanged;
+    if (didMove) {
       onDrop(state.event, newStart, newEnd);
     }
 
-    cleanupDrag();
+    cleanupDrag(didMove);
   }, [hourHeight, startHour, snapToGrid, onDrop, cleanupDrag]);
 
   const cancelDrag = useCallback(() => {
@@ -322,6 +330,7 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
   return {
     dragState,
     isDragging: dragState !== null && dragState.confirmed,
+    justDraggedRef,
     pendingEventId,
     startDrag,
     onPointerMove,
