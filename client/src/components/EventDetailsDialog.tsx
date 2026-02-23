@@ -16,7 +16,7 @@ import type { User } from "@shared/schema";
 interface EventDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onEdit: () => void;
+  onEdit?: () => void;
   onDelete?: (eventId: string) => void;
   event: UiEvent;
 }
@@ -109,7 +109,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
             style={{ background: 'hsl(var(--card) / 0.85)' }}
           />
           <div className="relative flex items-center justify-between gap-3">
-            <button
+            {onEdit && <button
               onClick={onEdit}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
               style={{
@@ -121,7 +121,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
             >
               <Edit3 className="w-3 h-3" />
               Edit
-            </button>
+            </button>}
 
             <div className="flex items-center gap-2">
               <div
@@ -297,7 +297,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
             backdropFilter: 'blur(20px)',
           }}
         >
-          <Button
+          {onEdit && <Button
             onClick={onEdit}
             className="flex-1 h-9 rounded-lg text-xs font-semibold"
             style={{
@@ -309,7 +309,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
           >
             <Edit3 className="w-3 h-3 mr-1.5" />
             Edit Event
-          </Button>
+          </Button>}
           {onDelete && (
             <Button
               variant="ghost"

@@ -1,9 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
+import { ROLE_PERMISSIONS, type FamilyRole } from "@shared/schema";
+
+type Permissions = typeof ROLE_PERMISSIONS[FamilyRole];
 
 interface RoleResponse {
   role: string;
+  permissions: Permissions | null;
 }
 
 export function useUserRole() {
@@ -15,12 +19,16 @@ export function useUserRole() {
     enabled: isAuthenticated && !!activeFamilyId,
   });
 
+  const permissions = data?.permissions ?? null;
+
   return {
-    role: data?.role,
+    role: data?.role as FamilyRole | undefined,
     isOwner: data?.role === 'owner',
     isMember: data?.role === 'member',
     isCaregiver: data?.role === 'caregiver',
     isLoading: isLoading || isFetching,
-    activeFamilyId
+    activeFamilyId,
+    permissions,
+    can: (permission: keyof Permissions) => permissions?.[permission] ?? false,
   };
 }

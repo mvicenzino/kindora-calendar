@@ -32,7 +32,7 @@ interface DayEventsDialogProps {
   events: Event[];
   members: Member[];
   onEventClick: (event: Event) => void;
-  onAddEvent: () => void;
+  onAddEvent?: () => void;
 }
 
 export default function DayEventsDialog({
@@ -67,7 +67,7 @@ export default function DayEventsDialog({
 
   const handleAddEvent = () => {
     onClose();
-    onAddEvent();
+    onAddEvent?.();
   };
 
   return (
@@ -120,7 +120,7 @@ export default function DayEventsDialog({
                 <CalendarDays className="w-5 h-5 text-muted-foreground" />
               </div>
               <p className="text-xs text-muted-foreground mb-3">No events scheduled</p>
-              <Button
+              {onAddEvent && <Button
                 onClick={handleAddEvent}
                 size="sm"
                 className="h-8 text-xs rounded-lg"
@@ -128,7 +128,7 @@ export default function DayEventsDialog({
               >
                 <Plus className="w-3 h-3 mr-1.5" />
                 Add Event
-              </Button>
+              </Button>}
             </div>
           ) : (
             <div className="px-3 py-2 space-y-1.5">
@@ -198,7 +198,7 @@ export default function DayEventsDialog({
               backdropFilter: 'blur(20px)',
             }}
           >
-            <Button
+            {onAddEvent && <Button
               onClick={handleAddEvent}
               variant="ghost"
               className="w-full h-8 text-xs rounded-lg"
@@ -206,7 +206,7 @@ export default function DayEventsDialog({
             >
               <Plus className="w-3 h-3 mr-1.5" />
               Add Event
-            </Button>
+            </Button>}
           </div>
         )}
       </DialogContent>

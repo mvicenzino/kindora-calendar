@@ -4,7 +4,7 @@ import { storage, NotFoundError } from "./storage";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
+import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
 import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
 import { startOfWeek, endOfWeek, format, addDays } from "date-fns";
@@ -379,7 +379,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "You are not a member of this family" });
       }
       
-      res.json({ role });
+      const permissions = role ? getPermissionsForRole(role) : null;
+      res.json({ role, permissions });
     } catch (error) {
       console.error("Error fetching user role:", error);
       res.status(500).json({ error: "Failed to fetch user role" });
@@ -1660,10 +1661,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found for user" });
       }
       
-      // Verify user is a member of this family
       const role = await getUserFamilyRole(storage, userId, familyId);
       if (!role) {
         return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canSendMessages')) {
+        return res.status(403).json({ error: "You don't have permission to send messages" });
       }
       
       const noteData = {
@@ -1720,8 +1725,8 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(404).json({ error: "Note not found" });
       }
       
-      // Allow deletion if user is the author or has owner/member role
-      if (noteToDelete.authorUserId !== userId && role === 'caregiver') {
+      const context = { userId, familyId, role };
+      if (noteToDelete.authorUserId !== userId && !hasPermission(context, 'canDeleteMessages')) {
         return res.status(403).json({ error: "You can only delete your own notes" });
       }
       
@@ -1894,9 +1899,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can create medications
-      if (role === 'caregiver') {
-        return res.status(403).json({ error: "Caregivers cannot create medications" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageMedications')) {
+        return res.status(403).json({ error: "You don't have permission to manage medications" });
       }
       
       const result = insertMedicationSchema.safeParse(req.body);
@@ -1926,9 +1931,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can update medications
-      if (role === 'caregiver') {
-        return res.status(403).json({ error: "Caregivers cannot update medications" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageMedications')) {
+        return res.status(403).json({ error: "You don't have permission to manage medications" });
       }
       
       const medication = await storage.updateMedication(req.params.id, familyId, req.body);
@@ -1956,9 +1961,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can delete medications
-      if (role === 'caregiver') {
-        return res.status(403).json({ error: "Caregivers cannot delete medications" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageMedications')) {
+        return res.status(403).json({ error: "You don't have permission to manage medications" });
       }
       
       await storage.deleteMedication(req.params.id, familyId);
@@ -2064,6 +2069,11 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canLogMedications')) {
+        return res.status(403).json({ error: "You don't have permission to log medications" });
+      }
+      
       // Verify the medication exists
       const medication = await storage.getMedication(req.params.medicationId, familyId);
       if (!medication) {
@@ -2156,7 +2166,11 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // All family members (including caregivers) can send messages
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canSendMessages')) {
+        return res.status(403).json({ error: "You don't have permission to send messages" });
+      }
+      
       const messageData = {
         ...req.body,
         authorUserId: userId,
@@ -2211,7 +2225,8 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(404).json({ error: "Message not found" });
       }
       
-      if (message.authorUserId !== userId && role !== 'owner') {
+      const context = { userId, familyId, role };
+      if (message.authorUserId !== userId && !hasPermission(context, 'canDeleteMessages')) {
         return res.status(403).json({ error: "You can only delete your own messages" });
       }
       
@@ -2268,9 +2283,13 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "Valid hourly rate is required" });
       }
       
-      // Determine target user (owners can set for others)
+      // Determine target user (users with canManagePayRates can set for others)
       let targetUserId = userId;
-      if (caregiverUserId && role === 'owner') {
+      if (caregiverUserId && caregiverUserId !== userId) {
+        const context = { userId, familyId, role };
+        if (!hasPermission(context, 'canManagePayRates')) {
+          return res.status(403).json({ error: "You don't have permission to set pay rates for other users" });
+        }
         targetUserId = caregiverUserId;
       }
       
@@ -2665,10 +2684,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "Family ID is required" });
       }
       
-      // Check if user has permission to manage this setting (owner/member only)
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can configure weekly summaries" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageWeeklySummary')) {
+        return res.status(403).json({ error: "You don't have permission to manage weekly summaries" });
       }
       
       const schedule = await storage.upsertWeeklySummarySchedule(familyId, {
@@ -2945,9 +2968,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can upload documents
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can upload documents" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canUploadDocuments')) {
+        return res.status(403).json({ error: "You don't have permission to upload documents" });
       }
       
       const { fileName, contentType } = req.body;
@@ -2993,9 +3016,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can upload documents
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can upload documents" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canUploadDocuments')) {
+        return res.status(403).json({ error: "You don't have permission to upload documents" });
       }
       
       const { title, documentType, description, memberId, fileUrl, fileName, fileSize, mimeType } = req.body;
@@ -3048,9 +3071,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can delete documents
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can delete documents" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canDeleteDocuments')) {
+        return res.status(403).json({ error: "You don't have permission to delete documents" });
       }
       
       await storage.deleteCareDocument(req.params.id, familyId);
@@ -3118,8 +3141,13 @@ Visit Kindora Calendar: ${joinUrl}
       }
       
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || (role !== 'owner' && role !== 'member')) {
-        return res.status(403).json({ error: "Only family owners and members can import from Google Drive" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canImportSchedules')) {
+        return res.status(403).json({ error: "You don't have permission to import from Google Drive" });
       }
       
       const { fileId, title, documentType, description, memberId } = req.body;
@@ -3244,9 +3272,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can view tokens
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can view emergency bridge tokens" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       const tokens = await storage.getEmergencyBridgeTokens(familyId);
@@ -3271,9 +3299,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can create tokens
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can create emergency bridge tokens" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       const { label, expiresInHours } = req.body;
@@ -3320,9 +3348,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can revoke tokens
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can revoke emergency bridge tokens" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       await storage.revokeEmergencyBridgeToken(req.params.id, familyId);
@@ -3352,8 +3380,13 @@ Visit Kindora Calendar: ${joinUrl}
       }
       
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can send emergency bridge emails" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       const family = await storage.getFamilyById(familyId);
@@ -3517,10 +3550,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission to manage invoices (owners and members only)
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can scan for invoices" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canImportSchedules')) {
+        return res.status(403).json({ error: "You don't have permission to scan for invoices" });
       }
 
       const daysBack = req.body.daysBack || 30;
@@ -3606,10 +3643,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission to add to calendar
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can add invoices to calendar" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageInvoices')) {
+        return res.status(403).json({ error: "You don't have permission to manage invoices" });
       }
 
       // Get invoice
@@ -3668,10 +3709,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can dismiss invoices" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageInvoices')) {
+        return res.status(403).json({ error: "You don't have permission to manage invoices" });
       }
 
       await storage.updateParsedInvoiceStatus(invoiceId, familyId, 'dismissed');
@@ -3693,10 +3738,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can delete invoices" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageInvoices')) {
+        return res.status(403).json({ error: "You don't have permission to manage invoices" });
       }
 
       await storage.deleteParsedInvoice(invoiceId, familyId);

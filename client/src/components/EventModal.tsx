@@ -67,9 +67,12 @@ export default function EventModal({
   members,
   selectedDate,
 }: EventModalProps) {
-  const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const { can, isLoading: roleLoading } = useUserRole();
   const { activeFamilyId } = useActiveFamily();
-  const isReadOnly = roleLoading || isCaregiver;
+  const canEdit = !roleLoading && can('canEditEvents');
+  const canCreate = !roleLoading && can('canCreateEvents');
+  const canDelete = !roleLoading && can('canDeleteEvents');
+  const isReadOnly = roleLoading || (!canEdit && !canCreate);
   const defaultDate = selectedDate || new Date();
   const defaultTimes = getDefaultTimes();
   const [title, setTitle] = useState("");

@@ -53,8 +53,8 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'members' | 'settings'>('profile');
   const menuRef = useRef<HTMLDivElement>(null);
-  const { isCaregiver, isLoading: roleLoading } = useUserRole();
-  const isReadOnly = roleLoading || isCaregiver;
+  const { can, isCaregiver, isLoading: roleLoading } = useUserRole();
+  const isReadOnly = roleLoading || !can('canCreateMembers');
   const { activeFamilyId, activeFamily } = useActiveFamily();
   const [, setLocation] = useLocation();
   const { user } = useAuth();

@@ -79,7 +79,7 @@ function isPreviewable(mimeType: string | null | undefined): boolean {
 export default function Documents() {
   const { user } = useAuth();
   const { activeFamilyId } = useActiveFamily();
-  const { isOwner, isMember, isLoading: isLoadingRole } = useUserRole();
+  const { can, isLoading: isLoadingRole } = useUserRole();
   const { toast } = useToast();
   
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -134,7 +134,7 @@ export default function Documents() {
   
   const { data: driveStatus } = useQuery<{ connected: boolean }>({
     queryKey: ['/api/google-drive/status'],
-    enabled: !!activeFamilyId && (isOwner || isMember),
+    enabled: !!activeFamilyId && can('canViewDocuments'),
     staleTime: 60000,
   });
   
@@ -368,7 +368,8 @@ export default function Documents() {
     return member?.color || "#888888";
   };
 
-  const canUpload = isOwner || isMember;
+  const canUpload = can('canUploadDocuments');
+  const canDeleteDocs = can('canDeleteDocuments');
   
   if (!activeFamilyId) {
     return (
@@ -585,7 +586,7 @@ export default function Documents() {
                                       <Download className="w-4 h-4" />
                                     </a>
                                   </Button>
-                                  {canUpload && (
+                                  {canDeleteDocs && (
                                     <Button
                                       variant="ghost"
                                       size="icon"

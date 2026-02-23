@@ -31,7 +31,7 @@ export default function Home() {
   const { activeFamilyId, isLoadingFamily } = useActiveFamily();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { isCaregiver, isLoading: isRoleLoading } = useUserRole();
+  const { isCaregiver, can, isLoading: isRoleLoading } = useUserRole();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('day');
   const [layout, setLayout] = useState<CalendarLayout>('grid');
@@ -389,11 +389,11 @@ export default function Home() {
             events={todayEvents}
             members={members}
             onEventClick={handleEventClick}
-            onAddEvent={handleAddEvent}
-            onAddEventForDate={handleAddEventForDate}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleAddEventForDate : undefined}
             onDateChange={handleDateChange}
-            onEventDrop={handleEventDrop}
-            onEventDelete={handleDeleteEvent}
+            onEventDrop={can('canEditEvents') ? handleEventDrop : undefined}
+            onEventDelete={can('canDeleteEvents') ? handleDeleteEvent : undefined}
           />
         )}
 
@@ -405,7 +405,7 @@ export default function Home() {
             members={members}
             onEventClick={handleEventClick}
             onViewChange={setView}
-            onAddEvent={handleAddEvent}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
           />
         )}
 
@@ -415,12 +415,12 @@ export default function Home() {
             events={weekEvents}
             members={members}
             onEventClick={handleEventClick}
-            onAddEvent={handleAddEvent}
-            onAddEventForDate={handleAddEventForDate}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleAddEventForDate : undefined}
             onDateChange={handleDateChange}
             onWeekChange={handleWeekChange}
-            onEventDrop={handleEventDrop}
-            onEventDelete={handleDeleteEvent}
+            onEventDrop={can('canEditEvents') ? handleEventDrop : undefined}
+            onEventDelete={can('canDeleteEvents') ? handleDeleteEvent : undefined}
           />
         )}
 
@@ -431,8 +431,8 @@ export default function Home() {
             members={members}
             onEventClick={handleEventClick}
             onViewChange={setView}
-            onAddEvent={handleAddEvent}
-            onAddEventForDate={handleAddEventForDate}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleAddEventForDate : undefined}
             onDateChange={handleDateChange}
             onWeekChange={handleWeekChange}
           />
@@ -445,10 +445,10 @@ export default function Home() {
             members={members}
             onEventClick={handleEventClick}
             onViewChange={setView}
-            onAddEvent={handleAddEvent}
-            onAddEventForDate={handleDayClick}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleDayClick : undefined}
             onDateChange={handleDateChange}
-            onEventDrop={handleEventDrop}
+            onEventDrop={can('canEditEvents') ? handleEventDrop : undefined}
           />
         )}
 
@@ -459,8 +459,8 @@ export default function Home() {
             members={members}
             onEventClick={handleEventClick}
             onViewChange={setView}
-            onAddEvent={handleAddEvent}
-            onAddEventForDate={handleDayClick}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleDayClick : undefined}
             onDateChange={handleDateChange}
           />
         )}
@@ -485,7 +485,7 @@ export default function Home() {
           <TimelineView
             events={filteredEvents}
             onEventClick={handleEventClick}
-            onAddEvent={handleAddEvent}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
           />
         )}
       </div>
@@ -497,8 +497,8 @@ export default function Home() {
             setEventDetailsOpen(false);
             setSelectedEventId(undefined);
           }}
-          onEdit={handleEditFromDetails}
-          onDelete={handleDeleteEvent}
+          onEdit={can('canEditEvents') ? handleEditFromDetails : undefined}
+          onDelete={can('canDeleteEvents') ? handleDeleteEvent : undefined}
           event={selectedEvent}
         />
       )}
@@ -547,7 +547,7 @@ export default function Home() {
         events={filteredEvents}
         members={members}
         onEventClick={handleEventClick}
-        onAddEvent={() => handleAddEventForDate(selectedDayDate)}
+        onAddEvent={can('canCreateEvents') ? () => handleAddEventForDate(selectedDayDate) : undefined}
       />
     </div>
   );

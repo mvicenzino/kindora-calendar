@@ -25,9 +25,11 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   const [uploading, setUploading] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const { toast } = useToast();
-  const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const { can, isLoading: roleLoading } = useUserRole();
   const { activeFamilyId } = useActiveFamily();
-  const isReadOnly = roleLoading || isCaregiver;
+  const canEditEvents = !roleLoading && can('canEditEvents');
+  const canDeleteEvents = !roleLoading && can('canDeleteEvents');
+  const isReadOnly = roleLoading || !canEditEvents;
 
   const { data: currentUser } = useQuery<User>({
     queryKey: ['/api/auth/user'],
