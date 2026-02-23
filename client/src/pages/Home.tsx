@@ -393,6 +393,7 @@ export default function Home() {
             onAddEventForDate={handleAddEventForDate}
             onDateChange={handleDateChange}
             onEventDrop={handleEventDrop}
+            onEventDelete={handleDeleteEvent}
           />
         )}
 
@@ -419,6 +420,7 @@ export default function Home() {
             onDateChange={handleDateChange}
             onWeekChange={handleWeekChange}
             onEventDrop={handleEventDrop}
+            onEventDelete={handleDeleteEvent}
           />
         )}
 
@@ -496,6 +498,7 @@ export default function Home() {
             setSelectedEventId(undefined);
           }}
           onEdit={handleEditFromDetails}
+          onDelete={handleDeleteEvent}
           event={selectedEvent}
         />
       )}

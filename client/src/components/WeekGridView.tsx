@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useEventDrag } from "@/hooks/useEventDrag";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
+import { X } from "lucide-react";
+
 interface WeekGridViewProps {
   date: Date;
   events: UiEvent[];
@@ -15,6 +17,7 @@ interface WeekGridViewProps {
   onDateChange?: (date: Date) => void;
   onWeekChange?: (date: Date) => void;
   onEventDrop?: (event: UiEvent, newStart: Date, newEnd: Date) => void;
+  onEventDelete?: (eventId: string) => void;
 }
 
 const HOUR_HEIGHT = 44;
@@ -58,7 +61,7 @@ function layoutOverlappingEvents(events: UiEvent[]) {
   return result;
 }
 
-export default function WeekGridView({ date, events, members, onEventClick, onAddEvent, onAddEventForDate, onDateChange, onWeekChange, onEventDrop }: WeekGridViewProps) {
+export default function WeekGridView({ date, events, members, onEventClick, onAddEvent, onAddEventForDate, onDateChange, onWeekChange, onEventDrop, onEventDelete }: WeekGridViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const dayColumnsRef = useRef<HTMLDivElement[]>([]);
   const weekStart = startOfWeek(date);
@@ -241,7 +244,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                     return (
                       <div
                         key={event.id}
-                        className={`absolute rounded-sm text-left overflow-hidden pointer-events-auto ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
+                        className={`absolute rounded-sm text-left overflow-visible pointer-events-auto group ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
                         style={{
                           top: displayTop + 1,
                           height: displayHeight - 2,
@@ -264,13 +267,24 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                           }}
                           onClick={(e) => { e.stopPropagation(); if (!isDragging) onEventClick(event); }}
                         >
-                          <p className="text-[9px] sm:text-[10px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
+                          <p className="text-[9px] sm:text-[10px] font-semibold text-foreground truncate leading-tight pr-3">{event.title}</p>
                           {displayHeight > 25 && (
                             <p className="text-[8px] sm:text-[9px] text-muted-foreground truncate">
                               {format(event.startTime, 'h:mma').toLowerCase()}
                             </p>
                           )}
                         </div>
+
+                        {onEventDelete && !isBeingDragged && (
+                          <button
+                            className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-10"
+                            style={{ background: 'hsl(var(--destructive) / 0.9)', color: '#fff' }}
+                            onClick={(e) => { e.stopPropagation(); onEventDelete(event.id); }}
+                            data-testid={`button-delete-event-${event.id}`}
+                          >
+                            <X className="w-2 h-2" />
+                          </button>
+                        )}
 
                         {onEventDrop && (
                           <div

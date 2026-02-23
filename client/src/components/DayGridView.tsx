@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useEventDrag } from "@/hooks/useEventDrag";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
+import { X } from "lucide-react";
+
 interface DayGridViewProps {
   date: Date;
   events: UiEvent[];
@@ -14,6 +16,7 @@ interface DayGridViewProps {
   onAddEventForDate?: (date: Date) => void;
   onDateChange?: (date: Date) => void;
   onEventDrop?: (event: UiEvent, newStart: Date, newEnd: Date) => void;
+  onEventDelete?: (eventId: string) => void;
 }
 
 const HOUR_HEIGHT = 48;
@@ -57,7 +60,7 @@ function layoutOverlappingEvents(events: UiEvent[]) {
   return result;
 }
 
-export default function DayGridView({ date, events, members = [], onEventClick, onAddEvent, onAddEventForDate, onDateChange, onEventDrop }: DayGridViewProps) {
+export default function DayGridView({ date, events, members = [], onEventClick, onAddEvent, onAddEventForDate, onDateChange, onEventDrop, onEventDelete }: DayGridViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isTodayDate = isToday(date);
 
@@ -202,7 +205,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
               return (
                 <div
                   key={event.id}
-                  className={`absolute rounded-sm text-left overflow-hidden pointer-events-auto ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
+                  className={`absolute rounded-sm text-left overflow-visible pointer-events-auto group ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
                   style={{
                     top: displayTop + 1,
                     height: displayHeight - 2,
@@ -225,7 +228,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                     }}
                     onClick={(e) => { e.stopPropagation(); if (!isDragging) onEventClick(event); }}
                   >
-                    <p className="text-[11px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
+                    <p className="text-[11px] font-semibold text-foreground truncate leading-tight pr-4">{event.title}</p>
                     {displayHeight > 30 && (
                       <p className="text-[10px] text-muted-foreground truncate">
                         {isBeingDragged ? formatDragTime(displayTop, displayHeight) : format(event.startTime, 'h:mm a')}
@@ -241,6 +244,17 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                       </div>
                     )}
                   </div>
+
+                  {onEventDelete && !isBeingDragged && (
+                    <button
+                      className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-10"
+                      style={{ background: 'hsl(var(--destructive) / 0.9)', color: '#fff' }}
+                      onClick={(e) => { e.stopPropagation(); onEventDelete(event.id); }}
+                      data-testid={`button-delete-event-${event.id}`}
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
+                  )}
 
                   {onEventDrop && (
                     <div

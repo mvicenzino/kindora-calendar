@@ -17,10 +17,11 @@ interface EventDetailsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onEdit: () => void;
+  onDelete?: (eventId: string) => void;
   event: UiEvent;
 }
 
-export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: EventDetailsDialogProps) {
+export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, event }: EventDetailsDialogProps) {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { activeFamilyId } = useActiveFamily();
@@ -309,10 +310,21 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
             <Edit3 className="w-3 h-3 mr-1.5" />
             Edit Event
           </Button>
+          {onDelete && (
+            <Button
+              variant="ghost"
+              onClick={() => { onDelete(event.id); onClose(); }}
+              className="h-9 rounded-lg text-xs font-semibold text-destructive hover:text-destructive"
+              data-testid="button-delete-event-details"
+            >
+              <Trash2 className="w-3 h-3 mr-1.5" />
+              Delete
+            </Button>
+          )}
           <Button
             variant="ghost"
             onClick={onClose}
-            className="flex-1 h-9 rounded-lg text-xs font-semibold"
+            className="h-9 rounded-lg text-xs font-semibold"
             data-testid="button-close-bottom"
           >
             Close
