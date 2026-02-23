@@ -148,18 +148,21 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
         </div>
       </div>
 
-      <div className="grid grid-cols-[48px_repeat(7,1fr)] border-b border-border/30">
+      <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[48px_repeat(7,1fr)] border-b border-border/30">
         <div className="border-r border-border/30 dark:border-white/[0.08]" />
         {days.map((day) => {
           const isTodayDate = isToday(day);
           return (
             <div
               key={day.toISOString()}
-              className={`text-center py-1.5 border-r border-border/30 dark:border-white/[0.08] last:border-r-0 ${isTodayDate ? 'bg-primary/5' : ''}`}
+              className={`text-center py-1 sm:py-1.5 border-r border-border/30 dark:border-white/[0.08] last:border-r-0 ${isTodayDate ? 'bg-primary/5' : ''}`}
               data-testid={`week-col-header-${format(day, 'yyyy-MM-dd')}`}
             >
-              <p className="text-[10px] text-muted-foreground uppercase">{format(day, 'EEE')}</p>
-              <p className={`text-sm font-semibold ${isTodayDate ? 'text-primary' : 'text-foreground'}`}>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">
+                <span className="sm:hidden">{format(day, 'EEEEE')}</span>
+                <span className="hidden sm:inline">{format(day, 'EEE')}</span>
+              </p>
+              <p className={`text-xs sm:text-sm font-semibold ${isTodayDate ? 'text-primary' : 'text-foreground'}`}>
                 {format(day, 'd')}
               </p>
             </div>
@@ -176,7 +179,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
         onPointerLeave={handlePointerCancel}
         style={isDragging ? { cursor: 'grabbing', userSelect: 'none' } : undefined}
       >
-        <div className="grid grid-cols-[48px_repeat(7,1fr)]" style={{ height: HOURS.length * HOUR_HEIGHT }}>
+        <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[48px_repeat(7,1fr)]" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           <div className="relative border-r border-border/30 dark:border-white/[0.08]">
             {HOURS.map(hour => (
               <div
@@ -184,7 +187,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                 className="absolute left-0 right-0 border-b border-border/40 dark:border-white/[0.06]"
                 style={{ top: (hour - START_HOUR) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
               >
-                <span className="absolute left-1 top-0 text-[9px] text-muted-foreground/50 font-mono select-none">
+                <span className="absolute left-0.5 sm:left-1 top-0 text-[8px] sm:text-[9px] text-muted-foreground/50 font-mono select-none">
                   {hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}
                 </span>
               </div>
@@ -255,9 +258,9 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                           }}
                           onClick={(e) => { e.stopPropagation(); if (!isDragging) onEventClick(event); }}
                         >
-                          <p className="text-[10px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
+                          <p className="text-[9px] sm:text-[10px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
                           {displayHeight > 25 && (
-                            <p className="text-[9px] text-muted-foreground truncate">
+                            <p className="text-[8px] sm:text-[9px] text-muted-foreground truncate">
                               {format(event.startTime, 'h:mma').toLowerCase()}
                             </p>
                           )}

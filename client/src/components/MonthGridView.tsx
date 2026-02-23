@@ -144,9 +144,18 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
       </div>
 
       <div className="grid grid-cols-7 border-b border-border/30 dark:border-white/[0.08]">
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
-          <div key={idx} className="text-center py-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-r border-border/30 dark:border-white/[0.08] last:border-r-0">
-            {day}
+        {[
+          { short: 'S', full: 'Sun' },
+          { short: 'M', full: 'Mon' },
+          { short: 'T', full: 'Tue' },
+          { short: 'W', full: 'Wed' },
+          { short: 'T', full: 'Thu' },
+          { short: 'F', full: 'Fri' },
+          { short: 'S', full: 'Sat' },
+        ].map((day, idx) => (
+          <div key={idx} className="text-center py-1 sm:py-1.5 text-[9px] sm:text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-r border-border/30 dark:border-white/[0.08] last:border-r-0">
+            <span className="sm:hidden">{day.short}</span>
+            <span className="hidden sm:inline">{day.full}</span>
           </div>
         ))}
       </div>
@@ -197,8 +206,8 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
                           onClick={(e) => { e.stopPropagation(); if (!dragState) onEventClick(event); }}
                           data-testid={`grid-event-${event.id}`}
                           className={`
-                            w-full text-left rounded-sm px-1 py-px truncate text-[10px] leading-tight font-medium
-                            flex items-center gap-1
+                            w-full text-left rounded-sm px-1 py-0.5 sm:py-px truncate text-[9px] sm:text-[10px] leading-tight font-medium
+                            flex items-center gap-0.5 sm:gap-1 min-h-[18px] sm:min-h-0
                             ${isBeingDragged ? 'opacity-40' : 'cursor-grab'}
                           `}
                           style={{

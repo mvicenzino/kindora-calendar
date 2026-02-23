@@ -58,7 +58,7 @@ export default function FamilySelector() {
   return (
     <Select value={activeFamilyId || undefined} onValueChange={handleFamilyChange}>
       <SelectTrigger 
-        className="w-full sm:w-auto sm:min-w-[140px] sm:max-w-[220px] bg-muted/50 border-border text-foreground hover-elevate text-xs"
+        className="w-auto max-w-[130px] sm:max-w-[220px] sm:min-w-[140px] bg-muted/50 border-border text-foreground hover-elevate text-xs"
         data-testid="select-family"
       >
         <SelectValue>

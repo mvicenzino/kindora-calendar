@@ -86,7 +86,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, event }: E
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="sm:max-w-md p-0 border-0 overflow-hidden rounded-2xl max-h-[85vh] flex flex-col gap-0"
+        className="w-[calc(100vw-1.5rem)] max-w-[calc(100vw-1.5rem)] sm:max-w-md p-0 border-0 overflow-hidden rounded-2xl max-h-[85vh] flex flex-col gap-0"
         style={{
           background: 'transparent',
           boxShadow: `0 0 0 1px rgba(255,255,255,0.06), 0 25px 60px -12px rgba(0,0,0,0.5), 0 0 40px -8px ${eventColor}15`,

@@ -165,8 +165,9 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
               onClick={() => handleSlotClick(hour)}
               data-testid={`time-slot-${hour}`}
             >
-              <span className="absolute left-2 top-0.5 text-[10px] text-muted-foreground/60 font-mono select-none">
-                {hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}
+              <span className="absolute left-1 sm:left-2 top-0.5 text-[9px] sm:text-[10px] text-muted-foreground/60 font-mono select-none">
+                <span className="sm:hidden">{hour === 0 ? '12a' : hour < 12 ? `${hour}a` : hour === 12 ? '12p' : `${hour - 12}p`}</span>
+                <span className="hidden sm:inline">{hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`}</span>
               </span>
             </div>
           ))}
@@ -180,7 +181,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
             </div>
           )}
 
-          <div className="absolute left-14 right-2 top-0 bottom-0">
+          <div className="absolute left-10 sm:left-14 right-1 sm:right-2 top-0 bottom-0">
             {dayEvents.map(event => {
               const pos = getEventPosition(event);
               const col = layout.get(event.id);
