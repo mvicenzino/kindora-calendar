@@ -101,11 +101,15 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
     });
   }, [events, days]);
 
-  const handleSlotClick = (day: Date, hour: number) => {
+  const handleSlotClick = (e: React.MouseEvent, day: Date, hour: number) => {
     if (isDragging) return;
     if (onAddEventForDate) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const yInSlot = e.clientY - rect.top;
+      const fractionOfHour = yInSlot / HOUR_HEIGHT;
+      const minuteOffset = Math.floor(fractionOfHour * 4) * 15;
       const d = new Date(day);
-      d.setHours(hour, 0, 0, 0);
+      d.setHours(hour, Math.min(minuteOffset, 45), 0, 0);
       onAddEventForDate(d);
     }
   };
@@ -207,7 +211,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                     key={hour}
                     className="absolute left-0 right-0 border-b border-border/40 dark:border-white/[0.06] cursor-pointer hover:bg-muted/15 transition-colors"
                     style={{ top: (hour - START_HOUR) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
-                    onClick={() => handleSlotClick(day, hour)}
+                    onClick={(e) => handleSlotClick(e, day, hour)}
                   />
                 ))}
 
@@ -217,7 +221,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                   </div>
                 )}
 
-                <div className="absolute inset-0" style={{ left: 2, right: 2 }}>
+                <div className="absolute inset-0 pointer-events-none" style={{ left: 2, right: 2 }}>
                   {dayEvts.map(event => {
                     const pos = getEventPosition(event);
                     const col = layout.get(event.id);
@@ -237,7 +241,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                     return (
                       <div
                         key={event.id}
-                        className={`absolute rounded-sm text-left overflow-hidden ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
+                        className={`absolute rounded-sm text-left overflow-hidden pointer-events-auto ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
                         style={{
                           top: displayTop + 1,
                           height: displayHeight - 2,

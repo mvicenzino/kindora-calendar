@@ -92,11 +92,15 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
     return (now.getHours() + now.getMinutes() / 60 - START_HOUR) * HOUR_HEIGHT;
   }, [isTodayDate]);
 
-  const handleSlotClick = (hour: number) => {
+  const handleSlotClick = (e: React.MouseEvent, hour: number) => {
     if (isDragging) return;
     if (onAddEventForDate) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const yInSlot = e.clientY - rect.top;
+      const fractionOfHour = yInSlot / HOUR_HEIGHT;
+      const minuteOffset = Math.floor(fractionOfHour * 4) * 15;
       const d = new Date(date);
-      d.setHours(hour, 0, 0, 0);
+      d.setHours(hour, Math.min(minuteOffset, 45), 0, 0);
       onAddEventForDate(d);
     }
   };
@@ -162,7 +166,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
               key={hour}
               className="absolute left-0 right-0 border-b border-border/40 dark:border-white/[0.06] cursor-pointer hover:bg-muted/20 transition-colors"
               style={{ top: (hour - START_HOUR) * HOUR_HEIGHT, height: HOUR_HEIGHT }}
-              onClick={() => handleSlotClick(hour)}
+              onClick={(e) => handleSlotClick(e, hour)}
               data-testid={`time-slot-${hour}`}
             >
               <span className="absolute left-1 sm:left-2 top-0.5 text-[9px] sm:text-[10px] text-muted-foreground/60 font-mono select-none">
@@ -181,7 +185,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
             </div>
           )}
 
-          <div className="absolute left-10 sm:left-14 right-1 sm:right-2 top-0 bottom-0">
+          <div className="absolute left-10 sm:left-14 right-1 sm:right-2 top-0 bottom-0 pointer-events-none">
             {dayEvents.map(event => {
               const pos = getEventPosition(event);
               const col = layout.get(event.id);
@@ -198,7 +202,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
               return (
                 <div
                   key={event.id}
-                  className={`absolute rounded-sm text-left overflow-hidden ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
+                  className={`absolute rounded-sm text-left overflow-hidden pointer-events-auto ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
                   style={{
                     top: displayTop + 1,
                     height: displayHeight - 2,

@@ -130,13 +130,19 @@ export default function EventModal({
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
     } else {
-      // New event - set defaults with current time rounded to nearest 15 min
-      const times = getDefaultTimes();
       setTitle("");
       setDescription("");
-      setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-      setStartTime(times.start);
-      setEndTime(times.end);
+      if (selectedDate && (selectedDate.getHours() !== 0 || selectedDate.getMinutes() !== 0)) {
+        setStartDate(format(selectedDate, 'yyyy-MM-dd'));
+        setStartTime(format(selectedDate, 'HH:mm'));
+        const end = new Date(selectedDate.getTime() + 60 * 60 * 1000);
+        setEndTime(format(end, 'HH:mm'));
+      } else {
+        const times = getDefaultTimes();
+        setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+        setStartTime(times.start);
+        setEndTime(times.end);
+      }
       setIsSometimeToday(false);
       
       // Auto-select first member if available
