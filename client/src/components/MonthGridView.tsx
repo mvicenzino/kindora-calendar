@@ -54,21 +54,47 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
     }
   };
 
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingTouch = useRef<{ event: UiEvent; dateStr: string } | null>(null);
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+
   const handleEventPointerDown = useCallback((e: React.PointerEvent, event: UiEvent) => {
     if (!onEventDrop) return;
-    e.preventDefault();
     e.stopPropagation();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
     const dateStr = format(event.startTime, 'yyyy-MM-dd');
-    setDragState({
-      event,
-      originDateStr: dateStr,
-      currentDateStr: dateStr,
-    });
+
+    if (e.pointerType === 'touch') {
+      pendingTouch.current = { event, dateStr };
+      setPendingEventId(event.id);
+      longPressTimer.current = setTimeout(() => {
+        if (pendingTouch.current) {
+          setDragState({
+            event: pendingTouch.current.event,
+            originDateStr: pendingTouch.current.dateStr,
+            currentDateStr: pendingTouch.current.dateStr,
+          });
+          setPendingEventId(null);
+          pendingTouch.current = null;
+        }
+      }, 250);
+    } else {
+      e.preventDefault();
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      setDragState({ event, originDateStr: dateStr, currentDateStr: dateStr });
+    }
   }, [onEventDrop]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (pendingTouch.current && !dragState) {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+      pendingTouch.current = null;
+      setPendingEventId(null);
+      return;
+    }
     if (!dragState) return;
     e.preventDefault();
 
@@ -84,6 +110,16 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
   }, [dragState]);
 
   const handlePointerUp = useCallback(() => {
+    if (pendingTouch.current && !dragState) {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+      pendingTouch.current = null;
+      setPendingEventId(null);
+      return;
+    }
+
     if (!dragState || !onEventDrop) {
       setDragState(null);
       return;
@@ -105,6 +141,12 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
   }, [dragState, onEventDrop, calendarDays]);
 
   const handlePointerCancel = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    pendingTouch.current = null;
+    setPendingEventId(null);
     setDragState(null);
   }, []);
 
@@ -119,10 +161,10 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
   return (
     <div
       className="flex flex-col h-full"
-      onPointerMove={dragState ? handlePointerMove : undefined}
-      onPointerUp={dragState ? handlePointerUp : undefined}
+      onPointerMove={(dragState || pendingEventId) ? handlePointerMove : undefined}
+      onPointerUp={(dragState || pendingEventId) ? handlePointerUp : undefined}
       onPointerCancel={handlePointerCancel}
-      onPointerLeave={dragState ? handlePointerCancel : undefined}
+      onPointerLeave={(dragState || pendingEventId) ? handlePointerCancel : undefined}
       style={dragState ? { cursor: 'grabbing', userSelect: 'none' } : undefined}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
@@ -199,20 +241,22 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
                   <div className="flex-1 space-y-px overflow-hidden min-h-0">
                     {dayEvents.slice(0, MAX_EVENTS_PER_CELL).map(event => {
                       const isBeingDragged = dragState?.event.id === event.id;
+                      const isPending = pendingEventId === event.id;
                       return (
                         <div
                           key={event.id}
                           onPointerDown={(e) => handleEventPointerDown(e, event)}
-                          onClick={(e) => { e.stopPropagation(); if (!dragState) onEventClick(event); }}
+                          onClick={(e) => { e.stopPropagation(); if (!dragState && !isPending) onEventClick(event); }}
                           data-testid={`grid-event-${event.id}`}
                           className={`
                             w-full text-left rounded-sm px-1 py-0.5 sm:py-px truncate text-[9px] sm:text-[10px] leading-tight font-medium
                             flex items-center gap-0.5 sm:gap-1 min-h-[18px] sm:min-h-0
-                            ${isBeingDragged ? 'opacity-40' : 'cursor-grab'}
+                            ${isBeingDragged ? 'opacity-40' : isPending ? 'ring-1 ring-primary/50 scale-[1.03]' : 'cursor-grab'}
                           `}
                           style={{
                             backgroundColor: event.color + '25',
                             color: 'var(--foreground)',
+                            touchAction: onEventDrop ? 'none' : undefined,
                           }}
                         >
                           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: event.color }} />

@@ -13,6 +13,7 @@ export interface DragState {
   currentHeight: number;
   currentDayIndex?: number;
   originalDayIndex?: number;
+  confirmed: boolean;
 }
 
 interface UseEventDragOptions {
@@ -24,6 +25,8 @@ interface UseEventDragOptions {
 
 const MIN_DURATION_MINUTES = 15;
 const MAX_HOUR = 24;
+const LONG_PRESS_MS = 250;
+const DRAG_THRESHOLD_PX = 4;
 
 function clampMinutes(minutes: number): number {
   return Math.max(0, Math.min(minutes, MAX_HOUR * 60));
@@ -31,7 +34,21 @@ function clampMinutes(minutes: number): number {
 
 export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }: UseEventDragOptions) {
   const [dragState, setDragState] = useState<DragState | null>(null);
+  const [pendingEventId, setPendingEventId] = useState<string | null>(null);
   const dragRef = useRef<DragState | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingRef = useRef<{
+    event: UiEvent;
+    mode: 'move' | 'resize';
+    startY: number;
+    startX: number;
+    originalTop: number;
+    originalHeight: number;
+    dayIndex?: number;
+    pointerId: number;
+    target: HTMLElement;
+  } | null>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   const snapToGrid = useCallback((minutes: number) => {
     return Math.round(minutes / snapMinutes) * snapMinutes;
@@ -45,13 +62,66 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     if (!dragRef.current) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        dragRef.current = null;
-        setDragState(null);
+        cleanupDrag();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [dragState]);
+
+  const cleanupDrag = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    pendingRef.current = null;
+    setPendingEventId(null);
+    dragRef.current = null;
+    setDragState(null);
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.touchAction = '';
+      scrollContainerRef.current.style.overflowY = '';
+      scrollContainerRef.current = null;
+    }
+  }, []);
+
+  const findScrollContainer = useCallback((el: HTMLElement): HTMLElement | null => {
+    let current: HTMLElement | null = el;
+    while (current) {
+      const style = window.getComputedStyle(current);
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return null;
+  }, []);
+
+  const confirmDrag = useCallback((pending: NonNullable<typeof pendingRef.current>) => {
+    const container = findScrollContainer(pending.target);
+    if (container) {
+      scrollContainerRef.current = container;
+      container.style.touchAction = 'none';
+      container.style.overflowY = 'hidden';
+    }
+
+    const state: DragState = {
+      eventId: pending.event.id,
+      event: pending.event,
+      mode: pending.mode,
+      startY: pending.startY,
+      startX: pending.startX,
+      originalTop: pending.originalTop,
+      originalHeight: pending.originalHeight,
+      currentTop: pending.originalTop,
+      currentHeight: pending.originalHeight,
+      currentDayIndex: pending.dayIndex,
+      originalDayIndex: pending.dayIndex,
+      confirmed: true,
+    };
+    dragRef.current = state;
+    setDragState(state);
+  }, [findScrollContainer]);
 
   const startDrag = useCallback((
     e: React.PointerEvent,
@@ -61,27 +131,53 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     currentHeight: number,
     dayIndex?: number,
   ) => {
-    e.preventDefault();
     e.stopPropagation();
-    const target = e.currentTarget as HTMLElement;
-    target.setPointerCapture(e.pointerId);
 
-    const state: DragState = {
-      eventId: event.id,
-      event,
-      mode,
-      startY: e.clientY,
-      startX: e.clientX,
-      originalTop: currentTop,
-      originalHeight: currentHeight,
-      currentTop,
-      currentHeight,
-      currentDayIndex: dayIndex,
-      originalDayIndex: dayIndex,
-    };
-    dragRef.current = state;
-    setDragState(state);
-  }, []);
+    const isTouch = e.pointerType === 'touch';
+    const target = e.currentTarget as HTMLElement;
+
+    if (!isTouch) {
+      e.preventDefault();
+      target.setPointerCapture(e.pointerId);
+
+      const state: DragState = {
+        eventId: event.id,
+        event,
+        mode,
+        startY: e.clientY,
+        startX: e.clientX,
+        originalTop: currentTop,
+        originalHeight: currentHeight,
+        currentTop,
+        currentHeight,
+        currentDayIndex: dayIndex,
+        originalDayIndex: dayIndex,
+        confirmed: true,
+      };
+      dragRef.current = state;
+      setDragState(state);
+    } else {
+      pendingRef.current = {
+        event,
+        mode,
+        startY: e.clientY,
+        startX: e.clientX,
+        originalTop: currentTop,
+        originalHeight: currentHeight,
+        dayIndex,
+        pointerId: e.pointerId,
+        target,
+      };
+      setPendingEventId(event.id);
+
+      longPressTimer.current = setTimeout(() => {
+        if (pendingRef.current) {
+          setPendingEventId(null);
+          confirmDrag(pendingRef.current);
+        }
+      }, LONG_PRESS_MS);
+    }
+  }, [confirmDrag]);
 
   const computeNewPosition = useCallback((deltaY: number, current: DragState) => {
     const deltaMinutes = pixelsToMinutes(deltaY);
@@ -109,6 +205,20 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
   }, [hourHeight, pixelsToMinutes, snapToGrid, startHour]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (pendingRef.current && !dragRef.current) {
+      const dx = e.clientX - pendingRef.current.startX;
+      const dy = e.clientY - pendingRef.current.startY;
+      if (Math.abs(dx) > DRAG_THRESHOLD_PX * 3 || Math.abs(dy) > DRAG_THRESHOLD_PX * 3) {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+        pendingRef.current = null;
+        setPendingEventId(null);
+      }
+      return;
+    }
+
     if (!dragRef.current) return;
     e.preventDefault();
 
@@ -121,6 +231,20 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
   }, [computeNewPosition]);
 
   const onPointerMoveWeek = useCallback((e: React.PointerEvent, dayColumns: HTMLElement[]) => {
+    if (pendingRef.current && !dragRef.current) {
+      const dx = e.clientX - pendingRef.current.startX;
+      const dy = e.clientY - pendingRef.current.startY;
+      if (Math.abs(dx) > DRAG_THRESHOLD_PX * 3 || Math.abs(dy) > DRAG_THRESHOLD_PX * 3) {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+          longPressTimer.current = null;
+        }
+        pendingRef.current = null;
+        setPendingEventId(null);
+      }
+      return;
+    }
+
     if (!dragRef.current) return;
     e.preventDefault();
 
@@ -146,6 +270,11 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
   }, [computeNewPosition]);
 
   const endDrag = useCallback((baseDate?: Date, days?: Date[]) => {
+    if (pendingRef.current && !dragRef.current) {
+      cleanupDrag();
+      return;
+    }
+
     if (!dragRef.current) return;
     const state = dragRef.current;
 
@@ -154,8 +283,7 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     const endMinutes = clampMinutes(topMinutes + durationMinutes);
 
     if (endMinutes <= topMinutes) {
-      dragRef.current = null;
-      setDragState(null);
+      cleanupDrag();
       return;
     }
 
@@ -184,18 +312,17 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
       onDrop(state.event, newStart, newEnd);
     }
 
-    dragRef.current = null;
-    setDragState(null);
-  }, [hourHeight, startHour, snapToGrid, onDrop]);
+    cleanupDrag();
+  }, [hourHeight, startHour, snapToGrid, onDrop, cleanupDrag]);
 
   const cancelDrag = useCallback(() => {
-    dragRef.current = null;
-    setDragState(null);
-  }, []);
+    cleanupDrag();
+  }, [cleanupDrag]);
 
   return {
     dragState,
-    isDragging: dragState !== null,
+    isDragging: dragState !== null && dragState.confirmed,
+    pendingEventId,
     startDrag,
     onPointerMove,
     onPointerMoveWeek,

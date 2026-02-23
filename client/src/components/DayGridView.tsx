@@ -65,7 +65,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
     if (onEventDrop) onEventDrop(event, newStart, newEnd);
   }, [onEventDrop]);
 
-  const { dragState, isDragging, startDrag, onPointerMove, endDrag, cancelDrag } = useEventDrag({
+  const { dragState, isDragging, pendingEventId, startDrag, onPointerMove, endDrag, cancelDrag } = useEventDrag({
     hourHeight: HOUR_HEIGHT,
     startHour: START_HOUR,
     snapMinutes: 15,
@@ -102,12 +102,12 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
   };
 
   const handlePointerUp = useCallback(() => {
-    if (isDragging) endDrag(date);
-  }, [isDragging, endDrag, date]);
+    if (isDragging || pendingEventId) endDrag(date);
+  }, [isDragging, pendingEventId, endDrag, date]);
 
   const handlePointerCancel = useCallback(() => {
-    if (isDragging) cancelDrag();
-  }, [isDragging, cancelDrag]);
+    if (isDragging || pendingEventId) cancelDrag();
+  }, [isDragging, pendingEventId, cancelDrag]);
 
   const formatDragTime = (topPx: number, heightPx: number) => {
     const startMinutes = (topPx / HOUR_HEIGHT + START_HOUR) * 60;
@@ -150,7 +150,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto overflow-x-hidden"
-        onPointerMove={isDragging ? onPointerMove : undefined}
+        onPointerMove={(isDragging || pendingEventId) ? onPointerMove : undefined}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
         onPointerLeave={handlePointerCancel}
@@ -191,13 +191,14 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
               const leftPct = colIdx * widthPct;
 
               const isBeingDragged = dragState?.eventId === event.id;
+              const isPending = pendingEventId === event.id;
               const displayTop = isBeingDragged ? dragState.currentTop : pos.top;
               const displayHeight = isBeingDragged ? dragState.currentHeight : pos.height;
 
               return (
                 <div
                   key={event.id}
-                  className={`absolute rounded-sm text-left overflow-hidden ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : 'cursor-grab'}`}
+                  className={`absolute rounded-sm text-left overflow-hidden ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
                   style={{
                     top: displayTop + 1,
                     height: displayHeight - 2,
@@ -208,12 +209,13 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                       ? `inset 3px 0 0 ${event.color}, 0 4px 12px rgba(0,0,0,0.3)`
                       : `inset 3px 0 0 ${event.color}`,
                     transition: isBeingDragged ? 'none' : 'top 0.15s ease, height 0.15s ease',
+                    transform: isPending ? 'scale(1.03)' : undefined,
                   }}
                   data-testid={`grid-event-${event.id}`}
                 >
                   <div
                     className="absolute inset-0 px-2 py-1 cursor-grab active:cursor-grabbing"
-                    style={{ bottom: '6px' }}
+                    style={{ bottom: '6px', touchAction: onEventDrop ? 'none' : undefined }}
                     onPointerDown={(e) => {
                       if (onEventDrop) startDrag(e, event, 'move', pos.top, pos.height);
                     }}
@@ -239,6 +241,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                   {onEventDrop && (
                     <div
                       className="absolute bottom-0 left-0 right-0 h-[6px] cursor-s-resize z-10"
+                      style={{ touchAction: 'none' }}
                       onPointerDown={(e) => startDrag(e, event, 'resize', pos.top, pos.height)}
                       data-testid={`resize-handle-${event.id}`}
                     >

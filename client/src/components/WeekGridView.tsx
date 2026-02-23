@@ -69,7 +69,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
     if (onEventDrop) onEventDrop(event, newStart, newEnd);
   }, [onEventDrop]);
 
-  const { dragState, isDragging, startDrag, onPointerMoveWeek, endDrag, cancelDrag } = useEventDrag({
+  const { dragState, isDragging, pendingEventId, startDrag, onPointerMoveWeek, endDrag, cancelDrag } = useEventDrag({
     hourHeight: HOUR_HEIGHT,
     startHour: START_HOUR,
     snapMinutes: 15,
@@ -111,16 +111,16 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
   };
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (isDragging) onPointerMoveWeek(e, dayColumnsRef.current);
-  }, [isDragging, onPointerMoveWeek]);
+    if (isDragging || pendingEventId) onPointerMoveWeek(e, dayColumnsRef.current);
+  }, [isDragging, pendingEventId, onPointerMoveWeek]);
 
   const handlePointerUp = useCallback(() => {
-    if (isDragging) endDrag(undefined, days);
-  }, [isDragging, endDrag, days]);
+    if (isDragging || pendingEventId) endDrag(undefined, days);
+  }, [isDragging, pendingEventId, endDrag, days]);
 
   const handlePointerCancel = useCallback(() => {
-    if (isDragging) cancelDrag();
-  }, [isDragging, cancelDrag]);
+    if (isDragging || pendingEventId) cancelDrag();
+  }, [isDragging, pendingEventId, cancelDrag]);
 
   const findOriginalDayIndex = (event: UiEvent) => {
     return days.findIndex(d => isSameDay(d, event.startTime));
@@ -173,7 +173,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto overflow-x-hidden"
-        onPointerMove={isDragging ? handlePointerMove : undefined}
+        onPointerMove={(isDragging || pendingEventId) ? handlePointerMove : undefined}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
         onPointerLeave={handlePointerCancel}
@@ -227,6 +227,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                     const leftPct = colIdx * widthPct;
 
                     const isBeingDragged = dragState?.eventId === event.id;
+                    const isPending = pendingEventId === event.id;
                     const movedToOtherDay = isBeingDragged && dragState.currentDayIndex !== dayIdx;
                     if (movedToOtherDay) return null;
 
@@ -236,7 +237,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                     return (
                       <div
                         key={event.id}
-                        className={`absolute rounded-sm text-left overflow-hidden ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : 'cursor-grab'}`}
+                        className={`absolute rounded-sm text-left overflow-hidden ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
                         style={{
                           top: displayTop + 1,
                           height: displayHeight - 2,
@@ -247,12 +248,13 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                             ? `inset 2px 0 0 ${event.color}, 0 4px 12px rgba(0,0,0,0.3)`
                             : `inset 2px 0 0 ${event.color}`,
                           transition: isBeingDragged ? 'none' : 'top 0.15s ease, height 0.15s ease',
+                          transform: isPending ? 'scale(1.05)' : undefined,
                         }}
                         data-testid={`grid-event-${event.id}`}
                       >
                         <div
                           className="absolute inset-0 px-1 py-0.5 cursor-grab active:cursor-grabbing"
-                          style={{ bottom: '5px' }}
+                          style={{ bottom: '5px', touchAction: onEventDrop ? 'none' : undefined }}
                           onPointerDown={(e) => {
                             if (onEventDrop) startDrag(e, event, 'move', pos.top, pos.height, dayIdx);
                           }}
@@ -269,6 +271,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                         {onEventDrop && (
                           <div
                             className="absolute bottom-0 left-0 right-0 h-[5px] cursor-s-resize z-10"
+                            style={{ touchAction: 'none' }}
                             onPointerDown={(e) => startDrag(e, event, 'resize', pos.top, pos.height, dayIdx)}
                             data-testid={`resize-handle-${event.id}`}
                           >
