@@ -250,10 +250,13 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                           height: displayHeight - 2,
                           left: `${leftPct}%`,
                           width: `calc(${widthPct}% - 2px)`,
-                          backgroundColor: event.color + '25',
+                          background: `linear-gradient(160deg, ${event.color}38 0%, ${event.color}22 50%, ${event.color}12 100%)`,
+                          backdropFilter: 'blur(6px) saturate(1.2)',
+                          WebkitBackdropFilter: 'blur(6px) saturate(1.2)',
+                          border: `1px solid ${event.color}35`,
                           boxShadow: isBeingDragged
-                            ? `inset 2px 0 0 ${event.color}, 0 4px 12px rgba(0,0,0,0.3)`
-                            : `inset 2px 0 0 ${event.color}`,
+                            ? `inset 2px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.3), 0 2px 8px ${event.color}28`
+                            : `inset 2px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 8px ${event.color}22`,
                           transition: isBeingDragged ? 'none' : 'top 0.15s ease, height 0.15s ease',
                           transform: isPending ? 'scale(1.05)' : undefined,
                         }}
@@ -310,8 +313,11 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                           height: dragState.currentHeight - 2,
                           left: 0,
                           width: 'calc(100% - 2px)',
-                          backgroundColor: event.color + '25',
-                          boxShadow: `inset 2px 0 0 ${event.color}, 0 4px 12px rgba(0,0,0,0.3)`,
+                          background: `linear-gradient(160deg, ${event.color}38 0%, ${event.color}22 50%, ${event.color}12 100%)`,
+                          backdropFilter: 'blur(6px) saturate(1.2)',
+                          WebkitBackdropFilter: 'blur(6px) saturate(1.2)',
+                          border: `1px solid ${event.color}35`,
+                          boxShadow: `inset 2px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.3), 0 2px 8px ${event.color}28`,
                         }}
                       >
                         <div className="px-1 py-0.5">

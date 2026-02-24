@@ -112,8 +112,15 @@ export default function EventCard({
           ${className}
         `}
         style={{
-          backgroundColor: event.color + '18',
-          boxShadow: `inset 3px 0 0 ${event.color}`,
+          background: `linear-gradient(135deg, ${event.color}30 0%, ${event.color}1c 55%, ${event.color}0e 100%)`,
+          backdropFilter: 'blur(8px) saturate(1.2)',
+          WebkitBackdropFilter: 'blur(8px) saturate(1.2)',
+          border: `1px solid ${event.color}30`,
+          boxShadow: [
+            `inset 3px 0 0 ${event.color}`,
+            'inset 0 1px 0 rgba(255,255,255,0.15)',
+            `0 1px 6px ${event.color}22`,
+          ].join(', '),
         }}
       >
         <button

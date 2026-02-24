@@ -211,10 +211,13 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                     height: displayHeight - 2,
                     left: `${leftPct}%`,
                     width: `calc(${widthPct}% - 4px)`,
-                    backgroundColor: event.color + '25',
+                    background: `linear-gradient(160deg, ${event.color}38 0%, ${event.color}22 50%, ${event.color}12 100%)`,
+                    backdropFilter: 'blur(6px) saturate(1.2)',
+                    WebkitBackdropFilter: 'blur(6px) saturate(1.2)',
+                    border: `1px solid ${event.color}35`,
                     boxShadow: isBeingDragged
-                      ? `inset 3px 0 0 ${event.color}, 0 4px 12px rgba(0,0,0,0.3)`
-                      : `inset 3px 0 0 ${event.color}`,
+                      ? `inset 3px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.3), 0 2px 8px ${event.color}28`
+                      : `inset 3px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 8px ${event.color}22`,
                     transition: isBeingDragged ? 'none' : 'top 0.15s ease, height 0.15s ease',
                     transform: isPending ? 'scale(1.03)' : undefined,
                   }}
