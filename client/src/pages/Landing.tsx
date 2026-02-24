@@ -560,93 +560,54 @@ export default function Landing() {
               Simple, Family-Friendly Pricing
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Start free. Upgrade when your family needs more.
+              One plan. Everything included. Try free for 14 days.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <div className="bg-card border border-border rounded-xl p-6 flex flex-col" data-testid="card-pricing-free">
-              <h3 className="text-xl font-bold text-foreground mb-1" data-testid="text-pricing-free-name">Free</h3>
-              <p className="text-muted-foreground text-sm mb-4">For getting started</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-foreground" data-testid="text-pricing-free-price">$0</span>
-                <span className="text-muted-foreground text-sm ml-1">/month</span>
-              </div>
-              <ul className="space-y-3 mb-6 flex-1">
-                {["1 family calendar", "Up to 3 members", "Basic event management", "Color-coded categories", "Mobile-friendly design"].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              {!isAuthenticated && (
-                <Button
-                  onClick={() => setAuthMode("register")}
-                  variant="outline"
-                  className="w-full"
-                  data-testid="button-pricing-free"
-                >
-                  Get Started
-                </Button>
-              )}
-            </div>
-
-            <div className="bg-card border-2 border-primary/50 rounded-xl p-6 flex flex-col relative" data-testid="card-pricing-family">
+          <div className="max-w-lg mx-auto">
+            <div className="bg-card border-2 border-primary/50 rounded-xl p-8 flex flex-col relative" data-testid="card-pricing-family">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-primary rounded-full text-xs font-semibold text-primary-foreground">
-                Most Popular
+                14-Day Free Trial
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-1" data-testid="text-pricing-family-name">Family</h3>
-              <p className="text-muted-foreground text-sm mb-4">For active families</p>
+              <h3 className="text-2xl font-bold text-foreground mb-1" data-testid="text-pricing-family-name">Kindora Family Plan</h3>
+              <p className="text-muted-foreground text-sm mb-5">Everything your family needs to stay coordinated</p>
               <div className="mb-6">
-                <span className="text-4xl font-bold text-foreground" data-testid="text-pricing-family-price">$9</span>
+                <span className="text-5xl font-bold text-foreground" data-testid="text-pricing-family-price">$7</span>
                 <span className="text-muted-foreground text-sm ml-1">/month</span>
+                <span className="text-muted-foreground text-xs ml-2">after trial</span>
               </div>
-              <ul className="space-y-3 mb-6 flex-1">
-                {["Unlimited family calendars", "Up to 10 members", "Recurring events & RRULE", "Weekly email summaries", "Caregiver invitations", "Document vault", "AI schedule import"].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 mb-8">
+                {[
+                  "Unlimited family calendars",
+                  "Unlimited family members",
+                  "Recurring events & reminders",
+                  "Weekly email summaries",
+                  "Caregiver invitations & permissions",
+                  "Caregiver time & pay tracking",
+                  "Medication tracking & logging",
+                  "Care Documentation Vault",
+                  "Emergency Bridge Mode",
+                  "AI-powered schedule import",
+                  "Color-coded categories",
+                  "Day / Week / Month / Timeline views",
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
                     <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
                     <span>{item}</span>
-                  </li>
+                  </div>
                 ))}
-              </ul>
+              </div>
               {!isAuthenticated && (
                 <Button
+                  size="lg"
                   onClick={() => setAuthMode("register")}
                   className="w-full"
                   data-testid="button-pricing-family"
                 >
-                  Start Free Trial
+                  Start Your 14-Day Free Trial
                 </Button>
               )}
-            </div>
-
-            <div className="bg-card border border-border rounded-xl p-6 flex flex-col relative" data-testid="card-pricing-pro">
-              <span className="absolute top-4 right-4 text-xs font-semibold uppercase tracking-wider text-primary bg-primary/15 border border-primary/30 px-2.5 py-1 rounded-full" data-testid="badge-coming-soon">Coming Soon</span>
-              <h3 className="text-xl font-bold text-foreground mb-1" data-testid="text-pricing-pro-name">Professional</h3>
-              <p className="text-muted-foreground text-sm mb-4">For care agencies</p>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-foreground" data-testid="text-pricing-pro-price">$29</span>
-                <span className="text-muted-foreground text-sm ml-1">/month</span>
-              </div>
-              <ul className="space-y-3 mb-6 flex-1">
-                {["Everything in Family", "Unlimited members", "Medication tracking & logs", "Caregiver time & pay tracking", "Emergency Bridge Mode", "Priority support", "Custom branding"].map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              {!isAuthenticated && (
-                <Button
-                  onClick={() => setAuthMode("register")}
-                  variant="outline"
-                  className="w-full"
-                  data-testid="button-pricing-pro"
-                >
-                  Contact Sales
-                </Button>
-              )}
+              <p className="text-xs text-muted-foreground text-center mt-3">No credit card required to start. Cancel anytime.</p>
             </div>
           </div>
         </div>
@@ -659,7 +620,7 @@ export default function Landing() {
             Stop Juggling. Start Coordinating.
           </h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join families who've traded sticky notes and group texts for one shared calendar that actually works. Free to start, no credit card needed.
+            Join families who've traded sticky notes and group texts for one shared calendar that actually works. Try free for 14 days, no credit card needed.
           </p>
           {!isAuthenticated && (
             <div className="flex flex-wrap justify-center gap-3">

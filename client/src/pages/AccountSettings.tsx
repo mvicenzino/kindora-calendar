@@ -21,12 +21,6 @@ interface SubscriptionStatus {
 }
 
 const PLAN_FEATURES = {
-  free: [
-    "1 family calendar",
-    "Up to 3 family members",
-    "Basic event management",
-    "Day / Week / Month views",
-  ],
   family: [
     "Unlimited family calendars",
     "Unlimited family members",
@@ -36,7 +30,7 @@ const PLAN_FEATURES = {
     "Emergency Bridge Mode",
     "AI-powered schedule import",
     "Weekly email summaries",
-    "Priority support",
+    "Day / Week / Month / Timeline views",
   ],
 };
 
@@ -188,69 +182,39 @@ function AccountTab() {
         </CardHeader>
         <CardContent className="space-y-6">
           {!isFamily && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card className="border-muted">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Free</CardTitle>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-bold">$0</span>
-                    <span className="text-xs text-muted-foreground">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2">
-                    {PLAN_FEATURES.free.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-xs">
-                        <Check className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card className="border-primary/50 relative overflow-visible">
-                <div className="absolute -top-3 left-4">
-                  <Badge className="bg-primary text-primary-foreground no-default-hover-elevate no-default-active-elevate">
-                    Recommended
-                  </Badge>
-                </div>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Family Plan</CardTitle>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-lg font-bold">$9</span>
-                    <span className="text-xs text-muted-foreground">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <ul className="space-y-2">
-                    {PLAN_FEATURES.family.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-xs">
-                        <Check className="h-4 w-4 mt-0.5 text-primary shrink-0" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    className="w-full"
-                    onClick={() => checkoutMutation.mutate()}
-                    disabled={checkoutMutation.isPending}
-                    data-testid="button-upgrade-plan"
-                  >
-                    {checkoutMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Redirecting to checkout...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Upgrade to Family Plan
-                      </>
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
+            <div className="space-y-4">
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold">$7</span>
+                <span className="text-sm text-muted-foreground">/month</span>
+                <Badge variant="secondary" className="ml-1">14-day free trial</Badge>
+              </div>
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {PLAN_FEATURES.family.map((feature) => (
+                  <li key={feature} className="flex items-start gap-2 text-sm">
+                    <Check className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                className="w-full sm:w-auto"
+                onClick={() => checkoutMutation.mutate()}
+                disabled={checkoutMutation.isPending}
+                data-testid="button-upgrade-plan"
+              >
+                {checkoutMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Redirecting to checkout...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Start 14-Day Free Trial
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground">No charge until your trial ends. Cancel anytime.</p>
             </div>
           )}
 

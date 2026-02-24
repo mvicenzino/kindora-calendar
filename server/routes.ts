@@ -24,7 +24,7 @@ async function getOrCreateFamilyPlanPrice(stripe: Stripe): Promise<string> {
   const knownPriceId = "price_1T3I35QiL2ZGFBUjx2Q6WxHA";
   try {
     const price = await stripe.prices.retrieve(knownPriceId);
-    if (price.active) {
+    if (price.active && price.unit_amount === 700) {
       cachedFamilyPlanPriceId = knownPriceId;
       return knownPriceId;
     }
@@ -51,17 +51,18 @@ async function getOrCreateFamilyPlanPrice(stripe: Stripe): Promise<string> {
     product: productId,
     active: true,
     type: "recurring",
-    limit: 1,
+    limit: 10,
   });
 
-  if (prices.data.length > 0) {
-    cachedFamilyPlanPriceId = prices.data[0].id;
+  const matchingPrice = prices.data.find(p => p.unit_amount === 700 && p.currency === "usd");
+  if (matchingPrice) {
+    cachedFamilyPlanPriceId = matchingPrice.id;
     return cachedFamilyPlanPriceId;
   }
 
   const price = await stripe.prices.create({
     product: productId,
-    unit_amount: 900,
+    unit_amount: 700,
     currency: "usd",
     recurring: { interval: "month" },
   });
@@ -3899,6 +3900,9 @@ Visit Kindora Calendar: ${joinUrl}
         mode: "subscription",
         payment_method_types: ["card"],
         line_items: [{ price: priceId, quantity: 1 }],
+        subscription_data: {
+          trial_period_days: 14,
+        },
         success_url: `${baseUrl}/settings?subscription=success`,
         cancel_url: `${baseUrl}/settings?subscription=cancelled`,
         metadata: { userId: user.id },
