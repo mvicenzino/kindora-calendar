@@ -51,10 +51,10 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
 
   return (
     <div className="w-full bg-muted/20 dark:bg-white/[0.02] backdrop-blur-xl border-b border-border/30">
-      <div className="flex items-center justify-between px-2 sm:px-3 py-1.5 pb-2 sm:pb-3 gap-1.5 sm:gap-2">
+      <div className="relative flex items-center justify-center px-2 sm:px-3 py-1.5 pb-2 sm:pb-3">
         <nav 
           ref={containerRef} 
-          className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide flex-shrink min-w-0"
+          className="relative flex items-center gap-0.5 bg-muted/40 backdrop-blur-xl rounded-full p-0.5 border border-border/30 overflow-x-auto scrollbar-hide"
           data-testid="nav-view-switcher"
         >
           <div
@@ -97,34 +97,32 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
           ))}
         </nav>
 
-        <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
-          {showLayoutToggle && (
-            <>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => onLayoutChange('grid')}
-                data-testid="button-layout-grid"
-                aria-pressed={layout === 'grid'}
-                aria-label="Schedule view"
-                className={`toggle-elevate ${layout === 'grid' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
-              >
-                <CalendarDays className="w-4 h-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => onLayoutChange('tile')}
-                data-testid="button-layout-tile"
-                aria-pressed={layout === 'tile'}
-                aria-label="Cards view"
-                className={`toggle-elevate ${layout === 'tile' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </Button>
-            </>
-          )}
-        </div>
+        {showLayoutToggle && (
+          <div className="absolute right-2 sm:right-3 flex items-center gap-0.5 sm:gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => onLayoutChange('grid')}
+              data-testid="button-layout-grid"
+              aria-pressed={layout === 'grid'}
+              aria-label="Schedule view"
+              className={`toggle-elevate ${layout === 'grid' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+            >
+              <CalendarDays className="w-4 h-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => onLayoutChange('tile')}
+              data-testid="button-layout-tile"
+              aria-pressed={layout === 'tile'}
+              aria-label="Cards view"
+              className={`toggle-elevate ${layout === 'tile' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
