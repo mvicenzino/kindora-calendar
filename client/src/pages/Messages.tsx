@@ -193,23 +193,23 @@ export default function Messages() {
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100vh-200px)]">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100dvh-200px)]">
           <TabsList className="w-full rounded-md mb-3 p-0.5">
             <TabsTrigger 
               value="conversations" 
               className="flex-1 rounded-md text-xs"
               data-testid="tab-conversations"
             >
-              <Users className="w-4 h-4 mr-1.5" />
-              Conversations ({messages.length})
+              <Users className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Conversations </span>({messages.length})
             </TabsTrigger>
             <TabsTrigger 
               value="event-notes" 
               className="flex-1 rounded-md text-xs"
               data-testid="tab-event-notes"
             >
-              <Calendar className="w-4 h-4 mr-1.5" />
-              Event Notes ({eventNotes.length})
+              <Calendar className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Event </span>Notes ({eventNotes.length})
             </TabsTrigger>
           </TabsList>
 

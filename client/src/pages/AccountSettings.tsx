@@ -281,22 +281,22 @@ export default function AccountSettings({ initialTab }: { initialTab?: string })
         </div>
 
         <Tabs defaultValue={defaultTab} className="space-y-4">
-          <TabsList data-testid="settings-tabs">
-            <TabsTrigger value="account" data-testid="tab-account">
-              <CreditCard className="h-4 w-4 mr-1.5" />
-              Account
+          <TabsList className="w-full" data-testid="settings-tabs">
+            <TabsTrigger value="account" className="flex-1" data-testid="tab-account">
+              <CreditCard className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Account</span>
             </TabsTrigger>
-            <TabsTrigger value="family" data-testid="tab-family">
-              <Users className="h-4 w-4 mr-1.5" />
-              Family
+            <TabsTrigger value="family" className="flex-1" data-testid="tab-family">
+              <Users className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Family</span>
             </TabsTrigger>
-            <TabsTrigger value="import" data-testid="tab-import">
-              <Upload className="h-4 w-4 mr-1.5" />
-              Import
+            <TabsTrigger value="import" className="flex-1" data-testid="tab-import">
+              <Upload className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Import</span>
             </TabsTrigger>
-            <TabsTrigger value="kira" data-testid="tab-kira">
-              <Sparkles className="h-4 w-4 mr-1.5" />
-              Kira
+            <TabsTrigger value="kira" className="flex-1" data-testid="tab-kira">
+              <Sparkles className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Kira</span>
             </TabsTrigger>
           </TabsList>
 

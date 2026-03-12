@@ -413,7 +413,7 @@ export default function Documents() {
                     data-testid="button-import-drive"
                   >
                     <SiGoogledrive className="w-4 h-4" />
-                    Import from Drive
+                    <span className="hidden sm:inline">Import from </span>Drive
                   </Button>
                 )}
                 <Button 
@@ -422,7 +422,7 @@ export default function Documents() {
                   data-testid="button-upload-document"
                 >
                   <Upload className="w-4 h-4" />
-                  Upload Document
+                  <span className="hidden sm:inline">Upload </span>Document
                 </Button>
               </div>
             )}
@@ -430,23 +430,23 @@ export default function Documents() {
           
           <Card>
             <CardContent className="pt-3">
-              <div className="flex flex-wrap gap-3">
-                <div className="flex-1 min-w-[200px]">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
+                <div className="flex-1 min-w-0">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       placeholder="Search documents..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9"
+                      className="pl-9 w-full"
                       data-testid="input-search-documents"
                     />
                   </div>
                 </div>
-                
+                <div className="flex gap-2 flex-wrap">
                 <Select value={filterType} onValueChange={(v) => setFilterType(v as DocumentType | "all")}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-filter-type">
-                    <Filter className="w-4 h-4 mr-2" />
+                  <SelectTrigger className="w-full sm:w-[160px]" data-testid="select-filter-type">
+                    <Filter className="w-4 h-4 mr-2 flex-shrink-0" />
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -458,7 +458,7 @@ export default function Documents() {
                 </Select>
                 
                 <Select value={filterMember} onValueChange={setFilterMember}>
-                  <SelectTrigger className="w-[180px]" data-testid="select-filter-member">
+                  <SelectTrigger className="w-full sm:w-[150px]" data-testid="select-filter-member">
                     <SelectValue placeholder="All members" />
                   </SelectTrigger>
                   <SelectContent>
@@ -468,6 +468,7 @@ export default function Documents() {
                     ))}
                   </SelectContent>
                 </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
