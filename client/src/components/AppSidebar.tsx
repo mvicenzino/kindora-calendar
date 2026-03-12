@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Sidebar,
@@ -24,6 +24,7 @@ const navItems = [
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Memories", url: "/memories", icon: Image },
   { title: "Care", url: "/care", icon: Heart },
+  { title: "Advisor", url: "/advisor", icon: Sparkles },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

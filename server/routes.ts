@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, NotFoundError } from "./storage";
+import { registerAdvisorRoutes } from "./advisorRoutes";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -4080,6 +4081,8 @@ Visit Kindora Calendar: ${joinUrl}
       res.status(500).json({ message: error.message });
     }
   });
+
+  registerAdvisorRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

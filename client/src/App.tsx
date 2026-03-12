@@ -20,6 +20,7 @@ import EmergencyBridge from "@/pages/EmergencyBridge";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import AccountSettings from "@/pages/AccountSettings";
+import Advisor from "@/pages/Advisor";
 import AppSidebar from "@/components/AppSidebar";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -92,6 +93,7 @@ function Router() {
               <Route path="/messages" component={Messages} />
               <Route path="/documents" component={Documents} />
               <Route path="/memories" component={Memories} />
+              <Route path="/advisor" component={Advisor} />
               <Route path="/settings/family">{() => <AccountSettings initialTab="family" />}</Route>
               <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
               <Route path="/settings">{() => <AccountSettings />}</Route>

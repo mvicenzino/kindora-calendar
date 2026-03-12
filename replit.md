@@ -26,9 +26,10 @@ The application utilizes PostgreSQL for persistent data storage. A `DemoAwareSto
 - **Caregiver & Medical Management**: `medications` with `medicationLogs` for tracking administration, `caregiverPayRates` and `caregiverTimeEntries` for time tracking and automated pay calculation.
 - **Care Documentation Vault**: Secure storage for `careDocuments` (medical, insurance, legal) with role-based access and presigned URL uploads.
 - **Automated Weekly Summaries**: Cozi-style weekly digest emails of calendar events, configurable by family owners/members and opt-in for users.
+- **AI Family Advisor (Kira)**: Chat-based AI counselor powered by OpenAI (via Replit AI Integrations, no API key needed). Specialized in sandwich generation challenges: child behavior (picky eating, potty training, biting, tantrums), eldercare (dementia, caregiver burnout, difficult conversations), and caregiver self-care. Per-user conversation history stored in `advisor_conversations` and `advisor_messages` tables. Streaming SSE responses. Route: `/advisor`. Backend: `server/advisorRoutes.ts`.
 
 ### Navigation
-Sidebar navigation (`AppSidebar`) with links to: Calendar (`/`), Messages (`/messages`), Documents (`/documents`), Memories (`/memories`), Care (`/care`), Settings (`/settings`). The Settings page uses tabs for Account (subscription/billing), Family (members, invites, emergency bridge), and Import (AI schedule parser). Unified `Header` with FamilySelector, ThemeToggle, and profile actions. `ViewSwitcherBar` (Day/Week/Month/Timeline views) for calendar navigation.
+Sidebar navigation (`AppSidebar`) with links to: Calendar (`/`), Messages (`/messages`), Documents (`/documents`), Memories (`/memories`), Care (`/care`), Advisor (`/advisor`), Settings (`/settings`). The Settings page uses tabs for Account (subscription/billing), Family (members, invites, emergency bridge), and Import (AI schedule parser). Unified `Header` with FamilySelector, ThemeToggle, and profile actions. `ViewSwitcherBar` (Day/Week/Month/Timeline views) for calendar navigation.
 
 ## External Dependencies
 ### UI/Styling

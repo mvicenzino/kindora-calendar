@@ -615,3 +615,5 @@ export const ROLE_PERMISSIONS = {
 } as const;
 
 export type PermissionKey = keyof typeof ROLE_PERMISSIONS[FamilyRole];
+
+export * from './models/chat';
