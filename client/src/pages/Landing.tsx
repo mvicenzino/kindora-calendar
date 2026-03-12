@@ -386,7 +386,7 @@ export default function Landing() {
               {!isAuthenticated && (
                 <div className="flex flex-wrap gap-3 mb-8">
                   <Button
-                    onClick={() => setAuthMode("register")}
+                    onClick={() => { window.location.href = "/intro"; }}
                     size="lg"
                     data-testid="button-hero-signup"
                   >

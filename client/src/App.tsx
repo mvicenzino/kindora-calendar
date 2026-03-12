@@ -7,6 +7,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { ActiveFamilyProvider } from "@/contexts/ActiveFamilyContext";
 import Landing from "@/pages/Landing";
+import Intro from "@/pages/Intro";
 import Home from "@/pages/Home";
 import Memories from "@/pages/Memories";
 import Onboarding from "@/pages/Onboarding";
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
+      <Route path="/intro" component={Intro} />
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
