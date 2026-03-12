@@ -24,6 +24,7 @@ import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
 import FamilySelector from "@/components/FamilySelector";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 
 const sidebarStyle = {
   "--sidebar-width": "12rem",
@@ -31,6 +32,7 @@ const sidebarStyle = {
 };
 
 function AppShell({ children }: { children: React.ReactNode }) {
+  useMessageNotifications();
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full bg-background">

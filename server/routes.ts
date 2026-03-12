@@ -226,9 +226,47 @@ async function createRecurringEvents(
   return createdEvents;
 }
 
+// ── Real-time SSE notification infrastructure ──────────────────────────────
+const sseClients = new Map<string, Set<any>>();
+
+function pushSSEEvent(userId: string, eventName: string, data: object) {
+  const conns = sseClients.get(userId);
+  if (!conns || conns.size === 0) return;
+  const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of conns) {
+    try { res.write(payload); } catch {}
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
+
+  // ── SSE notification stream ──────────────────────────────────────────────
+  app.get("/api/notifications/stream", isAuthenticated, (req: any, res) => {
+    const userId = req.user.claims.sub;
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    if (!sseClients.has(userId)) sseClients.set(userId, new Set());
+    sseClients.get(userId)!.add(res);
+
+    res.write('event: connected\ndata: {}\n\n');
+
+    const keepalive = setInterval(() => {
+      try { res.write(':keepalive\n\n'); } catch {}
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(keepalive);
+      sseClients.get(userId)?.delete(res);
+    });
+  });
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Auth user endpoint
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -2252,7 +2290,24 @@ Visit Kindora Calendar: ${joinUrl}
           role: membership?.role || 'member',
         } : null,
       };
-      
+
+      // Push real-time notification to all other family members
+      const authorName = author
+        ? [author.firstName, author.lastName].filter(Boolean).join(' ') || author.email || 'Someone'
+        : 'Someone';
+      const familyMembers = await storage.getFamilyMembershipsWithUsers(familyId);
+      for (const fm of familyMembers) {
+        if (fm.userId !== userId) {
+          pushSSEEvent(fm.userId, 'new-message', {
+            id: message.id,
+            content: message.content,
+            familyId: message.familyId,
+            authorName,
+            authorAvatar: author?.profileImageUrl || null,
+          });
+        }
+      }
+
       res.status(201).json(enrichedMessage);
     } catch (error) {
       console.error("Error creating family message:", error);
