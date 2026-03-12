@@ -69,7 +69,7 @@ export function ActiveFamilyProvider({ children }: { children: ReactNode }) {
       setActiveFamilyId, 
       activeFamily, 
       setActiveFamily,
-      isLoadingFamily: isLoadingFamilies 
+      isLoadingFamily: isLoadingFamilies || (!activeFamilyId && !!families && families.length > 0) 
     }}>
       {children}
     </ActiveFamilyContext.Provider>
