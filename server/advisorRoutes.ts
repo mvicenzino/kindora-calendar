@@ -9,7 +9,9 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const BASE_SYSTEM_PROMPT = `You are Kira, a warm and experienced family advisor within the Kindora Calendar app. You specialize in supporting the "sandwich generation" — people who are simultaneously raising children and caring for aging parents.
+const BASE_SYSTEM_PROMPT = `You are Kira, a warm and deeply trusted family advisor within the Kindora app. You specialize in supporting the "sandwich generation" — people who are simultaneously raising children and caring for aging parents.
+
+You feel like a close friend who has been walking alongside this family for years. You remember names, circumstances, and the emotional weight of what they're carrying. You never make them explain themselves from scratch.
 
 Your expertise covers:
 - Child development and behavior (toddlers, school-age children, teens)
@@ -36,7 +38,7 @@ Your communication style:
 - Honest — if something needs professional attention (doctor, therapist, social worker), say so clearly
 - Conversational — match the user's tone, keep responses focused and readable
 - Use short paragraphs; avoid walls of text
-- When you know their family context, reference it naturally — use names, mention specific situations
+- Always reference names and specific situations from what you know — never speak generically when you have context
 
 Important boundaries:
 - You are a supportive resource, NOT a licensed therapist, doctor, or medical provider
@@ -68,10 +70,26 @@ function buildSystemPrompt(family?: {
   return `${BASE_SYSTEM_PROMPT}
 
 ---
-FAMILY CONTEXT — use this to personalize your responses. Reference names and details naturally when relevant:
+FAMILY CONTEXT — You know this family well. Use names, reference specific situations, and never make them repeat themselves. Weave this naturally into every response:
 
 ${parts.join("\n\n")}
 ---`;
+}
+
+function buildGreetingPrompt(): string {
+  return `Open this conversation with a personal, warm check-in message — as if you've been thinking about this family and want to reconnect.
+
+Your opening message should:
+- Be 2–3 short paragraphs, conversational and human
+- Reference their specific situation using names and details from what you know — make it clear you remember them
+- Offer one genuine, concrete observation or insight that might actually help them right now — something grounded in their real circumstances
+- End with a natural, open-ended question that invites them to share what's on their mind today
+
+Tone rules:
+- Don't open with "Hi" or "Hello" or "Hey" — start with something more engaged and present
+- Sound like a trusted confidant who's been paying attention, not a help desk
+- Keep it warm but grounded — not over-enthusiastic, not clinical
+- This should feel like hearing from a friend who genuinely knows them`;
 }
 
 async function getFamilyForUser(userId: string) {
@@ -123,6 +141,62 @@ export function registerAdvisorRoutes(app: Express): void {
     } catch (error) {
       console.error("Error saving advisor profile:", error);
       res.status(500).json({ error: "Failed to save advisor profile" });
+    }
+  });
+
+  // Generate a personalized greeting from Kira (streamed, no conversation required)
+  app.post("/api/advisor/greet", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      const family = await getFamilyForUser(userId);
+
+      if (!family) {
+        return res.status(400).json({ error: "No family profile found" });
+      }
+
+      const hasContext =
+        family.advisorChildrenContext?.trim() ||
+        family.advisorElderContext?.trim() ||
+        family.advisorSelfContext?.trim();
+
+      if (!hasContext) {
+        return res.status(400).json({ error: "No family context to generate greeting" });
+      }
+
+      const systemPrompt = buildSystemPrompt(family);
+      const greetingPrompt = buildGreetingPrompt();
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-5.1",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: greetingPrompt },
+        ],
+        stream: true,
+        max_completion_tokens: 500,
+      });
+
+      for await (const chunk of stream) {
+        const delta = chunk.choices[0]?.delta?.content || "";
+        if (delta) {
+          res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } catch (error) {
+      console.error("Error generating greeting:", error);
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ error: "Failed to generate greeting" })}\n\n`);
+        res.end();
+      } else {
+        res.status(500).json({ error: "Failed to generate greeting" });
+      }
     }
   });
 
@@ -182,9 +256,18 @@ export function registerAdvisorRoutes(app: Express): void {
     try {
       const userId = (req as any).user?.claims?.sub;
       const conversationId = parseInt(req.params.id);
-      const { content } = req.body;
+      const { content, priorGreeting } = req.body;
 
       if (!content?.trim()) return res.status(400).json({ error: "Message content required" });
+
+      // If a prior greeting was shown to the user, save it as the first assistant message
+      // (only if this conversation has no messages yet)
+      if (priorGreeting?.trim()) {
+        const existing = await chatStorage.getMessagesByConversation(conversationId);
+        if (existing.length === 0) {
+          await chatStorage.createMessage(conversationId, "assistant", priorGreeting.trim());
+        }
+      }
 
       // Save user message
       await chatStorage.createMessage(conversationId, "user", content);

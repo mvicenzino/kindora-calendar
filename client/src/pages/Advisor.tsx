@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2 } from "lucide-react";
+import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2, RefreshCw } from "lucide-react";
 import type { AdvisorConversation, AdvisorMessage } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
@@ -60,15 +60,31 @@ function MessageBubble({ message }: { message: AdvisorMessage }) {
           ? "bg-primary text-primary-foreground rounded-tr-sm"
           : "bg-muted text-foreground rounded-tl-sm"
       )}>
-        {message.content.split("\n").map((line, i) => (
-          <span key={i}>{line}{i < message.content.split("\n").length - 1 && <br />}</span>
+        {message.content.split("\n").map((line, i, arr) => (
+          <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
         ))}
       </div>
     </div>
   );
 }
 
-function EmptyState({ onSuggest }: { onSuggest: (prompt: string) => void }) {
+function StreamingBubble({ content }: { content: string }) {
+  return (
+    <div className="flex gap-3 items-start">
+      <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <Bot className="w-3.5 h-3.5 text-primary" />
+      </div>
+      <div className="max-w-[80%] bg-muted rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-foreground">
+        {content.split("\n").map((line, i, arr) => (
+          <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+        ))}
+        <span className="inline-block w-1.5 h-4 bg-primary/60 ml-0.5 align-middle animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+function EmptyStateGeneric({ onSuggest }: { onSuggest: (prompt: string) => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full px-6 py-12 text-center">
       <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
@@ -105,6 +121,12 @@ export default function Advisor() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Kira greeting state (shown before any conversation starts)
+  const [greeting, setGreeting] = useState<string>("");
+  const [isGreeting, setIsGreeting] = useState(false);
+  const [greetingDone, setGreetingDone] = useState(false);
+  const greetingAbortRef = useRef<AbortController | null>(null);
+
   const { data: conversations = [] } = useQuery<AdvisorConversation[]>({
     queryKey: ["/api/advisor/conversations"],
   });
@@ -113,10 +135,13 @@ export default function Advisor() {
     queryKey: ["/api/advisor/profile"],
   });
 
-  const profileIsEmpty = profile &&
-    !profile.advisorChildrenContext?.trim() &&
-    !profile.advisorElderContext?.trim() &&
-    !profile.advisorSelfContext?.trim();
+  const profileHasContent = !!(
+    profile?.advisorChildrenContext?.trim() ||
+    profile?.advisorElderContext?.trim() ||
+    profile?.advisorSelfContext?.trim()
+  );
+
+  const profileIsEmpty = profile && !profileHasContent;
 
   const { data: activeConv } = useQuery<ConversationWithMessages>({
     queryKey: ["/api/advisor/conversations", activeId],
@@ -144,11 +169,90 @@ export default function Advisor() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+  }, [messages, streamingContent, greeting]);
+
+  // Generate Kira's greeting when profile loads with content and no active conversation
+  const generateGreeting = useCallback(async () => {
+    if (isGreeting || greetingDone) return;
+
+    greetingAbortRef.current?.abort();
+    const abort = new AbortController();
+    greetingAbortRef.current = abort;
+
+    setIsGreeting(true);
+    setGreeting("");
+
+    try {
+      const res = await fetch("/api/advisor/greet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: abort.signal,
+      });
+
+      if (!res.ok) {
+        setIsGreeting(false);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let full = "";
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const evt = JSON.parse(line.slice(6));
+              if (evt.content) {
+                full += evt.content;
+                setGreeting(full);
+              }
+              if (evt.done) {
+                setIsGreeting(false);
+                setGreetingDone(true);
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        setIsGreeting(false);
+      }
+    }
+  }, [isGreeting, greetingDone]);
+
+  useEffect(() => {
+    if (profileHasContent && !activeId && !greetingDone && !isGreeting && profile) {
+      generateGreeting();
+    }
+  }, [profileHasContent, activeId, profile]);
+
+  // Reset greeting when user navigates away from a conversation back to home
+  const handleNewChat = () => {
+    abortRef.current?.abort();
+    setActiveId(null);
+    setIsStreaming(false);
+    setStreamingContent("");
+    // Reset greeting so Kira greets fresh next time
+    setGreeting("");
+    setGreetingDone(false);
+    setIsGreeting(false);
+  };
 
   const sendMessage = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content || isStreaming) return;
+
+    // Capture greeting before clearing state
+    const priorGreeting = greeting || undefined;
 
     let convId = activeId;
     if (!convId) {
@@ -165,17 +269,33 @@ export default function Advisor() {
     setIsStreaming(true);
     setStreamingContent("");
 
-    // Optimistically add the user message
-    queryClient.setQueryData(["/api/advisor/conversations", convId], (old: any) => ({
-      ...old,
-      messages: [...(old?.messages ?? []), {
-        id: Date.now(),
-        conversationId: convId,
-        role: "user",
-        content,
-        createdAt: new Date().toISOString(),
-      }],
-    }));
+    // Optimistically add the user message; if there was a greeting, include it too
+    queryClient.setQueryData(["/api/advisor/conversations", convId], (old: any) => {
+      const existingMessages = old?.messages ?? [];
+      const greetingMsg = priorGreeting && existingMessages.length === 0
+        ? [{
+            id: Date.now() - 1,
+            conversationId: convId,
+            role: "assistant",
+            content: priorGreeting,
+            createdAt: new Date().toISOString(),
+          }]
+        : [];
+      return {
+        ...old,
+        messages: [
+          ...existingMessages,
+          ...greetingMsg,
+          {
+            id: Date.now(),
+            conversationId: convId,
+            role: "user",
+            content,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      };
+    });
 
     try {
       const abort = new AbortController();
@@ -184,7 +304,7 @@ export default function Advisor() {
       const res = await fetch(`/api/advisor/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, priorGreeting }),
         signal: abort.signal,
       });
 
@@ -232,6 +352,10 @@ export default function Advisor() {
     }
   };
 
+  // Determine what to show in the main area
+  const showGreeting = !activeId && (greeting || isGreeting);
+  const showGenericEmpty = !activeId && !greeting && !isGreeting;
+
   return (
     <div className="flex h-full">
       {/* Sidebar */}
@@ -240,7 +364,12 @@ export default function Advisor() {
           <Button
             size="sm"
             className="w-full gap-1.5 text-xs"
-            onClick={() => { setActiveId(null); createConversation.mutate(); }}
+            onClick={() => {
+              handleNewChat();
+              if (profileHasContent) {
+                setTimeout(() => generateGreeting(), 50);
+              }
+            }}
             data-testid="button-new-conversation"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -302,67 +431,103 @@ export default function Advisor() {
               <p className="text-[10px] text-muted-foreground mt-0.5">Family Advisor · AI-powered</p>
             </div>
           </div>
-          {activeId && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => { setActiveId(null); }}
-              className="text-xs text-muted-foreground gap-1.5"
-              data-testid="button-new-chat"
-            >
-              <Plus className="w-3 h-3" />
-              New chat
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {profileIsEmpty && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs gap-1.5"
+                onClick={() => navigate("/settings/kira")}
+                data-testid="button-setup-kira-profile"
+              >
+                <Settings2 className="w-3 h-3" />
+                Set up profile
+              </Button>
+            )}
+            {activeId && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleNewChat}
+                className="text-xs text-muted-foreground gap-1.5"
+                data-testid="button-new-chat"
+              >
+                <Plus className="w-3 h-3" />
+                New chat
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Profile setup nudge */}
-        {profileIsEmpty && (
-          <div className="mx-4 mt-3 mb-0 flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-primary/8 border border-primary/20">
-            <div className="flex items-center gap-2 min-w-0">
-              <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-              <p className="text-xs text-foreground/80 truncate">
-                Help Kira get to know your family for more personal advice.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs flex-shrink-0 gap-1.5 h-7"
-              onClick={() => navigate("/settings/kira")}
-              data-testid="button-setup-kira-profile"
-            >
-              <Settings2 className="w-3 h-3" />
-              Set up profile
-            </Button>
-          </div>
-        )}
-
-        {/* Messages */}
+        {/* Messages / Greeting / Empty state */}
         <ScrollArea className="flex-1 px-4 py-4">
-          {!activeId && !isStreaming ? (
-            <EmptyState onSuggest={(prompt) => sendMessage(prompt)} />
-          ) : (
+          {/* Active conversation */}
+          {activeId && (
             <div className="space-y-4 max-w-2xl mx-auto">
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
-              {isStreaming && streamingContent && (
-                <div className="flex gap-3 items-start">
-                  <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bot className="w-3.5 h-3.5 text-primary" />
-                  </div>
-                  <div className="max-w-[80%] bg-muted rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-foreground">
-                    {streamingContent.split("\n").map((line, i) => (
-                      <span key={i}>{line}{i < streamingContent.split("\n").length - 1 && <br />}</span>
-                    ))}
-                    <span className="inline-block w-1.5 h-4 bg-primary/60 ml-0.5 align-middle animate-pulse" />
-                  </div>
-                </div>
-              )}
+              {isStreaming && streamingContent && <StreamingBubble content={streamingContent} />}
               {isStreaming && !streamingContent && <TypingIndicator />}
               <div ref={messagesEndRef} />
             </div>
+          )}
+
+          {/* Kira's personalized greeting (no active conversation yet) */}
+          {showGreeting && (
+            <div className="max-w-2xl mx-auto space-y-4">
+              {/* Greeting message */}
+              <div className="flex gap-3 items-start">
+                <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Bot className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <div className="max-w-[85%] bg-muted rounded-2xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed text-foreground">
+                  {greeting ? (
+                    <>
+                      {greeting.split("\n").map((line, i, arr) => (
+                        <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+                      ))}
+                      {isGreeting && (
+                        <span className="inline-block w-1.5 h-4 bg-primary/60 ml-0.5 align-middle animate-pulse" />
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex gap-1 items-center h-4">
+                      {[0, 1, 2].map((i) => (
+                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50"
+                          style={{ animation: `bounce 1.2s ${i * 0.2}s ease-in-out infinite` }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Regenerate option once greeting is done */}
+              {greetingDone && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => {
+                      setGreeting("");
+                      setGreetingDone(false);
+                      setIsGreeting(false);
+                      setTimeout(() => generateGreeting(), 50);
+                    }}
+                    className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground flex items-center gap-1 transition-colors"
+                    data-testid="button-regenerate-greeting"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" />
+                    Refresh
+                  </button>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+
+          {/* Generic empty state (no profile set up) */}
+          {showGenericEmpty && (
+            <EmptyStateGeneric onSuggest={(prompt) => sendMessage(prompt)} />
           )}
         </ScrollArea>
 
@@ -374,7 +539,7 @@ export default function Advisor() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask Kira anything…"
+              placeholder={greeting ? "Reply to Kira…" : "Ask Kira anything…"}
               className="resize-none min-h-[44px] max-h-32 text-sm"
               rows={1}
               disabled={isStreaming}
