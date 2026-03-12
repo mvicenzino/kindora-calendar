@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar } from "lucide-react";
+import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image } from "lucide-react";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 
 const BRAND_ORANGE = "#f97316";
@@ -28,7 +28,7 @@ const SLIDE_DATA = [
     accentGlow: "rgba(249, 115, 22, 0.28)",
     badge: "Beyond the calendar",
     headline: "Google Calendar\ncan't do this.",
-    sub: "Medication tracking. Caregiver time logs. Automated weekly family summaries. Everything Google and Apple left out.",
+    sub: "Medications. Caregiver hours. Family messaging. Document vault. Shared memories. Weekly summaries. Everything Google and Apple left out.",
     illustration: "features",
   },
 ] as const;
@@ -129,35 +129,39 @@ function AccessIllustration() {
 
 function FeaturesIllustration() {
   const features = [
-    { icon: Pill, color: BRAND_ORANGE, label: "Medication tracker", value: "Metformin · 8:00 AM", delay: "0ms", x: "0%", y: "0%" },
-    { icon: Clock, color: BRAND_AMBER, label: "Caregiver hours", value: "This week: 18.5 hrs", delay: "100ms", x: "55%", y: "20%" },
-    { icon: Mail, color: "#10B981", label: "Weekly digest", value: "Sent every Sunday", delay: "200ms", x: "10%", y: "54%" },
+    { icon: Pill,          color: BRAND_ORANGE, label: "Medications",       value: "Metformin · 8 AM"    },
+    { icon: Clock,         color: BRAND_AMBER,  label: "Caregiver hours",   value: "18.5 hrs this week"  },
+    { icon: Mail,          color: "#10B981",    label: "Weekly digest",     value: "Every Sunday"        },
+    { icon: MessageCircle, color: "#3B82F6",    label: "Family messaging",  value: "All in one place"    },
+    { icon: FolderLock,    color: "#A855F7",    label: "Document vault",    value: "Insurance, legal..."  },
+    { icon: Image,         color: "#EC4899",    label: "Shared memories",   value: "Photos & moments"    },
   ];
   return (
-    <div className="relative w-full max-w-xs mx-auto h-52 select-none">
-      {features.map((f, i) => {
-        const Icon = f.icon;
-        return (
-          <div key={i} className="absolute rounded-2xl p-3 flex items-center gap-3"
-            style={{
-              left: f.x, top: f.y, width: "172px",
-              background: `linear-gradient(135deg, ${f.color}18 0%, ${f.color}08 100%)`,
-              border: `1px solid ${f.color}35`,
-              backdropFilter: "blur(16px)",
-              animation: `slideInCard 0.5s ${f.delay} both, floatUp ${3.2 + i * 0.6}s ${f.delay} ease-in-out infinite`,
-              boxShadow: `0 8px 28px ${f.color}15`,
-            }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: `${f.color}20`, border: `1px solid ${f.color}40` }}>
-              <Icon className="w-4 h-4" style={{ color: f.color }} />
+    <div className="w-full max-w-xs mx-auto select-none">
+      <div className="grid grid-cols-2 gap-2">
+        {features.map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <div key={i} className="rounded-xl p-2.5 flex items-center gap-2"
+              style={{
+                background: `linear-gradient(135deg, ${f.color}18 0%, ${f.color}08 100%)`,
+                border: `1px solid ${f.color}35`,
+                backdropFilter: "blur(16px)",
+                animation: `slideInCard 0.4s ${i * 60}ms both`,
+                boxShadow: `0 4px 16px ${f.color}12`,
+              }}>
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: `${f.color}20`, border: `1px solid ${f.color}38` }}>
+                <Icon className="w-3.5 h-3.5" style={{ color: f.color }} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-white/55 text-[8px] uppercase tracking-wide leading-none mb-0.5 truncate">{f.label}</p>
+                <p className="text-white text-[10px] font-semibold leading-snug truncate">{f.value}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-white/60 text-[9px] uppercase tracking-wider leading-none mb-0.5">{f.label}</p>
-              <p className="text-white text-[11px] font-semibold leading-snug">{f.value}</p>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
