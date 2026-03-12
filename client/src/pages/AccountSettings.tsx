@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CreditCard, Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload } from "lucide-react";
+import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import FamilySettings from "./FamilySettings";
 import ImportSchedule from "./ImportSchedule";
@@ -64,25 +64,6 @@ function AccountTab() {
       window.history.replaceState({}, "", "/settings");
     }
   }, [searchString, toast]);
-
-  const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/checkout/create-session");
-      return res.json();
-    },
-    onSuccess: (data: { url: string }) => {
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start checkout",
-        variant: "destructive",
-      });
-    },
-  });
 
   const cancelMutation = useMutation({
     mutationFn: async () => {
@@ -169,7 +150,7 @@ function AccountTab() {
                 Family Plan
               </Badge>
             ) : (
-              <Badge variant="secondary" data-testid="badge-plan-tier">Free Plan</Badge>
+              <Badge variant="secondary" data-testid="badge-plan-tier">Beta</Badge>
             )}
           </div>
           <CardDescription>
@@ -177,17 +158,12 @@ function AccountTab() {
               ? isCanceling
                 ? "Your subscription is set to cancel at the end of the billing period."
                 : "You have access to all premium features."
-              : "Upgrade to unlock all premium features for your family."}
+              : "You're in the Kindora beta — full access, on us."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {!isFamily && (
-            <div className="space-y-4">
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">$7</span>
-                <span className="text-sm text-muted-foreground">/month</span>
-                <Badge variant="secondary" className="ml-1">14-day free trial</Badge>
-              </div>
+            <div className="space-y-3">
               <ul className="grid gap-2 sm:grid-cols-2">
                 {PLAN_FEATURES.family.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm">
@@ -196,25 +172,9 @@ function AccountTab() {
                   </li>
                 ))}
               </ul>
-              <Button
-                className="w-full sm:w-auto"
-                onClick={() => checkoutMutation.mutate()}
-                disabled={checkoutMutation.isPending}
-                data-testid="button-upgrade-plan"
-              >
-                {checkoutMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Redirecting to checkout...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Start 14-Day Free Trial
-                  </>
-                )}
-              </Button>
-              <p className="text-xs text-muted-foreground">No charge until your trial ends. Cancel anytime.</p>
+              <p className="text-xs text-muted-foreground pt-1">
+                Kindora is free during beta. Pricing will be introduced soon — beta users will get early notice.
+              </p>
             </div>
           )}
 
