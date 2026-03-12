@@ -2,13 +2,14 @@ import type { Express, Request, Response } from "express";
 import OpenAI from "openai";
 import { chatStorage } from "./replit_integrations/chat/storage";
 import { isAuthenticated } from "./replitAuth";
+import { storage } from "./storage";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-const ADVISOR_SYSTEM_PROMPT = `You are Kira, a warm and experienced family advisor within the Kindora Calendar app. You specialize in supporting the "sandwich generation" — people who are simultaneously raising children and caring for aging parents.
+const BASE_SYSTEM_PROMPT = `You are Kira, a warm and experienced family advisor within the Kindora Calendar app. You specialize in supporting the "sandwich generation" — people who are simultaneously raising children and caring for aging parents.
 
 Your expertise covers:
 - Child development and behavior (toddlers, school-age children, teens)
@@ -35,16 +36,96 @@ Your communication style:
 - Honest — if something needs professional attention (doctor, therapist, social worker), say so clearly
 - Conversational — match the user's tone, keep responses focused and readable
 - Use short paragraphs; avoid walls of text
+- When you know their family context, reference it naturally — use names, mention specific situations
 
 Important boundaries:
 - You are a supportive resource, NOT a licensed therapist, doctor, or medical provider
 - For medical symptoms or safety concerns, always recommend consulting a healthcare professional
 - For mental health crises, provide crisis resources (988 Suicide & Crisis Lifeline, etc.)
-- Remind users you're an AI when it feels appropriate, not defensively
+- Remind users you're an AI when it feels appropriate, not defensively`;
 
-Start each new conversation by warmly asking what's going on — let them lead. If they describe a situation, validate their feelings first, then offer 2-3 concrete suggestions they can try.`;
+function buildSystemPrompt(family?: {
+  advisorChildrenContext?: string | null;
+  advisorElderContext?: string | null;
+  advisorSelfContext?: string | null;
+}): string {
+  if (!family) return BASE_SYSTEM_PROMPT;
+
+  const parts: string[] = [];
+
+  if (family.advisorChildrenContext?.trim()) {
+    parts.push(`About their children:\n${family.advisorChildrenContext.trim()}`);
+  }
+  if (family.advisorElderContext?.trim()) {
+    parts.push(`About their aging parents or loved ones:\n${family.advisorElderContext.trim()}`);
+  }
+  if (family.advisorSelfContext?.trim()) {
+    parts.push(`About the user themselves:\n${family.advisorSelfContext.trim()}`);
+  }
+
+  if (parts.length === 0) return BASE_SYSTEM_PROMPT;
+
+  return `${BASE_SYSTEM_PROMPT}
+
+---
+FAMILY CONTEXT — use this to personalize your responses. Reference names and details naturally when relevant:
+
+${parts.join("\n\n")}
+---`;
+}
+
+async function getFamilyForUser(userId: string) {
+  try {
+    const families = await storage.getUserFamilies(userId);
+    if (families.length === 0) return null;
+    return families[0];
+  } catch {
+    return null;
+  }
+}
 
 export function registerAdvisorRoutes(app: Express): void {
+  // Get advisor context for the user's family
+  app.get("/api/advisor/profile", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      const family = await getFamilyForUser(userId);
+      if (!family) return res.json({ advisorChildrenContext: "", advisorElderContext: "", advisorSelfContext: "" });
+      res.json({
+        familyId: family.id,
+        advisorChildrenContext: family.advisorChildrenContext ?? "",
+        advisorElderContext: family.advisorElderContext ?? "",
+        advisorSelfContext: family.advisorSelfContext ?? "",
+      });
+    } catch (error) {
+      console.error("Error fetching advisor profile:", error);
+      res.status(500).json({ error: "Failed to fetch advisor profile" });
+    }
+  });
+
+  // Save advisor context for the user's family
+  app.patch("/api/advisor/profile", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      const { advisorChildrenContext, advisorElderContext, advisorSelfContext } = req.body;
+
+      const families = await storage.getUserFamilies(userId);
+      if (families.length === 0) return res.status(404).json({ error: "No family found" });
+
+      const familyId = families[0].id;
+      const updated = await storage.updateFamily(familyId, {
+        advisorChildrenContext: advisorChildrenContext?.slice(0, 2000) ?? null,
+        advisorElderContext: advisorElderContext?.slice(0, 2000) ?? null,
+        advisorSelfContext: advisorSelfContext?.slice(0, 2000) ?? null,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error saving advisor profile:", error);
+      res.status(500).json({ error: "Failed to save advisor profile" });
+    }
+  });
+
   // Get user's advisor conversations
   app.get("/api/advisor/conversations", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -99,6 +180,7 @@ export function registerAdvisorRoutes(app: Express): void {
   // Send a message and stream back AI response
   app.post("/api/advisor/conversations/:id/messages", isAuthenticated, async (req: Request, res: Response) => {
     try {
+      const userId = (req as any).user?.claims?.sub;
       const conversationId = parseInt(req.params.id);
       const { content } = req.body;
 
@@ -114,6 +196,10 @@ export function registerAdvisorRoutes(app: Express): void {
         content: m.content,
       }));
 
+      // Build personalized system prompt using family context
+      const family = await getFamilyForUser(userId);
+      const systemPrompt = buildSystemPrompt(family ?? undefined);
+
       // Set up SSE streaming
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
@@ -122,7 +208,7 @@ export function registerAdvisorRoutes(app: Express): void {
       const stream = await openai.chat.completions.create({
         model: "gpt-5.1",
         messages: [
-          { role: "system", content: ADVISOR_SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           ...chatMessages,
         ],
         stream: true,

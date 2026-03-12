@@ -96,6 +96,7 @@ function Router() {
               <Route path="/advisor" component={Advisor} />
               <Route path="/settings/family">{() => <AccountSettings initialTab="family" />}</Route>
               <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
+              <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>
               <Route path="/settings">{() => <AccountSettings />}</Route>
             </Switch>
           </AppShell>

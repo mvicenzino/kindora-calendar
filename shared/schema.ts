@@ -67,6 +67,9 @@ export const families = pgTable("families", {
   inviteCode: varchar("invite_code").unique().notNull(),
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  advisorChildrenContext: text("advisor_children_context"),
+  advisorElderContext: text("advisor_elder_context"),
+  advisorSelfContext: text("advisor_self_context"),
 });
 
 // Family Memberships table (links users to families)

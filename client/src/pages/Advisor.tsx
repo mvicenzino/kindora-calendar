@@ -4,9 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { apiRequest } from "@/lib/queryClient";
-import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles } from "lucide-react";
+import { useLocation } from "wouter";
+import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2 } from "lucide-react";
 import type { AdvisorConversation, AdvisorMessage } from "@shared/schema";
 import { cn } from "@/lib/utils";
+
+interface AdvisorProfile {
+  advisorChildrenContext: string;
+  advisorElderContext: string;
+  advisorSelfContext: string;
+}
 
 const SUGGESTED_TOPICS = [
   { label: "Toddler won't eat", prompt: "My toddler refuses to eat most foods and mealtimes have become a battle. What can I do?" },
@@ -89,6 +96,7 @@ function EmptyState({ onSuggest }: { onSuggest: (prompt: string) => void }) {
 
 export default function Advisor() {
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
   const [activeId, setActiveId] = useState<number | null>(null);
   const [input, setInput] = useState("");
   const [streamingContent, setStreamingContent] = useState("");
@@ -100,6 +108,15 @@ export default function Advisor() {
   const { data: conversations = [] } = useQuery<AdvisorConversation[]>({
     queryKey: ["/api/advisor/conversations"],
   });
+
+  const { data: profile } = useQuery<AdvisorProfile>({
+    queryKey: ["/api/advisor/profile"],
+  });
+
+  const profileIsEmpty = profile &&
+    !profile.advisorChildrenContext?.trim() &&
+    !profile.advisorElderContext?.trim() &&
+    !profile.advisorSelfContext?.trim();
 
   const { data: activeConv } = useQuery<ConversationWithMessages>({
     queryKey: ["/api/advisor/conversations", activeId],
@@ -238,11 +255,14 @@ export default function Advisor() {
               </p>
             )}
             {conversations.map((conv) => (
-              <button
+              <div
                 key={conv.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setActiveId(conv.id)}
+                onKeyDown={(e) => e.key === "Enter" && setActiveId(conv.id)}
                 className={cn(
-                  "w-full text-left px-3 py-2 rounded-lg text-xs transition-colors group flex items-center gap-2",
+                  "w-full text-left px-3 py-2 rounded-lg text-xs transition-colors group flex items-center gap-2 cursor-pointer",
                   activeId === conv.id
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-foreground/70 hover:bg-muted hover:text-foreground"
@@ -253,12 +273,12 @@ export default function Advisor() {
                 <span className="truncate flex-1">{conv.title}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteConversation.mutate(conv.id); }}
-                  className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity flex-shrink-0"
+                  className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity flex-shrink-0 p-0.5 rounded"
                   data-testid={`delete-conv-${conv.id}`}
                 >
                   <Trash2 className="w-3 h-3" />
                 </button>
-              </button>
+              </div>
             ))}
           </div>
         </ScrollArea>
@@ -295,6 +315,28 @@ export default function Advisor() {
             </Button>
           )}
         </div>
+
+        {/* Profile setup nudge */}
+        {profileIsEmpty && (
+          <div className="mx-4 mt-3 mb-0 flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-primary/8 border border-primary/20">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+              <p className="text-xs text-foreground/80 truncate">
+                Help Kira get to know your family for more personal advice.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs flex-shrink-0 gap-1.5 h-7"
+              onClick={() => navigate("/settings/kira")}
+              data-testid="button-setup-kira-profile"
+            >
+              <Settings2 className="w-3 h-3" />
+              Set up profile
+            </Button>
+          </div>
+        )}
 
         {/* Messages */}
         <ScrollArea className="flex-1 px-4 py-4">

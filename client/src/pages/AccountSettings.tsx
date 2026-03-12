@@ -8,10 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload } from "lucide-react";
+import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import FamilySettings from "./FamilySettings";
 import ImportSchedule from "./ImportSchedule";
+import KiraProfile from "./KiraProfile";
 
 interface SubscriptionStatus {
   tier: string;
@@ -293,6 +294,10 @@ export default function AccountSettings({ initialTab }: { initialTab?: string })
               <Upload className="h-4 w-4 mr-1.5" />
               Import
             </TabsTrigger>
+            <TabsTrigger value="kira" data-testid="tab-kira">
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Kira
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="account" className="mt-0">
@@ -305,6 +310,10 @@ export default function AccountSettings({ initialTab }: { initialTab?: string })
 
           <TabsContent value="import" className="mt-0">
             <ImportSchedule />
+          </TabsContent>
+
+          <TabsContent value="kira" className="mt-0">
+            <KiraProfile />
           </TabsContent>
         </Tabs>
       </div>
