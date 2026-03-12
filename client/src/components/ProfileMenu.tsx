@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { UiFamilyMember } from "@shared/types";
 import type { FamilyMembership, User as UserType } from "@shared/schema";
-import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2, Bell, BellOff, CreditCard } from 'lucide-react';
+import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2, Bell, BellOff, CreditCard, Send } from 'lucide-react';
 import { Switch } from "@/components/ui/switch";
 import { queryClient } from "@/lib/queryClient";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -84,9 +84,14 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
     },
   });
 
-  // Weekly summary preference query
+  // Weekly summary preference query (familyId included in URL so multi-family works correctly)
   const { data: prefData, isLoading: prefLoading } = useQuery<{ preference: { optedIn: boolean } }>({
     queryKey: ['/api/weekly-summary-preference', activeFamilyId],
+    queryFn: async () => {
+      const res = await fetch(`/api/weekly-summary-preference?familyId=${activeFamilyId}`);
+      if (!res.ok) throw new Error('Failed to fetch preference');
+      return res.json();
+    },
     enabled: !!activeFamilyId && isOpen,
   });
 
@@ -141,7 +146,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
 
   const handleNavigateToSettings = () => {
     setIsOpen(false);
-    setLocation('/family');
+    setLocation('/settings/family');
   };
 
   const handleLogout = () => {
@@ -223,7 +228,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
           </div>
 
           {/* Tab Content */}
-          <div className="p-4 max-h-64 overflow-y-auto">
+          <div className="p-4 max-h-80 overflow-y-auto">
             {/* Profile Tab */}
             {activeTab === 'profile' && (
               <div className="space-y-3">
@@ -468,14 +473,16 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                       <div className="text-xs text-muted-foreground">Email this week's agenda</div>
                     </div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  <Send className="w-4 h-4 text-muted-foreground" />
                 </button>
                 
                 {/* Weekly Summary Opt-in Toggle */}
                 <div className="w-full flex items-center justify-between p-3 rounded-lg bg-muted/50 text-left">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
-                      {prefData?.preference.optedIn ? (
+                      {prefLoading ? (
+                        <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+                      ) : prefData?.preference.optedIn ? (
                         <Bell className="w-4 h-4 text-teal-400" />
                       ) : (
                         <BellOff className="w-4 h-4 text-muted-foreground" />
@@ -484,25 +491,33 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                     <div>
                       <div className="text-sm font-medium text-foreground">Receive Weekly Emails</div>
                       <div className="text-xs text-muted-foreground">
-                        {prefData?.preference.optedIn ? "Subscribed to automated summaries" : "Opt into weekly digest"}
+                        {prefLoading
+                          ? "Loading preference..."
+                          : prefData?.preference.optedIn
+                            ? "Subscribed to automated summaries"
+                            : "Opt into weekly digest"}
                       </div>
                     </div>
                   </div>
-                  <Switch
-                    checked={prefData?.preference.optedIn ?? true}
-                    onCheckedChange={(checked) => {
-                      if (!isDemoMode) {
-                        updatePrefMutation.mutate(checked);
-                      } else {
-                        toast({
-                          title: "Demo Mode",
-                          description: "Settings are disabled in demo mode. Sign up to customize!",
-                        });
-                      }
-                    }}
-                    disabled={prefLoading || updatePrefMutation.isPending}
-                    data-testid="switch-weekly-summary-optin"
-                  />
+                  {prefLoading ? (
+                    <div className="w-9 h-5" />
+                  ) : (
+                    <Switch
+                      checked={prefData?.preference.optedIn ?? false}
+                      onCheckedChange={(checked) => {
+                        if (!isDemoMode) {
+                          updatePrefMutation.mutate(checked);
+                        } else {
+                          toast({
+                            title: "Demo Mode",
+                            description: "Settings are disabled in demo mode. Sign up to customize!",
+                          });
+                        }
+                      }}
+                      disabled={updatePrefMutation.isPending}
+                      data-testid="switch-weekly-summary-optin"
+                    />
+                  )}
                 </div>
               </div>
             )}
