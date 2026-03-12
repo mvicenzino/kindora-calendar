@@ -88,11 +88,8 @@ export default function Home() {
   const isDemoMode = user?.id?.startsWith('demo-') ?? false;
   useEffect(() => {
     if (!isLoading && isAuthenticated && !isLoadingFamily && !isDemoMode) {
-      const onboardingDone = localStorage.getItem("kindora_onboarding_complete");
-      if (!onboardingDone && !activeFamilyId) {
+      if (!activeFamilyId) {
         setLocation("/onboarding");
-      } else if (activeFamilyId && !onboardingDone) {
-        localStorage.setItem("kindora_onboarding_complete", "true");
       }
     }
   }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, setLocation]);
