@@ -271,6 +271,16 @@ export const emergencyBridgeTokens = pgTable("emergency_bridge_tokens", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Advisor Usage Tracking — per-user counters for beta analytics
+export const advisorUsage = pgTable("advisor_usage", {
+  userId: varchar("user_id").primaryKey(),
+  totalMessages: integer("total_messages").notNull().default(0),
+  totalGreetings: integer("total_greetings").notNull().default(0),
+  totalConversations: integer("total_conversations").notNull().default(0),
+  firstSeenAt: timestamp("first_seen_at").notNull().default(sql`now()`),
+  lastMessageAt: timestamp("last_message_at"),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -529,6 +539,9 @@ export type EmergencyBridgeToken = typeof emergencyBridgeTokens.$inferSelect;
 // Parsed Invoice types
 export type InsertParsedInvoice = z.infer<typeof insertParsedInvoiceSchema>;
 export type ParsedInvoice = typeof parsedInvoices.$inferSelect;
+
+// Advisor Usage types
+export type AdvisorUsage = typeof advisorUsage.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {

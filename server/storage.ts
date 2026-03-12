@@ -1,9 +1,9 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, and, inArray, isNull, desc } from "drizzle-orm";
+import { eq, and, inArray, isNull, desc, sql } from "drizzle-orm";
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -117,6 +117,13 @@ export interface IStorage {
   createParsedInvoice(familyId: string, userId: string, invoice: Omit<InsertParsedInvoice, 'familyId' | 'createdByUserId'>): Promise<ParsedInvoice>;
   updateParsedInvoiceStatus(id: string, familyId: string, status: string, eventId?: string): Promise<ParsedInvoice>;
   deleteParsedInvoice(id: string, familyId: string): Promise<void>;
+
+  // Advisor Usage Tracking (beta analytics)
+  trackAdvisorMessage(userId: string): Promise<void>;
+  trackAdvisorGreeting(userId: string): Promise<void>;
+  trackAdvisorConversation(userId: string): Promise<void>;
+  getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined>;
+  getAllAdvisorUsage(): Promise<AdvisorUsage[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1016,6 +1023,49 @@ export class MemStorage implements IStorage {
     }
     this.parsedInvoicesMap.delete(id);
   }
+
+  private advisorUsageMap: Map<string, AdvisorUsage> = new Map();
+
+  async trackAdvisorMessage(userId: string): Promise<void> {
+    const now = new Date();
+    const existing = this.advisorUsageMap.get(userId);
+    if (existing) {
+      existing.totalMessages++;
+      existing.lastMessageAt = now;
+    } else {
+      this.advisorUsageMap.set(userId, { userId, totalMessages: 1, totalGreetings: 0, totalConversations: 0, firstSeenAt: now, lastMessageAt: now });
+    }
+  }
+
+  async trackAdvisorGreeting(userId: string): Promise<void> {
+    const now = new Date();
+    const existing = this.advisorUsageMap.get(userId);
+    if (existing) {
+      existing.totalGreetings++;
+    } else {
+      this.advisorUsageMap.set(userId, { userId, totalMessages: 0, totalGreetings: 1, totalConversations: 0, firstSeenAt: now, lastMessageAt: null });
+    }
+  }
+
+  async trackAdvisorConversation(userId: string): Promise<void> {
+    const now = new Date();
+    const existing = this.advisorUsageMap.get(userId);
+    if (existing) {
+      existing.totalConversations++;
+    } else {
+      this.advisorUsageMap.set(userId, { userId, totalMessages: 0, totalGreetings: 0, totalConversations: 1, firstSeenAt: now, lastMessageAt: null });
+    }
+  }
+
+  async getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined> {
+    return this.advisorUsageMap.get(userId);
+  }
+
+  async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
+    return Array.from(this.advisorUsageMap.values()).sort((a, b) =>
+      (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
+    );
+  }
 }
 
 // DrizzleStorage implementation
@@ -1817,6 +1867,49 @@ class DrizzleStorage implements IStorage {
       throw new NotFoundError(`Parsed invoice with id ${id} not found`);
     }
   }
+
+  async trackAdvisorMessage(userId: string): Promise<void> {
+    await this.db.insert(advisorUsage)
+      .values({ userId, totalMessages: 1, totalGreetings: 0, totalConversations: 0, lastMessageAt: new Date() })
+      .onConflictDoUpdate({
+        target: advisorUsage.userId,
+        set: {
+          totalMessages: sql`${advisorUsage.totalMessages} + 1`,
+          lastMessageAt: new Date(),
+        },
+      });
+  }
+
+  async trackAdvisorGreeting(userId: string): Promise<void> {
+    await this.db.insert(advisorUsage)
+      .values({ userId, totalMessages: 0, totalGreetings: 1, totalConversations: 0 })
+      .onConflictDoUpdate({
+        target: advisorUsage.userId,
+        set: {
+          totalGreetings: sql`${advisorUsage.totalGreetings} + 1`,
+        },
+      });
+  }
+
+  async trackAdvisorConversation(userId: string): Promise<void> {
+    await this.db.insert(advisorUsage)
+      .values({ userId, totalMessages: 0, totalGreetings: 0, totalConversations: 1 })
+      .onConflictDoUpdate({
+        target: advisorUsage.userId,
+        set: {
+          totalConversations: sql`${advisorUsage.totalConversations} + 1`,
+        },
+      });
+  }
+
+  async getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined> {
+    const result = await this.db.select().from(advisorUsage).where(eq(advisorUsage.userId, userId));
+    return result[0];
+  }
+
+  async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
+    return this.db.select().from(advisorUsage).orderBy(desc(advisorUsage.lastMessageAt));
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2254,6 +2347,30 @@ class DemoAwareStorage implements IStorage {
   async deleteParsedInvoice(id: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteParsedInvoice(id, familyId);
+  }
+
+  async trackAdvisorMessage(userId: string): Promise<void> {
+    if (userId.startsWith('demo-')) return;
+    return this.persistentStorage.trackAdvisorMessage(userId);
+  }
+
+  async trackAdvisorGreeting(userId: string): Promise<void> {
+    if (userId.startsWith('demo-')) return;
+    return this.persistentStorage.trackAdvisorGreeting(userId);
+  }
+
+  async trackAdvisorConversation(userId: string): Promise<void> {
+    if (userId.startsWith('demo-')) return;
+    return this.persistentStorage.trackAdvisorConversation(userId);
+  }
+
+  async getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined> {
+    if (userId.startsWith('demo-')) return undefined;
+    return this.persistentStorage.getAdvisorUsage(userId);
+  }
+
+  async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
+    return this.persistentStorage.getAllAdvisorUsage();
   }
 }
 

@@ -144,6 +144,40 @@ export function registerAdvisorRoutes(app: Express): void {
     }
   });
 
+  // Admin stats — advisor usage across all real users
+  app.get("/api/admin/advisor-stats", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const allUsage = await storage.getAllAdvisorUsage();
+
+      // Enrich with user emails for readability
+      const enriched = await Promise.all(
+        allUsage.map(async (u) => {
+          const user = await storage.getUser(u.userId).catch(() => null);
+          return {
+            userId: u.userId,
+            email: user?.email ?? "(unknown)",
+            totalMessages: u.totalMessages,
+            totalGreetings: u.totalGreetings,
+            totalConversations: u.totalConversations,
+            firstSeenAt: u.firstSeenAt,
+            lastMessageAt: u.lastMessageAt,
+          };
+        })
+      );
+
+      res.json({
+        totalUsers: enriched.length,
+        totalMessages: enriched.reduce((sum, u) => sum + u.totalMessages, 0),
+        totalConversations: enriched.reduce((sum, u) => sum + u.totalConversations, 0),
+        totalGreetings: enriched.reduce((sum, u) => sum + u.totalGreetings, 0),
+        users: enriched,
+      });
+    } catch (error) {
+      console.error("Error fetching advisor stats:", error);
+      res.status(500).json({ error: "Failed to fetch advisor stats" });
+    }
+  });
+
   // Generate a personalized greeting from Kira (streamed, no conversation required)
   app.post("/api/advisor/greet", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -186,6 +220,9 @@ export function registerAdvisorRoutes(app: Express): void {
           res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
         }
       }
+
+      // Track greeting usage (fire-and-forget)
+      storage.trackAdvisorGreeting(userId).catch(() => {});
 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
@@ -232,6 +269,8 @@ export function registerAdvisorRoutes(app: Express): void {
       const userId = (req as any).user?.claims?.sub;
       const { title } = req.body;
       const conversation = await chatStorage.createConversation(title || "New conversation", userId);
+      // Track conversation creation (fire-and-forget)
+      storage.trackAdvisorConversation(userId).catch(() => {});
       res.status(201).json(conversation);
     } catch (error) {
       console.error("Error creating conversation:", error);
@@ -271,6 +310,8 @@ export function registerAdvisorRoutes(app: Express): void {
 
       // Save user message
       await chatStorage.createMessage(conversationId, "user", content);
+      // Track message usage (fire-and-forget)
+      storage.trackAdvisorMessage(userId).catch(() => {});
 
       // Get conversation history
       const history = await chatStorage.getMessagesByConversation(conversationId);
