@@ -4124,13 +4124,11 @@ Visit Kindora Calendar: ${joinUrl}
       const rangeStart = subDays(now, 30);
       const rangeEnd = addDays(now, 365);
 
-      // Include events within the range (also expand rrule recurring events is complex — for now use DB events)
       const relevantEvents = allEvents.filter(e => {
         const start = new Date(e.startTime);
         return start >= rangeStart && start <= rangeEnd;
       });
 
-      // Format events as a compact text context for the AI
       const eventContext = relevantEvents.map(e => {
         const memberNames = (e.memberIds || []).map((id: string) => memberMap[id] || id).join(', ') || 'everyone';
         const dateStr = format(new Date(e.startTime), 'EEE MMM d, yyyy');
@@ -4140,31 +4138,90 @@ Visit Kindora Calendar: ${joinUrl}
       }).join('\n');
 
       const todayStr = format(now, 'EEEE, MMMM d, yyyy');
+      const currentYear = now.getFullYear();
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4.1",
         messages: [
           {
             role: "system",
-            content: `You are a helpful family calendar assistant embedded in the Kindora app. Today is ${todayStr}. Answer questions about the family's schedule based on the events provided. Be concise, warm, and specific — always include dates and times in your answers. Return your response as valid JSON with two fields: "answer" (a natural language response, 1–3 sentences) and "eventIds" (an array of event IDs from the list that directly answer or are most relevant to the question, maximum 5 IDs). If no specific events are relevant, return an empty array for eventIds. Only include IDs that appear in the event list.`,
+            content: `You are a helpful family calendar assistant embedded in the Kindora app. Today is ${todayStr} (year ${currentYear}).
+
+You handle two types of requests:
+
+1. ADD EVENT: User wants to create/add/schedule/put an event on the calendar.
+   Return JSON: { "intent": "add", "answer": "<confirmation sentence>", "event": { "title": "<string>", "startTime": "<ISO 8601 datetime>", "endTime": "<ISO 8601 datetime>", "category": "<one of: medical|school|activities|errands|financial|social|caregiving|work|other>", "description": "<optional string or null>", "location": "<optional string or null>" } }
+   Rules for time:
+   - If no time specified, default startTime to 7:00 PM, endTime to 8:00 PM.
+   - If only start time given, endTime = startTime + 1 hour.
+   - If no year specified, use the next occurrence of that date (${currentYear} if not past, otherwise ${currentYear + 1}).
+   - All times must be valid ISO 8601 strings (e.g. "2026-04-15T19:00:00").
+   - Infer category from context (birthday/dinner/party → social, doctor/medical → medical, etc.)
+
+2. QUERY: User is asking a question about existing events.
+   Return JSON: { "intent": "query", "answer": "<natural language response, 1–3 sentences>", "eventIds": ["<id>", ...] }
+   Only include IDs from the event list below. Max 5 IDs.
+
+Always return valid JSON matching one of the two formats above.`,
           },
           {
             role: "user",
-            content: `Family events (next 12 months):\n${eventContext || '(no events found in the next year)'}\n\nQuestion: ${question.trim()}`,
+            content: `Family events (next 12 months):\n${eventContext || '(no events scheduled)'}\n\nRequest: ${question.trim()}`,
           },
         ],
         response_format: { type: "json_object" },
       });
 
       const raw = completion.choices[0]?.message?.content || '{}';
-      let parsed: { answer?: string; eventIds?: string[] } = {};
+      let parsed: any = {};
       try {
         parsed = JSON.parse(raw);
       } catch {
-        parsed = { answer: raw, eventIds: [] };
+        parsed = { intent: 'query', answer: raw, eventIds: [] };
       }
 
-      // Fetch the actual event objects for the returned IDs
+      // Handle ADD EVENT intent
+      if (parsed.intent === 'add' && parsed.event) {
+        const { title, startTime, endTime, category, description, location } = parsed.event;
+
+        if (!title || !startTime || !endTime) {
+          return res.json({
+            answer: "I understood you want to add an event, but I couldn't determine all the required details. Please try again with a title and date.",
+            events: [],
+          });
+        }
+
+        // Build description — include location if provided since there's no dedicated field
+        const resolvedCategory = String(category || 'other');
+        const locationNote = location ? `Location: ${location}` : null;
+        const fullDescription = [description, locationNote].filter(Boolean).join('\n') || null;
+
+        // Pick a color based on category
+        const categoryColors: Record<string, string> = {
+          medical: '#E53E3E', school: '#3B82F6', activities: '#8B5CF6',
+          errands: '#F59E0B', financial: '#10B981', social: '#EC4899',
+          caregiving: '#F97316', work: '#6366F1', other: '#64748B',
+        };
+        const color = categoryColors[resolvedCategory] || '#64748B';
+
+        const newEvent = await storage.createEvent(familyId, {
+          title: String(title),
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+          category: resolvedCategory,
+          description: fullDescription,
+          memberIds: [],
+          color,
+        });
+
+        return res.json({
+          type: 'event_created',
+          answer: parsed.answer || `I added "${title}" to your calendar.`,
+          event: newEvent,
+        });
+      }
+
+      // Handle QUERY intent (existing behaviour)
       const idSet = new Set<string>(parsed.eventIds || []);
       const matchedEvents = relevantEvents.filter(e => idSet.has(e.id));
 
