@@ -4104,7 +4104,7 @@ Visit Kindora Calendar: ${joinUrl}
       }
 
       // Check permission
-      const role = await getUserFamilyRole(userId, familyId);
+      const role = await getUserFamilyRole(storage, userId, familyId);
       if (!role) {
         return res.status(403).json({ error: "Access denied" });
       }
