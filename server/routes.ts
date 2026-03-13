@@ -8,7 +8,8 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
 import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
-import { startOfWeek, endOfWeek, format, addDays } from "date-fns";
+import { startOfWeek, endOfWeek, format, addDays, subDays } from "date-fns";
+import OpenAI from "openai";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
 import { parseScheduleFromText, parseScheduleFromImage, parseScheduleFromPdf, type ParsedScheduleEvent } from "./scheduleParser";
 import { parseICalData } from "./icalParser";
@@ -93,6 +94,11 @@ async function getFamilyId(req: any, userId: string): Promise<string | null> {
 
 import rruleLib from 'rrule';
 const { RRule } = rruleLib;
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
 
 function legacyRuleToRRule(rule: string, startTime: Date, endDate?: Date | null, count?: string | null): string {
   const freqMap: Record<string, string> = {
@@ -4079,6 +4085,96 @@ Visit Kindora Calendar: ${joinUrl}
     } catch (error: any) {
       console.error("Cleanup error:", error);
       res.status(500).json({ message: error.message });
+    }
+  });
+
+  // NLP Calendar Ask — answers natural language questions about the family's events
+  app.post("/api/calendar/ask", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { question, familyId: bodyFamilyId } = req.body;
+
+      if (!question?.trim()) {
+        return res.status(400).json({ error: "Question is required" });
+      }
+
+      const familyId = bodyFamilyId || await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+
+      // Check permission
+      const role = await getUserFamilyRole(userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const [allEvents, familyMembers] = await Promise.all([
+        storage.getEvents(familyId),
+        storage.getFamilyMembers(familyId),
+      ]);
+
+      // Build member name map
+      const memberMap: Record<string, string> = {};
+      for (const m of familyMembers) {
+        memberMap[m.id] = m.name;
+      }
+
+      const now = new Date();
+      const rangeStart = subDays(now, 30);
+      const rangeEnd = addDays(now, 365);
+
+      // Include events within the range (also expand rrule recurring events is complex — for now use DB events)
+      const relevantEvents = allEvents.filter(e => {
+        const start = new Date(e.startTime);
+        return start >= rangeStart && start <= rangeEnd;
+      });
+
+      // Format events as a compact text context for the AI
+      const eventContext = relevantEvents.map(e => {
+        const memberNames = (e.memberIds || []).map((id: string) => memberMap[id] || id).join(', ') || 'everyone';
+        const dateStr = format(new Date(e.startTime), 'EEE MMM d, yyyy');
+        const timeStr = `${format(new Date(e.startTime), 'h:mm a')} – ${format(new Date(e.endTime), 'h:mm a')}`;
+        const note = e.description ? ` | Note: ${e.description.slice(0, 100)}` : '';
+        return `[${e.id}] "${e.title}" | ${e.category || 'other'} | ${dateStr} ${timeStr} | Members: ${memberNames}${note}`;
+      }).join('\n');
+
+      const todayStr = format(now, 'EEEE, MMMM d, yyyy');
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful family calendar assistant embedded in the Kindora app. Today is ${todayStr}. Answer questions about the family's schedule based on the events provided. Be concise, warm, and specific — always include dates and times in your answers. Return your response as valid JSON with two fields: "answer" (a natural language response, 1–3 sentences) and "eventIds" (an array of event IDs from the list that directly answer or are most relevant to the question, maximum 5 IDs). If no specific events are relevant, return an empty array for eventIds. Only include IDs that appear in the event list.`,
+          },
+          {
+            role: "user",
+            content: `Family events (next 12 months):\n${eventContext || '(no events found in the next year)'}\n\nQuestion: ${question.trim()}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const raw = completion.choices[0]?.message?.content || '{}';
+      let parsed: { answer?: string; eventIds?: string[] } = {};
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = { answer: raw, eventIds: [] };
+      }
+
+      // Fetch the actual event objects for the returned IDs
+      const idSet = new Set<string>(parsed.eventIds || []);
+      const matchedEvents = relevantEvents.filter(e => idSet.has(e.id));
+
+      res.json({
+        answer: parsed.answer || "I couldn't find an answer based on your calendar.",
+        events: matchedEvents,
+      });
+    } catch (error) {
+      console.error("Calendar ask error:", error);
+      res.status(500).json({ error: "Failed to answer your question" });
     }
   });
 

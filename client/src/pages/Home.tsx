@@ -17,6 +17,7 @@ import EventDetailsDialog from "@/components/EventDetailsDialog";
 import MemberModal from "@/components/MemberModal";
 import DayEventsDialog from "@/components/DayEventsDialog";
 import MemberFilterStrip from "@/components/MemberFilterStrip";
+import CalendarAskBar from "@/components/CalendarAskBar";
 import { isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -370,6 +371,7 @@ export default function Home() {
             onAddMember={() => setMemberModalOpen(true)}
           />
         )}
+        <CalendarAskBar onSelectEvent={handleEventClick} />
       </div>
 
       <SearchPanel
