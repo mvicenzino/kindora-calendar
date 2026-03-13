@@ -155,28 +155,6 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
         </div>
       </div>
 
-      <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[48px_repeat(7,1fr)] border-b border-border/30">
-        <div className="border-r border-border/30 dark:border-white/[0.08]" />
-        {days.map((day) => {
-          const isTodayDate = isToday(day);
-          return (
-            <div
-              key={day.toISOString()}
-              className={`text-center py-1 sm:py-1.5 border-r border-border/30 dark:border-white/[0.08] last:border-r-0 ${isTodayDate ? 'bg-primary/5' : ''}`}
-              data-testid={`week-col-header-${format(day, 'yyyy-MM-dd')}`}
-            >
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">
-                <span className="sm:hidden">{format(day, 'EEEEE')}</span>
-                <span className="hidden sm:inline">{format(day, 'EEE')}</span>
-              </p>
-              <p className={`text-xs sm:text-sm font-semibold ${isTodayDate ? 'text-primary' : 'text-foreground'}`}>
-                {format(day, 'd')}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto overflow-x-hidden"
@@ -186,6 +164,36 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
         onPointerLeave={handlePointerCancel}
         style={isDragging ? { cursor: 'grabbing', userSelect: 'none' } : undefined}
       >
+        {/* Day-column headers — sticky inside the scroll container so they share the exact same width as the grid below (including scrollbar gutter) */}
+        <div
+          className="sticky top-0 z-10 grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[48px_repeat(7,1fr)] border-b border-border/30"
+          style={{
+            backdropFilter: 'blur(16px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(16px) saturate(1.4)',
+            background: 'hsl(var(--background) / 0.92)',
+          }}
+        >
+          <div className="border-r border-border/30 dark:border-white/[0.08]" />
+          {days.map((day) => {
+            const isTodayDate = isToday(day);
+            return (
+              <div
+                key={day.toISOString()}
+                className={`text-center py-1 sm:py-1.5 border-r border-border/30 dark:border-white/[0.08] last:border-r-0 ${isTodayDate ? 'bg-primary/5' : ''}`}
+                data-testid={`week-col-header-${format(day, 'yyyy-MM-dd')}`}
+              >
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">
+                  <span className="sm:hidden">{format(day, 'EEEEE')}</span>
+                  <span className="hidden sm:inline">{format(day, 'EEE')}</span>
+                </p>
+                <p className={`text-xs sm:text-sm font-semibold ${isTodayDate ? 'text-primary' : 'text-foreground'}`}>
+                  {format(day, 'd')}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
         <div className="grid grid-cols-[36px_repeat(7,1fr)] sm:grid-cols-[48px_repeat(7,1fr)]" style={{ height: HOURS.length * HOUR_HEIGHT }}>
           <div className="relative border-r border-border/30 dark:border-white/[0.08]">
             {HOURS.map(hour => (
