@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { CalendarDays, LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type CalendarLayout = 'grid' | 'tile';
@@ -116,25 +116,14 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
         </nav>
 
         {showLayoutToggle && (
-          <div className="absolute right-2 sm:right-3 flex items-center gap-0.5">
+          <div className="absolute right-2 sm:right-3 flex items-center">
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onLayoutChange('grid')}
-              data-testid="button-layout-grid"
-              aria-pressed={layout === 'grid'}
-              aria-label="Schedule view"
-              className={`toggle-elevate ${layout === 'grid' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
-            >
-              <CalendarDays className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => onLayoutChange('tile')}
-              data-testid="button-layout-tile"
+              onClick={() => onLayoutChange(layout === 'tile' ? 'grid' : 'tile')}
+              data-testid="button-layout-toggle"
               aria-pressed={layout === 'tile'}
-              aria-label="Cards view"
+              aria-label="Toggle cards view"
               className={`toggle-elevate ${layout === 'tile' ? 'toggle-elevated bg-accent text-accent-foreground' : 'text-muted-foreground'}`}
             >
               <LayoutGrid className="w-4 h-4" />
