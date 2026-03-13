@@ -13,6 +13,7 @@ import {
   SidebarHeader,
   SidebarFooter,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,6 +35,7 @@ export default function AppSidebar() {
   const { activeFamily } = useActiveFamily();
   const { user } = useAuth();
   const { unreadCount } = useUnreadMessages();
+  const { setOpenMobile } = useSidebar();
 
   return (
     <Sidebar collapsible="icon" data-testid="app-sidebar">
@@ -79,7 +81,7 @@ export default function AppSidebar() {
                     >
                       <a
                         href={item.url}
-                        onClick={(e) => { e.preventDefault(); setLocation(item.url); }}
+                        onClick={(e) => { e.preventDefault(); setLocation(item.url); setOpenMobile(false); }}
                         data-testid={`nav-${item.title.toLowerCase()}`}
                       >
                         <div className="relative flex-shrink-0">
