@@ -87,7 +87,7 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
         setResult(data);
         // If an event was created, refresh the calendar
         if (data.type === 'event_created') {
-          queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
           setQuestion("");
         }
       }
