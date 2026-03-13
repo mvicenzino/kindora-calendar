@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnreadMessages } from "@/hooks/useUnreadMessages";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 
 const navItems = [
@@ -32,6 +33,7 @@ export default function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { activeFamily } = useActiveFamily();
   const { user } = useAuth();
+  const { unreadCount } = useUnreadMessages();
 
   return (
     <Sidebar collapsible="icon" data-testid="app-sidebar">
@@ -65,12 +67,14 @@ export default function AppSidebar() {
             <SidebarMenu className="gap-0.5 px-1">
               {navItems.map((item) => {
                 const isActive = location === item.url || (item.url === '/' && location === '') || (item.url !== '/' && location.startsWith(item.url + '/'));
+                const isMessages = item.url === "/messages";
+                const showBadge = isMessages && unreadCount > 0;
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
-                      tooltip={item.title}
+                      tooltip={isMessages && unreadCount > 0 ? `Messages (${unreadCount} unread)` : item.title}
                       className="text-[12px] gap-2"
                     >
                       <a
@@ -78,8 +82,23 @@ export default function AppSidebar() {
                         onClick={(e) => { e.preventDefault(); setLocation(item.url); }}
                         data-testid={`nav-${item.title.toLowerCase()}`}
                       >
-                        <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                        <div className="relative flex-shrink-0">
+                          <item.icon className="w-3.5 h-3.5" />
+                          {showBadge && (
+                            <span
+                              className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-[3px] leading-none"
+                              data-testid="badge-unread-messages"
+                            >
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                          )}
+                        </div>
                         <span>{item.title}</span>
+                        {showBadge && (
+                          <span className="group-data-[collapsible=icon]:hidden ml-auto min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-1 leading-none">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
