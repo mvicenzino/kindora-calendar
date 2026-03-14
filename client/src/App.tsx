@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -98,6 +98,7 @@ function Router() {
               <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
               <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>
               <Route path="/settings">{() => <AccountSettings />}</Route>
+              <Route>{() => <Redirect to="/" />}</Route>
             </Switch>
           </AppShell>
         </>

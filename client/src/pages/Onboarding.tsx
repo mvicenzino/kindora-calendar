@@ -193,7 +193,7 @@ export default function Onboarding() {
 
   const goToInvite = () => {
     markOnboardingComplete();
-    setLocation("/family");
+    setLocation("/settings/family");
   };
 
   const careOptions: { id: CareContextOption; label: string }[] = [
