@@ -381,6 +381,158 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     }
 
     // ============================================
+    // CAREGIVER DATA for "Your Family Calendar"
+    // Jenny the babysitter - pay tracking
+    // ============================================
+
+    // Set Jenny's hourly babysitting rate
+    await storage.setCaregiverPayRate(familyId, jennyId, "18.00", "USD");
+
+    // Time entries for Jenny - past babysitting sessions
+    const jennyTimeEntries = [
+      {
+        hoursWorked: "5.0",
+        entryDate: subDays(today, 10),
+        notes: "Anniversary dinner cover — kids to park, dinner, bedtime routine",
+      },
+      {
+        hoursWorked: "3.5",
+        entryDate: subDays(today, 7),
+        notes: "Saturday afternoon — helped Emma with art project, Lucas soccer practice pickup",
+      },
+      {
+        hoursWorked: "4.0",
+        entryDate: subDays(today, 4),
+        notes: "After-school cover — homework help and snacks, both kids",
+      },
+      {
+        hoursWorked: "2.5",
+        entryDate: subDays(today, 2),
+        notes: "Quick Tuesday cover — school pickup and dinner prep",
+      },
+      {
+        hoursWorked: "5.0",
+        entryDate: addDays(today, 5),
+        notes: "Date night — full evening including bedtime",
+      },
+    ];
+
+    for (const entry of jennyTimeEntries) {
+      await storage.createCaregiverTimeEntry(familyId, jennyId, entry, "18.00");
+    }
+
+    // ============================================
+    // MEDICATIONS for "Your Family Calendar"
+    // Kids' medications — shows the full feature
+    // ============================================
+
+    const familyMedications = [
+      {
+        memberId: son.id,
+        name: "Albuterol Inhaler",
+        dosage: "90mcg/puff, 2 puffs",
+        frequency: "As needed",
+        scheduledTimes: [] as string[],
+        instructions: "Use before exercise or when wheezing. Shake well. Rinse mouth after. Keep spare at school.",
+        isActive: true,
+      },
+      {
+        memberId: daughter.id,
+        name: "Cetirizine (Zyrtec)",
+        dosage: "10mg",
+        frequency: "Once daily",
+        scheduledTimes: ["08:00"],
+        instructions: "Daily allergy medication. Take with breakfast. Can cause drowsiness.",
+        isActive: true,
+      },
+      {
+        memberId: son.id,
+        name: "Fluticasone Nasal Spray",
+        dosage: "1 spray each nostril",
+        frequency: "Once daily",
+        scheduledTimes: ["08:00"],
+        instructions: "Shake before use. 2 week ramp-up before full effect. Don't skip days.",
+        isActive: true,
+      },
+    ];
+
+    const createdFamilyMedications: Array<{ id: string; name: string }> = [];
+    for (const med of familyMedications) {
+      const created = await storage.createMedication(familyId, med);
+      createdFamilyMedications.push({ id: created.id, name: created.name });
+    }
+
+    // Recent medication logs for the kids
+    const getFamMedId = (name: string) => createdFamilyMedications.find(m => m.name === name)?.id;
+    type MedStatus2 = "given" | "skipped" | "refused";
+    const familyMedLogs: Array<{
+      medicationId: string;
+      administeredBy: string;
+      scheduledTime: Date;
+      administeredAt: Date;
+      status: MedStatus2;
+      notes?: string;
+    }> = [
+      {
+        medicationId: getFamMedId("Cetirizine (Zyrtec)")!,
+        administeredBy: userId,
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 10),
+        status: "given",
+        notes: "Gave with breakfast, high pollen day today",
+      },
+      {
+        medicationId: getFamMedId("Fluticasone Nasal Spray")!,
+        administeredBy: userId,
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 12),
+        status: "given",
+      },
+      {
+        medicationId: getFamMedId("Cetirizine (Zyrtec)")!,
+        administeredBy: userId,
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
+        status: "given",
+      },
+      {
+        medicationId: getFamMedId("Fluticasone Nasal Spray")!,
+        administeredBy: userId,
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
+        status: "given",
+      },
+      {
+        medicationId: getFamMedId("Cetirizine (Zyrtec)")!,
+        administeredBy: michaelId,
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 30),
+        status: "given",
+        notes: "Michael gave before school — Sarah had early meeting",
+      },
+      {
+        medicationId: getFamMedId("Fluticasone Nasal Spray")!,
+        administeredBy: michaelId,
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 32),
+        status: "skipped",
+        notes: "Forgot in the morning rush — will double-check tomorrow",
+      },
+      {
+        medicationId: getFamMedId("Albuterol Inhaler")!,
+        administeredBy: userId,
+        scheduledTime: localTime(subDays(today, 3), 16, 0),
+        administeredAt: localTime(subDays(today, 3), 16, 5),
+        status: "given",
+        notes: "Lucas used before soccer practice — did great, no issues during practice",
+      },
+    ];
+
+    for (const log of familyMedLogs) {
+      await storage.createMedicationLog(familyId, log);
+    }
+
+    // ============================================
     // FAMILY 2: "Mom's Care Calendar" - Eldercare
     // ============================================
     
@@ -1451,10 +1603,11 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
 
     console.log(`Demo account seeded:`);
     console.log(`   Your Family: ${familyEvents.length} events, 4 members (3 family + 1 caregiver)`);
+    console.log(`   Your Family Care: ${familyMedications.length} kids meds, ${jennyTimeEntries.length} Jenny timesheet entries ($18/hr)`);
     console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
-    console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
-    console.log(`   Medication Logs: ${medicationLogs.length} dose records (given/skipped/refused)`);
-    console.log(`   Time Tracking: ${timeEntries.length} time entries for Maya ($28/hr) - 27hrs total`);
+    console.log(`   Mom's Medications: ${medications.length} meds tracked for Marilyn`);
+    console.log(`   Medication Logs: ${medicationLogs.length + familyMedLogs.length} dose records (given/skipped/refused)`);
+    console.log(`   Time Tracking: ${jennyTimeEntries.length} Jenny entries ($18/hr) + ${timeEntries.length} Maya entries ($28/hr)`);
     console.log(`   Care Documents: ${careDocuments.length} in Mom's Care vault, ${familyDocuments.length} in Your Family Calendar`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
