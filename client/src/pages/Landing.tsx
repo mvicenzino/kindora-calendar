@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-const logoLight = "/kindora-logo-light.png";
+const logoLight = "/kindora-logo-light.jpeg";
 const logoDark = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";

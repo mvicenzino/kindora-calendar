@@ -23,7 +23,7 @@ import {
   Loader2
 } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-const logoLight = "/kindora-logo-light.png";
+const logoLight = "/kindora-logo-light.jpeg";
 const logoDark = "/kindora-logo.jpeg";
 
 type Persona = "family" | "caregiver";

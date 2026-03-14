@@ -18,7 +18,7 @@ import {
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-const logoLight = "/kindora-logo-light.png";
+const logoLight = "/kindora-logo-light.jpeg";
 const logoDark = "/kindora-logo.jpeg";
 
 const navItems = [

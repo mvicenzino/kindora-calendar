@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-const logoLight = "/kindora-logo-light.png";
+const logoLight = "/kindora-logo-light.jpeg";
 const logoDark = "/kindora-logo.jpeg";
 
 export default function AppFooter() {
