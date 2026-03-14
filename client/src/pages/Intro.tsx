@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image } from "lucide-react";
+import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image, Loader2 } from "lucide-react";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -171,6 +171,7 @@ function FeaturesIllustration() {
 export default function Intro() {
   const [slide, setSlide] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
   const total = SLIDE_DATA.length;
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
@@ -180,22 +181,30 @@ export default function Intro() {
   const tzOffset = params.get("tz") || String(new Date().getTimezoneOffset());
 
   const transition = (target: number | "signup") => {
-    setVisible(false);
-    setTimeout(() => {
-      if (target === "signup") {
-        localStorage.setItem("kindora_intro_seen", "true");
-        if (isDemoMode) {
+    if (target === "signup") {
+      localStorage.setItem("kindora_intro_seen", "true");
+      if (isDemoMode) {
+        setIsNavigating(true);
+        setTimeout(() => {
           window.location.href = `/api/login/demo?tz=${tzOffset}`;
-        } else if (isAuthenticated) {
+        }, 100);
+        return;
+      }
+      setVisible(false);
+      setTimeout(() => {
+        if (isAuthenticated) {
           setLocation("/onboarding");
         } else {
           window.location.href = "/api/login";
         }
-      } else {
+      }, 320);
+    } else {
+      setVisible(false);
+      setTimeout(() => {
         setSlide(target);
         setVisible(true);
-      }
-    }, 320);
+      }, 320);
+    }
   };
 
   const goNext = () => {
@@ -207,9 +216,31 @@ export default function Intro() {
   const current = SLIDE_DATA[slide];
   const illustrations = [<FamilyIllustration />, <AccessIllustration />, <FeaturesIllustration />];
 
+  if (isNavigating) {
+    return (
+      <div
+        className="min-h-screen flex flex-col items-center justify-center"
+        style={{
+          background: `linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)`,
+        }}
+      >
+        <div className="text-center">
+          <div className="relative mb-6">
+            <img src={calendoraIcon} alt="Kindora" className="w-16 h-16 rounded-2xl mx-auto mb-4" />
+          </div>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: BRAND_ORANGE }} />
+          <p className="text-white text-lg font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            Setting up your demo...
+          </p>
+          <p className="text-white/50 text-sm mt-2">This only takes a moment</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col relative"
       style={{
         background: `radial-gradient(ellipse at 25% 15%, ${current.accentGlow} 0%, transparent 55%), linear-gradient(160deg, ${current.gradient[0]} 0%, ${current.gradient[1]} 50%, ${current.gradient[2]} 100%)`,
         transition: "background 0.8s ease",
