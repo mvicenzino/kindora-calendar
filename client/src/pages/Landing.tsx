@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 
 const logo = "/kindora-logo.jpeg";
@@ -623,6 +623,210 @@ export default function Landing() {
                   See your schedule, log medications, track your hours, and calculate your pay—all in one dashboard.
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Family Messaging Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/6 via-transparent to-sky-500/5" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+            {/* Left: copy */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-500 text-sm font-semibold px-4 py-1.5 rounded-full mb-5 border border-blue-500/20">
+                <MessageSquare className="w-4 h-4" />
+                Family Messaging
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-5 leading-tight">
+                Everyone stays<br />in the loop
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+                A private family channel where caregivers, parents, and family members can coordinate in real time — no group texts, no lost updates.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Send className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Event-linked threads</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Attach messages directly to calendar events — "Who's picking up Emma from soccer?" lives next to the event, not buried in texts.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <AtSign className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">@mention family members</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Tag mom, the caregiver, or anyone else directly. No more "did you see my message?" moments.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Users className="w-3.5 h-3.5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Include caregivers seamlessly</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Aides and nurses see only what they need. Keep professional caregivers in sync without mixing personal family chats.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            {/* Right: mock chat UI */}
+            <div className="relative">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
+                {/* Chat header */}
+                <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/15 border border-blue-500/20 flex items-center justify-center">
+                    <Users className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Johnson Family</p>
+                    <p className="text-xs text-muted-foreground">4 members · 1 caregiver</p>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div className="p-4 space-y-3 bg-background/40">
+                  {/* Event thread banner */}
+                  <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-500/8 border border-blue-500/15 rounded-lg">
+                    <Calendar className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                    <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Thread: Dad's cardiology appt — Fri Mar 20</p>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <div className="w-6 h-6 rounded-full bg-orange-400 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white">S</div>
+                    <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2 max-w-[75%]">
+                      <p className="text-xs text-foreground">Can anyone take Dad to his cardiology appointment Friday at 2pm?</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Sarah · 10:14 AM</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end gap-2 flex-row-reverse">
+                    <div className="w-6 h-6 rounded-full bg-blue-400 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white">M</div>
+                    <div className="bg-primary/90 rounded-2xl rounded-br-sm px-3 py-2 max-w-[75%]">
+                      <p className="text-xs text-primary-foreground">I've got it! I'll pick him up at 1:30.</p>
+                      <p className="text-[10px] text-primary-foreground/70 mt-0.5">Mike · 10:22 AM</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end gap-2">
+                    <div className="w-6 h-6 rounded-full bg-teal-400 flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white">R</div>
+                    <div className="bg-muted rounded-2xl rounded-bl-sm px-3 py-2 max-w-[75%]">
+                      <p className="text-xs text-foreground">I'll have his medication list ready. He also needs to fast beforehand.</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Rosa (caregiver) · 10:31 AM</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Input */}
+                <div className="px-4 py-3 border-t border-border bg-muted/20 flex items-center gap-2">
+                  <div className="flex-1 h-8 rounded-full bg-background border border-border px-3 flex items-center">
+                    <p className="text-xs text-muted-foreground/50">Message the family...</p>
+                  </div>
+                  <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                    <Send className="w-3 h-3 text-primary-foreground" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Memories Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-pink-500/6 via-transparent to-rose-500/4" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+            {/* Left: mock memories grid */}
+            <div className="relative order-2 md:order-1">
+              <div className="bg-card border border-border rounded-2xl p-5 shadow-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <Heart className="w-4 h-4 text-pink-500" />
+                  <p className="text-sm font-semibold text-foreground">Family Memories</p>
+                  <span className="ml-auto text-xs text-muted-foreground">42 moments</span>
+                </div>
+
+                {/* Memory cards grid */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {[
+                    { label: "Emma's recital", date: "Mar 8", color: "from-pink-400 to-rose-500", icon: Star },
+                    { label: "Dad's birthday", date: "Feb 22", color: "from-orange-400 to-orange-500", icon: Heart },
+                    { label: "First steps", date: "Jan 15", color: "from-blue-400 to-blue-500", icon: Camera },
+                    { label: "Soccer finals", date: "Dec 12", color: "from-green-400 to-green-500", icon: Star },
+                    { label: "Thanksgiving", date: "Nov 28", color: "from-amber-400 to-amber-500", icon: Heart },
+                    { label: "School play", date: "Nov 10", color: "from-violet-400 to-violet-500", icon: Camera },
+                  ].map((memory, i) => {
+                    const Icon = memory.icon;
+                    return (
+                      <div key={i} className={`aspect-square rounded-xl bg-gradient-to-br ${memory.color} flex flex-col items-center justify-center p-2 relative overflow-hidden`}>
+                        <Icon className="w-5 h-5 text-white/80 mb-1" />
+                        <p className="text-[9px] font-semibold text-white leading-tight text-center">{memory.label}</p>
+                        <p className="text-[8px] text-white/70">{memory.date}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Recent memory highlight */}
+                <div className="bg-muted/40 border border-border rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center flex-shrink-0">
+                    <Star className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">Emma's Spring Recital</p>
+                    <p className="text-xs text-muted-foreground">Added by Sarah · Linked to Mar 8 event</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: copy */}
+            <div className="order-1 md:order-2">
+              <div className="inline-flex items-center gap-2 bg-pink-500/10 text-pink-500 text-sm font-semibold px-4 py-1.5 rounded-full mb-5 border border-pink-500/20">
+                <Heart className="w-4 h-4" />
+                Memories
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-5 leading-tight">
+                Capture the moments<br />that matter most
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+                Life moves fast. Kindora gives your family a private space to collect photos, notes, and milestones — tied to the events that created them.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Calendar className="w-3.5 h-3.5 text-pink-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Tied to your calendar</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Add a memory directly to any event — so your first-day-of-school photos live next to the event, not lost in your camera roll.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <BookOpen className="w-3.5 h-3.5 text-pink-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">A family story, not a feed</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Browse memories as a timeline of your family's life — milestones, celebrations, everyday moments worth keeping.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Shield className="w-3.5 h-3.5 text-pink-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Private and secure</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Your memories stay within your family. No algorithms, no ads, no sharing with strangers — just the people you love.</p>
+                  </div>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
