@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image } from "lucide-react";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
+import { useAuth } from "@/hooks/useAuth";
 
 const BRAND_ORANGE = "#f97316";
 const BRAND_AMBER = "#f59e0b";
@@ -170,12 +172,19 @@ export default function Intro() {
   const [slide, setSlide] = useState(0);
   const [visible, setVisible] = useState(true);
   const total = SLIDE_DATA.length;
+  const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
 
   const transition = (target: number | "signup") => {
     setVisible(false);
     setTimeout(() => {
       if (target === "signup") {
-        window.location.href = "/api/login";
+        localStorage.setItem("kindora_intro_seen", "true");
+        if (isAuthenticated) {
+          setLocation("/onboarding");
+        } else {
+          window.location.href = "/api/login";
+        }
       } else {
         setSlide(target);
         setVisible(true);

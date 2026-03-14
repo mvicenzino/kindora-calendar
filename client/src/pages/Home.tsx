@@ -90,7 +90,12 @@ export default function Home() {
   useEffect(() => {
     if (!isLoading && isAuthenticated && !isLoadingFamily && !isDemoMode) {
       if (!activeFamilyId) {
-        setLocation("/onboarding");
+        const hasSeenIntro = localStorage.getItem("kindora_intro_seen");
+        if (!hasSeenIntro) {
+          setLocation("/intro");
+        } else {
+          setLocation("/onboarding");
+        }
       }
     }
   }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, setLocation]);
