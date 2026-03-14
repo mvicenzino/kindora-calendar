@@ -78,6 +78,7 @@ function isPreviewable(mimeType: string | null | undefined): boolean {
 
 export default function Documents() {
   const { user } = useAuth();
+  const isDemoMode = (user?.id as string)?.startsWith('demo-') ?? false;
   const { activeFamilyId } = useActiveFamily();
   const { can, isLoading: isLoadingRole } = useUserRole();
   const { toast } = useToast();
@@ -571,7 +572,13 @@ export default function Documents() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      onClick={() => setPreviewDocument(doc)}
+                                      onClick={() => {
+                                        if (isDemoMode) {
+                                          toast({ title: "Demo mode", description: "Document preview isn't available in the demo." });
+                                        } else {
+                                          setPreviewDocument(doc);
+                                        }
+                                      }}
                                       data-testid={`button-preview-${doc.id}`}
                                     >
                                       <Eye className="w-4 h-4" />
@@ -580,12 +587,16 @@ export default function Documents() {
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    asChild
+                                    onClick={() => {
+                                      if (isDemoMode) {
+                                        toast({ title: "Demo mode", description: "Downloads aren't available in the demo." });
+                                      } else {
+                                        window.open(doc.fileUrl, '_blank');
+                                      }
+                                    }}
                                     data-testid={`button-download-${doc.id}`}
                                   >
-                                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download>
-                                      <Download className="w-4 h-4" />
-                                    </a>
+                                    <Download className="w-4 h-4" />
                                   </Button>
                                   {canDeleteDocs && (
                                     <Button

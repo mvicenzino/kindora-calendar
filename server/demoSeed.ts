@@ -1043,6 +1043,86 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     }
 
     // ============================================
+    // CARE DOCUMENTS for Your Family Calendar
+    // ============================================
+
+    const familyDocuments = [
+      {
+        memberId: daughter.id,
+        uploadedBy: userId,
+        title: "Emma's Immunization Record",
+        description: "Up-to-date vaccination record for school enrollment. MMR, DTaP, Varicella, HPV all current. Next flu shot due October.",
+        documentType: "medical" as const,
+        fileName: "emma_immunization_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_piano__e17f7106.jpg",
+        fileSize: "198000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: son.id,
+        uploadedBy: userId,
+        title: "Liam's Asthma Action Plan",
+        description: "Dr. Rivera's updated asthma management plan. Green zone: Albuterol PRN. Yellow zone: 2 puffs + call office. Red zone: ER.",
+        documentType: "care_plan" as const,
+        fileName: "liam_asthma_action_plan.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_soccer_29d1c0c9.jpg",
+        fileSize: "224000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: daughter.id,
+        uploadedBy: userId,
+        title: "Emma's Annual School Physical",
+        description: "Required physical for 4th grade. Cleared for all PE activities including swimming and contact sports. Vision 20/20.",
+        documentType: "medical" as const,
+        fileName: "emma_school_physical_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_piano__e17f7106.jpg",
+        fileSize: "176000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: null,
+        uploadedBy: userId,
+        title: "Family Emergency Contact Sheet",
+        description: "Emergency contacts, doctors, preferred hospital (Mercy General), insurance numbers, and allergy list for all family members.",
+        documentType: "other" as const,
+        fileName: "family_emergency_contacts.jpg",
+        fileUrl: "/attached_assets/stock_images/family_dinner_table__181f0ecf.jpg",
+        fileSize: "145000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: null,
+        uploadedBy: userId,
+        title: "Homeowner's Insurance Policy",
+        description: "State Farm policy #SF-2024-88821. Renewal due April 15. Coverage: $450k dwelling, $180k personal property, $100k liability.",
+        documentType: "insurance" as const,
+        fileName: "homeowners_insurance_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/family_beach_day_oce_a7a6744f.jpg",
+        fileSize: "312000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: son.id,
+        uploadedBy: userId,
+        title: "Liam's Allergy Test Results",
+        description: "Allergy panel from April. Positive: tree pollen (high), dust mites (moderate), peanuts (trace — carry EpiPen). Retest in 18 months.",
+        documentType: "medical" as const,
+        fileName: "liam_allergy_panel_april.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_soccer_29d1c0c9.jpg",
+        fileSize: "258000",
+        mimeType: "image/jpeg",
+      },
+    ];
+
+    for (const doc of familyDocuments) {
+      await storage.createCareDocument(familyId, {
+        ...doc,
+        memberId: doc.memberId || undefined,
+      });
+    }
+
+    // ============================================
     // FAMILY MESSAGES - Impressive Threaded Conversations
     // ============================================
 
@@ -1375,7 +1455,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
     console.log(`   Medication Logs: ${medicationLogs.length} dose records (given/skipped/refused)`);
     console.log(`   Time Tracking: ${timeEntries.length} time entries for Maya ($28/hr) - 27hrs total`);
-    console.log(`   Care Documents: ${careDocuments.length} documents in Mom's Care vault`);
+    console.log(`   Care Documents: ${careDocuments.length} in Mom's Care vault, ${familyDocuments.length} in Your Family Calendar`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
