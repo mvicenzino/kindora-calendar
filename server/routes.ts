@@ -4235,6 +4235,69 @@ Always return valid JSON matching one of the two formats above.`,
     }
   });
 
+  // Public support contact form — no auth required
+  app.post("/api/support", async (req, res) => {
+    const { name, email, subject, message } = req.body;
+    if (!name?.trim() || !email?.trim() || !message?.trim()) {
+      return res.status(400).json({ error: "name, email, and message are required" });
+    }
+
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    const fromEmail = process.env.EMAIL_FROM_ADDRESS || "noreply@kindora.ai";
+    const toEmail = "mvicenzino@gmail.com";
+
+    if (sendgridApiKey) {
+      try {
+        await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sendgridApiKey}`,
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: toEmail }] }],
+            from: { email: fromEmail, name: "Kindora Support" },
+            reply_to: { email, name },
+            subject: `[Kindora Support] ${subject || "General inquiry"} — from ${name}`,
+            content: [
+              {
+                type: "text/plain",
+                value: `New support message from Kindora\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject || "General inquiry"}\n\n---\n\n${message}\n\n---\nReply directly to this email to respond to ${name}.`,
+              },
+              {
+                type: "text/html",
+                value: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#f97316;padding:16px 24px;border-radius:8px 8px 0 0">
+    <h2 style="color:white;margin:0;font-size:18px">New Support Message · Kindora</h2>
+  </div>
+  <div style="background:#ffffff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px;width:80px">Name</td><td style="padding:6px 0;font-weight:600;color:#111827">${name}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Email</td><td style="padding:6px 0"><a href="mailto:${email}" style="color:#f97316">${email}</a></td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Subject</td><td style="padding:6px 0;color:#111827">${subject || "General inquiry"}</td></tr>
+    </table>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:16px">
+      <p style="margin:0;color:#374151;line-height:1.6;white-space:pre-wrap">${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+    </div>
+    <p style="margin-top:16px;font-size:12px;color:#9ca3af">Reply directly to this email to respond to ${name}.</p>
+  </div>
+</div>`,
+              },
+            ],
+          }),
+        });
+      } catch (err) {
+        console.error("Support email send error:", err);
+        // Still return success to the user — don't expose email config errors
+      }
+    } else {
+      // Log to console in dev / if email not configured
+      console.log(`[Support] From: ${name} <${email}> | Subject: ${subject} | Message: ${message}`);
+    }
+
+    res.json({ success: true });
+  });
+
   registerAdvisorRoutes(app);
 
   const httpServer = createServer(app);

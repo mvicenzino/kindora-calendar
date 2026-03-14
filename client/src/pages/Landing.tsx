@@ -962,6 +962,10 @@ export default function Landing() {
             
             <div className="text-center space-y-2">
               <div className="flex items-center justify-center gap-4 flex-wrap">
+                <Link href="/about" className="text-muted-foreground hover:text-foreground text-sm transition-colors" data-testid="link-about">About</Link>
+                <span className="text-muted-foreground/50">|</span>
+                <Link href="/support" className="text-muted-foreground hover:text-foreground text-sm transition-colors" data-testid="link-support">Support</Link>
+                <span className="text-muted-foreground/50">|</span>
                 <Link href="/terms" className="text-muted-foreground hover:text-foreground text-sm transition-colors" data-testid="link-terms">Terms of Service</Link>
                 <span className="text-muted-foreground/50">|</span>
                 <Link href="/privacy" className="text-muted-foreground hover:text-foreground text-sm transition-colors" data-testid="link-privacy">Privacy Policy</Link>

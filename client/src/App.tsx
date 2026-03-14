@@ -19,6 +19,8 @@ import Documents from "@/pages/Documents";
 import EmergencyBridge from "@/pages/EmergencyBridge";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
+import About from "@/pages/About";
+import Support from "@/pages/Support";
 import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
 import AppSidebar from "@/components/AppSidebar";
@@ -78,6 +80,8 @@ function Router() {
       <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
+      <Route path="/about" component={About} />
+      <Route path="/support" component={Support} />
       <Route path="/intro" component={Intro} />
       {!isAuthenticated ? (
         <Route path="/" component={Landing} />
