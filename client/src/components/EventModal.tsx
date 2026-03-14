@@ -90,6 +90,20 @@ export default function EventModal({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   
+  // When start time changes, shift end time to maintain the same duration (min 1 hour)
+  const handleStartTimeChange = (newStart: string) => {
+    setStartTime(newStart);
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const prevDuration = (eh * 60 + em) - (sh * 60 + sm);
+    const duration = prevDuration > 0 ? prevDuration : 60;
+    const [nh, nm] = newStart.split(':').map(Number);
+    const newEndMins = Math.min(nh * 60 + nm + duration, 23 * 60 + 59);
+    const newEh = Math.floor(newEndMins / 60);
+    const newEm = newEndMins % 60;
+    setEndTime(`${String(newEh).padStart(2, '0')}:${String(newEm).padStart(2, '0')}`);
+  };
+
   // Recurrence state
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>(null);
   const [endCondition, setEndCondition] = useState<EndCondition>('never');
@@ -526,7 +540,7 @@ export default function EventModal({
                   <Input
                     type="time"
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    onChange={(e) => handleStartTimeChange(e.target.value)}
                     data-testid="input-start-time"
                     className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
                     disabled={isReadOnly}
