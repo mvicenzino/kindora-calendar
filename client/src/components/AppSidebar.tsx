@@ -18,8 +18,8 @@ import {
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-const logoLight = "/kindora-logo-light.jpeg";
-const logoDark = "/kindora-logo.jpeg";
+
+const logo = "/kindora-logo.jpeg";
 
 const navItems = [
   { title: "Calendar", url: "/", icon: Calendar },
@@ -42,8 +42,7 @@ export default function AppSidebar() {
     <Sidebar collapsible="icon" data-testid="app-sidebar">
       <SidebarHeader className="px-3 py-2">
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <img src={logoLight} alt="Kindora" className="block dark:hidden w-6 h-6 rounded flex-shrink-0" data-testid="icon-sidebar-logo" />
-          <img src={logoDark} alt="Kindora" className="hidden dark:block w-6 h-6 rounded flex-shrink-0" />
+          <img src={logo} alt="Kindora" className="w-6 h-6 rounded flex-shrink-0" data-testid="icon-sidebar-logo" />
           <div className="flex flex-col leading-none group-data-[collapsible=icon]:hidden">
             <span className="text-[13px] font-bold text-primary app-title" data-testid="text-sidebar-brand">Kindora</span>
             {activeFamily && (

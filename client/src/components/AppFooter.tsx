@@ -1,6 +1,6 @@
 import { Link } from "wouter";
-const logoLight = "/kindora-logo-light.jpeg";
-const logoDark = "/kindora-logo.jpeg";
+
+const logo = "/kindora-logo.jpeg";
 
 export default function AppFooter() {
   return (
@@ -8,8 +8,7 @@ export default function AppFooter() {
       <div className="max-w-6xl mx-auto">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <img src={logoLight} alt="Kindora" className="block dark:hidden w-5 h-5 rounded-sm" />
-            <img src={logoDark} alt="Kindora" className="hidden dark:block w-5 h-5 rounded-sm" />
+            <img src={logo} alt="Kindora" className="w-5 h-5 rounded-sm" />
             <span className="text-muted-foreground text-xs">
               © {new Date().getFullYear()} Kindora Family, Inc.
             </span>
