@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import calendoraIcon from "@assets/IMG_4040_1773507883126.jpeg";
+const calendoraIcon = "/kindora-logo.jpeg";
 
 export default function AppFooter() {
   return (

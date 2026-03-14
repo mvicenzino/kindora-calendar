@@ -23,7 +23,7 @@ import {
   Loader2
 } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-import calendoraIcon from "@assets/IMG_4040_1773507883126.jpeg";
+const calendoraIcon = "/kindora-logo.jpeg";
 
 type Persona = "family" | "caregiver";
 

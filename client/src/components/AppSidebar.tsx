@@ -18,7 +18,7 @@ import {
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import calendoraIcon from "@assets/IMG_4040_1773507883126.jpeg";
+const calendoraIcon = "/kindora-logo.jpeg";
 
 const navItems = [
   { title: "Calendar", url: "/", icon: Calendar },
