@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 
 const logo = "/kindora-logo.jpeg";
@@ -474,6 +474,82 @@ export default function Landing() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* AI Features Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-500/8 via-transparent to-primary/8" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="text-center mb-10 md:mb-14">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-sm font-semibold px-4 py-1.5 rounded-full mb-5 border border-primary/20">
+              <Sparkles className="w-4 h-4" />
+              AI-Powered
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Intelligence Built In
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Kindora doesn't just store your schedule — it understands your life and helps you manage it.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
+
+            {/* AI Schedule Import */}
+            <div className="bg-card border border-border rounded-xl p-6 md:p-8 hover-elevate relative overflow-hidden group" data-testid="card-ai-import">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
+              <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-orange-600 shadow-lg w-fit mb-5">
+                <Wand2 className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-3">AI Schedule Import</h3>
+              <p className="text-muted-foreground leading-relaxed mb-5">
+                Paste a school newsletter, doctor's email, or activity list and Kindora's AI instantly parses it into calendar events — no manual entry required.
+              </p>
+              <ul className="space-y-2.5">
+                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                  <span>Reads emails, newsletters, and plain text — extracts every date and time automatically</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                  <span>Creates events with correct titles, locations, and recurring patterns in seconds</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                  <span>Review and confirm before anything is added — you stay in control</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Kira AI Advisor */}
+            <div className="bg-card border border-border rounded-xl p-6 md:p-8 hover-elevate relative overflow-hidden group" data-testid="card-ai-kira">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-violet-500/12 to-transparent rounded-bl-full pointer-events-none" />
+              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-lg w-fit mb-5">
+                <MessageCircle className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-1">Meet Kira</h3>
+              <p className="text-sm text-violet-500 font-medium mb-3">Your AI Family Advisor</p>
+              <p className="text-muted-foreground leading-relaxed mb-5">
+                Kira is a private AI counselor built specifically for the sandwich generation. Get personalized, compassionate guidance on the hard parts of caregiving — anytime you need it.
+              </p>
+              <ul className="space-y-2.5">
+                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                  <span>Child behavior help — picky eating, tantrums, potty training, school anxiety</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                  <span>Eldercare guidance — dementia conversations, difficult decisions, caregiver burnout</span>
+                </li>
+                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                  <Check className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                  <span>Your conversation history stays private — Kira remembers your family's context</span>
+                </li>
+              </ul>
+            </div>
+
           </div>
         </div>
       </section>
