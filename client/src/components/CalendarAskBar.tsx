@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { Sparkles, X, ArrowRight, Loader2, CalendarDays, CheckCircle2, Plus } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react";
+import { Sparkles, X, ArrowRight, Loader2, CalendarDays, CheckCircle2, Plus, Mic, MicOff } from "lucide-react";
 import { format } from "date-fns";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -40,17 +40,33 @@ const CREATE_EXAMPLES = [
 
 const ALL_EXAMPLES = [...SEARCH_EXAMPLES, ...CREATE_EXAMPLES];
 
+type VoiceState = 'idle' | 'listening' | 'processing' | 'denied' | 'unsupported';
+
 export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
   const [question, setQuestion] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AskResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [placeholder, setPlaceholder] = useState(ALL_EXAMPLES[0]);
   const [isFocused, setIsFocused] = useState(false);
+  const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+  const submitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { activeFamilyId } = useActiveFamily();
 
+  // Detect speech recognition support
+  const speechSupported = typeof window !== 'undefined' &&
+    !!(( window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  useEffect(() => {
+    if (!speechSupported) setVoiceState('unsupported');
+  }, [speechSupported]);
+
+  // Rotate placeholder
   useEffect(() => {
     let idx = 0;
     const interval = setInterval(() => {
@@ -60,6 +76,7 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
     return () => clearInterval(interval);
   }, []);
 
+  // Close answer panel on outside click
   useEffect(() => {
     if (!result && !error) return;
     const handleClick = (e: MouseEvent) => {
@@ -72,13 +89,22 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [result, error]);
 
-  const handleAsk = async () => {
-    const q = question.trim();
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+      if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
+    };
+  }, []);
+
+  const handleAsk = useCallback(async (overrideQuestion?: string) => {
+    const q = (overrideQuestion ?? question).trim();
     if (!q || isLoading) return;
 
     setIsLoading(true);
     setResult(null);
     setError(null);
+    setInterimTranscript("");
 
     try {
       const response = await apiRequest("POST", "/api/calendar/ask", {
@@ -100,11 +126,98 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [question, isLoading, activeFamilyId]);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
+    setVoiceState('idle');
+    setInterimTranscript("");
+    if (submitTimerRef.current) clearTimeout(submitTimerRef.current);
+  }, []);
+
+  const handleMicClick = useCallback(() => {
+    if (voiceState === 'listening') {
+      stopListening();
+      return;
+    }
+
+    if (!speechSupported) return;
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setVoiceState('listening');
+      setResult(null);
+      setError(null);
+      setQuestion("");
+      setInterimTranscript("");
+    };
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          final += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+
+      if (interim) setInterimTranscript(interim);
+
+      if (final) {
+        setQuestion(final);
+        setInterimTranscript("");
+        setVoiceState('processing');
+        // Short delay so user sees the transcription before submitting
+        submitTimerRef.current = setTimeout(() => {
+          handleAsk(final);
+          setVoiceState('idle');
+        }, 400);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+        setVoiceState('denied');
+        setError("Microphone access was denied. Please allow microphone in your browser settings and try again.");
+      } else if (event.error === 'no-speech') {
+        setVoiceState('idle');
+        setInterimTranscript("");
+      } else {
+        setVoiceState('idle');
+        setInterimTranscript("");
+      }
+    };
+
+    recognition.onend = () => {
+      if (voiceState === 'listening') setVoiceState('idle');
+      setInterimTranscript("");
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      inputRef.current?.focus();
+    } catch {
+      setVoiceState('idle');
+    }
+  }, [voiceState, speechSupported, stopListening, handleAsk]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleAsk();
     if (e.key === "Escape") {
+      stopListening();
       setResult(null);
       setError(null);
       setQuestion("");
@@ -113,6 +226,7 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
   };
 
   const handleClear = () => {
+    stopListening();
     setResult(null);
     setError(null);
     setQuestion("");
@@ -127,44 +241,73 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
 
   const hasAnswer = !!(result || error);
   const isCreated = result?.type === 'event_created';
+  const isListening = voiceState === 'listening';
+  const isProcessingVoice = voiceState === 'processing';
+  const displayText = isListening ? interimTranscript : question;
+
+  const micLabel = isListening
+    ? "Stop listening"
+    : voiceState === 'denied'
+    ? "Microphone blocked"
+    : "Use voice input";
 
   return (
     <div ref={panelRef} className="relative w-full px-3 py-2 border-b border-border bg-background/80 backdrop-blur-sm">
       <div className="max-w-2xl mx-auto">
         {/* Main input row */}
         <div
-          className={`flex items-center gap-2 rounded-full px-3 py-2 transition-all duration-200 bg-muted/60 border ${
-            isFocused
-              ? "border-primary/50 shadow-[0_0_0_3px_hsl(var(--primary)/0.08)]"
-              : "border-border hover:border-border/80"
+          className={`flex items-center gap-2 rounded-full px-3 py-2 transition-all duration-200 border ${
+            isListening
+              ? "bg-red-500/8 border-red-400/40 shadow-[0_0_0_3px_rgba(239,68,68,0.08)]"
+              : isFocused
+              ? "bg-muted/60 border-primary/50 shadow-[0_0_0_3px_hsl(var(--primary)/0.08)]"
+              : "bg-muted/60 border-border"
           }`}
         >
           {/* AI badge */}
-          <div className="flex items-center gap-1 flex-shrink-0 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">
-            {isLoading ? (
+          <div className={`flex items-center gap-1 flex-shrink-0 rounded-full px-2 py-0.5 border transition-colors ${
+            isListening
+              ? "bg-red-500/15 border-red-400/30"
+              : "bg-primary/10 border-primary/20"
+          }`}>
+            {(isLoading || isProcessingVoice) ? (
               <Loader2 className="w-3 h-3 text-primary animate-spin" />
+            ) : isListening ? (
+              <span className="w-3 h-3 flex items-center justify-center">
+                <span className="block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              </span>
             ) : (
               <Sparkles className="w-3 h-3 text-primary" />
             )}
-            <span className="text-[10px] font-semibold text-primary leading-none">AI</span>
+            <span className={`text-[10px] font-semibold leading-none ${isListening ? "text-red-500" : "text-primary"}`}>
+              {isListening ? "Listening" : "AI"}
+            </span>
           </div>
 
+          {/* Input field */}
           <input
             ref={inputRef}
             type="text"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
+            value={displayText}
+            onChange={(e) => {
+              if (!isListening) setQuestion(e.target.value);
+            }}
             onKeyDown={handleKeyDown}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
-            placeholder={placeholder}
-            disabled={isLoading}
+            placeholder={isListening ? "Speak now..." : placeholder}
+            disabled={isLoading || isProcessingVoice}
+            readOnly={isListening}
             data-testid="input-calendar-ask"
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/70 outline-none min-w-0 disabled:opacity-50"
+            className={`flex-1 bg-transparent text-sm outline-none min-w-0 transition-colors ${
+              isListening
+                ? "text-muted-foreground placeholder:text-red-400/50 italic"
+                : "text-foreground placeholder:text-muted-foreground/70 disabled:opacity-50"
+            }`}
           />
 
-          {/* Hint chips — shown when empty and not focused */}
-          {!question && !isFocused && (
+          {/* Hint chips — shown when empty and idle */}
+          {!question && !isFocused && !isListening && (
             <div className="hidden sm:flex items-center gap-1.5 flex-shrink-0">
               <span className="text-[10px] text-muted-foreground/50 flex items-center gap-0.5">
                 <Plus className="w-2.5 h-2.5" />add
@@ -174,9 +317,10 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
             </div>
           )}
 
-          {question.trim() && !isLoading && (
+          {/* Submit button */}
+          {question.trim() && !isLoading && !isListening && (
             <button
-              onClick={handleAsk}
+              onClick={() => handleAsk()}
               data-testid="button-calendar-ask-submit"
               aria-label="Ask"
               className="flex-shrink-0 rounded-full p-1 bg-primary text-primary-foreground hover-elevate"
@@ -185,7 +329,8 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
             </button>
           )}
 
-          {hasAnswer && !question.trim() && (
+          {/* Clear button */}
+          {hasAnswer && !question.trim() && !isListening && (
             <button
               onClick={handleClear}
               data-testid="button-calendar-ask-clear"
@@ -195,7 +340,43 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
               <X className="w-3 h-3" />
             </button>
           )}
+
+          {/* Mic button */}
+          {speechSupported && !isLoading && !isProcessingVoice && (
+            <button
+              onClick={handleMicClick}
+              data-testid="button-calendar-voice"
+              aria-label={micLabel}
+              title={micLabel}
+              className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                isListening
+                  ? "bg-red-500 text-white hover-elevate"
+                  : voiceState === 'denied'
+                  ? "text-destructive/60"
+                  : "text-muted-foreground hover-elevate"
+              }`}
+            >
+              {voiceState === 'denied'
+                ? <MicOff className="w-3.5 h-3.5" />
+                : <Mic className={`w-3.5 h-3.5 ${isListening ? "animate-pulse" : ""}`} />
+              }
+            </button>
+          )}
         </div>
+
+        {/* Permission denied banner */}
+        {voiceState === 'denied' && (
+          <div className="mt-1.5 flex items-start gap-2 px-3 py-2 bg-destructive/8 border border-destructive/20 rounded-lg">
+            <MicOff className="w-3.5 h-3.5 text-destructive flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-destructive leading-snug">
+              Microphone access blocked. Enable it in your browser settings, then refresh the page.
+              <span className="text-muted-foreground"> Wispr Flow and Typeless work automatically — just focus the input and dictate.</span>
+            </p>
+            <button onClick={() => setVoiceState('idle')} className="flex-shrink-0 text-destructive/60 hover:text-destructive">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
 
         {/* Floating answer panel */}
         {hasAnswer && (
@@ -244,7 +425,8 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
                 <button
                   onClick={() => handleEventClick(result.event)}
                   data-testid="ask-created-event"
-                  className="w-full text-left rounded-lg px-3 py-2.5 transition-all hover-elevate border border-primary/20 bg-primary/6"
+                  className="w-full text-left rounded-lg px-3 py-2.5 transition-all hover-elevate border border-primary/20"
+                  style={{ background: 'hsl(var(--primary) / 0.06)' }}
                 >
                   <div className="flex items-center gap-2.5">
                     <div
