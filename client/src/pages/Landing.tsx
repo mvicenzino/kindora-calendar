@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
+import calendoraIcon from "@assets/IMG_4040_1773507883126.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";

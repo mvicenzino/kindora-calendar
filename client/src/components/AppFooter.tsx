@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
+import calendoraIcon from "@assets/IMG_4040_1773507883126.jpeg";
 
 export default function AppFooter() {
   return (

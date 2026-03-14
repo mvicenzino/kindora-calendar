@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image, Loader2 } from "lucide-react";
-import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
+import calendoraIcon from "@assets/IMG_4040_1773507883126.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 
 const BRAND_ORANGE = "#f97316";
