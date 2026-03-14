@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image, Loader2 } from "lucide-react";
-const calendoraIcon = "/kindora-logo.jpeg";
+const logoDark = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 
 const BRAND_ORANGE = "#f97316";
@@ -74,7 +74,7 @@ function FamilyIllustration() {
         style={{ animation: "floatUpDelay 4s ease-in-out infinite", animationDelay: "500ms" }}>
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden"
           style={{ background: "rgba(249,115,22,0.15)", border: "1px solid rgba(249,115,22,0.3)", backdropFilter: "blur(16px)", boxShadow: "0 8px 32px rgba(249,115,22,0.25)" }}>
-          <img src={calendoraIcon} alt="Kindora" className="w-10 h-10 rounded-lg" />
+          <img src={logoDark} alt="Kindora" className="w-10 h-10 rounded-lg" />
         </div>
       </div>
     </div>
@@ -104,7 +104,7 @@ function AccessIllustration() {
         </svg>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-2xl flex items-center justify-center z-10 overflow-hidden"
           style={{ background: "rgba(249,115,22,0.18)", border: "1px solid rgba(249,115,22,0.4)", backdropFilter: "blur(16px)", boxShadow: "0 0 32px rgba(249,115,22,0.3)" }}>
-          <img src={calendoraIcon} alt="Kindora" className="w-10 h-10 rounded-lg" />
+          <img src={logoDark} alt="Kindora" className="w-10 h-10 rounded-lg" />
         </div>
         {roles.map((r, i) => {
           const Icon = r.icon;
@@ -226,7 +226,7 @@ export default function Intro() {
       >
         <div className="text-center">
           <div className="relative mb-6">
-            <img src={calendoraIcon} alt="Kindora" className="w-16 h-16 rounded-2xl mx-auto mb-4" />
+            <img src={logoDark} alt="Kindora" className="w-16 h-16 rounded-2xl mx-auto mb-4" />
           </div>
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" style={{ color: BRAND_ORANGE }} />
           <p className="text-white text-lg font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
@@ -248,10 +248,9 @@ export default function Intro() {
     >
       <div className="flex items-center justify-between px-6 pt-6">
         <div className="flex items-center gap-2.5">
-          <img src={calendoraIcon} alt="Kindora" className="w-8 h-8 rounded-lg flex-shrink-0" />
-          <span className="font-bold text-base" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            <span style={{ color: BRAND_ORANGE }}>Kindora</span>
-            <span className="text-white/70"> Calendar</span>
+          <img src={logoDark} alt="Kindora" className="w-8 h-8 rounded-lg flex-shrink-0" />
+          <span className="font-bold text-base" style={{ fontFamily: "'Space Grotesk', sans-serif", color: BRAND_ORANGE }}>
+            Kindora
           </span>
         </div>
         <button

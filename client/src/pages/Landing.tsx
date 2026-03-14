@@ -4,7 +4,8 @@ import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-const calendoraIcon = "/kindora-logo.jpeg";
+const logoLight = "/kindora-logo-light.png";
+const logoDark = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -133,9 +134,10 @@ export default function Landing() {
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-4 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
+            <img src={logoLight} alt="Kindora" className="block dark:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
+            <img src={logoDark} alt="Kindora" className="hidden dark:block w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
             <span className="text-lg sm:text-xl font-bold text-foreground truncate">
-              <span className="text-primary">Kindora</span><span className="hidden sm:inline"> Calendar</span>
+              <span className="text-primary">Kindora</span>
             </span>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
@@ -209,7 +211,8 @@ export default function Landing() {
             </button>
 
             <div className="flex items-center gap-3 mb-6">
-              <img src={calendoraIcon} alt="Kindora" className="w-10 h-10 rounded-lg" />
+              <img src={logoLight} alt="Kindora" className="block dark:hidden w-10 h-10 rounded-lg" />
+              <img src={logoDark} alt="Kindora" className="hidden dark:block w-10 h-10 rounded-lg" />
               <div>
                 <h2 className="text-xl font-bold text-foreground">
                   {authMode === "login" ? "Welcome Back" : "Create Account"}

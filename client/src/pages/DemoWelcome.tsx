@@ -23,7 +23,8 @@ import {
   Loader2
 } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-const calendoraIcon = "/kindora-logo.jpeg";
+const logoLight = "/kindora-logo-light.png";
+const logoDark = "/kindora-logo.jpeg";
 
 type Persona = "family" | "caregiver";
 
@@ -109,10 +110,9 @@ export default function DemoWelcome() {
       <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 rounded-lg" />
-            <span className="text-xl app-title">
-              <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-foreground">Calendar</span>
-            </span>
+            <img src={logoLight} alt="Kindora" className="block dark:hidden w-10 h-10 rounded-lg" />
+            <img src={logoDark} alt="Kindora" className="hidden dark:block w-10 h-10 rounded-lg" />
+            <span className="text-xl app-title font-extrabold text-orange-300">Kindora</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -591,9 +591,10 @@ export default function DemoWelcome() {
       <footer className="border-t border-border py-8 px-4 md:px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 rounded-lg" />
+            <img src={logoLight} alt="Kindora" className="block dark:hidden w-8 h-8 rounded-lg" />
+            <img src={logoDark} alt="Kindora" className="hidden dark:block w-8 h-8 rounded-lg" />
             <span className="text-sm text-muted-foreground">
-              Kindora Calendar - Made with love for caregivers everywhere
+              Kindora — Made with love for caregivers everywhere
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
