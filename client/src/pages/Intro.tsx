@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image } from "lucide-react";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
@@ -174,13 +174,19 @@ export default function Intro() {
   const total = SLIDE_DATA.length;
   const { isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const isDemoMode = params.get("mode") === "demo";
+  const tzOffset = params.get("tz") || String(new Date().getTimezoneOffset());
 
   const transition = (target: number | "signup") => {
     setVisible(false);
     setTimeout(() => {
       if (target === "signup") {
         localStorage.setItem("kindora_intro_seen", "true");
-        if (isAuthenticated) {
+        if (isDemoMode) {
+          window.location.href = `/api/login/demo?tz=${tzOffset}`;
+        } else if (isAuthenticated) {
           setLocation("/onboarding");
         } else {
           window.location.href = "/api/login";

@@ -963,6 +963,86 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     }
 
     // ============================================
+    // CARE DOCUMENTS for Mom's Care Calendar
+    // ============================================
+
+    const careDocuments = [
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Medicare Supplemental Insurance Card",
+        description: "Marilyn's Medicare Part B + Supplemental (Plan G) coverage. Always carry to appointments.",
+        documentType: "insurance" as const,
+        fileName: "insurance_card_marilyn.jpg",
+        fileUrl: "/attached_assets/stock_images/nurse_visiting_elder_6f5a0aa9.jpg",
+        fileSize: "248000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Cardiology Care Plan – Dr. Patel",
+        description: "Updated care plan from Dr. Patel after the March cardiology visit. Includes medication adjustments and activity guidelines.",
+        documentType: "care_plan" as const,
+        fileName: "care_plan_cardiology_march.jpg",
+        fileUrl: "/attached_assets/stock_images/doctor_elderly_patie_c7a84ec4.jpg",
+        fileSize: "312000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Physical Therapy Progress Report",
+        description: "12-week PT progress report. Balance improved 60%, walker dependency reduced. Goal: independent outdoor walking by June.",
+        documentType: "medical" as const,
+        fileName: "pt_progress_report_q1.jpg",
+        fileUrl: "/attached_assets/stock_images/elderly_person_physi_801b2c25.jpg",
+        fileSize: "285000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: null,
+        uploadedBy: userId,
+        title: "Durable Power of Attorney",
+        description: "Sarah Johnson named as POA for healthcare and financial decisions. Notarized March 2024. Keep copy accessible.",
+        documentType: "legal" as const,
+        fileName: "power_of_attorney_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/elderly_grandmother__1b2dd55b.jpg",
+        fileSize: "195000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: mayaId,
+        title: "Daily Medication Schedule",
+        description: "Maya's detailed medication administration schedule. Includes timing, food requirements, and what to watch for.",
+        documentType: "care_plan" as const,
+        fileName: "medication_schedule_current.jpg",
+        fileUrl: "/attached_assets/stock_images/nurse_visiting_elder_6f5a0aa9.jpg",
+        fileSize: "167000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Ophthalmology Report – Glaucoma Monitor",
+        description: "Annual glaucoma monitoring results. Pressure stable at 16mm Hg. Continue current eye drops. Follow-up in 12 months.",
+        documentType: "medical" as const,
+        fileName: "eye_exam_glaucoma_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/doctor_elderly_patie_c7a84ec4.jpg",
+        fileSize: "221000",
+        mimeType: "image/jpeg",
+      },
+    ];
+
+    for (const doc of careDocuments) {
+      await storage.createCareDocument(careFamilyId, {
+        ...doc,
+        memberId: doc.memberId || undefined,
+      });
+    }
+
+    // ============================================
     // FAMILY MESSAGES - Impressive Threaded Conversations
     // ============================================
 
@@ -1295,6 +1375,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
     console.log(`   Medication Logs: ${medicationLogs.length} dose records (given/skipped/refused)`);
     console.log(`   Time Tracking: ${timeEntries.length} time entries for Maya ($28/hr) - 27hrs total`);
+    console.log(`   Care Documents: ${careDocuments.length} documents in Mom's Care vault`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
