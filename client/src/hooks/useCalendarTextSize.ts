@@ -3,32 +3,55 @@ import { useState, useEffect, useCallback } from "react";
 const STORAGE_KEY = "kindora-calendar-text-size";
 const CHANGE_EVENT = "kindora-text-size-change";
 
-export type CalendarTextSize = "normal" | "large";
+export type CalendarTextScale = 1 | 2 | 3 | 4 | 5;
 
-function readFromStorage(): CalendarTextSize {
+export const TEXT_SCALE_LABELS: Record<CalendarTextScale, string> = {
+  1: "Small",
+  2: "Default",
+  3: "Medium",
+  4: "Large",
+  5: "Extra Large",
+};
+
+export interface TextSizes {
+  title: string;   // font-size for event title
+  meta: string;    // font-size for time / date / description
+}
+
+export const TEXT_SCALE_SIZES: Record<CalendarTextScale, TextSizes> = {
+  1: { title: "10px", meta: "8px" },
+  2: { title: "12px", meta: "10px" },   // default
+  3: { title: "14px", meta: "11px" },
+  4: { title: "16px", meta: "12px" },
+  5: { title: "18px", meta: "13px" },
+};
+
+function readFromStorage(): CalendarTextScale {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "large" ? "large" : "normal";
-  } catch {
-    return "normal";
-  }
+    const v = parseInt(localStorage.getItem(STORAGE_KEY) ?? "2", 10);
+    if (v >= 1 && v <= 5) return v as CalendarTextScale;
+  } catch {}
+  return 2;
 }
 
 export function useCalendarTextSize() {
-  const [size, setSize] = useState<CalendarTextSize>(readFromStorage);
+  const [scale, setScale] = useState<CalendarTextScale>(readFromStorage);
 
   useEffect(() => {
-    const handler = () => setSize(readFromStorage());
+    const handler = () => setScale(readFromStorage());
     window.addEventListener(CHANGE_EVENT, handler);
     return () => window.removeEventListener(CHANGE_EVENT, handler);
   }, []);
 
-  const updateSize = useCallback((newSize: CalendarTextSize) => {
+  const updateScale = useCallback((newScale: CalendarTextScale) => {
     try {
-      localStorage.setItem(STORAGE_KEY, newSize);
+      localStorage.setItem(STORAGE_KEY, String(newScale));
     } catch {}
-    setSize(newSize);
+    setScale(newScale);
     window.dispatchEvent(new Event(CHANGE_EVENT));
   }, []);
 
-  return { size, updateSize };
+  const sizes = TEXT_SCALE_SIZES[scale];
+
+  return { scale, sizes, updateScale };
 }

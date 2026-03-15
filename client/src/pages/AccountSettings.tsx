@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type } from "lucide-react";
-import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
+import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock } from "lucide-react";
+import { useCalendarTextSize, TEXT_SCALE_LABELS, TEXT_SCALE_SIZES } from "@/hooks/useCalendarTextSize";
+import type { CalendarTextScale } from "@/hooks/useCalendarTextSize";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -279,8 +281,8 @@ function AccountTab() {
 }
 
 function DisplayPreferencesCard() {
-  const { size, updateSize } = useCalendarTextSize();
-  const isLarge = size === 'large';
+  const { scale, updateScale } = useCalendarTextSize();
+  const previewSizes = TEXT_SCALE_SIZES[scale];
 
   return (
     <Card>
@@ -291,19 +293,71 @@ function DisplayPreferencesCard() {
         </div>
         <CardDescription>Adjust how calendar events appear on screen.</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="flex items-center justify-between gap-4">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium text-foreground">Larger calendar text</p>
-            <p className="text-xs text-muted-foreground">
-              Makes event titles and times easier to read on small screens.
-            </p>
+      <CardContent className="space-y-5">
+        {/* Slider control */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-foreground">Calendar text size</p>
+            <span className="text-xs font-semibold text-primary" data-testid="text-scale-label">
+              {TEXT_SCALE_LABELS[scale]}
+            </span>
           </div>
-          <Switch
-            checked={isLarge}
-            onCheckedChange={(checked) => updateSize(checked ? 'large' : 'normal')}
-            data-testid="toggle-larger-calendar-text"
+          <Slider
+            min={1}
+            max={5}
+            step={1}
+            value={[scale]}
+            onValueChange={([v]) => updateScale(v as CalendarTextScale)}
+            data-testid="slider-calendar-text-size"
+            className="w-full"
           />
+          <div className="flex justify-between">
+            {([1, 2, 3, 4, 5] as CalendarTextScale[]).map((s) => (
+              <span key={s} className="text-[10px] text-muted-foreground">{TEXT_SCALE_LABELS[s]}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Live preview */}
+        <div
+          className="rounded-xl border border-border/50 overflow-hidden"
+          style={{ background: "hsl(var(--card))" }}
+          aria-label="Preview of calendar event text size"
+          data-testid="preview-calendar-text"
+        >
+          <div className="px-3 py-2 border-b border-border/40">
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Preview</p>
+          </div>
+          {[
+            { title: "Dr. Johnson – Annual checkup", time: "9:00 AM – 10:00 AM", color: "#f97316" },
+            { title: "School pick-up", time: "3:15 PM – 3:30 PM", color: "#3b82f6" },
+            { title: "Mom's physical therapy", time: "2:00 PM – 3:00 PM", color: "#8b5cf6" },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 px-3 py-2.5 border-b border-border/30 last:border-0"
+            >
+              <div
+                className="w-1 self-stretch rounded-full flex-shrink-0"
+                style={{ background: item.color, minHeight: "32px" }}
+              />
+              <div className="flex-1 min-w-0">
+                <p
+                  className="font-semibold text-foreground truncate"
+                  style={{ fontSize: previewSizes.title }}
+                >
+                  {item.title}
+                </p>
+                <p
+                  className="text-muted-foreground flex items-center gap-1 mt-0.5"
+                  style={{ fontSize: previewSizes.meta }}
+                >
+                  <Clock style={{ width: previewSizes.meta, height: previewSizes.meta }} />
+                  {item.time}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
