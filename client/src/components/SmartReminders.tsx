@@ -43,7 +43,7 @@ export default function SmartReminders() {
     // Only today (not past) or tomorrow
     if (!isToday(start) && !isTomorrow(start)) return false;
     // Skip events that have already ended today
-    if (isToday(start) && isPast(new Date(event.endTime))) return false;
+    if (isToday(start) && isPast(new Date(e.endTime))) return false;
     // Skip dismissed
     if (dismissed.has(e.id)) return false;
     return true;
