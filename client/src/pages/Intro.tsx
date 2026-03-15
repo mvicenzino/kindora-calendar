@@ -290,7 +290,7 @@ export default function Intro() {
             transition: "opacity 0.32s ease, transform 0.32s ease",
           }}
         >
-          <div className="w-full">
+          <div className={`w-full ${slide > 0 ? "mt-12" : ""}`}>
             {illustrations[slide]}
           </div>
 
