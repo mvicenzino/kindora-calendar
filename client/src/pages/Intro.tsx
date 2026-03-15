@@ -224,7 +224,7 @@ export default function Intro() {
           src="/animation/index.html"
           title="See Kindora in action"
           className="w-full block border-0"
-          style={{ height: "260px" }}
+          style={{ height: "380px" }}
           allow="autoplay"
           loading="eager"
           data-testid="iframe-promo-animation"
@@ -281,9 +281,9 @@ export default function Intro() {
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+      <div className="flex-1 flex flex-col items-center justify-start px-6 pt-3 pb-8">
         <div
-          className="w-full max-w-md flex flex-col items-center gap-8"
+          className="w-full max-w-md flex flex-col items-center gap-5"
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(12px)",
