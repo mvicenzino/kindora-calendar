@@ -43,6 +43,9 @@ export function setupGoogleAuth(app: Express) {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const callbackURL = resolveCallbackURL();
   console.log(`[Google OAuth] Callback URL: ${callbackURL}`);
+  // Log last 8 chars of client ID and secret to verify they match Google Console
+  console.log(`[Google OAuth] Client ID suffix: ...${clientId.slice(-20)}`);
+  console.log(`[Google OAuth] Secret suffix: ...${(clientSecret || "").slice(-6)}`);
 
   // Step 1: Redirect to Google
   app.get("/api/auth/google", (req, res) => {
