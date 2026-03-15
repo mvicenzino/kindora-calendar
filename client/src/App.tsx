@@ -1,5 +1,5 @@
-import { Switch, Route, Redirect } from "wouter";
-import { Component } from "react";
+import { Switch, Route, Redirect, useLocation } from "wouter";
+import { Component, useEffect } from "react";
 import type { ReactNode } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HelmetProvider } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
-import { ActiveFamilyProvider } from "@/contexts/ActiveFamilyContext";
+import { ActiveFamilyProvider, useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import Landing from "@/pages/Landing";
 import Intro from "@/pages/Intro";
 import Home from "@/pages/Home";
@@ -98,6 +98,19 @@ function AppShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Redirects freshly-signed-up users (no family yet) to onboarding
+function NewUserGuard() {
+  const { families, familiesLoaded } = useActiveFamily();
+  const [location, navigate] = useLocation();
+  useEffect(() => {
+    const exemptPaths = ["/onboarding", "/onboarding/wizard", "/demo-welcome"];
+    if (familiesLoaded && families !== undefined && families.length === 0 && !exemptPaths.includes(location)) {
+      navigate("/onboarding");
+    }
+  }, [families, familiesLoaded, location, navigate]);
+  return null;
+}
+
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
@@ -130,6 +143,7 @@ function Router() {
           <Route path="/onboarding" component={Onboarding} />
           <Route path="/onboarding/wizard" component={EventWizard} />
           <Route path="/demo-welcome" component={DemoWelcome} />
+          <NewUserGuard />
           <AppShell>
             <Switch>
               <Route path="/" component={Home} />

@@ -95,6 +95,10 @@ function updateUserSession(
 }
 
 export async function setupAuth(app: Express) {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("SESSION_SECRET environment variable must be set");
+  }
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -123,7 +127,7 @@ export async function setupAuth(app: Express) {
           firstName: claims["first_name"],
           lastName: claims["last_name"],
           profileImageUrl: claims["profile_image_url"],
-          authProvider: "google",
+          authProvider: "replit",
         });
 
         verified(null, user);
@@ -155,7 +159,7 @@ export async function setupAuth(app: Express) {
     ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
-      failureRedirect: "/landing",
+      failureRedirect: "/",
     })(req, res, next);
   });
 

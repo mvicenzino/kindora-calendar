@@ -15,7 +15,13 @@ const app = express();
 app.use(compression());
 
 const isProduction = process.env.NODE_ENV === "production";
-const allowedOrigin = "https://calendora.replit.app";
+
+// All domains that may originate API requests
+const allowedOrigins = [
+  "https://kindora.ai",
+  "https://www.kindora.ai",
+  "https://calendora.replit.app", // legacy — keep during transition
+];
 
 app.use(helmet({
   contentSecurityPolicy: isProduction ? {
@@ -36,7 +42,13 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: isProduction ? allowedOrigin : true,
+  origin: isProduction
+    ? (origin, cb) => {
+        // Allow requests with no origin (server-to-server, curl) and listed domains
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        return cb(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    : true,
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-API-Key"],
