@@ -279,17 +279,15 @@ export default function Messages() {
                           className={`flex items-end gap-1.5 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
                           data-testid={`message-${message.id}`}
                         >
-                          {/* Avatar — hidden for own messages, shown for others */}
-                          {!isOwnMessage && (
-                            <Avatar className="h-7 w-7 flex-shrink-0 mb-1">
-                              {message.author?.profileImageUrl && (
-                                <AvatarImage src={message.author.profileImageUrl} />
-                              )}
-                              <AvatarFallback className={`bg-gradient-to-br ${getAvatarGradient(authorRole)} text-white text-[10px] font-semibold`}>
-                                {message.author ? getInitials(message.author.firstName, message.author.lastName) : '?'}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
+                          {/* Avatar — always shown */}
+                          <Avatar className="h-7 w-7 flex-shrink-0 mb-1">
+                            {message.author?.profileImageUrl && (
+                              <AvatarImage src={message.author.profileImageUrl} />
+                            )}
+                            <AvatarFallback className={`bg-gradient-to-br ${getAvatarGradient(authorRole)} text-white text-[10px] font-bold tracking-tight`}>
+                              {message.author ? getInitials(message.author.firstName, message.author.lastName) : '?'}
+                            </AvatarFallback>
+                          </Avatar>
 
                           <div className={`max-w-[72%] flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
                             {/* Sender name (others only) */}
