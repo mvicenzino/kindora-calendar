@@ -6,6 +6,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -40,6 +41,8 @@ export default function EventCard({
   const { toast } = useToast();
   const { activeFamilyId } = useActiveFamily();
   const { user } = useAuth();
+  const { size: textSize } = useCalendarTextSize();
+  const lg = textSize === 'large';
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
@@ -145,7 +148,7 @@ export default function EventCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
               <span
-                className={`text-xs font-semibold truncate ${event.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}
+                className={`${lg ? 'text-sm' : 'text-xs'} font-semibold truncate ${event.completed ? 'line-through text-muted-foreground' : 'text-foreground'}`}
                 data-testid={`text-title-${event.id}`}
               >
                 {event.title}
@@ -165,7 +168,7 @@ export default function EventCard({
 
             <div className="flex items-center gap-2 mt-0.5">
               {showTime && (
-                <span className="text-[10px] text-muted-foreground whitespace-nowrap" data-testid={`text-time-${event.id}`}>
+                <span className={`${lg ? 'text-xs' : 'text-[10px]'} text-muted-foreground whitespace-nowrap`} data-testid={`text-time-${event.id}`}>
                   {isSometimeToday() ? (
                     <span className="flex items-center gap-0.5">
                       <Clock className="w-2.5 h-2.5" />
@@ -177,12 +180,12 @@ export default function EventCard({
                 </span>
               )}
               {showDate && (
-                <span className="text-[10px] text-muted-foreground" data-testid={`text-date-${event.id}`}>
+                <span className={`${lg ? 'text-xs' : 'text-[10px]'} text-muted-foreground`} data-testid={`text-date-${event.id}`}>
                   {format(event.startTime, 'MMM d')}
                 </span>
               )}
               {event.description && variant === 'full' && (
-                <span className="text-[10px] text-muted-foreground/70 truncate hidden sm:inline" data-testid={`text-description-${event.id}`}>
+                <span className={`${lg ? 'text-xs' : 'text-[10px]'} text-muted-foreground/70 truncate hidden sm:inline`} data-testid={`text-description-${event.id}`}>
                   {event.description}
                 </span>
               )}

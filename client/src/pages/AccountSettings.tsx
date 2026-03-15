@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send } from "lucide-react";
+import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type } from "lucide-react";
+import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
 import { Switch } from "@/components/ui/switch";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -268,9 +269,44 @@ function AccountTab() {
         </CardContent>
       </Card>
 
+      {/* Display Preferences Card */}
+      <DisplayPreferencesCard />
+
       {/* Push Notifications Card */}
       <PushNotificationsCard />
     </div>
+  );
+}
+
+function DisplayPreferencesCard() {
+  const { size, updateSize } = useCalendarTextSize();
+  const isLarge = size === 'large';
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Type className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm">Display</CardTitle>
+        </div>
+        <CardDescription>Adjust how calendar events appear on screen.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-foreground">Larger calendar text</p>
+            <p className="text-xs text-muted-foreground">
+              Makes event titles and times easier to read on small screens.
+            </p>
+          </div>
+          <Switch
+            checked={isLarge}
+            onCheckedChange={(checked) => updateSize(checked ? 'large' : 'normal')}
+            data-testid="toggle-larger-calendar-text"
+          />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
