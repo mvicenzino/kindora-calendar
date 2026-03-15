@@ -94,12 +94,24 @@ export function setupGoogleAuth(app: Express) {
     prompt: "select_account",
   }));
 
-  // Google OAuth callback
-  app.get(
-    "/api/auth/google/callback",
-    passport.authenticate("google", {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/",
-    })
-  );
+  // Google OAuth callback — use custom handler so we can log the real Google error
+  app.get("/api/auth/google/callback", (req, res, next) => {
+    passport.authenticate("google", (err: any, user: any, info: any) => {
+      if (err) {
+        console.error("[Google OAuth] Token exchange error:", err.message, err.oauthError || "");
+        return res.redirect("/?auth_error=google");
+      }
+      if (!user) {
+        console.error("[Google OAuth] No user returned:", info);
+        return res.redirect("/?auth_error=google");
+      }
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error("[Google OAuth] Session login error:", loginErr);
+          return res.redirect("/?auth_error=google");
+        }
+        return res.redirect("/");
+      });
+    })(req, res, next);
+  });
 }
