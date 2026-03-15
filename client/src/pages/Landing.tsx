@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 
 const logo = "/kindora-logo.jpeg";
@@ -488,68 +488,141 @@ export default function Landing() {
               AI-Powered
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-              Intelligence Built In
+              Ask anything. Add anything.<br className="hidden sm:block" /> By voice or by text.
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Kindora doesn't just store your schedule — it understands your life and helps you manage it.
+              Kindora's AI lives right inside your calendar — search for events, create new ones, and get guidance, all without leaving the page.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-
-            {/* AI Schedule Import */}
-            <div className="bg-card border border-border rounded-xl p-6 md:p-8 hover-elevate relative overflow-hidden group" data-testid="card-ai-import">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-primary/10 to-transparent rounded-bl-full pointer-events-none" />
-              <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-orange-600 shadow-lg w-fit mb-5">
-                <Wand2 className="w-6 h-6 text-white" />
+          {/* Top row: voice + search — wide card */}
+          <div className="bg-card border border-border rounded-2xl p-6 md:p-8 mb-6 relative overflow-hidden" data-testid="card-ai-voice-search">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary/8 to-transparent rounded-bl-full pointer-events-none" />
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+              {/* Copy */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-orange-600 shadow-lg">
+                    <Mic className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/80 to-orange-500 shadow-lg">
+                    <Search className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-foreground">Voice &amp; Text AI Search</h3>
+                </div>
+                <p className="text-muted-foreground leading-relaxed mb-5">
+                  A smart search bar lives at the top of every calendar view. Type or tap the mic and speak — Kindora figures out whether you want to <em>find</em> an event or <em>create</em> one.
+                </p>
+                <ul className="space-y-2.5">
+                  <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <Mic className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span><strong className="text-foreground">Voice-enabled on iPhone &amp; Android</strong> — tap the mic, say "add dentist Tuesday at 3pm" and it appears instantly</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <Search className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span><strong className="text-foreground">Natural language search</strong> — ask "what does dad have next week?" and get a direct answer with matching events</span>
+                  </li>
+                  <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span>Works with Wispr Flow, Typeless, and iOS dictation — just focus the bar and speak</span>
+                  </li>
+                </ul>
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">AI Schedule Import</h3>
-              <p className="text-muted-foreground leading-relaxed mb-5">
-                Paste a school newsletter, doctor's email, or activity list and Kindora's AI instantly parses it into calendar events — no manual entry required.
+
+              {/* Mock AI bar visual */}
+              <div className="space-y-3">
+                <div className="bg-background border border-border rounded-2xl p-4">
+                  {/* Simulated ask bar */}
+                  <div className="flex items-center gap-2 bg-muted/60 border border-primary/30 rounded-full px-3 py-2 shadow-[0_0_0_3px_hsl(var(--primary)/0.08)]">
+                    <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5 flex-shrink-0">
+                      <Sparkles className="w-3 h-3 text-primary" />
+                      <span className="text-[10px] font-semibold text-primary">AI</span>
+                    </div>
+                    <span className="flex-1 text-sm text-foreground">Add Emma's piano lesson every Thursday at 4pm</span>
+                    <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                      <Mic className="w-3 h-3 text-primary-foreground" />
+                    </div>
+                  </div>
+                  {/* Result card */}
+                  <div className="mt-3 border border-primary/25 rounded-xl p-3 bg-primary/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-5 h-5 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center">
+                        <Check className="w-3 h-3 text-primary" />
+                      </div>
+                      <p className="text-sm text-foreground font-medium">Event created — recurring every Thursday</p>
+                    </div>
+                    <div className="flex items-center gap-2 pl-7">
+                      <div className="w-2 h-2 rounded-full bg-purple-500" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Emma's Piano Lesson</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" /> Thu, Apr 3 · 4:00–5:00 PM · Weekly</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Search example */}
+                <div className="bg-background border border-border rounded-2xl p-4">
+                  <div className="flex items-center gap-2 bg-muted/60 border border-border rounded-full px-3 py-2">
+                    <div className="flex items-center gap-1 bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5 flex-shrink-0">
+                      <Sparkles className="w-3 h-3 text-primary" />
+                      <span className="text-[10px] font-semibold text-primary">AI</span>
+                    </div>
+                    <span className="flex-1 text-sm text-foreground">When is dad's next cardiology appointment?</span>
+                  </div>
+                  <div className="mt-3 px-1">
+                    <p className="text-sm text-foreground leading-relaxed">Dad has a cardiology follow-up with <strong>Dr. Patel</strong> on <strong>Friday, April 11 at 2:00 PM</strong> at Summit Medical Group.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom row: AI Import + Kira */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* AI Schedule Import */}
+            <div className="bg-card border border-border rounded-xl p-6 hover-elevate relative overflow-hidden" data-testid="card-ai-import">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/8 to-transparent rounded-bl-full pointer-events-none" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-orange-600 shadow-lg w-fit mb-4">
+                <Wand2 className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground mb-2">AI Schedule Import</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                Paste a school newsletter, doctor's discharge summary, or activity email. Kindora's AI reads it and creates calendar events automatically — no manual entry.
               </p>
-              <ul className="space-y-2.5">
-                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                  <span>Reads emails, newsletters, and plain text — extracts every date and time automatically</span>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Check className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                  <span>Extracts every date, time, location, and recurrence pattern</span>
                 </li>
-                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                  <span>Creates events with correct titles, locations, and recurring patterns in seconds</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                  <span>Review and confirm before anything is added — you stay in control</span>
+                <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Check className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                  <span>Review and confirm before anything is added to the calendar</span>
                 </li>
               </ul>
             </div>
 
             {/* Kira AI Advisor */}
-            <div className="bg-card border border-border rounded-xl p-6 md:p-8 hover-elevate relative overflow-hidden group" data-testid="card-ai-kira">
-              <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-violet-500/12 to-transparent rounded-bl-full pointer-events-none" />
-              <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-lg w-fit mb-5">
-                <MessageCircle className="w-6 h-6 text-white" />
+            <div className="bg-card border border-border rounded-xl p-6 hover-elevate relative overflow-hidden" data-testid="card-ai-kira">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-violet-500/10 to-transparent rounded-bl-full pointer-events-none" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 shadow-lg w-fit mb-4">
+                <MessageCircle className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-1">Meet Kira</h3>
-              <p className="text-sm text-violet-500 font-medium mb-3">Your AI Family Advisor</p>
-              <p className="text-muted-foreground leading-relaxed mb-5">
-                Kira is a private AI counselor built specifically for the sandwich generation. Get personalized, compassionate guidance on the hard parts of caregiving — anytime you need it.
+              <h3 className="text-lg font-bold text-foreground mb-1">Meet Kira</h3>
+              <p className="text-xs text-violet-500 font-semibold mb-3">Your AI Family Advisor</p>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                A private AI counselor built for sandwich generation families. Get compassionate guidance on child behavior, eldercare challenges, and caregiver self-care — anytime.
               </p>
-              <ul className="space-y-2.5">
-                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
-                  <span>Child behavior help — picky eating, tantrums, potty training, school anxiety</span>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Check className="w-3.5 h-3.5 text-violet-500 flex-shrink-0 mt-0.5" />
+                  <span>Child behavior, tantrums, picky eating, school anxiety</span>
                 </li>
-                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
-                  <span>Eldercare guidance — dementia conversations, difficult decisions, caregiver burnout</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
-                  <span>Your conversation history stays private — Kira remembers your family's context</span>
+                <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Check className="w-3.5 h-3.5 text-violet-500 flex-shrink-0 mt-0.5" />
+                  <span>Dementia conversations, difficult decisions, caregiver burnout</span>
                 </li>
               </ul>
             </div>
-
           </div>
         </div>
       </section>
@@ -827,6 +900,116 @@ export default function Landing() {
                   </div>
                 </li>
               </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Document Vault Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-500/6 via-transparent to-emerald-500/4" />
+        <div className="max-w-6xl mx-auto relative">
+          <div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center">
+
+            {/* Left: copy */}
+            <div>
+              <div className="inline-flex items-center gap-2 bg-teal-500/10 text-teal-600 dark:text-teal-400 text-sm font-semibold px-4 py-1.5 rounded-full mb-5 border border-teal-500/20">
+                <FolderOpen className="w-4 h-4" />
+                Document Vault
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-5 leading-tight">
+                Every important document,<br />always within reach
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed mb-8">
+                Stop hunting through email threads for insurance cards and medical records. Kindora's Document Vault gives your family one secure, organized home for everything that matters.
+              </p>
+              <ul className="space-y-4">
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <HardDrive className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Google Drive connected</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Link your Google Drive and pull documents directly into the vault — no re-uploading. Your files stay where they are; Kindora just makes them findable.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <FileText className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Organized by category</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Medical records, insurance cards, legal documents, prescriptions — each in their own section so the right person can find the right document fast.</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-500/10 border border-teal-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Shield className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground text-sm">Role-based access</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Share specific documents with caregivers or healthcare providers without giving access to everything. You control what's visible and to whom.</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            {/* Right: mock vault UI */}
+            <div className="relative">
+              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
+                {/* Vault header */}
+                <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-teal-500/15 border border-teal-500/20 flex items-center justify-center">
+                    <FolderOpen className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Family Documents</p>
+                    <p className="text-xs text-muted-foreground">12 documents · 2 connected sources</p>
+                  </div>
+                  <div className="ml-auto flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 bg-blue-500/10 border border-blue-500/20 rounded-full px-2 py-0.5">
+                      <HardDrive className="w-2.5 h-2.5 text-blue-500" />
+                      <span className="text-[9px] font-semibold text-blue-500">Drive</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Categories */}
+                <div className="p-4 space-y-2 bg-background/40">
+                  {[
+                    { label: "Medical Records", count: 4, color: "text-red-500", bg: "bg-red-500/10 border-red-500/20", icon: FileText },
+                    { label: "Insurance", count: 3, color: "text-blue-500", bg: "bg-blue-500/10 border-blue-500/20", icon: Shield },
+                    { label: "Legal & Estate", count: 2, color: "text-purple-500", bg: "bg-purple-500/10 border-purple-500/20", icon: FileText },
+                    { label: "Prescriptions", count: 3, color: "text-teal-500", bg: "bg-teal-500/10 border-teal-500/20", icon: Pill },
+                  ].map((cat, i) => {
+                    const Icon = cat.icon;
+                    return (
+                      <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-muted/30 border border-border hover-elevate">
+                        <div className={`w-7 h-7 rounded-lg border flex items-center justify-center flex-shrink-0 ${cat.bg}`}>
+                          <Icon className={`w-3.5 h-3.5 ${cat.color}`} />
+                        </div>
+                        <p className="text-sm font-medium text-foreground flex-1">{cat.label}</p>
+                        <span className="text-xs text-muted-foreground">{cat.count} files</span>
+                        <ExternalLink className="w-3 h-3 text-muted-foreground/50" />
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Recent / pinned */}
+                <div className="px-4 pb-4 pt-1 border-t border-border bg-muted/10">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2 pt-2">Pinned</p>
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-teal-500/6 border border-teal-500/15">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                      <HardDrive className="w-3.5 h-3.5 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">Dad's Medicare Card 2026.pdf</p>
+                      <p className="text-xs text-muted-foreground">Google Drive · Shared with Rosa</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
