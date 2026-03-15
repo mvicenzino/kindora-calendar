@@ -352,8 +352,9 @@ export default function EventModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
-        className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-2xl max-h-[90vh] flex flex-col gap-0"
+        className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-2xl flex flex-col gap-0"
         style={{
+          maxHeight: 'min(90dvh, 90vh)',
           background: 'transparent',
           boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 25px 60px -12px rgba(0,0,0,0.5)',
         }}
@@ -493,107 +494,104 @@ export default function EventModal({
               />
             </div>
 
-            {/* Date and Family Members */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Date */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Date
-                </Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-muted/50 border border-border rounded-2xl px-4 py-3 h-12 focus:border-purple-400 focus:ring-purple-400/50 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                  data-testid="input-event-date"
-                  disabled={isReadOnly}
-                />
-              </div>
+            {/* Date — always full width */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Date
+              </Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-muted/50 border border-border rounded-2xl px-4 py-3 h-12 focus:border-purple-400 focus:ring-purple-400/50 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                data-testid="input-event-date"
+                disabled={isReadOnly}
+              />
+            </div>
 
-              {/* Family Members - Multi-select Typeahead */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Family Members <span className="text-red-400">*</span>
-                </Label>
-                <div className="relative" ref={dropdownRef}>
-                  <div className="bg-muted/50 border border-border rounded-2xl p-2 min-h-12 flex flex-wrap items-center gap-2">
-                    {selectedMemberIds.map(id => {
-                      const member = members.find(m => m.id === id);
-                      return member ? (
-                        <div
-                          key={id}
-                          className="flex items-center gap-2 bg-muted rounded-lg px-2 py-1"
-                        >
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback 
-                              className="text-xs text-white"
-                              style={{ backgroundColor: member.color }}
-                            >
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-foreground text-sm">{member.name}</span>
-                          {!isReadOnly && (
-                            <button
-                              onClick={() => removeMember(id)}
-                              className="text-muted-foreground hover:text-foreground ml-1"
-                              data-testid={`button-remove-member-${id}`}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      ) : null;
-                    })}
-                    <input
-                      type="text"
-                      value={memberSearch}
-                      onChange={(e) => {
-                        setMemberSearch(e.target.value);
-                        setShowMemberDropdown(true);
-                      }}
-                      onFocus={() => setShowMemberDropdown(true)}
-                      placeholder="Type to add family members..."
-                      className="flex-1 min-w-[150px] bg-transparent text-foreground placeholder:text-muted-foreground outline-none text-sm"
-                      data-testid="input-member-search"
-                      disabled={isReadOnly}
-                    />
-                  </div>
-
-                  {/* Dropdown menu */}
-                  {showMemberDropdown && filteredMembers.length > 0 && !isReadOnly && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto">
-                      {filteredMembers.map(member => (
-                        <button
-                          key={member.id}
-                          onClick={() => {
-                            toggleMember(member.id);
-                            setMemberSearch("");
-                          }}
-                          className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-all border-b border-border last:border-0 ${
-                            selectedMemberIds.includes(member.id) ? 'bg-muted' : ''
-                          }`}
-                          data-testid={`option-member-${member.id}`}
-                        >
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback 
-                              className="text-xs text-white"
-                              style={{ backgroundColor: member.color }}
-                            >
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-foreground text-sm flex-1">{member.name}</span>
-                          {selectedMemberIds.includes(member.id) && (
-                            <div className="w-4 h-4 rounded border border-border bg-muted" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {/* Family Members - Multi-select Typeahead — always full width */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Family Members <span className="text-red-400">*</span>
+              </Label>
+              <div className="relative" ref={dropdownRef}>
+                <div className="bg-muted/50 border border-border rounded-2xl p-2 min-h-12 flex flex-wrap items-center gap-2">
+                  {selectedMemberIds.map(id => {
+                    const member = members.find(m => m.id === id);
+                    return member ? (
+                      <div
+                        key={id}
+                        className="flex items-center gap-2 bg-muted rounded-lg px-2 py-1"
+                      >
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback
+                            className="text-xs text-white"
+                            style={{ backgroundColor: member.color }}
+                          >
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-foreground text-sm">{member.name}</span>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => removeMember(id)}
+                            className="text-muted-foreground hover:text-foreground ml-1"
+                            data-testid={`button-remove-member-${id}`}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ) : null;
+                  })}
+                  <input
+                    type="text"
+                    value={memberSearch}
+                    onChange={(e) => {
+                      setMemberSearch(e.target.value);
+                      setShowMemberDropdown(true);
+                    }}
+                    onFocus={() => setShowMemberDropdown(true)}
+                    placeholder="Type to add family members..."
+                    className="flex-1 min-w-[120px] bg-transparent text-foreground placeholder:text-muted-foreground outline-none text-sm py-1"
+                    data-testid="input-member-search"
+                    disabled={isReadOnly}
+                  />
                 </div>
+
+                {/* Dropdown menu */}
+                {showMemberDropdown && filteredMembers.length > 0 && !isReadOnly && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                    {filteredMembers.map(member => (
+                      <button
+                        key={member.id}
+                        onClick={() => {
+                          toggleMember(member.id);
+                          setMemberSearch("");
+                        }}
+                        className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-all border-b border-border last:border-0 ${
+                          selectedMemberIds.includes(member.id) ? 'bg-muted' : ''
+                        }`}
+                        data-testid={`option-member-${member.id}`}
+                      >
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback
+                            className="text-xs text-white"
+                            style={{ backgroundColor: member.color }}
+                          >
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-foreground text-sm flex-1">{member.name}</span>
+                        {selectedMemberIds.includes(member.id) && (
+                          <div className="w-4 h-4 rounded border border-border bg-muted" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -615,7 +613,7 @@ export default function EventModal({
 
             {/* Start and End Times */}
             {!isSometimeToday && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Clock className="w-4 h-4" />
