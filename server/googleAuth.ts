@@ -127,11 +127,21 @@ export function setupGoogleAuth(app: Express) {
 
       console.log("[Google OAuth] Profile fetched for:", profile.email);
 
-      const userId = `google-${profile.id}`;
       const email = profile.email ?? null;
       const firstName = profile.given_name ?? profile.name?.split(" ")[0] ?? null;
       const lastName = profile.family_name ?? profile.name?.split(" ").slice(1).join(" ") ?? null;
       const profileImageUrl = profile.picture ?? null;
+
+      // Account linking: if a user with this email already exists, use their ID
+      // This prevents creating a duplicate account when the user previously signed up with email/password
+      let userId = `google-${profile.id}`;
+      if (email) {
+        const existingUser = await storage.getUserByEmail(email);
+        if (existingUser) {
+          userId = existingUser.id;
+          console.log("[Google OAuth] Linked to existing account:", userId);
+        }
+      }
 
       await storage.upsertUser({
         id: userId,
