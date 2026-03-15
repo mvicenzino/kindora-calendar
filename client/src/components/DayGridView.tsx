@@ -1,8 +1,9 @@
-import { useRef, useEffect, useMemo, useCallback } from "react";
+import { useRef, useEffect, useMemo, useCallback, useState } from "react";
 import { format, isToday, isSameDay, addDays, subDays } from "date-fns";
 import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useEventDrag } from "@/hooks/useEventDrag";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
@@ -64,6 +65,7 @@ function layoutOverlappingEvents(events: UiEvent[]) {
 export default function DayGridView({ date, events, members = [], onEventClick, onAddEvent, onAddEventForDate, onDateChange, onEventDrop, onEventDelete }: DayGridViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isTodayDate = isToday(date);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const { multiplier } = useCalendarTextSize();
   const evTitle = `${Math.round(11 * multiplier)}px`;
   const evMeta  = `${Math.round(10 * multiplier)}px`;
@@ -136,6 +138,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
   };
 
   return (
+    <>
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-3 py-2 border-b border-border/30">
         <div className="flex items-center gap-2">
@@ -274,7 +277,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                     <button
                       className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:!opacity-100 transition-opacity z-10"
                       style={{ background: 'hsl(var(--destructive) / 0.9)', color: '#fff' }}
-                      onClick={(e) => { e.stopPropagation(); onEventDelete(event.id); }}
+                      onClick={(e) => { e.stopPropagation(); setPendingDeleteId(event.id); }}
                       data-testid={`button-delete-event-${event.id}`}
                     >
                       <X className="w-2.5 h-2.5" />
@@ -298,5 +301,23 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
         </div>
       </div>
     </div>
+
+    <AlertDialog open={pendingDeleteId !== null} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Event</AlertDialogTitle>
+          <AlertDialogDescription>Are you sure you want to delete this event? This action cannot be undone.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="button-cancel-delete-event">Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            data-testid="button-confirm-delete-event"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => { if (pendingDeleteId && onEventDelete) { onEventDelete(pendingDeleteId); } setPendingDeleteId(null); }}
+          >Delete</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
