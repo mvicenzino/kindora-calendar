@@ -214,7 +214,26 @@ export default function Intro() {
   };
 
   const current = SLIDE_DATA[slide];
-  const illustrations = [<FamilyIllustration />, <AccessIllustration />, <FeaturesIllustration />];
+  const promoAnimation = (
+    <div className="w-full">
+      <div
+        className="relative rounded-2xl overflow-hidden"
+        style={{ boxShadow: "0 0 48px rgba(249,115,22,0.22), 0 20px 40px rgba(0,0,0,0.55)", outline: "1px solid rgba(255,255,255,0.12)" }}
+      >
+        <iframe
+          src="https://kindora-animation.replit.app"
+          title="See Kindora in action"
+          className="w-full block border-0"
+          style={{ height: "260px" }}
+          allow="autoplay"
+          loading="eager"
+          data-testid="iframe-promo-animation"
+        />
+      </div>
+      <p className="text-center text-white/40 text-xs mt-2.5 tracking-wide">See how Kindora works in 30 seconds</p>
+    </div>
+  );
+  const illustrations = [promoAnimation, <AccessIllustration />, <FeaturesIllustration />];
 
   if (isNavigating) {
     return (
