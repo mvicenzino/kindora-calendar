@@ -1,5 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback } from "react";
 import { format, isToday, isSameDay, addDays, subDays } from "date-fns";
+import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEventDrag } from "@/hooks/useEventDrag";
@@ -63,6 +64,9 @@ function layoutOverlappingEvents(events: UiEvent[]) {
 export default function DayGridView({ date, events, members = [], onEventClick, onAddEvent, onAddEventForDate, onDateChange, onEventDrop, onEventDelete }: DayGridViewProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isTodayDate = isToday(date);
+  const { multiplier } = useCalendarTextSize();
+  const evTitle = `${Math.round(11 * multiplier)}px`;
+  const evMeta  = `${Math.round(10 * multiplier)}px`;
 
   const handleDrop = useCallback((event: UiEvent, newStart: Date, newEnd: Date) => {
     if (onEventDrop) onEventDrop(event, newStart, newEnd);
@@ -249,9 +253,9 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                     }}
                     onClick={(e) => { e.stopPropagation(); if (!isDragging && !justDraggedRef.current) onEventClick(event); }}
                   >
-                    <p className="text-[11px] font-semibold text-foreground truncate leading-tight pr-4">{event.title}</p>
+                    <p className="font-semibold text-foreground truncate leading-tight pr-4" style={{ fontSize: evTitle }}>{event.title}</p>
                     {displayHeight > 30 && (
-                      <p className="text-[10px] text-muted-foreground truncate">
+                      <p className="text-muted-foreground truncate" style={{ fontSize: evMeta }}>
                         {isBeingDragged ? formatDragTime(displayTop, displayHeight) : format(event.startTime, 'h:mm a')}
                       </p>
                     )}

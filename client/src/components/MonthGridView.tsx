@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useRef } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, addMonths, subMonths, isToday } from "date-fns";
+import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
@@ -27,6 +28,8 @@ interface MonthDragState {
 export default function MonthGridView({ date, events, members, onEventClick, onAddEvent, onAddEventForDate, onDateChange, onViewChange, onEventDrop }: MonthGridViewProps) {
   const monthStart = startOfMonth(date);
   const monthEnd = endOfMonth(date);
+  const { multiplier } = useCalendarTextSize();
+  const evTitle = `${Math.round(10 * multiplier)}px`;
   const calendarStart = startOfWeek(monthStart);
   const calendarEnd = endOfWeek(monthEnd);
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
@@ -249,7 +252,7 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
                           onClick={(e) => { e.stopPropagation(); if (!dragState && !isPending) onEventClick(event); }}
                           data-testid={`grid-event-${event.id}`}
                           className={`
-                            w-full text-left rounded-sm px-1 py-0.5 sm:py-px truncate text-[9px] sm:text-[10px] leading-tight font-medium
+                            w-full text-left rounded-sm px-1 py-0.5 sm:py-px truncate leading-tight font-medium
                             flex items-center gap-0.5 sm:gap-1 min-h-[18px] sm:min-h-0
                             ${isBeingDragged ? 'opacity-40' : isPending ? 'ring-1 ring-primary/50 scale-[1.03]' : 'cursor-grab'}
                           `}
@@ -257,6 +260,7 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
                             backgroundColor: event.color + '25',
                             color: 'var(--foreground)',
                             touchAction: onEventDrop ? 'none' : undefined,
+                            fontSize: evTitle,
                           }}
                         >
                           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: event.color }} />

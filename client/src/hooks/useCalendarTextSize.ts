@@ -26,6 +26,16 @@ export const TEXT_SCALE_SIZES: Record<CalendarTextScale, TextSizes> = {
   5: { title: "18px", meta: "13px" },
 };
 
+// Multiplier relative to default (scale 2 = 1.0x).
+// Used by grid views with small cells to scale their own base sizes.
+export const TEXT_SCALE_MULTIPLIER: Record<CalendarTextScale, number> = {
+  1: 0.85,
+  2: 1.0,
+  3: 1.17,
+  4: 1.33,
+  5: 1.5,
+};
+
 function readFromStorage(): CalendarTextScale {
   try {
     const v = parseInt(localStorage.getItem(STORAGE_KEY) ?? "2", 10);
@@ -52,6 +62,7 @@ export function useCalendarTextSize() {
   }, []);
 
   const sizes = TEXT_SCALE_SIZES[scale];
+  const multiplier = TEXT_SCALE_MULTIPLIER[scale];
 
-  return { scale, sizes, updateScale };
+  return { scale, sizes, multiplier, updateScale };
 }

@@ -1,5 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback } from "react";
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, isToday } from "date-fns";
+import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEventDrag } from "@/hooks/useEventDrag";
@@ -65,6 +66,9 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
   const scrollRef = useRef<HTMLDivElement>(null);
   const dayColumnsRef = useRef<HTMLDivElement[]>([]);
   const weekStart = startOfWeek(date);
+  const { multiplier } = useCalendarTextSize();
+  const evTitle = `${Math.round(10 * multiplier)}px`;
+  const evMeta  = `${Math.round(9 * multiplier)}px`;
   const weekEnd = endOfWeek(date);
   const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
@@ -296,9 +300,9 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                           }}
                           onClick={(e) => { e.stopPropagation(); if (!isDragging && !justDraggedRef.current) onEventClick(event); }}
                         >
-                          <p className="text-[9px] sm:text-[10px] font-semibold text-foreground truncate leading-tight pr-3">{event.title}</p>
+                          <p className="font-semibold text-foreground truncate leading-tight pr-3" style={{ fontSize: evTitle }}>{event.title}</p>
                           {displayHeight > 25 && (
-                            <p className="text-[8px] sm:text-[9px] text-muted-foreground truncate">
+                            <p className="text-muted-foreground truncate" style={{ fontSize: evMeta }}>
                               {format(event.startTime, 'h:mma').toLowerCase()}
                             </p>
                           )}
@@ -347,7 +351,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                         }}
                       >
                         <div className="px-1 py-0.5">
-                          <p className="text-[10px] font-semibold text-foreground truncate leading-tight">{event.title}</p>
+                          <p className="font-semibold text-foreground truncate leading-tight" style={{ fontSize: evTitle }}>{event.title}</p>
                         </div>
                       </div>
                     );
