@@ -3,6 +3,7 @@
   "short_name": "Kindora",
   "description": "Family OS for the Sandwich Generation",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#111318",
   "theme_color": "#111318",

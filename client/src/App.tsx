@@ -1,4 +1,6 @@
 import { Switch, Route, Redirect } from "wouter";
+import { Component } from "react";
+import type { ReactNode } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -30,6 +32,38 @@ import FamilySelector from "@/components/FamilySelector";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import SmartReminders from "@/components/SmartReminders";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: "" };
+  }
+  static getDerivedStateFromError(err: Error) {
+    return { hasError: true, error: err?.message || "Unknown error" };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100svh", padding: "2rem", background: "#111318", color: "#fff", textAlign: "center", gap: "1rem" }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p style={{ fontSize: "1.1rem", fontWeight: 600 }}>Something went wrong</p>
+          <p style={{ fontSize: "0.85rem", color: "#aaa", maxWidth: "280px" }}>{this.state.error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ marginTop: "0.5rem", padding: "0.6rem 1.4rem", borderRadius: "8px", background: "#f97316", color: "#fff", fontWeight: 600, border: "none", cursor: "pointer", fontSize: "0.95rem" }}
+          >
+            Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const sidebarStyle = {
   "--sidebar-width": "12rem",
@@ -115,16 +149,18 @@ function Router() {
 
 function App() {
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <ActiveFamilyProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </ActiveFamilyProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <ActiveFamilyProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </ActiveFamilyProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 }
 
