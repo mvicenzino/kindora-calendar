@@ -28,18 +28,12 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
-  const dbUrl = process.env.DATABASE_URL!;
-  const poolerUrl = dbUrl.replace(
-    /(@ep-[^.]+)(\.)/,
-    '$1-pooler$2'
-  );
   const sessionPool = new pg.Pool({
-    connectionString: poolerUrl,
-    max: 1,
-    min: 0,
-    idleTimeoutMillis: 5000,
-    connectionTimeoutMillis: 3000,
-    allowExitOnIdle: true,
+    connectionString: process.env.DATABASE_URL!,
+    max: 3,
+    min: 1,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 10000,
   });
   sessionPool.on('error', (err: Error) => {
     console.error('Session pool error (non-fatal):', err.message);
