@@ -4319,6 +4319,53 @@ Always return valid JSON matching one of the two formats above.`,
     res.json({ success: true });
   });
 
+  // ── Push Notification Routes ──────────────────────────────────────────────
+  const { saveSubscription, deleteSubscription, sendPushToUser } = await import("./pushService");
+
+  app.post("/api/push/subscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { endpoint, keys } = req.body;
+      if (!endpoint || !keys?.p256dh || !keys?.auth) {
+        return res.status(400).json({ error: "Invalid subscription data" });
+      }
+      const sub = await saveSubscription(userId, { endpoint, keys });
+      res.json({ success: true, id: sub.id });
+    } catch (err) {
+      console.error("Push subscribe error:", err);
+      res.status(500).json({ error: "Failed to save subscription" });
+    }
+  });
+
+  app.delete("/api/push/subscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { endpoint } = req.body;
+      if (!endpoint) return res.status(400).json({ error: "endpoint required" });
+      await deleteSubscription(userId, endpoint);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to remove subscription" });
+    }
+  });
+
+  app.post("/api/push/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await sendPushToUser(userId, {
+        title: "Kindora",
+        body: "Notifications are working! You'll now get reminders for important events.",
+        url: "/",
+        tag: "kindora-test",
+        important: false,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Push test error:", err);
+      res.status(500).json({ error: "Failed to send test notification" });
+    }
+  });
+
   registerAdvisorRoutes(app);
 
   const httpServer = createServer(app);

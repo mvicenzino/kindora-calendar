@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard } from "lucide-react";
+import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import FamilySettings from "./FamilySettings";
 import ImportSchedule from "./ImportSchedule";
@@ -265,7 +267,138 @@ function AccountTab() {
           )}
         </CardContent>
       </Card>
+
+      {/* Push Notifications Card */}
+      <PushNotificationsCard />
     </div>
+  );
+}
+
+function PushNotificationsCard() {
+  const { toast } = useToast();
+  const {
+    isSupported,
+    isPwaInstalled,
+    permission,
+    isSubscribed,
+    isLoading,
+    subscribe,
+    unsubscribe,
+    sendTest,
+  } = usePushNotifications();
+
+  const handleToggle = async (checked: boolean) => {
+    if (checked) {
+      const ok = await subscribe();
+      if (ok) {
+        toast({ title: "Notifications enabled", description: "You'll get reminders for important events." });
+      } else if (permission === "denied") {
+        toast({ title: "Permission denied", description: "Enable notifications in your iPhone Settings > Kindora.", variant: "destructive" });
+      }
+    } else {
+      await unsubscribe();
+      toast({ title: "Notifications turned off", description: "You won't receive push reminders anymore." });
+    }
+  };
+
+  const handleTest = async () => {
+    await sendTest();
+    toast({ title: "Test sent!", description: "Check for a notification from Kindora." });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-primary" />
+          <CardTitle className="text-sm">iPhone Notifications</CardTitle>
+        </div>
+        <CardDescription>
+          Get reminder banners on your iPhone for upcoming and important events.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!isSupported ? (
+          <div className="rounded-xl bg-muted/60 border border-border p-4 space-y-2">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Smartphone className="h-4 w-4 flex-shrink-0" />
+              <p className="text-sm font-medium">Not available in this browser</p>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Push notifications require iOS 16.4 or later and the app must be added to your Home Screen.
+            </p>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Open <strong>kindora.ai</strong> in Safari on your iPhone</li>
+              <li>Tap the Share button <strong>⎋</strong> at the bottom</li>
+              <li>Tap <strong>"Add to Home Screen"</strong></li>
+              <li>Open Kindora from your Home Screen and return here</li>
+            </ol>
+          </div>
+        ) : !isPwaInstalled ? (
+          <div className="rounded-xl bg-muted/60 border border-border p-4 space-y-2">
+            <div className="flex items-center gap-2 text-amber-500 dark:text-amber-400">
+              <Smartphone className="h-4 w-4 flex-shrink-0" />
+              <p className="text-sm font-medium">Add Kindora to your Home Screen first</p>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              iPhone push notifications only work when Kindora is installed as a Home Screen app (PWA).
+            </p>
+            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+              <li>Tap the Share button <strong>⎋</strong> in Safari</li>
+              <li>Tap <strong>"Add to Home Screen"</strong></li>
+              <li>Open Kindora from your Home Screen and come back here</li>
+            </ol>
+          </div>
+        ) : permission === "denied" ? (
+          <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4">
+            <div className="flex items-center gap-2 text-destructive mb-1">
+              <BellOff className="h-4 w-4 flex-shrink-0" />
+              <p className="text-sm font-medium">Notifications blocked</p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Go to <strong>iPhone Settings → Kindora → Notifications</strong> and enable "Allow Notifications", then return here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium text-foreground">
+                  {isSubscribed ? "Push notifications on" : "Enable push notifications"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isSubscribed
+                    ? "Kindora will send banners for upcoming important events."
+                    : "Tap to allow Kindora to send you reminder banners."}
+                </p>
+              </div>
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground flex-shrink-0" />
+              ) : (
+                <Switch
+                  checked={isSubscribed}
+                  onCheckedChange={handleToggle}
+                  data-testid="toggle-push-notifications"
+                />
+              )}
+            </div>
+
+            {isSubscribed && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTest}
+                data-testid="button-test-notification"
+                className="gap-2"
+              >
+                <Send className="h-3.5 w-3.5" />
+                Send a test notification
+              </Button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
