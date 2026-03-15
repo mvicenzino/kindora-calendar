@@ -1,5 +1,7 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage, NotFoundError } from "./storage";
 import { registerAdvisorRoutes } from "./advisorRoutes";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
@@ -248,6 +250,13 @@ function pushSSEEvent(userId: string, eventName: string, data: object) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve animation assets from public/animation/ before Vite's catch-all intercepts
+  app.use('/animation', express.static(path.join(process.cwd(), 'public', 'animation'), {
+    setHeaders: (res) => {
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    }
+  }));
+
   // Setup authentication
   await setupAuth(app);
   setupGoogleAuth(app);
