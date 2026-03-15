@@ -202,7 +202,7 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
     };
 
     recognition.onend = () => {
-      if (voiceState === 'listening') setVoiceState('idle');
+      setVoiceState(prev => prev === 'listening' ? 'idle' : prev);
       setInterimTranscript("");
       recognitionRef.current = null;
     };

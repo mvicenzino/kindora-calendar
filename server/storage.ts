@@ -244,6 +244,9 @@ export class MemStorage implements IStorage {
       id,
       inviteCode,
       createdAt: new Date(),
+      advisorChildrenContext: familyData.advisorChildrenContext ?? null,
+      advisorElderContext: familyData.advisorElderContext ?? null,
+      advisorSelfContext: familyData.advisorSelfContext ?? null,
     };
     this.families.set(id, family);
     
@@ -462,8 +465,10 @@ export class MemStorage implements IStorage {
       recurrenceRule: insertEvent.recurrenceRule ?? null,
       recurrenceEndDate: insertEvent.recurrenceEndDate ?? null,
       recurringEventId: insertEvent.recurringEventId ?? null,
+      recurrenceCount: insertEvent.recurrenceCount ?? null,
       rrule: insertEvent.rrule ?? null,
       isRecurringParent: insertEvent.isRecurringParent ?? null,
+      isImportant: insertEvent.isImportant ?? false,
       completed: false,
       completedAt: null,
       createdAt: new Date(),

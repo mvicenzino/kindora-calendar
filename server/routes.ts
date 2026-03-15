@@ -240,7 +240,7 @@ function pushSSEEvent(userId: string, eventName: string, data: object) {
   const conns = sseClients.get(userId);
   if (!conns || conns.size === 0) return;
   const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
-  for (const res of conns) {
+  for (const res of Array.from(conns)) {
     try { res.write(payload); } catch {}
   }
 }
@@ -3802,8 +3802,9 @@ Visit Kindora Calendar: ${joinUrl}
         description: eventDescription,
         startTime,
         endTime,
-        memberIds: [], // No specific member assigned
+        memberIds: [],
         color: financialColor,
+        category: 'financial',
       });
 
       // Update invoice status
@@ -4229,7 +4230,7 @@ Always return valid JSON matching one of the two formats above.`,
           title: String(title),
           startTime: localToUtc(startTime),
           endTime: localToUtc(endTime),
-          category: resolvedCategory,
+          category: resolvedCategory as 'medical' | 'school' | 'activities' | 'errands' | 'financial' | 'social' | 'caregiving' | 'work' | 'other',
           description: fullDescription,
           memberIds: [],
           color,

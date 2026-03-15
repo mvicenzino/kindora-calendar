@@ -301,7 +301,7 @@ export default function EventWizard() {
                 <Select
                   value={form.watch('category') || 'other'}
                   onValueChange={(value) => {
-                    form.setValue('category', value);
+                    form.setValue('category', value as EventCategory);
                     form.setValue('color', CATEGORY_CONFIG[value as EventCategory].color);
                   }}
                 >

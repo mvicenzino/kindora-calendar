@@ -40,7 +40,8 @@ import {
   ExternalLink,
   CloudDownload,
   Folder,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from "lucide-react";
 import { SiGoogledrive } from "react-icons/si";
 import { useUserRole } from "@/hooks/useUserRole";

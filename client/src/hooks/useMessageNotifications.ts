@@ -46,11 +46,11 @@ export function useMessageNotifications() {
           duration: isOnMessages ? 4000 : 9000,
           action: isOnMessages
             ? undefined
-            : createElement(
+            : (createElement(
                 ToastAction,
                 { altText: "View messages", onClick: () => navigate("/messages") },
                 "View"
-              ),
+              ) as any),
         });
       });
 

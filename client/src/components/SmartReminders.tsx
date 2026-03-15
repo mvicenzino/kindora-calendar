@@ -24,7 +24,7 @@ function markFired(key: string) {
   try {
     const s = getFired();
     s.add(key);
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...s]));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(s)));
   } catch {}
 }
 
