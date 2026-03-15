@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
-import { format, isToday, isTomorrow, isPast, startOfDay, endOfDay, addDays } from "date-fns";
+import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { Flag, X, Bell, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import type { Event } from "@shared/schema";
 
@@ -18,7 +18,6 @@ function getDismissed(): Set<string> {
 }
 
 function saveDismissed(ids: Set<string>) {
-  // Trim to last 200 to avoid unbounded growth
   const arr = [...ids].slice(-200);
   localStorage.setItem(DISMISSED_KEY, JSON.stringify(arr));
 }
@@ -36,20 +35,26 @@ export default function SmartReminders() {
   });
 
   const now = new Date();
-  const tomorrowEnd = endOfDay(addDays(now, 1));
 
   const upcoming = events.filter((e) => {
+    // Only show events flagged as important
+    if (!e.isImportant) return false;
+
     const start = new Date(e.startTime);
-    // Only today (not past) or tomorrow
+
+    // Only today or tomorrow
     if (!isToday(start) && !isTomorrow(start)) return false;
-    // Skip events that have already ended today
+
+    // Skip today's events that have already ended
     if (isToday(start) && isPast(new Date(e.endTime))) return false;
+
     // Skip dismissed
     if (dismissed.has(e.id)) return false;
+
     return true;
   }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-  // Prune dismissed IDs daily (keep only those for events still in window)
+  // Prune dismissed IDs when event list changes
   useEffect(() => {
     const validIds = new Set(events.map(e => e.id));
     setDismissed(prev => {
@@ -85,25 +90,24 @@ export default function SmartReminders() {
     });
   }, []);
 
+  // Only render if there are important upcoming events
   if (upcoming.length === 0) return null;
-
-  const importantCount = upcoming.filter(e => e.isImportant).length;
 
   return (
     <div
-      className="fixed top-[3.5rem] right-3 z-[200] w-80 max-w-[calc(100vw-1.5rem)] pointer-events-auto"
+      className="fixed top-[3.5rem] right-3 z-[200] w-72 max-w-[calc(100vw-1.5rem)] pointer-events-auto"
       data-testid="smart-reminders-panel"
-      style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.18))" }}
+      style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.22))" }}
     >
-      {/* Header bar */}
+      {/* Header */}
       <div
-        className="flex items-center justify-between gap-2 px-3 py-2 rounded-t-2xl cursor-pointer select-none"
+        className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer select-none"
         style={{
-          background: "rgba(var(--card-rgb, 255,255,255), 0.55)",
+          background: "rgba(249,115,22,0.15)",
           backdropFilter: "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
-          border: "1px solid rgba(255,255,255,0.18)",
-          borderBottom: collapsed ? undefined : "1px solid rgba(255,255,255,0.10)",
+          border: "1px solid rgba(249,115,22,0.30)",
+          borderBottom: collapsed ? undefined : "1px solid rgba(249,115,22,0.18)",
           borderRadius: collapsed ? "1rem" : "1rem 1rem 0 0",
         }}
         onClick={toggleCollapsed}
@@ -111,19 +115,16 @@ export default function SmartReminders() {
       >
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Bell className="w-4 h-4 text-primary" />
-            {importantCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-500" />
-            )}
+            <Flag className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
           </div>
           <span className="text-sm font-semibold text-foreground">
-            {upcoming.length} upcoming reminder{upcoming.length !== 1 ? "s" : ""}
+            {upcoming.length} important reminder{upcoming.length !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); dismissAll(); }}
+            onClick={(ev) => { ev.stopPropagation(); dismissAll(); }}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded-md hover:bg-black/10 dark:hover:bg-white/10"
             data-testid="button-dismiss-all-reminders"
           >
@@ -144,7 +145,7 @@ export default function SmartReminders() {
             background: "rgba(var(--card-rgb, 255,255,255), 0.35)",
             backdropFilter: "blur(20px) saturate(180%)",
             WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            border: "1px solid rgba(255,255,255,0.18)",
+            border: "1px solid rgba(249,115,22,0.22)",
             borderTop: "none",
           }}
         >
@@ -153,75 +154,33 @@ export default function SmartReminders() {
             const isLast = idx === upcoming.length - 1;
             const dayLabel = isToday(start) ? "Today" : "Tomorrow";
 
-            if (event.isImportant) {
-              return (
-                <div
-                  key={event.id}
-                  data-testid={`reminder-item-${event.id}`}
-                  className="relative overflow-visible"
-                  style={{
-                    background: "linear-gradient(135deg, rgba(249,115,22,0.18) 0%, rgba(234,88,12,0.10) 100%)",
-                    borderBottom: isLast ? "none" : "1px solid rgba(249,115,22,0.15)",
-                  }}
-                >
-                  {/* Liquid glass shimmer */}
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      background: "linear-gradient(120deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 60%, transparent 100%)",
-                      borderRadius: isLast ? "0 0 1rem 1rem" : "0",
-                    }}
-                  />
-                  <div className="flex items-start gap-2.5 px-3 py-2.5 relative">
-                    <div className="mt-0.5 flex-shrink-0">
-                      <Flag className="w-3.5 h-3.5 text-orange-500 fill-orange-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
-                          {dayLabel} · Important
-                        </span>
-                      </div>
-                      <p className="text-sm font-semibold text-foreground leading-snug truncate">{event.title}</p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Clock className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">
-                          {format(start, "h:mm a")} – {format(new Date(event.endTime), "h:mm a")}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => dismiss(event.id)}
-                      className="flex-shrink-0 mt-0.5 p-0.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                      data-testid={`button-dismiss-reminder-${event.id}`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            }
-
             return (
               <div
                 key={event.id}
                 data-testid={`reminder-item-${event.id}`}
+                className="relative"
                 style={{
-                  background: "rgba(var(--card-rgb, 255,255,255), 0.20)",
-                  borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.12)",
+                  background: "linear-gradient(135deg, rgba(249,115,22,0.14) 0%, rgba(234,88,12,0.07) 100%)",
+                  borderBottom: isLast ? "none" : "1px solid rgba(249,115,22,0.14)",
                 }}
               >
-                <div className="flex items-start gap-2.5 px-3 py-2.5">
-                  <div className="mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: event.color || "#64748B" }} />
+                {/* shimmer */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: "linear-gradient(120deg, rgba(255,255,255,0.12) 0%, transparent 70%)",
+                    borderRadius: isLast ? "0 0 1rem 1rem" : "0",
+                  }}
+                />
+                <div className="flex items-start gap-2.5 px-3 py-2.5 relative">
+                  <Flag className="mt-0.5 w-3.5 h-3.5 text-orange-500 fill-orange-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-orange-500">
                       {dayLabel}
-                    </p>
-                    <p className="text-sm font-medium text-foreground leading-snug truncate">{event.title}</p>
+                    </span>
+                    <p className="text-sm font-semibold text-foreground leading-snug truncate">{event.title}</p>
                     <div className="flex items-center gap-1 mt-0.5">
-                      <Clock className="w-3 h-3 text-muted-foreground" />
+                      <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                       <span className="text-xs text-muted-foreground">
                         {format(start, "h:mm a")} – {format(new Date(event.endTime), "h:mm a")}
                       </span>
