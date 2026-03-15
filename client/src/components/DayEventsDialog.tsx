@@ -5,6 +5,20 @@ import { Plus, Clock, CalendarDays, X } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 
+function getRelativeLuminance(hex: string): number {
+  const clean = hex.replace('#', '');
+  if (clean.length < 6) return 0.5;
+  const r = parseInt(clean.slice(0, 2), 16) / 255;
+  const g = parseInt(clean.slice(2, 4), 16) / 255;
+  const b = parseInt(clean.slice(4, 6), 16) / 255;
+  const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function getContrastText(hex: string): string {
+  return getRelativeLuminance(hex) > 0.35 ? '#111827' : '#ffffff';
+}
+
 interface Event {
   id: string;
   title: string;
@@ -171,8 +185,11 @@ export default function DayEventsDialog({
                           {event.members.slice(0, 2).map((m) => (
                             <Avatar key={m.id} className="h-5 w-5 border border-card">
                               <AvatarFallback
-                                className="text-[8px] text-white font-bold"
-                                style={{ backgroundColor: m.color }}
+                                className="text-[8px] font-bold"
+                                style={{
+                                  backgroundColor: m.color,
+                                  color: getContrastText(m.color),
+                                }}
                               >
                                 {m.name?.[0]}
                               </AvatarFallback>

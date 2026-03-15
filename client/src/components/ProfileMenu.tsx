@@ -2,6 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { UiFamilyMember } from "@shared/types";
 import type { FamilyMembership, User as UserType } from "@shared/schema";
 import { X, User, UserPlus, Trash2, Shield, Users as UsersIcon, Heart, Settings, ChevronRight, LogOut, Sparkles, Mail, Loader2, Bell, BellOff, CreditCard, Send } from 'lucide-react';
@@ -52,6 +57,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
   const [isOpen, setIsOpen] = useState(false);
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'members' | 'settings'>('profile');
+  const [deleteMemberTarget, setDeleteMemberTarget] = useState<{ id: string; name: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const { can, isCaregiver, isLoading: roleLoading } = useUserRole();
   const isReadOnly = roleLoading || !can('canCreateMembers');
@@ -363,11 +369,7 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
                                   </button>
                                   {onDeleteMember && (
                                     <button
-                                      onClick={() => {
-                                        if (confirm(`Remove ${member.name} from family?`)) {
-                                          onDeleteMember(member.id);
-                                        }
-                                      }}
+                                      onClick={() => setDeleteMemberTarget({ id: member.id, name: member.name })}
                                       className="text-xs px-2 py-1 rounded-md bg-destructive/20 text-destructive hover-elevate transition-all"
                                       data-testid={`button-delete-member-${member.id}`}
                                     >
@@ -548,6 +550,32 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
           </div>
         </div>
       )}
+
+      <AlertDialog open={!!deleteMemberTarget} onOpenChange={(open) => !open && setDeleteMemberTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove family member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteMemberTarget?.name} will be removed from your family calendar. Their events will remain but they will no longer have access.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-member">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="button-confirm-delete-member"
+              className="bg-destructive text-destructive-foreground"
+              onClick={() => {
+                if (deleteMemberTarget && onDeleteMember) {
+                  onDeleteMember(deleteMemberTarget.id);
+                }
+                setDeleteMemberTarget(null);
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -7,6 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import NotesModal from "@/components/NotesModal";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
@@ -36,6 +41,7 @@ export default function EventCard({
   const { activeFamilyId } = useActiveFamily();
   const { user } = useAuth();
   const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const realEventId = event.id.includes('_occ_') ? event.id.split('_occ_')[0] : event.id;
 
@@ -86,9 +92,7 @@ export default function EventCard({
 
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('Delete this event?')) {
-      deleteEventMutation.mutate();
-    }
+    setDeleteConfirmOpen(true);
   };
 
   const isSometimeToday = () => {
@@ -244,6 +248,27 @@ export default function EventCard({
         familyId={activeFamilyId || ''}
         currentUserId={user?.id}
       />
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete event?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{event.title}&rdquo; will be permanently removed. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-event">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="button-confirm-delete-event"
+              className="bg-destructive text-destructive-foreground"
+              onClick={() => deleteEventMutation.mutate()}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
