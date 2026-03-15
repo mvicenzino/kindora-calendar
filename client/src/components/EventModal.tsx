@@ -116,6 +116,30 @@ export default function EventModal({
   const [showRecurrenceDropdown, setShowRecurrenceDropdown] = useState(false);
   const recurrenceDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Parse an RRULE string into component state values
+  const parseRRule = (rrule: string): { rule: RecurrenceRule; endCondition: EndCondition; count: string; untilDate: string } => {
+    const parts: Record<string, string> = {};
+    rrule.split(';').forEach(p => { const [k, v] = p.split('='); if (k && v !== undefined) parts[k] = v; });
+    const freq = parts['FREQ'];
+    const interval = parseInt(parts['INTERVAL'] || '1', 10);
+    let rule: RecurrenceRule = null;
+    if (freq === 'DAILY') rule = 'daily';
+    else if (freq === 'WEEKLY' && interval === 2) rule = 'biweekly';
+    else if (freq === 'WEEKLY') rule = 'weekly';
+    else if (freq === 'MONTHLY') rule = 'monthly';
+    else if (freq === 'YEARLY') rule = 'yearly';
+    let ec: EndCondition = 'never';
+    let count = '10';
+    let untilDate = '';
+    if (parts['COUNT']) { ec = 'after'; count = parts['COUNT']; }
+    else if (parts['UNTIL']) {
+      ec = 'on';
+      const u = parts['UNTIL'].replace('Z', '').split('T')[0];
+      if (u.length === 8) untilDate = `${u.slice(0,4)}-${u.slice(4,6)}-${u.slice(6,8)}`;
+    }
+    return { rule, endCondition: ec, count, untilDate };
+  };
+
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -152,6 +176,24 @@ export default function EventModal({
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
+      // Restore recurrence from rrule string or legacy field
+      if (event.rrule) {
+        const parsed = parseRRule(event.rrule);
+        setRecurrenceRule(parsed.rule);
+        setEndCondition(parsed.endCondition);
+        setRecurrenceCount(parsed.count);
+        setRecurrenceEndDate(parsed.untilDate);
+      } else if (event.recurrenceRule) {
+        setRecurrenceRule(event.recurrenceRule);
+        setEndCondition(event.recurrenceCount ? 'after' : event.recurrenceEndDate ? 'on' : 'never');
+        setRecurrenceCount(event.recurrenceCount || '10');
+        setRecurrenceEndDate(event.recurrenceEndDate ? format(new Date(event.recurrenceEndDate), 'yyyy-MM-dd') : '');
+      } else {
+        setRecurrenceRule(null);
+        setEndCondition('never');
+        setRecurrenceCount('10');
+        setRecurrenceEndDate('');
+      }
     } else {
       setTitle("");
       setDescription("");
@@ -300,7 +342,7 @@ export default function EventModal({
   const selectedMember = members.find(m => m.id === memberId);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent
         className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-2xl max-h-[90vh] flex flex-col gap-0"
         style={{

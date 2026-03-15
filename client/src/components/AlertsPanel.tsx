@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Bell, X, Clock, Calendar, ChevronRight } from "lucide-react";
+import { Bell, X, Clock, Calendar, ChevronRight, AlertCircle, Timer, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
@@ -64,6 +64,16 @@ export default function AlertsPanel() {
     return "border-border bg-muted/50";
   };
 
+  type UrgencyBadge = { label: string; style: React.CSSProperties; Icon: React.ElementType } | null;
+  const getUrgencyBadge = (event: UiEvent): UrgencyBadge => {
+    const mins = differenceInMinutes(new Date(event.startTime), new Date());
+    if (mins < 0) return null;
+    if (mins <= 15) return { label: "Urgent", style: { background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }, Icon: AlertCircle };
+    if (mins <= 30) return { label: "Very Soon", style: { background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }, Icon: Timer };
+    if (mins <= 60) return { label: "Coming Up", style: { background: 'rgba(234,179,8,0.15)', color: '#ca8a04', border: '1px solid rgba(234,179,8,0.3)' }, Icon: CalendarClock };
+    return null;
+  };
+
   const handleClose = useCallback(() => setIsOpen(false), []);
 
   useEffect(() => {
@@ -125,37 +135,51 @@ export default function AlertsPanel() {
                 <span className="text-xs font-semibold text-orange-400 uppercase tracking-wide">Today</span>
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{alerts.todayEvents.length}</Badge>
               </div>
-              {alerts.todayEvents.map(event => (
-                <div
-                  key={event.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${getUrgencyClass(event)}`}
-                  data-testid={`alert-event-${event.id}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
-                    {event.description && (
-                      <p className="text-xs text-muted-foreground truncate mt-0.5">{event.description}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs text-muted-foreground">
-                        {format(new Date(event.startTime), "h:mm a")}
-                      </span>
-                      <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs font-medium text-orange-400">
-                        {getTimeLabel(event)}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setDismissed(prev => new Set(prev).add(event.id))}
-                    className="text-muted-foreground p-1 rounded-lg flex-shrink-0 hover-elevate"
-                    data-testid={`button-dismiss-alert-${event.id}`}
+              {alerts.todayEvents.map(event => {
+                const badge = getUrgencyBadge(event);
+                return (
+                  <div
+                    key={event.id}
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-all ${getUrgencyClass(event)}`}
+                    data-testid={`alert-event-${event.id}`}
                   >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                        <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
+                        {badge && (
+                          <span
+                            className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md flex-shrink-0"
+                            style={badge.style}
+                          >
+                            <badge.Icon className="w-2.5 h-2.5" />
+                            {badge.label}
+                          </span>
+                        )}
+                      </div>
+                      {event.description && (
+                        <p className="text-xs text-muted-foreground truncate">{event.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <Clock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(event.startTime), "h:mm a")}
+                        </span>
+                        <ChevronRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs font-medium text-orange-400">
+                          {getTimeLabel(event)}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setDismissed(prev => new Set(prev).add(event.id))}
+                      className="text-muted-foreground p-1 rounded-lg flex-shrink-0 hover-elevate"
+                      data-testid={`button-dismiss-alert-${event.id}`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
 

@@ -25,6 +25,7 @@ import About from "@/pages/About";
 import Support from "@/pages/Support";
 import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
+import NotFound from "@/pages/not-found";
 import AppSidebar from "@/components/AppSidebar";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -120,7 +121,10 @@ function Router() {
       <Route path="/support" component={Support} />
       <Route path="/intro" component={Intro} />
       {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
+        <>
+          <Route path="/" component={Landing} />
+          <Route component={NotFound} />
+        </>
       ) : (
         <>
           <Route path="/onboarding" component={Onboarding} />
