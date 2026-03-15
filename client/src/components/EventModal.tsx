@@ -301,6 +301,14 @@ export default function EventModal({
       toast({ title: "Select a family member", description: "At least one family member must be assigned to this event.", variant: "destructive" });
       return;
     }
+    if (!isSometimeToday) {
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      if (sh * 60 + sm >= eh * 60 + em) {
+        toast({ title: "Invalid time range", description: "End time must be after start time.", variant: "destructive" });
+        return;
+      }
+    }
 
     const actualStartTime = isSometimeToday ? '23:58' : startTime;
     const actualEndTime = isSometimeToday ? '23:59' : endTime;
@@ -860,10 +868,9 @@ export default function EventModal({
                 <Button
                   size="sm"
                   onClick={handleSave}
-                  disabled={!title.trim() || selectedMemberIds.length === 0 || isReadOnly}
+                  disabled={isReadOnly}
                   data-testid="button-save-event"
-                  className="rounded-lg text-xs disabled:opacity-50"
-                  title={isReadOnly ? 'You cannot create or edit events' : !title.trim() ? 'Please enter an event title' : selectedMemberIds.length === 0 ? 'Please select at least one family member' : ''}
+                  className="rounded-lg text-xs"
                 >
                   {event?.id ? 'Update Event' : 'Create Event'}
                 </Button>

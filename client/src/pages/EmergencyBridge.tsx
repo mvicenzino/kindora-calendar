@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Shield, Calendar, Pill, Users, Phone, AlertTriangle, FileText, Clock, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Shield, Calendar, Pill, Users, Phone, AlertTriangle, FileText, Clock, MapPin, Mail, RefreshCw } from "lucide-react";
 import { format, parseISO, isToday, isTomorrow, addDays } from "date-fns";
 
 interface EmergencyBridgeData {
@@ -68,11 +69,40 @@ export default function EmergencyBridge() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-yellow-500" />
-            <h1 className="text-2xl font-bold text-foreground mb-2">Access Unavailable</h1>
-            <p className="text-muted-foreground">
-              This emergency access link has expired or is invalid. Please contact the family for a new link.
+          <CardContent className="pt-6 text-center space-y-4">
+            <AlertTriangle className="w-12 h-12 mx-auto text-yellow-500" />
+            <div>
+              <h1 className="text-xl font-bold text-foreground mb-1">Access Unavailable</h1>
+              <p className="text-sm text-muted-foreground">
+                This emergency access link has expired or is no longer valid. Emergency links are single-use and time-limited for security.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 pt-2">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">What you can do</p>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => window.location.href = 'mailto:?subject=Request new emergency access link&body=Hi, the emergency access link I received has expired. Could you please send me a new one?'}
+                data-testid="button-request-new-link"
+              >
+                <Mail className="w-4 h-4" />
+                Request a new link by email
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => window.location.reload()}
+                data-testid="button-retry-link"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try again
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground pt-1">
+              Need help? Contact{' '}
+              <a href="mailto:support@kindora.ai" className="text-primary underline underline-offset-2">
+                support@kindora.ai
+              </a>
             </p>
           </CardContent>
         </Card>

@@ -1,5 +1,5 @@
 import { format, isSameDay, isToday, startOfDay } from "date-fns";
-import { Plus } from "lucide-react";
+import { Plus, CalendarDays } from "lucide-react";
 import EventCard from "@/components/EventCard";
 import type { UiEvent } from "@shared/types";
 
@@ -83,8 +83,22 @@ export default function TimelineView({ events, onEventClick, onAddEvent }: Timel
         ))}
 
         {events.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg" data-testid="text-empty-state">No events to display</p>
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center" data-testid="text-empty-state">
+            <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center mb-4">
+              <CalendarDays className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-1">Nothing on the timeline yet</p>
+            <p className="text-xs text-muted-foreground mb-4">Events you create will appear here in chronological order</p>
+            {onAddEvent && (
+              <button
+                onClick={onAddEvent}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover-elevate px-3 py-1.5 rounded-lg border border-primary/30 bg-primary/5"
+                data-testid="button-add-first-event"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add your first event
+              </button>
+            )}
           </div>
         )}
       </div>
