@@ -1,5 +1,3 @@
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import passport from "passport";
 import type { Express } from "express";
 import { storage } from "./storage";
 
@@ -29,7 +27,6 @@ function createGoogleUserSession(
 function resolveCallbackURL(): string {
   if (process.env.GOOGLE_CALLBACK_URL) return process.env.GOOGLE_CALLBACK_URL;
   if (process.env.NODE_ENV === "production") return "https://kindora.ai/api/auth/google/callback";
-  // In Replit dev, REPLIT_DOMAINS is a comma-separated list of available domains
   const domain = (process.env.REPLIT_DOMAINS || "").split(",")[0].trim();
   return domain
     ? `https://${domain}/api/auth/google/callback`
@@ -42,76 +39,124 @@ export function setupGoogleAuth(app: Express) {
     return;
   }
 
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   const callbackURL = resolveCallbackURL();
   console.log(`[Google OAuth] Callback URL: ${callbackURL}`);
 
-  passport.use(
-    "google",
-    new GoogleStrategy(
-      {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL,
-      },
-      async (_accessToken, _refreshToken, profile, done) => {
-        try {
-          const email = profile.emails?.[0]?.value ?? null;
-          const firstName = profile.name?.givenName ?? profile.displayName ?? null;
-          const lastName = profile.name?.familyName ?? null;
-          const profileImageUrl = profile.photos?.[0]?.value ?? null;
+  // Step 1: Redirect to Google
+  app.get("/api/auth/google", (req, res) => {
+    const state = Math.random().toString(36).substring(2);
+    (req.session as any).googleOAuthState = state;
 
-          // Prefix with "google-" so IDs never collide with Replit OIDC subs
-          const userId = `google-${profile.id}`;
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: callbackURL,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "select_account",
+      state,
+    });
 
-          await storage.upsertUser({
-            id: userId,
-            email,
-            firstName,
-            lastName,
-            profileImageUrl,
-            authProvider: "google",
-          });
+    res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  });
 
-          const sessionUser = createGoogleUserSession(
-            userId,
-            email || "",
-            firstName || "",
-            lastName || "",
-            profileImageUrl
-          );
+  // Step 2: Handle callback — exchange code for tokens manually
+  app.get("/api/auth/google/callback", async (req, res) => {
+    const { code, state, error } = req.query as Record<string, string>;
 
-          return done(null, sessionUser as any);
-        } catch (err) {
-          return done(err as Error);
-        }
-      }
-    )
-  );
+    if (error) {
+      console.error("[Google OAuth] Google returned error:", error);
+      return res.redirect("/?auth_error=google");
+    }
 
-  // Initiate Google OAuth — prompt for account picker every time so users can switch accounts
-  app.get("/api/auth/google", passport.authenticate("google", {
-    scope: ["profile", "email"],
-    prompt: "select_account",
-  }));
+    const savedState = (req.session as any).googleOAuthState;
+    if (!state || state !== savedState) {
+      console.error("[Google OAuth] State mismatch — possible CSRF");
+      return res.redirect("/?auth_error=google");
+    }
+    delete (req.session as any).googleOAuthState;
 
-  // Google OAuth callback — use custom handler so we can log the real Google error
-  app.get("/api/auth/google/callback", (req, res, next) => {
-    passport.authenticate("google", (err: any, user: any, info: any) => {
-      if (err) {
-        console.error("[Google OAuth] Token exchange error:", err.message, err.oauthError || "");
+    if (!code) {
+      console.error("[Google OAuth] No code in callback");
+      return res.redirect("/?auth_error=google");
+    }
+
+    try {
+      // Exchange code for tokens
+      const tokenBody = new URLSearchParams({
+        code,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: callbackURL,
+        grant_type: "authorization_code",
+      });
+
+      console.log("[Google OAuth] Exchanging code, redirect_uri:", callbackURL);
+
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: tokenBody.toString(),
+      });
+
+      const tokenData = await tokenRes.json() as any;
+
+      if (!tokenRes.ok) {
+        console.error("[Google OAuth] Token exchange failed:", tokenRes.status, JSON.stringify(tokenData));
         return res.redirect("/?auth_error=google");
       }
-      if (!user) {
-        console.error("[Google OAuth] No user returned:", info);
+
+      const accessToken = tokenData.access_token;
+
+      // Get user profile
+      const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      const profile = await profileRes.json() as any;
+
+      if (!profileRes.ok) {
+        console.error("[Google OAuth] Profile fetch failed:", profileRes.status, JSON.stringify(profile));
         return res.redirect("/?auth_error=google");
       }
-      req.logIn(user, (loginErr) => {
-        if (loginErr) {
-          console.error("[Google OAuth] Session login error:", loginErr);
+
+      console.log("[Google OAuth] Profile fetched for:", profile.email);
+
+      const userId = `google-${profile.id}`;
+      const email = profile.email ?? null;
+      const firstName = profile.given_name ?? profile.name?.split(" ")[0] ?? null;
+      const lastName = profile.family_name ?? profile.name?.split(" ").slice(1).join(" ") ?? null;
+      const profileImageUrl = profile.picture ?? null;
+
+      await storage.upsertUser({
+        id: userId,
+        email,
+        firstName,
+        lastName,
+        profileImageUrl,
+        authProvider: "google",
+      });
+
+      const sessionUser = createGoogleUserSession(userId, email || "", firstName || "", lastName || "", profileImageUrl);
+      // Store in session.passport.user to match what isAuthenticated expects
+      if (!(req.session as any).passport) {
+        (req.session as any).passport = {};
+      }
+      (req.session as any).passport.user = sessionUser;
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("[Google OAuth] Session save error:", err);
           return res.redirect("/?auth_error=google");
         }
+        console.log("[Google OAuth] Login successful for:", email);
         return res.redirect("/");
       });
-    })(req, res, next);
+    } catch (err: any) {
+      console.error("[Google OAuth] Unexpected error:", err.message || err);
+      return res.redirect("/?auth_error=google");
+    }
   });
 }
