@@ -381,54 +381,74 @@ export default function Landing() {
 
         <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
           <div className="max-w-6xl mx-auto">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-white">Built for the Sandwich Generation</span>
+            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-14">
+              {/* Left: text + CTAs */}
+              <div className="flex-1 min-w-0">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-white">Built for the Sandwich Generation</span>
+                </div>
+
+                <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight mb-6 bg-gradient-to-r from-white via-purple-100 to-teal-100 bg-clip-text text-transparent">
+                  Kids. Parents. Caregivers. One Calendar.
+                </h1>
+
+                <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed">
+                  You're managing soccer practice and mom's doctor appointments. Kindora brings your whole care circle into one shared calendar—so nothing falls through the cracks.
+                </p>
+
+                {!isAuthenticated && (
+                  <div className="flex flex-wrap gap-3 mb-8">
+                    <Button
+                      onClick={() => { window.location.href = "/intro"; }}
+                      size="lg"
+                      data-testid="button-hero-signup"
+                    >
+                      Get Started Free
+                    </Button>
+                    <Button
+                      size="lg"
+                      onClick={() => (window.location.href = `/intro?mode=demo&tz=${new Date().getTimezoneOffset()}`)}
+                      variant="outline"
+                      className="backdrop-blur-sm bg-white/10"
+                      data-testid="button-hero-demo"
+                    >
+                      Try Demo
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-6 text-sm text-white/80">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span>No credit card required</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary/70" />
+                    <span>Works on all devices</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-destructive/70" />
+                    <span>Instant sync</span>
+                  </div>
+                </div>
               </div>
-              
-              <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight mb-6 bg-gradient-to-r from-white via-purple-100 to-teal-100 bg-clip-text text-transparent">
-                Kids. Parents. Caregivers. One Calendar.
-              </h1>
-              
-              <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-                You're managing soccer practice and mom's doctor appointments. Kindora brings your whole care circle into one shared calendar—so nothing falls through the cracks.
-              </p>
 
-              {!isAuthenticated && (
-                <div className="flex flex-wrap gap-3 mb-8">
-                  <Button
-                    onClick={() => { window.location.href = "/intro"; }}
-                    size="lg"
-                    data-testid="button-hero-signup"
-                  >
-                    Get Started Free
-                  </Button>
-                  <Button
-                    size="lg"
-                    onClick={() => (window.location.href = `/intro?mode=demo&tz=${new Date().getTimezoneOffset()}`)}
-                    variant="outline"
-                    className="backdrop-blur-sm bg-white/10"
-                    data-testid="button-hero-demo"
-                  >
-                    Try Demo
-                  </Button>
+              {/* Right: promo animation */}
+              <div className="w-full lg:w-[480px] shrink-0">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20"
+                  style={{ boxShadow: "0 0 60px rgba(249,115,22,0.25), 0 25px 50px rgba(0,0,0,0.6)" }}>
+                  <iframe
+                    src="https://kindora-animation.replit.app"
+                    title="Kindora — see how it works"
+                    className="w-full block border-0"
+                    style={{ height: "320px" }}
+                    allow="autoplay"
+                    loading="lazy"
+                    data-testid="iframe-promo-animation"
+                  />
                 </div>
-              )}
-
-              <div className="flex flex-wrap gap-6 text-sm text-white/80">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  <span>No credit card required</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary/70" />
-                  <span>Works on all devices</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-destructive/70" />
-                  <span>Instant sync</span>
-                </div>
+                <p className="text-center text-white/50 text-xs mt-3 tracking-wide">See how Kindora works in 30 seconds</p>
               </div>
             </div>
           </div>
