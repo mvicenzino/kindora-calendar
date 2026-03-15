@@ -136,7 +136,7 @@ export default function Landing() {
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <img src={logo} alt="Kindora" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
             <span className="text-lg sm:text-xl font-bold text-foreground truncate">
-              <span className="text-primary">Kindora</span>
+              <span className="text-white">Kindora</span>
             </span>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
