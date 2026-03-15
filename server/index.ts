@@ -9,6 +9,7 @@ import compression from "compression";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
+import { db } from "./db";
 
 const app = express();
 
@@ -168,6 +169,41 @@ app.use((req, res, next) => {
     }
   } catch (error) {
     console.error('Failed to initialize Stripe (non-fatal):', error);
+  }
+
+  // Startup migration: fix family memberships orphaned when a bug in upsertUser changed user IDs.
+  // Finds memberships whose user_id no longer exists in users, then reassigns them to
+  // a google- user who has no memberships (the "new" ID that replaced the old one).
+  try {
+    const { sql: drizzleSql } = await import("drizzle-orm");
+    const orphanRows = await db.execute(drizzleSql`
+      SELECT DISTINCT fm.user_id AS old_id
+      FROM family_memberships fm
+      LEFT JOIN users u ON u.id = fm.user_id
+      WHERE u.id IS NULL
+    `);
+    const orphanedIds: string[] = (orphanRows as any).rows?.map((r: any) => r.old_id) ?? [];
+    if (orphanedIds.length > 0) {
+      console.log(`[Migration] Orphaned family membership user_ids: ${orphanedIds.join(', ')}`);
+      // Find google- users with no memberships — these are the "new" IDs for orphaned subs
+      const googleNoFamilyRows = await db.execute(drizzleSql`
+        SELECT u.id FROM users u
+        WHERE u.id LIKE 'google-%'
+        AND NOT EXISTS (SELECT 1 FROM family_memberships WHERE user_id = u.id)
+        LIMIT 1
+      `);
+      const newUserId: string | undefined = (googleNoFamilyRows as any).rows?.[0]?.id;
+      if (newUserId) {
+        for (const oldId of orphanedIds) {
+          await db.execute(drizzleSql`
+            UPDATE family_memberships SET user_id = ${newUserId} WHERE user_id = ${oldId}
+          `);
+          console.log(`[Migration] Reassigned memberships: ${oldId} → ${newUserId}`);
+        }
+      }
+    }
+  } catch (migrationErr) {
+    console.error('[Migration] Orphaned membership fix failed (non-fatal):', migrationErr);
   }
 
   const server = await registerRoutes(app);

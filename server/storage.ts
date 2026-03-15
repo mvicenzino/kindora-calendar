@@ -1128,11 +1128,12 @@ class DrizzleStorage implements IStorage {
     
     let result;
     if (existingUser && existingUser.id !== userData.id) {
-      // User exists with same email but different ID - update the existing user
+      // User exists with same email but different ID - update profile fields only, NEVER change the primary key
+      const { id: _ignored, ...profileUpdate } = userData;
       result = await this.db
         .update(users)
         .set({
-          ...userData,
+          ...profileUpdate,
           updatedAt: new Date(),
         })
         .where(eq(users.id, existingUser.id))
