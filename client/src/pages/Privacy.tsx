@@ -11,8 +11,8 @@ export default function Privacy() {
         <meta name="description" content="Learn how Kindora collects, uses, and protects your personal and family data. Our Privacy Policy covers data security, retention, cookies, and your rights." />
         <meta property="og:title" content="Privacy Policy - Kindora" />
         <meta property="og:description" content="Learn how Kindora protects your personal and family data. Read our Privacy Policy." />
-        <meta property="og:url" content="https://calendora.replit.app/privacy" />
-        <link rel="canonical" href="https://calendora.replit.app/privacy" />
+        <meta property="og:url" content="https://kindora.ai/privacy" />
+        <link rel="canonical" href="https://kindora.ai/privacy" />
       </Helmet>
 
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-muted/50 border-b border-border px-4 md:px-6 py-4">
@@ -30,7 +30,7 @@ export default function Privacy() {
         <div className="backdrop-blur-xl bg-card border border-border rounded-md p-6 md:p-10 text-foreground space-y-6">
           <div>
             <h2 className="text-2xl font-bold text-foreground font-['Space_Grotesk'] mb-2" data-testid="text-privacy-title">Privacy Policy</h2>
-            <p className="text-muted-foreground text-sm">Last updated: February 19, 2026</p>
+            <p className="text-muted-foreground text-sm">Last updated: March 15, 2026</p>
           </div>
 
           <section className="space-y-3">

@@ -11,8 +11,8 @@ export default function Terms() {
         <meta name="description" content="Read the Kindora Terms of Service. Understand the rules and guidelines for using the Kindora family calendar and caregiving coordination platform." />
         <meta property="og:title" content="Terms of Service - Kindora" />
         <meta property="og:description" content="Read the Kindora Terms of Service for the family calendar and caregiving coordination platform." />
-        <meta property="og:url" content="https://calendora.replit.app/terms" />
-        <link rel="canonical" href="https://calendora.replit.app/terms" />
+        <meta property="og:url" content="https://kindora.ai/terms" />
+        <link rel="canonical" href="https://kindora.ai/terms" />
       </Helmet>
 
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-muted/50 border-b border-border px-4 md:px-6 py-4">
@@ -30,7 +30,7 @@ export default function Terms() {
         <div className="backdrop-blur-xl bg-card border border-border rounded-md p-6 md:p-10 text-foreground space-y-6">
           <div>
             <h2 className="text-2xl font-bold text-foreground font-['Space_Grotesk'] mb-2" data-testid="text-terms-title">Terms of Service</h2>
-            <p className="text-muted-foreground text-sm">Last updated: February 19, 2026</p>
+            <p className="text-muted-foreground text-sm">Last updated: March 15, 2026</p>
           </div>
 
           <section className="space-y-3">
