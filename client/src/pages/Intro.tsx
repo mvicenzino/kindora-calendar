@@ -195,7 +195,7 @@ export default function Intro() {
         if (isAuthenticated) {
           setLocation("/onboarding");
         } else {
-          window.location.href = "/api/login";
+          window.location.href = "/?signUp=1";
         }
       }, 320);
     } else {

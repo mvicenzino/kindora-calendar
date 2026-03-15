@@ -76,7 +76,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      window.location.href = "/api/login";
+      window.location.href = "/?signIn=1";
     }
   }, [isAuthenticated, isLoading]);
 

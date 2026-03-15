@@ -211,7 +211,7 @@ export default function DemoWelcome() {
                         Start Coordinating Now
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = "/api/login")}
+                        onClick={() => (window.location.href = "/?signIn=1")}
                         variant="outline"
                         className="border-white text-white bg-white/5 backdrop-blur-sm"
                         data-testid="button-sign-in-now"
@@ -247,7 +247,7 @@ export default function DemoWelcome() {
                         See the Caregiver Dashboard
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = "/api/login")}
+                        onClick={() => (window.location.href = "/?signUp=1")}
                         variant="outline"
                         className="border-white text-white bg-white/5 backdrop-blur-sm"
                         data-testid="button-get-invited"
@@ -544,7 +544,7 @@ export default function DemoWelcome() {
                   Start Coordinating Now
                 </Button>
                 <Button
-                  onClick={() => (window.location.href = "/api/login")}
+                  onClick={() => (window.location.href = "/?signIn=1")}
                   size="lg"
                   variant="outline"
                   className="px-8"
@@ -572,7 +572,7 @@ export default function DemoWelcome() {
                   See the Caregiver Dashboard
                 </Button>
                 <Button
-                  onClick={() => (window.location.href = "/api/login")}
+                  onClick={() => (window.location.href = "/?signUp=1")}
                   size="lg"
                   variant="outline"
                   className="px-8"

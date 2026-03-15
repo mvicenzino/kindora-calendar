@@ -380,7 +380,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       return next();
     }
 
-    if (user.access_token === "local-auth") {
+    if (user.access_token === "local-auth" || user.access_token === "google-auth") {
       const newExpiry = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
       user.expires_at = newExpiry;
       if (user.claims) user.claims.exp = newExpiry;
@@ -404,7 +404,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const sessionData = (req as any).session?.passport?.user;
   if (sessionData && sessionData.claims?.sub) {
     const now = Math.floor(Date.now() / 1000);
-    if (sessionData.access_token === "local-auth") {
+    if (sessionData.access_token === "local-auth" || sessionData.access_token === "google-auth") {
       const newExpiry = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
       sessionData.expires_at = newExpiry;
       if (sessionData.claims) sessionData.claims.exp = newExpiry;

@@ -5,6 +5,7 @@ import { registerAdvisorRoutes } from "./advisorRoutes";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupGoogleAuth } from "./googleAuth";
 import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
 import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
@@ -249,6 +250,7 @@ function pushSSEEvent(userId: string, eventName: string, data: object) {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   await setupAuth(app);
+  setupGoogleAuth(app);
 
   // ── SSE notification stream ──────────────────────────────────────────────
   app.get("/api/notifications/stream", isAuthenticated, (req: any, res) => {
