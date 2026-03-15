@@ -110,6 +110,8 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
       const response = await apiRequest("POST", "/api/calendar/ask", {
         question: q,
         familyId: activeFamilyId,
+        localNow: new Date().toISOString(),
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       });
       const data = await response.json();
       if (data.error) {

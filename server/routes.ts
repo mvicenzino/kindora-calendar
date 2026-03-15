@@ -4092,7 +4092,7 @@ Visit Kindora Calendar: ${joinUrl}
   app.post("/api/calendar/ask", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { question, familyId: bodyFamilyId } = req.body;
+      const { question, familyId: bodyFamilyId, localNow, tzOffsetMinutes } = req.body;
 
       if (!question?.trim()) {
         return res.status(400).json({ error: "Question is required" });
@@ -4121,6 +4121,13 @@ Visit Kindora Calendar: ${joinUrl}
       }
 
       const now = new Date();
+
+      // Use the client's local time if provided, so "today/tomorrow" resolve correctly
+      const clientOffset = typeof tzOffsetMinutes === 'number' ? tzOffsetMinutes : 0;
+      const clientLocalNow = localNow
+        ? new Date(new Date(localNow).getTime() - clientOffset * 60000)
+        : new Date(now.getTime() - clientOffset * 60000);
+
       const rangeStart = subDays(now, 30);
       const rangeEnd = addDays(now, 365);
 
@@ -4137,26 +4144,33 @@ Visit Kindora Calendar: ${joinUrl}
         return `[${e.id}] "${e.title}" | ${e.category || 'other'} | ${dateStr} ${timeStr} | Members: ${memberNames}${note}`;
       }).join('\n');
 
-      const todayStr = format(now, 'EEEE, MMMM d, yyyy');
-      const currentYear = now.getFullYear();
+      const todayStr = format(clientLocalNow, 'EEEE, MMMM d, yyyy');
+      const tomorrowStr = format(addDays(clientLocalNow, 1), 'EEEE, MMMM d, yyyy');
+      const currentYear = clientLocalNow.getFullYear();
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4.1",
         messages: [
           {
             role: "system",
-            content: `You are a helpful family calendar assistant embedded in the Kindora app. Today is ${todayStr} (year ${currentYear}).
+            content: `You are a helpful family calendar assistant embedded in the Kindora app.
+The user's current local date and time is: ${format(clientLocalNow, 'EEEE, MMMM d, yyyy h:mm a')} (year ${currentYear}).
+Today = ${todayStr}. Tomorrow = ${tomorrowStr}.
 
 You handle two types of requests:
 
 1. ADD EVENT: User wants to create/add/schedule/put an event on the calendar.
    Return JSON: { "intent": "add", "answer": "<confirmation sentence>", "event": { "title": "<string>", "startTime": "<ISO 8601 datetime>", "endTime": "<ISO 8601 datetime>", "category": "<one of: medical|school|activities|errands|financial|social|caregiving|work|other>", "description": "<optional string or null>", "location": "<optional string or null>" } }
-   Rules for time:
-   - If no time specified, default startTime to 7:00 PM, endTime to 8:00 PM.
-   - If only start time given, endTime = startTime + 1 hour.
-   - If no year specified, use the next occurrence of that date (${currentYear} if not past, otherwise ${currentYear + 1}).
-   - All times must be valid ISO 8601 strings (e.g. "2026-04-15T19:00:00").
-   - Infer category from context (birthday/dinner/party → social, doctor/medical → medical, etc.)
+
+   CRITICAL TIME RULES — follow these exactly, without exception:
+   - If the user says a specific time (e.g. "at 10am", "at 3:30pm", "at noon"), you MUST use that EXACT time. Do NOT substitute a different hour. Do NOT round or adjust.
+   - "10am" = 10:00, "10:00am" = 10:00, "3pm" = 15:00, "3:30pm" = 15:30, "noon" = 12:00, "midnight" = 00:00.
+   - If only start time is given, set endTime = startTime + 1 hour.
+   - If NO time is mentioned at all, default startTime to 19:00 (7:00 PM) and endTime to 20:00 (8:00 PM).
+   - Express all times in the user's LOCAL time (not UTC). Use format: "YYYY-MM-DDTHH:MM:SS" with no timezone suffix.
+   - "today" = ${todayStr}, "tomorrow" = ${tomorrowStr}.
+   - If no year specified, use the next upcoming occurrence (${currentYear} if not yet passed, otherwise ${currentYear + 1}).
+   - Infer category from context: birthday/dinner/party → social, doctor/hospital/medical → medical, school/homework/class → school, errands/chores/mail/store → errands, etc.
 
 2. QUERY: User is asking a question about existing events.
    Return JSON: { "intent": "query", "answer": "<natural language response, 1–3 sentences>", "eventIds": ["<id>", ...] }
@@ -4204,10 +4218,17 @@ Always return valid JSON matching one of the two formats above.`,
         };
         const color = categoryColors[resolvedCategory] || '#64748B';
 
+        // AI returns times in the user's local timezone (no tz suffix).
+        // Convert to UTC by adding back the client's offset before storing.
+        const localToUtc = (isoLocal: string) => {
+          const localMs = new Date(isoLocal).getTime();
+          return new Date(localMs + clientOffset * 60000);
+        };
+
         const newEvent = await storage.createEvent(familyId, {
           title: String(title),
-          startTime: new Date(startTime),
-          endTime: new Date(endTime),
+          startTime: localToUtc(startTime),
+          endTime: localToUtc(endTime),
           category: resolvedCategory,
           description: fullDescription,
           memberIds: [],
