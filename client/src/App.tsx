@@ -45,20 +45,24 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100svh", padding: "2rem", background: "#111318", color: "#fff", textAlign: "center", gap: "1rem" }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f97316" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <p style={{ fontSize: "1.1rem", fontWeight: 600 }}>Something went wrong</p>
-          <p style={{ fontSize: "0.85rem", color: "#aaa", maxWidth: "280px" }}>{this.state.error}</p>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100svh", padding: "2rem", background: "#1a1a2e", color: "#fff", textAlign: "center", gap: "1.25rem" }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#f97316", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.5rem" }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <p style={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em" }}>Kindora</p>
+          <p style={{ fontSize: "1rem", fontWeight: 600, color: "#fff" }}>Something went wrong</p>
+          <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.55)", maxWidth: "300px", lineHeight: 1.5 }}>{this.state.error || "An unexpected error occurred."}</p>
           <button
             onClick={() => window.location.reload()}
-            style={{ marginTop: "0.5rem", padding: "0.6rem 1.4rem", borderRadius: "8px", background: "#f97316", color: "#fff", fontWeight: 600, border: "none", cursor: "pointer", fontSize: "0.95rem" }}
+            style={{ marginTop: "0.5rem", padding: "0.75rem 2rem", borderRadius: "10px", background: "#f97316", color: "#fff", fontWeight: 700, border: "none", cursor: "pointer", fontSize: "1rem", letterSpacing: "0.01em" }}
           >
-            Reload
+            Reload App
           </button>
+          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", marginTop: "0.25rem" }}>If this keeps happening, contact support@kindora.ai</p>
         </div>
       );
     }
@@ -116,10 +120,11 @@ function Router() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "#111318" }}>
         <div className="text-center">
-          <div className="w-12 h-12 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">Loading...</p>
+          <div className="w-14 h-14 border-4 border-white/10 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-lg font-semibold text-white mb-1">Kindora</p>
+          <p className="text-sm text-white/50">Loading your family calendar…</p>
         </div>
       </div>
     );

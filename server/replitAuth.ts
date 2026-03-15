@@ -31,13 +31,24 @@ export function getSession() {
   const sessionPool = new pg.Pool({
     connectionString: process.env.DATABASE_URL!,
     max: 3,
-    min: 1,
-    idleTimeoutMillis: 60000,
-    connectionTimeoutMillis: 10000,
+    min: 2,
+    idleTimeoutMillis: 120000,
+    connectionTimeoutMillis: 15000,
   });
   sessionPool.on('error', (err: Error) => {
     console.error('Session pool error (non-fatal):', err.message);
   });
+
+  // Keep-alive: ping the database every 60 seconds to prevent Neon from
+  // suspending the compute and terminating our connections mid-session.
+  const keepAlive = setInterval(() => {
+    sessionPool.query('SELECT 1').catch((err: Error) => {
+      console.error('Session pool keep-alive failed (non-fatal):', err.message);
+    });
+  }, 60 * 1000);
+  // Don't block process exit on this timer
+  if (keepAlive.unref) keepAlive.unref();
+
   const sessionStore = new pgStore({
     pool: sessionPool,
     createTableIfMissing: true,
