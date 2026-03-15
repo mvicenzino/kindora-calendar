@@ -131,42 +131,52 @@ function Router() {
   }
 
   return (
-    <Switch>
-      <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
-      <Route path="/terms" component={Terms} />
-      <Route path="/privacy" component={Privacy} />
-      <Route path="/about" component={About} />
-      <Route path="/support" component={Support} />
-      <Route path="/intro" component={Intro} />
-      {!isAuthenticated ? (
-        <>
-          <Route path="/" component={Landing} />
-          <Route component={NotFound} />
-        </>
-      ) : (
-        <>
-          <Route path="/onboarding" component={Onboarding} />
-          <Route path="/onboarding/wizard" component={EventWizard} />
-          <Route path="/demo-welcome" component={DemoWelcome} />
-          <NewUserGuard />
-          <AppShell>
-            <Switch>
-              <Route path="/" component={Home} />
-              <Route path="/care" component={CaregiverDashboard} />
-              <Route path="/messages" component={Messages} />
-              <Route path="/documents" component={Documents} />
-              <Route path="/memories" component={Memories} />
-              <Route path="/advisor" component={Advisor} />
-              <Route path="/settings/family">{() => <AccountSettings initialTab="family" />}</Route>
-              <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
-              <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>
-              <Route path="/settings">{() => <AccountSettings />}</Route>
-              <Route>{() => <Redirect to="/" />}</Route>
-            </Switch>
-          </AppShell>
-        </>
-      )}
-    </Switch>
+    <>
+      {/* NewUserGuard must live OUTSIDE Switch — components with no `path` prop
+          are treated as "*" catch-alls by wouter's Switch, so placing it inside
+          caused it to intercept every URL before AppShell could render. */}
+      {isAuthenticated && <NewUserGuard />}
+      <Switch>
+        <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
+        <Route path="/terms" component={Terms} />
+        <Route path="/privacy" component={Privacy} />
+        <Route path="/about" component={About} />
+        <Route path="/support" component={Support} />
+        <Route path="/intro" component={Intro} />
+        {!isAuthenticated ? (
+          <>
+            <Route path="/" component={Landing} />
+            <Route component={NotFound} />
+          </>
+        ) : (
+          <>
+            <Route path="/onboarding" component={Onboarding} />
+            <Route path="/onboarding/wizard" component={EventWizard} />
+            <Route path="/demo-welcome" component={DemoWelcome} />
+            {/* Catch-all Route renders AppShell for all other authenticated paths */}
+            <Route>
+              {() => (
+                <AppShell>
+                  <Switch>
+                    <Route path="/" component={Home} />
+                    <Route path="/care" component={CaregiverDashboard} />
+                    <Route path="/messages" component={Messages} />
+                    <Route path="/documents" component={Documents} />
+                    <Route path="/memories" component={Memories} />
+                    <Route path="/advisor" component={Advisor} />
+                    <Route path="/settings/family">{() => <AccountSettings initialTab="family" />}</Route>
+                    <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
+                    <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>
+                    <Route path="/settings">{() => <AccountSettings />}</Route>
+                    <Route>{() => <Redirect to="/" />}</Route>
+                  </Switch>
+                </AppShell>
+              )}
+            </Route>
+          </>
+        )}
+      </Switch>
+    </>
   );
 }
 
