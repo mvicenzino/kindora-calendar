@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile, Tag } from "lucide-react";
+import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile, Tag, Flag } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
 import type { UiFamilyMember } from "@shared/types";
@@ -30,6 +30,7 @@ interface Event {
   recurrenceCount?: string | null;
   rrule?: string | null;
   isRecurringParent?: boolean;
+  isImportant?: boolean;
   _isVirtualOccurrence?: boolean;
   _parentEventId?: string;
 }
@@ -83,6 +84,7 @@ export default function EventModal({
   const [startTime, setStartTime] = useState(defaultTimes.start);
   const [endTime, setEndTime] = useState(defaultTimes.end);
   const [category, setCategory] = useState<EventCategory>('other');
+  const [isImportant, setIsImportant] = useState(false);
   const [isSometimeToday, setIsSometimeToday] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -120,6 +122,7 @@ export default function EventModal({
       setMemberId("");
       setSelectedMemberIds([]);
       setCategory('other');
+      setIsImportant(false);
       setMemberSearch("");
       setShowMemberDropdown(false);
       setShowCategoryDropdown(false);
@@ -142,6 +145,7 @@ export default function EventModal({
       setSelectedMemberIds(eventMemberIds);
       setMemberId(eventMemberIds[0] || members[0]?.id || "");
       setCategory(event.category || 'other');
+      setIsImportant(event.isImportant || false);
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
@@ -262,6 +266,7 @@ export default function EventModal({
       memberIds: selectedMemberIds,
       category,
       rrule: rruleString,
+      isImportant,
     });
     onClose();
   };
@@ -407,6 +412,23 @@ export default function EventModal({
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Important Flag */}
+            <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border border-border rounded-2xl">
+              <div className="flex items-center gap-2.5">
+                <Flag className={`w-4 h-4 ${isImportant ? 'text-orange-500 fill-orange-500' : 'text-muted-foreground'}`} />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Mark as Important</p>
+                  <p className="text-xs text-muted-foreground">Shows a highlighted reminder on the day of</p>
+                </div>
+              </div>
+              <Switch
+                checked={isImportant}
+                onCheckedChange={setIsImportant}
+                disabled={isReadOnly}
+                data-testid="toggle-important"
+              />
             </div>
 
             {/* Date and Family Members */}

@@ -112,6 +112,7 @@ export const events = pgTable("events", {
   recurringEventId: varchar("recurring_event_id"), // Links instances to the parent/first event in the series
   rrule: text("rrule"), // RFC 5545 RRULE string (e.g. "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10")
   isRecurringParent: boolean("is_recurring_parent").default(false), // True if this is the template event for a series
+  isImportant: boolean("is_important").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

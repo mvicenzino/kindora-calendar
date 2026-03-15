@@ -29,6 +29,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import FamilySelector from "@/components/FamilySelector";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
+import SmartReminders from "@/components/SmartReminders";
 
 const sidebarStyle = {
   "--sidebar-width": "12rem",
@@ -57,6 +58,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </SidebarInset>
       </div>
+      <SmartReminders />
     </SidebarProvider>
   );
 }

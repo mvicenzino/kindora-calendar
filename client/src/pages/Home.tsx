@@ -256,6 +256,7 @@ export default function Home() {
     memberIds: string[];
     category?: EventCategory;
     rrule?: string | null;
+    isImportant?: boolean;
   }) => {
     if (eventData.memberIds.length === 0) return;
 
@@ -273,6 +274,7 @@ export default function Home() {
           memberIds: eventData.memberIds,
           category: cat,
           color,
+          isImportant: eventData.isImportant ?? false,
         },
       });
     } else {
@@ -284,6 +286,7 @@ export default function Home() {
         memberIds: eventData.memberIds,
         category: cat,
         color,
+        isImportant: eventData.isImportant ?? false,
         ...(eventData.rrule && { rrule: eventData.rrule, isRecurringParent: true }),
       });
     }
