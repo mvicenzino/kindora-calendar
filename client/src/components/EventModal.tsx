@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile, Tag, Flag } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
@@ -68,6 +69,7 @@ export default function EventModal({
   members,
   selectedDate,
 }: EventModalProps) {
+  const { toast } = useToast();
   const { can, isLoading: roleLoading } = useUserRole();
   const { activeFamilyId } = useActiveFamily();
   const canEdit = !roleLoading && can('canEditEvents');
@@ -249,6 +251,15 @@ export default function EventModal({
   };
 
   const handleSave = () => {
+    if (!title.trim()) {
+      toast({ title: "Title required", description: "Please enter an event title.", variant: "destructive" });
+      return;
+    }
+    if (selectedMemberIds.length === 0) {
+      toast({ title: "Select a family member", description: "At least one family member must be assigned to this event.", variant: "destructive" });
+      return;
+    }
+
     const actualStartTime = isSometimeToday ? '23:58' : startTime;
     const actualEndTime = isSometimeToday ? '23:59' : endTime;
     
@@ -415,12 +426,12 @@ export default function EventModal({
             </div>
 
             {/* Important Flag */}
-            <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border border-border rounded-2xl">
-              <div className="flex items-center gap-2.5">
-                <Flag className={`w-4 h-4 ${isImportant ? 'text-orange-500 fill-orange-500' : 'text-muted-foreground'}`} />
-                <div>
+            <div className="flex items-start justify-between gap-3 px-4 py-3 bg-muted/40 border border-border rounded-2xl">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <Flag className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isImportant ? 'text-orange-500 fill-orange-500' : 'text-muted-foreground'}`} />
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">Mark as Important</p>
-                  <p className="text-xs text-muted-foreground">Shows a highlighted reminder on the day of</p>
+                  <p className="text-xs text-muted-foreground">Fires a toast reminder 30, 15, and 5 minutes before the event</p>
                 </div>
               </div>
               <Switch
@@ -428,6 +439,7 @@ export default function EventModal({
                 onCheckedChange={setIsImportant}
                 disabled={isReadOnly}
                 data-testid="toggle-important"
+                className="flex-shrink-0 mt-0.5"
               />
             </div>
 
