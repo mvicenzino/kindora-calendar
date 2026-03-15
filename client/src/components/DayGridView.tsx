@@ -68,7 +68,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
     if (onEventDrop) onEventDrop(event, newStart, newEnd);
   }, [onEventDrop]);
 
-  const { dragState, isDragging, justDraggedRef, pendingEventId, startDrag, onPointerMove, endDrag, cancelDrag } = useEventDrag({
+  const { dragState, isDragging, justDraggedRef, pendingEventId, justDroppedEventId, startDrag, onPointerMove, endDrag, cancelDrag } = useEventDrag({
     hourHeight: HOUR_HEIGHT,
     startHour: START_HOUR,
     snapMinutes: 15,
@@ -199,27 +199,45 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
 
               const isBeingDragged = dragState?.eventId === event.id;
               const isPending = pendingEventId === event.id;
+              const isJustDropped = justDroppedEventId === event.id;
               const displayTop = isBeingDragged ? dragState.currentTop : pos.top;
               const displayHeight = isBeingDragged ? dragState.currentHeight : pos.height;
 
               return (
                 <div
                   key={event.id}
-                  className={`absolute rounded-sm text-left overflow-visible pointer-events-auto group ${isBeingDragged ? 'z-30 opacity-90 shadow-lg' : isPending ? 'z-20 ring-2 ring-primary/50' : 'cursor-grab'}`}
+                  className={`absolute rounded-sm text-left overflow-visible pointer-events-auto group ${isBeingDragged ? 'z-30' : isPending ? 'z-20' : 'cursor-grab'}`}
                   style={{
                     top: displayTop + 1,
                     height: displayHeight - 2,
                     left: `${leftPct}%`,
                     width: `calc(${widthPct}% - 4px)`,
-                    background: `linear-gradient(160deg, ${event.color}38 0%, ${event.color}22 50%, ${event.color}12 100%)`,
+                    background: isPending
+                      ? `linear-gradient(160deg, ${event.color}55 0%, ${event.color}38 50%, ${event.color}20 100%)`
+                      : `linear-gradient(160deg, ${event.color}38 0%, ${event.color}22 50%, ${event.color}12 100%)`,
                     backdropFilter: 'blur(6px) saturate(1.2)',
                     WebkitBackdropFilter: 'blur(6px) saturate(1.2)',
-                    border: `1px solid ${event.color}35`,
+                    border: isPending
+                      ? `1px solid ${event.color}70`
+                      : `1px solid ${event.color}35`,
                     boxShadow: isBeingDragged
-                      ? `inset 3px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.3), 0 2px 8px ${event.color}28`
+                      ? `inset 3px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.25), 0 16px 40px rgba(0,0,0,0.38), 0 6px 16px ${event.color}50`
+                      : isPending
+                      ? `inset 3px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px ${event.color}40`
                       : `inset 3px 0 0 ${event.color}, inset 0 1px 0 rgba(255,255,255,0.18), 0 2px 8px ${event.color}22`,
-                    transition: isBeingDragged ? 'none' : 'top 0.15s ease, height 0.15s ease',
-                    transform: isPending ? 'scale(1.03)' : undefined,
+                    transform: isBeingDragged
+                      ? 'scale(1.04) rotate(0.6deg)'
+                      : isPending
+                      ? 'scale(0.97)'
+                      : 'scale(1)',
+                    transition: isBeingDragged
+                      ? 'none'
+                      : isJustDropped
+                      ? 'top 0.4s cubic-bezier(0.34,1.56,0.64,1), height 0.4s cubic-bezier(0.34,1.56,0.64,1), transform 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s ease'
+                      : isPending
+                      ? 'transform 0.08s ease-in, box-shadow 0.08s ease-in, background 0.08s ease-in, border-color 0.08s ease-in'
+                      : 'top 0.15s ease, height 0.15s ease, transform 0.2s ease-out, box-shadow 0.2s ease',
+                    willChange: (isBeingDragged || isJustDropped) ? 'transform, box-shadow' : undefined,
                   }}
                   data-testid={`grid-event-${event.id}`}
                 >

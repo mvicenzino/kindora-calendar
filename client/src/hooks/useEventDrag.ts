@@ -35,6 +35,8 @@ function clampMinutes(minutes: number): number {
 export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }: UseEventDragOptions) {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [pendingEventId, setPendingEventId] = useState<string | null>(null);
+  const [justDroppedEventId, setJustDroppedEventId] = useState<string | null>(null);
+  const justDroppedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingRef = useRef<{
@@ -71,7 +73,7 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [dragState]);
 
-  const cleanupDrag = useCallback((wasDrag = false) => {
+  const cleanupDrag = useCallback((wasDrag = false, droppedEventId?: string) => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -89,6 +91,11 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
       justDraggedRef.current = true;
       if (justDraggedTimer.current) clearTimeout(justDraggedTimer.current);
       justDraggedTimer.current = setTimeout(() => { justDraggedRef.current = false; }, 300);
+    }
+    if (droppedEventId) {
+      setJustDroppedEventId(droppedEventId);
+      if (justDroppedTimer.current) clearTimeout(justDroppedTimer.current);
+      justDroppedTimer.current = setTimeout(() => setJustDroppedEventId(null), 500);
     }
   }, []);
 
@@ -320,7 +327,7 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
       onDrop(state.event, newStart, newEnd);
     }
 
-    cleanupDrag(didMove);
+    cleanupDrag(didMove, state.event.id);
   }, [hourHeight, startHour, snapToGrid, onDrop, cleanupDrag]);
 
   const cancelDrag = useCallback(() => {
@@ -332,6 +339,7 @@ export function useEventDrag({ hourHeight, startHour, snapMinutes = 15, onDrop }
     isDragging: dragState !== null && dragState.confirmed,
     justDraggedRef,
     pendingEventId,
+    justDroppedEventId,
     startDrag,
     onPointerMove,
     onPointerMoveWeek,
