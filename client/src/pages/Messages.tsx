@@ -97,15 +97,18 @@ function getAvatarGradient(role: string): string {
   }
 }
 
-function getBubbleStyle(role: string, isOwn: boolean): string {
-  if (isOwn) {
-    return 'bg-primary text-primary-foreground';
-  }
+function getBubbleColors(role: string): { bg: string; border: string } {
   switch (role) {
     case 'caregiver':
-      return 'bg-emerald-500/25 text-foreground border border-emerald-400/40';
+      return {
+        bg: 'rgba(16,185,129,0.18)',
+        border: 'rgba(52,211,153,0.28)',
+      };
     default:
-      return 'bg-muted/50 text-foreground';
+      return {
+        bg: 'rgba(255,255,255,0.09)',
+        border: 'rgba(255,255,255,0.14)',
+      };
   }
 }
 
@@ -233,7 +236,7 @@ export default function Messages() {
 
           <CardContent className="flex-1 p-0 overflow-hidden flex flex-col">
             <ScrollArea className="flex-1 px-4" ref={scrollAreaRef}>
-              <div className="py-4 space-y-4">
+              <div className="py-4 space-y-1.5">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="text-muted-foreground">Loading messages...</div>
@@ -254,52 +257,107 @@ export default function Messages() {
                     const authorRole = message.author?.role || 'member';
 
                     return (
-                      <div key={message.id}>
+                      <div key={message.id} className="space-y-0.5">
                         {showDateDivider && (
-                          <div className="flex items-center justify-center my-4">
-                            <div className="bg-muted/50 px-4 py-1.5 rounded-full text-muted-foreground text-xs font-medium">
+                          <div className="flex items-center justify-center my-5">
+                            <div
+                              className="px-3 py-1 text-[11px] font-medium text-muted-foreground"
+                              style={{
+                                background: "rgba(255,255,255,0.07)",
+                                backdropFilter: "blur(12px)",
+                                WebkitBackdropFilter: "blur(12px)",
+                                borderRadius: 999,
+                                border: "1px solid rgba(255,255,255,0.10)",
+                              }}
+                            >
                               {formatDateDivider(message.createdAt)}
                             </div>
                           </div>
                         )}
                         
                         <div 
-                          className={`flex items-end gap-2 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
+                          className={`flex items-end gap-1.5 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
                           data-testid={`message-${message.id}`}
                         >
-                          <Avatar className={`h-8 w-8 flex-shrink-0 ${isOwnMessage ? 'ring-2 ring-blue-400/50' : 'ring-2 ring-border'}`}>
-                            {message.author?.profileImageUrl && (
-                              <AvatarImage src={message.author.profileImageUrl} />
-                            )}
-                            <AvatarFallback className={`bg-gradient-to-br ${getAvatarGradient(authorRole)} text-white text-xs font-semibold`}>
-                              {message.author ? getInitials(message.author.firstName, message.author.lastName) : '?'}
-                            </AvatarFallback>
-                          </Avatar>
+                          {/* Avatar — hidden for own messages, shown for others */}
+                          {!isOwnMessage && (
+                            <Avatar className="h-7 w-7 flex-shrink-0 mb-1">
+                              {message.author?.profileImageUrl && (
+                                <AvatarImage src={message.author.profileImageUrl} />
+                              )}
+                              <AvatarFallback className={`bg-gradient-to-br ${getAvatarGradient(authorRole)} text-white text-[10px] font-semibold`}>
+                                {message.author ? getInitials(message.author.firstName, message.author.lastName) : '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
 
-                          <div className={`max-w-[70%] flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                          <div className={`max-w-[72%] flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                            {/* Sender name (others only) */}
                             {!isOwnMessage && message.author && (
-                              <span className={`text-xs font-medium mb-1 ml-2 ${
-                                authorRole === 'caregiver' ? 'text-emerald-300' : 'text-muted-foreground'
+                              <span className={`text-[11px] font-semibold mb-1 ml-1 ${
+                                authorRole === 'caregiver' ? 'text-emerald-400' : 'text-muted-foreground'
                               }`}>
                                 {message.author.firstName}
-                                {authorRole === 'caregiver' && <span className="ml-1 opacity-75">(Caregiver)</span>}
+                                {authorRole === 'caregiver' && <span className="ml-1 font-normal opacity-60">· Caregiver</span>}
                               </span>
                             )}
-                            
-                            <div className={`px-3 py-2 rounded-md ${getBubbleStyle(authorRole, isOwnMessage)} ${
-                              isOwnMessage ? 'rounded-br-sm' : 'rounded-bl-sm'
-                            }`}>
-                              <p className="text-xs whitespace-pre-wrap break-words leading-relaxed" data-testid={`text-message-content-${message.id}`}>
-                                {message.content}
-                              </p>
-                              <div className={`text-[10px] mt-1 ${
-                                isOwnMessage ? 'text-blue-100/70' : 
-                                authorRole === 'caregiver' ? 'text-emerald-200/60' : 'text-muted-foreground'
-                              }`}>
-                                {formatMessageTime(message.createdAt)}
+
+                            {/* Bubble */}
+                            {isOwnMessage ? (
+                              <div
+                                className="relative px-3.5 py-2.5"
+                                style={{
+                                  background: "linear-gradient(135deg, rgba(249,115,22,1) 0%, rgba(234,88,12,0.92) 100%)",
+                                  backdropFilter: "blur(16px) saturate(160%)",
+                                  WebkitBackdropFilter: "blur(16px) saturate(160%)",
+                                  borderRadius: "22px 22px 6px 22px",
+                                  boxShadow: "0 4px 20px rgba(249,115,22,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+                                }}
+                                data-testid={`text-message-content-${message.id}`}
+                              >
+                                {/* glass shimmer */}
+                                <div className="absolute inset-0 pointer-events-none rounded-[inherit]"
+                                  style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 55%, transparent 100%)" }} />
+                                <p className="relative text-[13px] text-white whitespace-pre-wrap break-words leading-relaxed">
+                                  {message.content}
+                                </p>
+                                <p className="relative text-[10px] text-white/60 mt-1 text-right">
+                                  {formatMessageTime(message.createdAt)}
+                                </p>
                               </div>
-                            </div>
+                            ) : (
+                              (() => {
+                                const { bg, border } = getBubbleColors(authorRole);
+                                return (
+                                  <div
+                                    className="relative px-3.5 py-2.5"
+                                    style={{
+                                      background: bg,
+                                      backdropFilter: "blur(20px) saturate(180%)",
+                                      WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                                      border: `1px solid ${border}`,
+                                      borderRadius: "22px 22px 22px 6px",
+                                      boxShadow: "0 2px 12px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.10)",
+                                    }}
+                                    data-testid={`text-message-content-${message.id}`}
+                                  >
+                                    {/* glass shimmer */}
+                                    <div className="absolute inset-0 pointer-events-none rounded-[inherit]"
+                                      style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 60%, transparent 100%)" }} />
+                                    <p className="relative text-[13px] text-foreground whitespace-pre-wrap break-words leading-relaxed">
+                                      {message.content}
+                                    </p>
+                                    <p className="relative text-[10px] text-muted-foreground mt-1">
+                                      {formatMessageTime(message.createdAt)}
+                                    </p>
+                                  </div>
+                                );
+                              })()
+                            )}
                           </div>
+
+                          {/* Avatar placeholder for own messages to keep alignment */}
+                          {isOwnMessage && <div className="w-7 flex-shrink-0" />}
                         </div>
                       </div>
                     );
