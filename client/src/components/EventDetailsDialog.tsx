@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Clock, Edit3, X, Upload, Trash2, CalendarDays, MapPin, Users, Tag, ChevronRight } from "lucide-react";
@@ -311,15 +312,36 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
             Edit Event
           </Button>}
           {onDelete && (
-            <Button
-              variant="ghost"
-              onClick={() => { onDelete(event.id); onClose(); }}
-              className="h-9 rounded-lg text-xs font-semibold text-destructive hover:text-destructive"
-              data-testid="button-delete-event-details"
-            >
-              <Trash2 className="w-3 h-3 mr-1.5" />
-              Delete
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-9 rounded-lg text-xs font-semibold text-destructive hover:text-destructive"
+                  data-testid="button-delete-event-details"
+                >
+                  <Trash2 className="w-3 h-3 mr-1.5" />
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to delete "{event.title}"? This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid="button-delete-cancel">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => { onDelete(event.id); onClose(); }}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    data-testid="button-delete-confirm"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           <Button
             variant="ghost"
