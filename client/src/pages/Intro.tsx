@@ -221,7 +221,7 @@ export default function Intro() {
         style={{ boxShadow: "0 0 48px rgba(249,115,22,0.22), 0 20px 40px rgba(0,0,0,0.55)", outline: "1px solid rgba(255,255,255,0.12)" }}
       >
         <iframe
-          src="https://kindora-animation.replit.app"
+          src="/animation/index.html"
           title="See Kindora in action"
           className="w-full block border-0"
           style={{ height: "260px" }}
