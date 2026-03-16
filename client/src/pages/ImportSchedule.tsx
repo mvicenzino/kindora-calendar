@@ -24,7 +24,7 @@ import {
   Clock,
   AlertCircle
 } from "lucide-react";
-import { format, parseISO, eachDayOfInterval, isWeekend } from "date-fns";
+import { format, parseISO, eachDayOfInterval } from "date-fns";
 import type { FamilyMember, EventCategory } from "@shared/schema";
 import { EVENT_CATEGORIES, CATEGORY_CONFIG } from "@shared/schema";
 
@@ -156,8 +156,7 @@ export default function ImportSchedule() {
         const endDate = parseISO(event.endDate);
         
         // If dates span multiple days and not all-day, create individual events
-        const days = eachDayOfInterval({ start: startDate, end: endDate })
-          .filter(day => !isWeekend(day) || event.isAllDay);
+        const days = eachDayOfInterval({ start: startDate, end: endDate });
         
         return days.map(day => {
           const startTime = new Date(day);
@@ -204,9 +203,10 @@ export default function ImportSchedule() {
           variant: "destructive",
         });
       } else {
+        const skippedNote = data.skipped > 0 ? ` (${data.skipped} skipped)` : "";
         toast({
           title: "Schedule Imported!",
-          description: `Successfully added ${data.imported} event(s) to your calendar`,
+          description: `Successfully added ${data.imported} event(s) to your calendar${skippedNote}`,
         });
         setLocation("/");
       }

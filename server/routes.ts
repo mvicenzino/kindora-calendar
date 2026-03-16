@@ -1471,10 +1471,14 @@ Visit Kindora Calendar: ${joinUrl}
       
       const createdEvents: any[] = [];
       
+      const skipped: string[] = [];
+
       for (const eventData of eventsData) {
         const result = insertEventSchema.safeParse(eventData);
         if (!result.success) {
-          console.warn("Skipping invalid event:", result.error.message);
+          const msg = `"${eventData.title ?? 'untitled'}": ${result.error.message}`;
+          console.warn("Skipping invalid event:", msg);
+          skipped.push(msg);
           continue;
         }
         
@@ -1485,6 +1489,8 @@ Visit Kindora Calendar: ${joinUrl}
       res.status(201).json({ 
         success: true, 
         imported: createdEvents.length,
+        skipped: skipped.length,
+        skippedReasons: skipped,
         source: source || "manual",
         events: createdEvents 
       });

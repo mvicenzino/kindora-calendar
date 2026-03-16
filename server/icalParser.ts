@@ -29,12 +29,22 @@ export function parseICalData(icsContent: string): ParseScheduleResult {
       if (!isAllDay) {
         const startJs = startDate.toJSDate();
         const endJs = endDate.toJSDate();
-        startTime = `${String(startJs.getHours()).padStart(2, '0')}:${String(startJs.getMinutes()).padStart(2, '0')}`;
-        endTime = `${String(endJs.getHours()).padStart(2, '0')}:${String(endJs.getMinutes()).padStart(2, '0')}`;
+        // Use UTC hours since ical.js stores timed events in UTC
+        startTime = `${String(startJs.getUTCHours()).padStart(2, '0')}:${String(startJs.getUTCMinutes()).padStart(2, '0')}`;
+        endTime = `${String(endJs.getUTCHours()).padStart(2, '0')}:${String(endJs.getUTCMinutes()).padStart(2, '0')}`;
       }
 
       const startDateStr = formatDate(startDate.toJSDate());
-      const endDateStr = formatDate(endDate.toJSDate());
+
+      // In the iCal spec, DTEND for all-day events is the *exclusive* next day.
+      // e.g. a single-day event on March 11 has DTEND=March 12.
+      // Subtract 1 day so the stored endDate is the actual last day of the event.
+      let endDateJs = endDate.toJSDate();
+      if (isAllDay && endDateJs > startDate.toJSDate()) {
+        endDateJs = new Date(endDateJs);
+        endDateJs.setUTCDate(endDateJs.getUTCDate() - 1);
+      }
+      const endDateStr = formatDate(endDateJs);
 
       return {
         title: event.summary || "Untitled Event",
@@ -65,8 +75,8 @@ export function parseICalData(icsContent: string): ParseScheduleResult {
 }
 
 function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
