@@ -365,10 +365,10 @@ export default function CaregiverDashboard() {
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-muted-foreground">
               <TimeIcon className="h-4 w-4" />
-              <span className="text-xs font-medium">{timeOfDay.label}</span>
+              <span className="text-xs font-medium">{timeOfDay.label}{user?.firstName ? ', ' + user.firstName : ''}</span>
             </div>
             <h1 className="text-sm font-semibold text-foreground" data-testid="text-dashboard-title">
-              Today's Care Dashboard
+              {isCaregiver ? 'Your Shift Dashboard' : 'Today\'s Care Dashboard'}
             </h1>
             <p className="text-xs text-muted-foreground" data-testid="text-dashboard-date">
               {format(new Date(), "EEEE, MMMM d, yyyy")}
