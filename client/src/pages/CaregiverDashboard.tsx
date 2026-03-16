@@ -716,17 +716,15 @@ export default function CaregiverDashboard() {
         </Card>
 
         {showTimeTracking && <Card data-testid="card-time-tracking">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Timer className="h-4 w-4" />
-                Time Tracking
-              </CardTitle>
-              <CardDescription className="mt-1">
-                Log your hours and track pay
-              </CardDescription>
-            </div>
-            <div className="flex gap-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <Timer className="h-4 w-4" />
+              Time Tracking
+            </CardTitle>
+            <CardDescription>
+              Log your hours and track pay
+            </CardDescription>
+            <div className="flex gap-2 pt-1">
               <Dialog open={showPayRateDialog} onOpenChange={setShowPayRateDialog}>
                 <DialogTrigger asChild>
                   <Button 
