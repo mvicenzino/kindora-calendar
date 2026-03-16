@@ -44,7 +44,10 @@ export default function AppSidebar() {
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <img src={logo} alt="Kindora" className="w-6 h-6 rounded flex-shrink-0" data-testid="icon-sidebar-logo" />
           <div className="flex flex-col leading-none group-data-[collapsible=icon]:hidden">
-            <span className="text-[13px] font-bold text-primary app-title" data-testid="text-sidebar-brand">Kindora</span>
+            <span className="flex items-center gap-1.5">
+              <span className="text-[13px] font-bold text-primary app-title" data-testid="text-sidebar-brand">Kindora</span>
+              <span className="text-[9px] font-semibold px-1 py-px rounded-full border border-primary/40 text-primary/70 leading-none tracking-wide">beta</span>
+            </span>
             {activeFamily && (
               <span className="text-[10px] text-sidebar-foreground/60 truncate max-w-[120px] mt-0.5" data-testid="text-sidebar-family">
                 {activeFamily.name}
