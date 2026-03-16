@@ -157,7 +157,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => setLocation("/")}
-                  className="text-xs sm:text-sm"
+                  className="text-xs sm:text-sm bg-primary text-white"
                   data-testid="button-open-app"
                 >
                   Open Calendar
@@ -165,8 +165,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => (window.location.href = "/api/logout")}
-                  variant="outline"
-                  className="text-xs sm:text-sm"
+                  className="text-xs sm:text-sm bg-white/10 text-white border border-white/25 hover:bg-white/20"
                   data-testid="button-logout"
                 >
                   <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -179,8 +178,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => (window.location.href = `/intro?mode=demo&tz=${new Date().getTimezoneOffset()}`)}
-                  variant="secondary"
-                  className="text-xs sm:text-sm"
+                  className="text-xs sm:text-sm bg-white/10 text-white border border-white/25"
                   data-testid="button-demo"
                 >
                   Try Demo
@@ -188,8 +186,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => setAuthMode("login")}
-                  variant="outline"
-                  className="text-xs sm:text-sm"
+                  className="text-xs sm:text-sm bg-white/10 text-white border border-white/25"
                   data-testid="button-login"
                 >
                   Sign In
@@ -197,7 +194,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => setAuthMode("register")}
-                  className="text-xs sm:text-sm"
+                  className="text-xs sm:text-sm bg-primary text-white"
                   data-testid="button-register"
                 >
                   Sign Up
