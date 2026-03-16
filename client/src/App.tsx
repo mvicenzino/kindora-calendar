@@ -21,6 +21,7 @@ import Documents from "@/pages/Documents";
 import EmergencyBridge from "@/pages/EmergencyBridge";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
+import Help from "@/pages/Help";
 import About from "@/pages/About";
 import Support from "@/pages/Support";
 import AccountSettings from "@/pages/AccountSettings";
@@ -165,6 +166,7 @@ function Router() {
         <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
+        <Route path="/help" component={Help} />
         <Route path="/about" component={About} />
         <Route path="/support" component={Support} />
         <Route path="/intro" component={Intro} />
