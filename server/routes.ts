@@ -2335,7 +2335,11 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      const messages = await storage.getFamilyMessages(familyId);
+      const allMessages = await storage.getFamilyMessages(familyId);
+      // Caregivers only see messages tagged as 'caregiver' type
+      const messages = role === 'caregiver'
+        ? allMessages.filter((m: any) => m.messageType === 'caregiver')
+        : allMessages;
       
       // Enrich messages with author info
       const enrichedMessages = await Promise.all(messages.map(async (message) => {
@@ -2378,9 +2382,13 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You don't have permission to send messages" });
       }
       
+      // Auto-set messageType: caregivers always send 'caregiver' messages
+      // owners/members can specify type, defaulting to 'family'
+      const messageType = role === 'caregiver' ? 'caregiver' : (req.body.messageType || 'family');
       const messageData = {
         ...req.body,
         authorUserId: userId,
+        messageType,
       };
       
       const result = insertFamilyMessageSchema.safeParse(messageData);

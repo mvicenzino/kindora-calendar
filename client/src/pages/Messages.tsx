@@ -138,11 +138,19 @@ export default function Messages() {
     enabled: !!activeFamilyId,
   });
 
+  const { data: userRole } = useQuery<{ role: string }>({
+    queryKey: ['/api/family/' + activeFamilyId + '/role'],
+    enabled: !!activeFamilyId,
+  });
+  const isCaregiver = userRole?.role === 'caregiver';
+  const isOwnerOrMember = userRole?.role === 'owner' || userRole?.role === 'member';
+
   const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, messageType }: { content: string; messageType: string }) => {
       const res = await apiRequest('POST', '/api/family-messages', {
         content,
         familyId: activeFamilyId,
+        messageType,
       });
       return await res.json();
     },
@@ -169,12 +177,19 @@ export default function Messages() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [sortedMessages]);
 
+  const [activeMsgTab, setActiveMsgTab] = useState<'family' | 'caregiver'>('family');
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (newMessage.trim() && !sendMessageMutation.isPending) {
-      sendMessageMutation.mutate(newMessage.trim());
+      const messageType = isCaregiver ? 'caregiver' : activeMsgTab;
+      sendMessageMutation.mutate({ content: newMessage.trim(), messageType });
     }
   };
+
+  const familyMessages = sortedMessages.filter(m => (m as any).messageType !== 'caregiver');
+  const caregiverMessages = sortedMessages.filter(m => (m as any).messageType === 'caregiver');
+  const displayedMessages = isCaregiver ? sortedMessages : (activeMsgTab === 'family' ? familyMessages : caregiverMessages);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -195,6 +210,26 @@ export default function Messages() {
             Family conversations and event notes
           </p>
         </div>
+
+        {/* Message type tabs for owners/members */}
+        {isOwnerOrMember && (
+          <div className="flex gap-2 mb-3">
+            <button onClick={() => setActiveMsgTab('family')} className={"flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition-all " + (activeMsgTab === 'family' ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/30")}>
+              Family
+              {familyMessages.length > 0 && <span className="ml-1.5 opacity-60">{familyMessages.length}</span>}
+            </button>
+            <button onClick={() => setActiveMsgTab('caregiver')} className={"flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition-all " + (activeMsgTab === 'caregiver' ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/30")}>
+              Care Team
+              {caregiverMessages.length > 0 && <span className="ml-1.5 opacity-60">{caregiverMessages.length}</span>}
+            </button>
+          </div>
+        )}
+        {isCaregiver && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+            <p className="text-xs text-primary font-medium">Care Team Messages</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Messages visible to family and caregivers</p>
+          </div>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="h-[calc(100dvh-200px)]">
           <TabsList className="w-full rounded-md mb-3 p-0.5">
@@ -250,7 +285,7 @@ export default function Messages() {
                     </p>
                   </div>
                 ) : (
-                  sortedMessages.map((message, index) => {
+                  displayedMessages.map((message, index) => {
                     const prevMessage = index > 0 ? sortedMessages[index - 1] : null;
                     const isOwnMessage = message.authorUserId === user?.id;
                     const showDateDivider = shouldShowDateDivider(message, prevMessage);
