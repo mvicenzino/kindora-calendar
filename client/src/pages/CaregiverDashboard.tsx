@@ -158,10 +158,28 @@ export default function CaregiverDashboard() {
 
   const todayEvents = useMemo(() => {
     const now = new Date();
-    return events
+    const allToday = events
       .filter(e => isToday(e.startTime))
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-  }, [events]);
+
+    // For caregivers: show only events tagged to them (name match) or care-related events
+    // or events with no specific member assigned (family-wide)
+    if (isCaregiver && user?.firstName) {
+      const caregiverName = user.firstName.toLowerCase();
+      return allToday.filter(e => {
+        // No members tagged = family-wide event, show to everyone
+        if (!e.members || e.members.length === 0) return true;
+        // Tagged to a member whose name matches the caregiver
+        if (e.members.some(m => m.name.toLowerCase().includes(caregiverName))) return true;
+        // Medical/care events always relevant
+        const isCareRelated = ['doctor','appointment','therapy','medical','medication','check-up','care'].some(k => e.title.toLowerCase().includes(k));
+        if (isCareRelated) return true;
+        return false;
+      });
+    }
+
+    return allToday;
+  }, [events, isCaregiver, user]);
 
   const upcomingEvents = useMemo(() => {
     const now = new Date();
