@@ -209,6 +209,10 @@ export default function CaregiverDashboard() {
         administeredAt: new Date(),
         familyId: activeFamilyId,
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errData.error || errData.message || 'Failed to log medication - status ' + res.status);
+      }
       return { ...(await res.json()), medicationName, status };
     },
     onSuccess: (data) => {
