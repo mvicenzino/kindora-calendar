@@ -409,11 +409,11 @@ export default function CaregiverDashboard() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div className="p-2 rounded-md bg-amber-500/30 animate-pulse">
-                  <AlertCircle className="h-4 w-4 text-amber-200" />
+                  <AlertCircle className="h-4 w-4 text-amber-700 dark:text-amber-200" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-foreground mb-1">Action Needed</h3>
-                  <p className="text-amber-100/80 text-xs">
+                  <p className="text-amber-800/80 dark:text-amber-100/80 text-xs">
                     {pendingMeds.length > 0 && (
                       <span className="font-medium">{pendingMeds.length} medication{pendingMeds.length !== 1 ? 's' : ''} pending</span>
                     )}
@@ -426,7 +426,7 @@ export default function CaregiverDashboard() {
               </div>
               {pendingMeds.length > 0 && (
                 <Button
-                  className="bg-amber-500/30 text-amber-100 border border-amber-400/40"
+                  className="bg-amber-500/30 text-amber-800 dark:text-amber-100 border border-amber-400/40"
                   onClick={() => document.getElementById('medications-section')?.scrollIntoView({ behavior: 'smooth' })}
                   data-testid="button-view-pending-meds"
                 >
@@ -462,7 +462,7 @@ export default function CaregiverDashboard() {
             {payRate && (
               <div className='grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-primary/20'>
                 <div><p className='text-xs text-muted-foreground'>This Week</p><p className='text-lg font-bold text-foreground'>{weeklyHours.toFixed(1)}h</p></div>
-                <div><p className='text-xs text-muted-foreground'>Weekly Earnings</p><p className='text-lg font-bold text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
+                <div><p className='text-xs text-muted-foreground'>Weekly Earnings</p><p className='text-lg font-bold text-emerald-600 dark:text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
               </div>
             )}
           </div>
@@ -473,14 +473,14 @@ export default function CaregiverDashboard() {
           <div className='rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4'>
             <div className='flex items-center justify-between gap-4 flex-wrap'>
               <div>
-                <p className='text-xs font-semibold uppercase tracking-widest text-emerald-400/70 mb-1'>Caregiver Summary</p>
+                <p className='text-xs font-semibold uppercase tracking-widest text-emerald-700/70 dark:text-emerald-400/70 mb-1'>Caregiver Summary</p>
                 <p className='text-sm text-foreground font-medium'>
                   {timeEntries[0] ? 'Last logged: ' + format(new Date(timeEntries[0].entryDate), 'MMM d') + ' — ' + parseFloat(timeEntries[0].hoursWorked).toFixed(1) + 'h' : 'No hours logged yet'}
                 </p>
                 {timeEntries[0]?.notes && <p className='text-xs text-muted-foreground mt-1 italic'>'{timeEntries[0].notes}'</p>}
               </div>
               <div className='flex gap-4 text-right'>
-                <div><p className='text-xs text-muted-foreground'>This Week</p><p className='text-base font-bold text-foreground'>{weeklyHours.toFixed(1)}h</p><p className='text-xs text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
+                <div><p className='text-xs text-muted-foreground'>This Week</p><p className='text-base font-bold text-foreground'>{weeklyHours.toFixed(1)}h</p><p className='text-xs text-emerald-600 dark:text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
               </div>
             </div>
           </div>
@@ -531,11 +531,11 @@ export default function CaregiverDashboard() {
             <CardContent className="p-3">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className={`p-2 rounded-lg flex-shrink-0 ${pendingMeds.length > 0 ? 'bg-amber-500/30' : 'bg-amber-500/20'}`}>
-                  <Pill className={`h-4 w-4 ${pendingMeds.length > 0 ? 'text-amber-200' : 'text-amber-300'}`} />
+                  <Pill className={`h-4 w-4 ${pendingMeds.length > 0 ? 'text-amber-700 dark:text-amber-200' : 'text-amber-600 dark:text-amber-300'}`} />
                 </div>
                 <div className="min-w-0">
-                  <p className={`text-lg font-bold ${pendingMeds.length > 0 ? 'text-amber-100' : 'text-foreground'}`}>{pendingMeds.length}</p>
-                  <p className={`text-xs truncate ${pendingMeds.length > 0 ? 'text-amber-200/70' : 'text-muted-foreground'}`}>Meds Pending</p>
+                  <p className={`text-lg font-bold ${pendingMeds.length > 0 ? 'text-amber-800 dark:text-amber-100' : 'text-foreground'}`}>{pendingMeds.length}</p>
+                  <p className={`text-xs truncate ${pendingMeds.length > 0 ? 'text-amber-700/70 dark:text-amber-200/70' : 'text-muted-foreground'}`}>Meds Pending</p>
                 </div>
               </div>
             </CardContent>
@@ -545,7 +545,7 @@ export default function CaregiverDashboard() {
             <CardContent className="p-3">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-2 rounded-lg bg-green-500/20 flex-shrink-0">
-                  <CheckCircle2 className="h-4 w-4 text-green-300" />
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-300" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-lg font-bold text-foreground">{completedMeds.length}</p>
@@ -627,8 +627,8 @@ export default function CaregiverDashboard() {
                             <div className="flex flex-col gap-2">
                               {status === 'given' || recentlyLoggedMedId === med.id ? (
                                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${recentlyLoggedMedId === med.id ? 'bg-green-500/30 animate-pulse' : 'bg-green-500/20'}`}>
-                                  <CheckCircle2 className="h-4 w-4 text-green-300" />
-                                  <span className="text-green-300 text-xs font-medium">Given</span>
+                                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-300" />
+                                  <span className="text-green-700 dark:text-green-300 text-xs font-medium">Given</span>
                                 </div>
                               ) : status === 'skipped' ? (
                                 <Badge variant="secondary">
@@ -638,7 +638,7 @@ export default function CaregiverDashboard() {
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
-                                    className="bg-green-500/20 text-green-300 border border-green-500/30 min-h-[44px]"
+                                    className="bg-green-500/20 text-green-700 dark:text-green-300 border border-green-500/30 min-h-[44px]"
                                     onClick={() => { setLogDialogMed({ id: med.id, name: med.name, dosage: med.dosage }); setLogNotes(''); setLogStatus('given'); }}
                                     data-testid={`button-log-med-${med.id}`}
                                   >
@@ -735,7 +735,7 @@ export default function CaregiverDashboard() {
                               )}
                             </div>
                             {event.completed && (
-                              <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
+                              <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">
                                 Done
                               </Badge>
                             )}
@@ -1064,7 +1064,7 @@ export default function CaregiverDashboard() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-emerald-300 font-semibold">
+                              <span className="text-emerald-600 dark:text-emerald-300 font-semibold">
                                 {formatCurrency(parseFloat(entry.calculatedPay))}
                               </span>
                               <Button
