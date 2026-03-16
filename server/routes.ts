@@ -1995,13 +1995,14 @@ Visit Kindora Calendar: ${joinUrl}
         });
       }
 
+      console.log("[MedImport] Gemini response:", JSON.stringify(response).slice(0, 500));
       const responseText = response.text || "";
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (!jsonMatch) return res.json({ medications: [], count: 0 });
       const medications = JSON.parse(jsonMatch[0]);
       res.json({ medications, count: medications.length });
-    } catch (error) {
-      console.error("Error parsing medications:", error);
+    } catch (error: any) {
+      console.error("Error parsing medications:", error?.message || error);
       res.status(500).json({ error: "Failed to parse medications" });
     }
   });
