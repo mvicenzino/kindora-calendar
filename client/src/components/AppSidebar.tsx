@@ -11,25 +11,75 @@ import {
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
+import { useQuery } from "@tanstack/react-query";
 
 const logo = "/kindora-logo.jpeg";
-const navItems = [
+
+const familyNavItems = [
   { title: "Calendar", url: "/", icon: Calendar },
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Memories", url: "/memories", icon: Image },
-  { title: "Care", url: "/care", icon: Heart },
   { title: "Advisor", url: "/advisor", icon: Sparkles },
+  { title: "Settings", url: "/settings", icon: Settings },
+];
+
+const caregiverNavItems = [
+  { title: "Care Dashboard", url: "/care", icon: Heart },
+  { title: "Messages", url: "/messages", icon: MessageCircle },
+  { title: "Calendar", url: "/", icon: Calendar },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export default function AppSidebar() {
   const [location, setLocation] = useLocation();
-  const { activeFamily } = useActiveFamily();
+  const { activeFamily, activeFamilyId } = useActiveFamily();
   const { user } = useAuth();
   const { unreadCount } = useUnreadMessages();
   const { setOpenMobile } = useSidebar();
   const [helpOpen, setHelpOpen] = useState(false);
+
+  const { data: userRole } = useQuery({
+    queryKey: ["/api/family/" + activeFamilyId + "/role"],
+    enabled: !!activeFamilyId,
+  });
+
+  const isCaregiver = userRole?.role === "caregiver";
+  const isOwnerOrMember = userRole?.role === "owner" || userRole?.role === "member";
+
+  function handleNavClick(e, url) {
+    e.preventDefault();
+    setLocation(url);
+    setOpenMobile(false);
+  }
+
+  function NavItem({ item }) {
+    const isActive = location === item.url || (item.url === "/" && location === "") || (item.url !== "/" && location.startsWith(item.url + "/"));
+    const isMessages = item.url === "/messages";
+    const showBadge = isMessages && unreadCount > 0;
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="text-[12px] gap-2">
+          <a href={item.url} onClick={function(e) { handleNavClick(e, item.url); }} data-testid={"nav-" + item.title.toLowerCase().replace(" ", "-")}>
+            <div className="relative flex-shrink-0">
+              <item.icon className="w-3.5 h-3.5" />
+              {showBadge && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-[3px] leading-none" data-testid="badge-unread-messages">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </div>
+            <span>{item.title}</span>
+            {showBadge && (
+              <span className="group-data-[collapsible=icon]:hidden ml-auto min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-1 leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </a>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
 
   return (
     <>
@@ -50,47 +100,58 @@ export default function AppSidebar() {
             </div>
           </div>
         </SidebarHeader>
+
         <SidebarSeparator />
+
         <SidebarContent className="tesla-scrollbar">
-          <SidebarGroup className="py-1">
-            <SidebarGroupLabel className="text-[9px] uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
-              Navigate
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5 px-1">
-                {navItems.map((item) => {
-                  const isActive = location === item.url || (item.url === "/" && location === "") || (item.url !== "/" && location.startsWith(item.url + "/"));
-                  const isMessages = item.url === "/messages";
-                  const showBadge = isMessages && unreadCount > 0;
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title} className="text-[12px] gap-2">
-                        <a href={item.url} onClick={(e) => { e.preventDefault(); setLocation(item.url); setOpenMobile(false); }} data-testid={`nav-${item.title.toLowerCase()}`}>
-                          <div className="relative flex-shrink-0">
-                            <item.icon className="w-3.5 h-3.5" />
-                            {showBadge && (
-                              <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-[3px] leading-none" data-testid="badge-unread-messages">
-                                {unreadCount > 9 ? "9+" : unreadCount}
-                              </span>
-                            )}
-                          </div>
-                          <span>{item.title}</span>
-                          {showBadge && (
-                            <span className="group-data-[collapsible=icon]:hidden ml-auto min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center px-1 leading-none">
-                              {unreadCount > 9 ? "9+" : unreadCount}
-                            </span>
-                          )}
-                        </a>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+
+          {(isOwnerOrMember || !userRole) && (
+            <SidebarGroup className="py-1">
+              <SidebarGroupLabel className="text-[9px] uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
+                Family
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.5 px-1">
+                  {familyNavItems.map((item) => (
+                    <NavItem key={item.title} item={item} />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {isOwnerOrMember && (
+            <SidebarGroup className="py-1">
+              <SidebarGroupLabel className="text-[9px] uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
+                Caregiver
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.5 px-1">
+                  <NavItem item={{ title: "Care Dashboard", url: "/care", icon: Heart }} />
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {isCaregiver && (
+            <SidebarGroup className="py-1">
+              <SidebarGroupLabel className="text-[9px] uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
+                Caregiver
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.5 px-1">
+                  {caregiverNavItems.map((item) => (
+                    <NavItem key={item.title} item={item} />
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
         </SidebarContent>
+
         <SidebarFooter className="px-3 py-2">
-          <button onClick={() => setHelpOpen(true)} className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-1 group-data-[collapsible=icon]:justify-center" title="Help and Support">
+          <button onClick={function() { setHelpOpen(true); }} className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-1 group-data-[collapsible=icon]:justify-center" title="Help and Support">
             <HelpCircle className="w-4 h-4 flex-shrink-0" />
             <span className="text-[11px] font-medium group-data-[collapsible=icon]:hidden">Help & Support</span>
           </button>
@@ -111,7 +172,7 @@ export default function AppSidebar() {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <HelpDrawer open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <HelpDrawer open={helpOpen} onClose={function() { setHelpOpen(false); }} />
     </>
   );
 }
