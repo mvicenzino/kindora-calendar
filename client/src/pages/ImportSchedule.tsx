@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,7 @@ export default function ImportSchedule() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { activeFamilyId } = useActiveFamily();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const icalInputRef = useRef<HTMLInputElement>(null);
   
@@ -190,12 +192,13 @@ export default function ImportSchedule() {
 
       const res = await apiRequest("POST", "/api/events/bulk-import", {
         events,
+        familyId: activeFamilyId,
         source: "ai-import"
       });
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/events?familyId=${activeFamilyId}`] });
       if (data.imported === 0) {
         toast({
           title: "No Events Imported",
