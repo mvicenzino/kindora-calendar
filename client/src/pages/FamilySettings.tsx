@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X, Pill, Plus, Pencil, ChevronDown, ChevronUp } from "lucide-react";
+import { Copy, Users, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X, Pill, Plus, Pencil, ChevronDown, ChevronUp, Upload, FileText, Sparkles, CheckCircle2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -47,6 +47,206 @@ interface EmergencyBridgeToken {
   lastAccessedAt: string | null;
   createdAt: string;
   rawToken?: string;
+}
+
+
+function ImportMedicationsDialog({ familyId, members, onImported }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState('source');
+  const [source, setSource] = useState('text');
+  const [inputText, setInputText] = useState('');
+  const [selectedVaultDoc, setSelectedVaultDoc] = useState(null);
+  const [parsedMeds, setParsedMeds] = useState([]);
+  const [selectedMeds, setSelectedMeds] = useState({});
+  const [assignMemberId, setAssignMemberId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const { data: vaultDocs = [] } = useQuery({
+    queryKey: ['/api/care-documents?familyId=' + familyId],
+    enabled: !!familyId && open,
+  });
+
+  const medicalDocs = vaultDocs.filter(d => d.documentType === 'medical' || d.documentType === 'care_plan');
+  const otherDocs = vaultDocs.filter(d => d.documentType !== 'medical' && d.documentType !== 'care_plan');
+  const suggestedDoc = medicalDocs.length > 0 ? medicalDocs[0] : null;
+
+  const resetDialog = () => { setStep('source'); setSource('text'); setInputText(''); setSelectedVaultDoc(null); setParsedMeds([]); setSelectedMeds({}); setAssignMemberId(''); setIsLoading(false); };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target.result.split(',')[1];
+      await parseMedications({ imageBase64: base64, mimeType: file.type });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleVaultDocSelect = async (doc) => {
+    setSelectedVaultDoc(doc);
+    setIsLoading(true);
+    await parseMedications({ text: 'Document title: ' + doc.title + '. File: ' + doc.fileName + '. Description: ' + (doc.description || 'Medical document') + '. Extract any medications listed.' });
+  };
+
+  const parseMedications = async (payload) => {
+    setIsLoading(true);
+    try {
+      const res = await apiRequest('POST', '/api/medications/import-ai', { ...payload, familyId });
+      const data = await res.json();
+      if (data.medications && data.medications.length > 0) {
+        setParsedMeds(data.medications);
+        const allSelected = {};
+        data.medications.forEach((m, i) => { allSelected[i] = true; });
+        setSelectedMeds(allSelected);
+        setStep('preview');
+      } else {
+        toast({ title: "No medications found", description: "Try pasting the list as text for better results.", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Parse failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveMedsMutation = useMutation({
+    mutationFn: async () => {
+      const toSave = parsedMeds.filter((_, i) => selectedMeds[i]);
+      for (const med of toSave) {
+        await apiRequest('POST', '/api/medications', { memberId: assignMemberId, name: med.name, dosage: med.dosage, frequency: med.frequency, scheduledTimes: med.scheduledTimes && med.scheduledTimes.length > 0 ? med.scheduledTimes : null, instructions: med.instructions || null, familyId });
+      }
+      return toSave.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/medications?familyId=' + familyId] });
+      toast({ title: count + " medication" + (count !== 1 ? "s" : "") + " imported", description: "They now appear in the Care dashboard." });
+      setOpen(false);
+      resetDialog();
+      if (onImported) onImported();
+    },
+    onError: (error) => { toast({ title: "Import failed", description: error.message || "Please try again.", variant: "destructive" }); },
+  });
+
+  const selectedCount = Object.values(selectedMeds).filter(Boolean).length;
+
+  return (
+    <>
+      <Button size="sm" variant="outline" onClick={() => { resetDialog(); setOpen(true); }} className="gap-1.5" data-testid="button-import-medications">
+        <Upload className="w-4 h-4" />Import
+      </Button>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { setOpen(false); resetDialog(); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" />Import Medication List</DialogTitle>
+            <DialogDescription>
+              {step === 'source' && "Paste text, upload a file, or use a document from your vault."}
+              {step === 'preview' && "Review the medications found. Uncheck any you don't want to import."}
+              {step === 'assign' && "Choose which family member these medications belong to."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {step === 'source' && (
+            <div className="space-y-4 py-2">
+              {suggestedDoc && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+                  <p className="text-xs font-semibold text-primary mb-2 flex items-center gap-1.5"><Sparkles className="w-3 h-3" />Found in your Document Vault</p>
+                  <button onClick={() => { setSource('vault'); handleVaultDocSelect(suggestedDoc); }} className="w-full flex items-center gap-3 text-left hover:bg-primary/10 rounded-md p-2 transition-colors">
+                    <FileText className="w-8 h-8 text-primary/60 flex-shrink-0" />
+                    <div><p className="text-sm font-medium text-foreground">{suggestedDoc.title}</p><p className="text-xs text-muted-foreground">{suggestedDoc.fileName} — Click to extract medications</p></div>
+                  </button>
+                </div>
+              )}
+              <div className="flex gap-2">
+                {['text', 'file', 'vault'].map((s) => (
+                  <button key={s} onClick={() => setSource(s)} className={"flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-all " + (source === s ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground hover:border-primary/30")}>
+                    {s === 'text' ? 'Paste Text' : s === 'file' ? 'Upload File' : 'From Vault'}
+                  </button>
+                ))}
+              </div>
+              {source === 'text' && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Paste medication list</Label>
+                  <Textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="e.g. Metformin 500mg - twice daily with meals&#10;Lisinopril 10mg - once daily in the morning&#10;Atorvastatin 20mg - once at bedtime" className="text-sm resize-none h-36" />
+                </div>
+              )}
+              {source === 'file' && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Upload medication list (PDF or image)</Label>
+                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/30 transition-colors">
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                    <p className="text-xs text-muted-foreground mb-3">PNG, JPG, PDF supported</p>
+                    <label className="cursor-pointer"><span className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md font-medium">Choose File</span><input type="file" accept="image/*,.pdf" onChange={handleFileUpload} className="hidden" /></label>
+                  </div>
+                  {isLoading && <p className="text-xs text-center text-muted-foreground animate-pulse">Extracting medications...</p>}
+                </div>
+              )}
+              {source === 'vault' && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium">Choose from Document Vault</Label>
+                  {vaultDocs.length === 0 ? (
+                    <p className="text-xs text-muted-foreground py-4 text-center">No documents in vault yet. Upload files in the Documents section.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                      {[...medicalDocs, ...otherDocs].map((doc) => (
+                        <button key={doc.id} onClick={() => handleVaultDocSelect(doc)} className={"w-full flex items-center gap-3 text-left p-2.5 rounded-lg border transition-all " + (selectedVaultDoc && selectedVaultDoc.id === doc.id ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:border-primary/20")}>
+                          <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0"><p className="text-xs font-medium text-foreground truncate">{doc.title}</p><p className="text-xs text-muted-foreground truncate">{doc.fileName}</p></div>
+                          {(doc.documentType === 'medical' || doc.documentType === 'care_plan') && (<Badge variant="outline" className="text-xs flex-shrink-0">Medical</Badge>)}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {isLoading && <p className="text-xs text-center text-muted-foreground animate-pulse">Extracting medications from document...</p>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'preview' && (
+            <div className="space-y-3 py-2">
+              <p className="text-xs text-muted-foreground">{parsedMeds.length} medication{parsedMeds.length !== 1 ? 's' : ''} found. Uncheck any you don't want to import.</p>
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {parsedMeds.map((med, i) => (
+                  <div key={i} className={"flex items-start gap-3 p-3 rounded-lg border transition-all " + (selectedMeds[i] ? "border-primary/30 bg-primary/5" : "border-border bg-muted/30 opacity-50")}>
+                    <input type="checkbox" checked={!!selectedMeds[i]} onChange={(e) => setSelectedMeds(s => ({ ...s, [i]: e.target.checked }))} className="mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap"><p className="text-sm font-semibold text-foreground">{med.name}</p><Badge variant="secondary" className="text-xs">{med.dosage}</Badge></div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{med.frequency}</p>
+                      {med.scheduledTimes && med.scheduledTimes.length > 0 && <p className="text-xs text-primary/70 mt-0.5">{med.scheduledTimes.join(' • ')}</p>}
+                      {med.instructions && <p className="text-xs text-muted-foreground mt-0.5 italic">{med.instructions}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 'assign' && (
+            <div className="space-y-4 py-2">
+              <p className="text-xs text-muted-foreground">Who takes these {selectedCount} medication{selectedCount !== 1 ? 's' : ''}?</p>
+              <div className="space-y-2">
+                {members.map((m) => (
+                  <button key={m.id} onClick={() => setAssignMemberId(m.id)} className={"w-full flex items-center gap-3 p-3 rounded-lg border transition-all " + (assignMemberId === m.id ? "border-primary/40 bg-primary/5" : "border-border bg-card hover:border-primary/20")}>
+                    <Avatar className="h-8 w-8 flex-shrink-0"><AvatarFallback className="text-xs text-white font-semibold" style={{ backgroundColor: m.color }}>{m.name.charAt(0)}</AvatarFallback></Avatar>
+                    <span className="text-sm font-medium text-foreground">{m.name}</span>
+                    {assignMemberId === m.id && <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            {step === 'source' && (<><Button variant="outline" onClick={() => { setOpen(false); resetDialog(); }}>Cancel</Button><Button onClick={() => source === 'text' ? parseMedications({ text: inputText }) : null} disabled={isLoading || (source === 'text' && !inputText.trim())}>{isLoading ? "Extracting..." : "Extract Medications"}</Button></>)}
+            {step === 'preview' && (<><Button variant="outline" onClick={() => setStep('source')}>Back</Button><Button onClick={() => setStep('assign')} disabled={selectedCount === 0}>Assign to Member ({selectedCount})</Button></>)}
+            {step === 'assign' && (<><Button variant="outline" onClick={() => setStep('preview')}>Back</Button><Button onClick={() => saveMedsMutation.mutate()} disabled={!assignMemberId || saveMedsMutation.isPending}>{saveMedsMutation.isPending ? "Importing..." : "Import " + selectedCount + " Medication" + (selectedCount !== 1 ? "s" : "")}</Button></>)}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 
@@ -148,7 +348,12 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
             <CardTitle className="flex items-center gap-2 text-sm"><Pill className="w-4 h-4 text-amber-400" />Medication Schedule</CardTitle>
             <CardDescription className="text-xs mt-1">{isOwnerOrMember ? "Manage medications for family members. Caregivers will log each dose." : "View scheduled medications."}</CardDescription>
           </div>
-          {isOwnerOrMember && (<Button size="sm" onClick={() => { resetForm(); setShowAddDialog(true); }} className="gap-1.5" data-testid="button-add-medication"><Plus className="w-4 h-4" />Add Medication</Button>)}
+          {isOwnerOrMember && (
+            <div className="flex gap-2">
+              <ImportMedicationsDialog familyId={familyId} members={rawMembers} onImported={() => {}} />
+              <Button size="sm" onClick={() => { resetForm(); setShowAddDialog(true); }} className="gap-1.5" data-testid="button-add-medication"><Plus className="w-4 h-4" />Add Medication</Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>

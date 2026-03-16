@@ -1943,6 +1943,48 @@ Visit Kindora Calendar: ${joinUrl}
 
   // Medication Routes (protected) - Medication tracking for caregivers
   // Get all medications for a family
+
+  app.post("/api/medications/import-ai", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) return res.status(400).json({ error: "No family found" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ error: "Not a family member" });
+      if (!hasPermission({ userId, familyId, role }, 'canManageMedications')) {
+        return res.status(403).json({ error: "No permission to manage medications" });
+      }
+      const { text, imageBase64, mimeType } = req.body;
+      if (!text && !imageBase64) return res.status(400).json({ error: "Provide text or imageBase64" });
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY });
+      const prompt = "You are a medication extraction assistant. Extract all medications from the provided content. For each medication return a JSON object with: name (string, required), dosage (string, required), frequency (string, required), scheduledTimes (array of strings, can be empty), instructions (string or null). Respond ONLY with a valid JSON array. If no medications found return [].";
+
+      let response;
+      if (imageBase64) {
+        response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [{ inlineData: { mimeType: mimeType || "image/jpeg", data: imageBase64 } }, { text: prompt }] }],
+        });
+      } else {
+        response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: prompt + "\n\nContent:\n" + text,
+        });
+      }
+
+      const responseText = response.text || "";
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) return res.json({ medications: [], count: 0 });
+      const medications = JSON.parse(jsonMatch[0]);
+      res.json({ medications, count: medications.length });
+    } catch (error) {
+      console.error("Error parsing medications:", error);
+      res.status(500).json({ error: "Failed to parse medications" });
+    }
+  });
+
   app.get("/api/medications", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
