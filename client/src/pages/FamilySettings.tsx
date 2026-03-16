@@ -9,9 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X } from "lucide-react";
+import { Copy, Users, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X, Pill, Plus, Pencil, ChevronDown, ChevronUp } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface Family {
@@ -43,6 +47,187 @@ interface EmergencyBridgeToken {
   lastAccessedAt: string | null;
   createdAt: string;
   rawToken?: string;
+}
+
+
+function MedicationManager({ familyId, isOwnerOrMember }) {
+  const { toast } = useToast();
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingMed, setEditingMed] = useState(null);
+  const [expandedMember, setExpandedMember] = useState(null);
+  const [medForm, setMedForm] = useState({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
+
+  const { data: rawMembers = [] } = useQuery({ queryKey: ['/api/family-members', familyId], enabled: !!familyId });
+  const { data: medications = [] } = useQuery({ queryKey: ['/api/medications?familyId=' + familyId], enabled: !!familyId });
+
+  const resetForm = () => setMedForm({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
+
+  const createMedMutation = useMutation({
+    mutationFn: async (data) => {
+      const times = data.scheduledTimes ? data.scheduledTimes.split(',').map(t => t.trim()).filter(Boolean) : [];
+      const res = await apiRequest('POST', '/api/medications', { memberId: data.memberId, name: data.name.trim(), dosage: data.dosage.trim(), frequency: data.frequency.trim(), instructions: data.instructions.trim() || null, scheduledTimes: times.length > 0 ? times : null, familyId });
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/medications?familyId=' + familyId] }); setShowAddDialog(false); resetForm(); toast({ title: "Medication added", description: "Caregivers can now log this medication." }); },
+    onError: (error) => { toast({ title: "Could not add medication", description: error.message || "Please try again.", variant: "destructive" }); },
+  });
+
+  const updateMedMutation = useMutation({
+    mutationFn: async (data) => {
+      const times = data.scheduledTimes ? data.scheduledTimes.split(',').map(t => t.trim()).filter(Boolean) : [];
+      const res = await apiRequest('PATCH', '/api/medications/' + data.id + '?familyId=' + familyId, { name: data.name.trim(), dosage: data.dosage.trim(), frequency: data.frequency.trim(), instructions: data.instructions.trim() || null, scheduledTimes: times.length > 0 ? times : null });
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/medications?familyId=' + familyId] }); setEditingMed(null); resetForm(); toast({ title: "Medication updated" }); },
+    onError: (error) => { toast({ title: "Could not update", description: error.message || "Please try again.", variant: "destructive" }); },
+  });
+
+  const deleteMedMutation = useMutation({
+    mutationFn: async (medId) => { await apiRequest('DELETE', '/api/medications/' + medId + '?familyId=' + familyId); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/medications?familyId=' + familyId] }); toast({ title: "Medication removed" }); },
+    onError: (error) => { toast({ title: "Could not remove", description: error.message, variant: "destructive" }); },
+  });
+
+  const openEdit = (med) => { setEditingMed(med); setMedForm({ memberId: med.memberId, name: med.name, dosage: med.dosage, frequency: med.frequency, instructions: med.instructions || "", scheduledTimes: med.scheduledTimes ? med.scheduledTimes.join(', ') : "" }); };
+  const medsByMember = rawMembers.reduce((acc, member) => { acc[member.id] = medications.filter(m => m.memberId === member.id && m.isActive); return acc; }, {});
+  const membersWithMeds = rawMembers.filter(m => (medsByMember[m.id] || []).length > 0);
+  const isFormValid = medForm.memberId && medForm.name.trim() && medForm.dosage.trim() && medForm.frequency;
+
+  const MedFormFields = () => (
+    <div className="space-y-4 py-2">
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Family Member *</Label>
+        <Select value={medForm.memberId} onValueChange={(v) => setMedForm(f => ({ ...f, memberId: v }))}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Who takes this medication?" /></SelectTrigger>
+          <SelectContent>
+            {rawMembers.map((m) => (<SelectItem key={m.id} value={m.id}><div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full" style={{ backgroundColor: m.color }} />{m.name}</div></SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Medication Name *</Label>
+          <Input value={medForm.name} onChange={(e) => setMedForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Metformin" className="h-8 text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">Dosage *</Label>
+          <Input value={medForm.dosage} onChange={(e) => setMedForm(f => ({ ...f, dosage: e.target.value }))} placeholder="e.g. 500mg" className="h-8 text-sm" />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Frequency *</Label>
+        <Select value={medForm.frequency} onValueChange={(v) => setMedForm(f => ({ ...f, frequency: v }))}>
+          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="How often?" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Once daily">Once daily</SelectItem>
+            <SelectItem value="Twice daily">Twice daily</SelectItem>
+            <SelectItem value="Three times daily">Three times daily</SelectItem>
+            <SelectItem value="Every 8 hours">Every 8 hours</SelectItem>
+            <SelectItem value="Every 12 hours">Every 12 hours</SelectItem>
+            <SelectItem value="As needed">As needed (PRN)</SelectItem>
+            <SelectItem value="Weekly">Weekly</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Scheduled Times <span className="text-muted-foreground font-normal">(optional, comma-separated)</span></Label>
+        <Input value={medForm.scheduledTimes} onChange={(e) => setMedForm(f => ({ ...f, scheduledTimes: e.target.value }))} placeholder="e.g. 8:00 AM, 8:00 PM" className="h-8 text-sm" />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-medium">Special Instructions <span className="text-muted-foreground font-normal">(optional)</span></Label>
+        <Textarea value={medForm.instructions} onChange={(e) => setMedForm(f => ({ ...f, instructions: e.target.value }))} placeholder="e.g. Take with food, avoid grapefruit..." className="text-sm resize-none" rows={2} />
+      </div>
+    </div>
+  );
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-sm"><Pill className="w-4 h-4 text-amber-400" />Medication Schedule</CardTitle>
+            <CardDescription className="text-xs mt-1">{isOwnerOrMember ? "Manage medications for family members. Caregivers will log each dose." : "View scheduled medications."}</CardDescription>
+          </div>
+          {isOwnerOrMember && (<Button size="sm" onClick={() => { resetForm(); setShowAddDialog(true); }} className="gap-1.5" data-testid="button-add-medication"><Plus className="w-4 h-4" />Add Medication</Button>)}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {medications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <Pill className="w-10 h-10 mb-3 opacity-30" />
+            <p className="text-sm font-medium">No medications added yet</p>
+            <p className="text-xs mt-1 text-center max-w-xs">{isOwnerOrMember ? "Add medications so caregivers can log each dose." : "Family owners can add medications here."}</p>
+            {isOwnerOrMember && (<Button size="sm" variant="outline" className="mt-4 gap-1.5" onClick={() => { resetForm(); setShowAddDialog(true); }}><Plus className="w-4 h-4" />Add First Medication</Button>)}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {membersWithMeds.map((member) => {
+              const meds = medsByMember[member.id] || [];
+              return (
+                <div key={member.id} className="rounded-lg border border-border overflow-hidden">
+                  <button onClick={() => setExpandedMember(expandedMember === member.id ? null : member.id)} className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-center gap-2.5">
+                      <Avatar className="h-7 w-7"><AvatarFallback className="text-xs text-white font-semibold" style={{ backgroundColor: member.color }}>{member.name.charAt(0)}</AvatarFallback></Avatar>
+                      <span className="text-sm font-medium text-foreground">{member.name}</span>
+                      <Badge variant="outline" className="text-xs">{meds.length} med{meds.length !== 1 ? 's' : ''}</Badge>
+                    </div>
+                    {expandedMember === member.id ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                  </button>
+                  {(expandedMember === member.id || expandedMember === null) && (
+                    <div className="divide-y divide-border">
+                      {meds.map((med) => (
+                        <div key={med.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-semibold text-foreground">{med.name}</p>
+                              <Badge variant="secondary" className="text-xs">{med.dosage}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{med.frequency}</p>
+                            {med.scheduledTimes && med.scheduledTimes.length > 0 && (
+                              <div className="flex gap-1 mt-1.5 flex-wrap">
+                                {med.scheduledTimes.map((t, i) => (<span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">{t}</span>))}
+                              </div>
+                            )}
+                            {med.instructions && <p className="text-xs text-muted-foreground mt-1 italic">{med.instructions}</p>}
+                          </div>
+                          {isOwnerOrMember && (
+                            <div className="flex gap-1.5 flex-shrink-0">
+                              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => openEdit(med)}><Pencil className="h-3.5 w-3.5" /></Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild><Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button></AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader><AlertDialogTitle>Remove {med.name}?</AlertDialogTitle><AlertDialogDescription>This removes the medication from the schedule. Existing logs are kept.</AlertDialogDescription></AlertDialogHeader>
+                                  <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteMedMutation.mutate(med.id)} className="bg-destructive text-destructive-foreground">Remove</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Pill className="h-4 w-4" />Add Medication</DialogTitle><DialogDescription>Add a medication to a family member's schedule.</DialogDescription></DialogHeader>
+          <MedFormFields />
+          <DialogFooter><Button variant="outline" onClick={() => { setShowAddDialog(false); resetForm(); }}>Cancel</Button><Button onClick={() => createMedMutation.mutate(medForm)} disabled={createMedMutation.isPending || !isFormValid}>{createMedMutation.isPending ? "Adding..." : "Add Medication"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!editingMed} onOpenChange={(v) => { if (!v) { setEditingMed(null); resetForm(); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><Pencil className="h-4 w-4" />Edit Medication</DialogTitle><DialogDescription>Update the medication details.</DialogDescription></DialogHeader>
+          <MedFormFields />
+          <DialogFooter><Button variant="outline" onClick={() => { setEditingMed(null); resetForm(); }}>Cancel</Button><Button onClick={() => editingMed && updateMedMutation.mutate({ ...medForm, id: editingMed.id })} disabled={updateMedMutation.isPending || !isFormValid}>{updateMedMutation.isPending ? "Saving..." : "Save Changes"}</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
 }
 
 export default function FamilySettings() {
@@ -457,6 +642,7 @@ export default function FamilySettings() {
 
   return (
     <div className="space-y-6">
+        {activeFamilyId && (<MedicationManager familyId={activeFamilyId} isOwnerOrMember={!!isOwnerOrMember} />)}
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
