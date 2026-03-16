@@ -87,7 +87,7 @@ function ImportMedicationsDialog({ familyId, members, onImported }) {
   const handleVaultDocSelect = async (doc) => {
     setSelectedVaultDoc(doc);
     setIsLoading(true);
-    await parseMedications({ text: 'Document title: ' + doc.title + '. File: ' + doc.fileName + '. Description: ' + (doc.description || 'Medical document') + '. Extract any medications listed.' });
+    await parseMedications({ documentId: doc.id });
   };
 
   const parseMedications = async (payload) => {

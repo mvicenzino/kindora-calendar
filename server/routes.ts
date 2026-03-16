@@ -1954,23 +1954,44 @@ Visit Kindora Calendar: ${joinUrl}
       if (!hasPermission({ userId, familyId, role }, 'canManageMedications')) {
         return res.status(403).json({ error: "No permission to manage medications" });
       }
-      const { text, imageBase64, mimeType } = req.body;
-      if (!text && !imageBase64) return res.status(400).json({ error: "Provide text or imageBase64" });
+      const { text, imageBase64, mimeType, documentId } = req.body;
+      if (!text && !imageBase64 && !documentId) return res.status(400).json({ error: "Provide text, imageBase64, or documentId" });
+
+      // If documentId provided, fetch the actual file from object storage
+      let finalImageBase64 = imageBase64;
+      let finalMimeType = mimeType;
+      let finalText = text;
+
+      if (documentId) {
+        try {
+          const doc = await storage.getCareDocument(documentId, familyId);
+          if (!doc) return res.status(404).json({ error: "Document not found" });
+
+          const objectStorageService = new ObjectStorageService();
+          const file = await objectStorageService.getObjectEntityFile(doc.fileUrl);
+          const [buffer] = await file.download();
+          finalImageBase64 = buffer.toString('base64');
+          finalMimeType = doc.mimeType || 'application/pdf';
+        } catch (err: any) {
+          console.error("Error fetching vault document:", err.message);
+          return res.status(500).json({ error: "Could not read document from vault" });
+        }
+      }
 
       const { GoogleGenAI } = await import("@google/genai");
       const ai = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY });
       const prompt = "You are a medication extraction assistant. Extract all medications from the provided content. For each medication return a JSON object with: name (string, required), dosage (string, required), frequency (string, required), scheduledTimes (array of strings, can be empty), instructions (string or null). Respond ONLY with a valid JSON array. If no medications found return [].";
 
       let response;
-      if (imageBase64) {
+      if (finalImageBase64) {
         response = await ai.models.generateContent({
           model: "gemini-2.5-flash",
-          contents: [{ role: "user", parts: [{ inlineData: { mimeType: mimeType || "image/jpeg", data: imageBase64 } }, { text: prompt }] }],
+          contents: [{ role: "user", parts: [{ inlineData: { mimeType: finalMimeType || "image/jpeg", data: finalImageBase64 } }, { text: prompt }] }],
         });
       } else {
         response = await ai.models.generateContent({
           model: "gemini-2.5-flash",
-          contents: prompt + "\n\nContent:\n" + text,
+          contents: prompt + "\n\nContent:\n" + finalText,
         });
       }
 
