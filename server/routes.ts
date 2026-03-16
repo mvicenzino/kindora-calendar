@@ -304,6 +304,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  app.patch("/api/auth/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { firstName, lastName } = req.body;
+      if (!firstName || !firstName.trim()) {
+        return res.status(400).json({ message: "First name is required" });
+      }
+      const cleanFirst = firstName.trim().replace(/[<>]/g, '');
+      const cleanLast = lastName ? lastName.trim().replace(/[<>]/g, '') : null;
+      const updated = await storage.upsertUser({ id: userId, firstName: cleanFirst, lastName: cleanLast });
+      const { passwordHash, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // Family Routes (protected)
   app.get("/api/family", isAuthenticated, async (req: any, res) => {
     try {

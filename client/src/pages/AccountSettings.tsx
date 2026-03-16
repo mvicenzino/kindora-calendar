@@ -5,10 +5,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock } from "lucide-react";
+import { Check, Crown, User, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock } from "lucide-react";
 import { useCalendarTextSize, TEXT_SCALE_LABELS, TEXT_SCALE_SIZES } from "@/hooks/useCalendarTextSize";
 import type { CalendarTextScale } from "@/hooks/useCalendarTextSize";
 import { Slider } from "@/components/ui/slider";
@@ -137,8 +139,56 @@ function AccountTab() {
   const isFamily = sub?.tier === "family";
   const isCanceling = sub?.status === "canceling";
 
+  const [firstName, setFirstName] = useState(user?.firstName || "");
+  const [lastName, setLastName] = useState(user?.lastName || "");
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("PATCH", "/api/auth/user", { firstName, lastName });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setProfileSaved(true);
+      setTimeout(() => setProfileSaved(false), 3000);
+      toast({ title: "Profile updated", description: "Your name has been saved." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Could not update profile", description: error.message || "Please try again.", variant: "destructive" });
+    },
+  });
+
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Your Profile
+          </CardTitle>
+          <CardDescription className="text-xs">Update your display name</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">First Name</Label>
+              <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First name" className="h-8 text-sm" data-testid="input-first-name" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Last Name</Label>
+              <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last name" className="h-8 text-sm" data-testid="input-last-name" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => updateProfileMutation.mutate()} disabled={updateProfileMutation.isPending || !firstName.trim()} data-testid="button-save-profile">
+              {updateProfileMutation.isPending ? "Saving..." : profileSaved ? "Saved!" : "Save Name"}
+            </Button>
+            {profileSaved && <span className="text-xs text-emerald-400">Changes saved</span>}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
