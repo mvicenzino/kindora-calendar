@@ -115,7 +115,7 @@ function ImportMedicationsDialog({ familyId, members, onImported }) {
     mutationFn: async () => {
       const toSave = parsedMeds.filter((_, i) => selectedMeds[i]);
       for (const med of toSave) {
-        await apiRequest('POST', '/api/medications', { memberId: assignMemberId, name: med.name, dosage: med.dosage, frequency: med.frequency, scheduledTimes: med.scheduledTimes && med.scheduledTimes.length > 0 ? med.scheduledTimes : null, instructions: med.instructions || null, familyId });
+        await apiRequest('POST', '/api/medications', { memberId: assignMemberId, name: med.name, dosage: med.dosage, frequency: med.frequency, scheduledTimes: (med.scheduledTimes && med.scheduledTimes.length > 0) ? med.scheduledTimes : [], instructions: med.instructions || null, familyId });
       }
       return toSave.length;
     },
