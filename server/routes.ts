@@ -1978,25 +1978,30 @@ Visit Kindora Calendar: ${joinUrl}
         }
       }
 
-      const { GoogleGenAI } = await import("@google/genai");
-      const ai = new GoogleGenAI({ apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY });
-      const prompt = "You are a medication extraction assistant. Extract all medications from the provided content. For each medication return a JSON object with: name (string, required), dosage (string, required), frequency (string, required), scheduledTimes (array of strings, can be empty), instructions (string or null). Respond ONLY with a valid JSON array. If no medications found return [].";
-
-      let response;
+      const prompt = "You are a medication extraction assistant. Extract all medications from the provided content. Return ONLY a valid JSON array of objects with fields: name, dosage, frequency, scheduledTimes (array), instructions (string or null). No markdown, no explanation. Return [] if none found.";
+      let responseText = "";
       if (finalImageBase64) {
-        response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [{ role: "user", parts: [{ inlineData: { mimeType: finalMimeType || "image/jpeg", data: finalImageBase64 } }, { text: prompt }] }],
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: [
+            { type: "image_url", image_url: { url: "data:" + (finalMimeType || "image/jpeg") + ";base64," + finalImageBase64 } },
+            { type: "text", text: prompt }
+          ]}],
+          max_tokens: 1000,
         });
+        responseText = completion.choices[0]?.message?.content || "";
       } else {
-        response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [{ role: "user", parts: [{ text: prompt + "\n\nContent to parse:\n" + finalText }] }],
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: prompt },
+            { role: "user", content: finalText || "" }
+          ],
+          max_tokens: 1000,
         });
+        responseText = completion.choices[0]?.message?.content || "";
       }
-
-      console.log("[MedImport] Gemini response:", JSON.stringify(response).slice(0, 500));
-      const responseText = response.text || "";
+      console.log("[MedImport] AI response:", responseText.slice(0, 300));
       const jsonMatch = responseText.match(/\[[\s\S]*\]/);
       if (!jsonMatch) return res.json({ medications: [], count: 0 });
       const medications = JSON.parse(jsonMatch[0]);
