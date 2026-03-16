@@ -138,7 +138,7 @@ export default function CaregiverDashboard() {
   
   const isDemoMode = user?.id?.startsWith('demo-');
   
-  const showTimeTracking = isCaregiver || isDemoMode || true;
+  const showTimeTracking = true; // keep true for beta — BETA_MODE handles gating
   
   const { data: payRate } = useQuery<CaregiverPayRate | null>({
     queryKey: ['/api/caregiver/pay-rate?familyId=' + activeFamilyId],
@@ -413,6 +413,66 @@ export default function CaregiverDashboard() {
           </div>
         )}
 
+
+        {/* CAREGIVER HERO: Log Hours — shown first for caregivers */}
+        {isCaregiver && (
+          <div className='rounded-xl border border-primary/30 bg-primary/5 p-4'>
+            <div className='flex items-center justify-between gap-4 flex-wrap'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-widest text-primary/70 mb-1'>Your Shift</p>
+                <p className='text-sm text-foreground font-medium'>Log your hours for today</p>
+                {payRate && <p className='text-xs text-muted-foreground mt-0.5'>Rate: {formatCurrency(parseFloat(payRate.hourlyRate))}/hr</p>}
+              </div>
+              <div className='flex gap-2 flex-wrap'>
+                {!payRate && (
+                  <Button variant='outline' size='sm' className='gap-1.5' onClick={() => setShowPayRateDialog(true)} data-testid='button-set-pay-rate-hero'>
+                    <DollarSign className='h-4 w-4' />Set My Rate
+                  </Button>
+                )}
+                <Button className='gap-2 bg-primary' disabled={!payRate} onClick={() => setShowLogHoursDialog(true)} data-testid='button-log-hours-hero'>
+                  <Clock className='h-4 w-4' />Log Hours
+                </Button>
+              </div>
+            </div>
+            {payRate && (
+              <div className='grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-primary/20'>
+                <div><p className='text-xs text-muted-foreground'>This Week</p><p className='text-lg font-bold text-foreground'>{weeklyHours.toFixed(1)}h</p></div>
+                <div><p className='text-xs text-muted-foreground'>Weekly Earnings</p><p className='text-lg font-bold text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* OWNER ACCOUNTABILITY: shown to owners/parents */}
+        {!isCaregiver && payRate && (
+          <div className='rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4'>
+            <div className='flex items-center justify-between gap-4 flex-wrap'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-widest text-emerald-400/70 mb-1'>Caregiver Summary</p>
+                <p className='text-sm text-foreground font-medium'>
+                  {timeEntries[0] ? 'Last logged: ' + format(new Date(timeEntries[0].entryDate), 'MMM d') + ' — ' + parseFloat(timeEntries[0].hoursWorked).toFixed(1) + 'h' : 'No hours logged yet'}
+                </p>
+                {timeEntries[0]?.notes && <p className='text-xs text-muted-foreground mt-1 italic'>'{timeEntries[0].notes}'</p>}
+              </div>
+              <div className='flex gap-4 text-right'>
+                <div><p className='text-xs text-muted-foreground'>This Week</p><p className='text-base font-bold text-foreground'>{weeklyHours.toFixed(1)}h</p><p className='text-xs text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* OWNER: Set pay rate prompt */}
+        {!isCaregiver && !payRate && (
+          <div className='rounded-xl border border-border bg-muted/30 p-4 flex items-center justify-between gap-4'>
+            <div>
+              <p className='text-sm font-medium text-foreground'>Track caregiver hours and pay</p>
+              <p className='text-xs text-muted-foreground mt-0.5'>Set a pay rate to start tracking your caregiver's time and earnings.</p>
+            </div>
+            <Button size='sm' variant='outline' className='gap-1.5 flex-shrink-0' onClick={() => setShowPayRateDialog(true)} data-testid='button-set-pay-rate-owner'>
+              <DollarSign className='h-4 w-4' />Set Rate
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card data-testid="card-stat-events">
             <CardContent className="p-3">
@@ -716,15 +776,17 @@ export default function CaregiverDashboard() {
         </Card>
 
         {showTimeTracking && <Card data-testid="card-time-tracking">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2">
-              <Timer className="h-4 w-4" />
-              Time Tracking
-            </CardTitle>
-            <CardDescription>
-              Log your hours and track pay
-            </CardDescription>
-            <div className="flex gap-2 pt-1">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="h-4 w-4" />
+                Time Tracking
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Log your hours and track pay
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
               <Dialog open={showPayRateDialog} onOpenChange={setShowPayRateDialog}>
                 <DialogTrigger asChild>
                   <Button 
