@@ -1991,7 +1991,7 @@ Visit Kindora Calendar: ${joinUrl}
       } else {
         response = await ai.models.generateContent({
           model: "gemini-2.5-flash",
-          contents: prompt + "\n\nContent:\n" + finalText,
+          contents: [{ role: "user", parts: [{ text: prompt + "\n\nContent to parse:\n" + finalText }] }],
         });
       }
 
