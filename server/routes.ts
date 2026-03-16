@@ -7,6 +7,7 @@ import { registerAdvisorRoutes } from "./advisorRoutes";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { requireFamily, requireCare } from "./tierMiddleware";
 import { setupGoogleAuth } from "./googleAuth";
 import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
@@ -1917,7 +1918,7 @@ Visit Kindora Calendar: ${joinUrl}
 
   // Medication Routes (protected) - Medication tracking for caregivers
   // Get all medications for a family
-  app.get("/api/medications", isAuthenticated, async (req: any, res) => {
+  app.get("/api/medications", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -1998,7 +1999,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Create a medication (owners and members only)
-  app.post("/api/medications", isAuthenticated, async (req: any, res) => {
+  app.post("/api/medications", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2431,7 +2432,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Get user's time entries
-  app.get("/api/caregiver/time-entries", isAuthenticated, async (req: any, res) => {
+  app.get("/api/caregiver/time-entries", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2454,7 +2455,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Create a new time entry
-  app.post("/api/caregiver/time-entries", isAuthenticated, async (req: any, res) => {
+  app.post("/api/caregiver/time-entries", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3028,7 +3029,7 @@ Visit Kindora Calendar: ${joinUrl}
   // ========== Care Documents Routes ==========
   
   // Get all care documents for a family
-  app.get("/api/care-documents", isAuthenticated, async (req: any, res) => {
+  app.get("/api/care-documents", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3132,7 +3133,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
   
   // Create a care document record after upload
-  app.post("/api/care-documents", isAuthenticated, async (req: any, res) => {
+  app.post("/api/care-documents", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3388,7 +3389,7 @@ Visit Kindora Calendar: ${joinUrl}
   // ========================================
   
   // Get emergency bridge tokens for a family (authenticated)
-  app.get("/api/emergency-bridge/tokens", isAuthenticated, async (req: any, res) => {
+  app.get("/api/emergency-bridge/tokens", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3415,7 +3416,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
   
   // Create an emergency bridge token (authenticated)
-  app.post("/api/emergency-bridge/tokens", isAuthenticated, async (req: any, res) => {
+  app.post("/api/emergency-bridge/tokens", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -4101,7 +4102,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // NLP Calendar Ask — answers natural language questions about the family's events
-  app.post("/api/calendar/ask", isAuthenticated, async (req: any, res) => {
+  app.post("/api/calendar/ask", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { question, familyId: bodyFamilyId, localNow, tzOffsetMinutes } = req.body;

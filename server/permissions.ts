@@ -7,16 +7,12 @@ export interface PermissionContext {
   role: FamilyRole;
 }
 
-const API_KEY_USER_ID = '21601610';
 
 export async function getUserFamilyRole(
   storage: IStorage,
   userId: string,
   familyId: string
 ): Promise<FamilyRole | null> {
-  if (userId === API_KEY_USER_ID) {
-    return 'owner' as FamilyRole;
-  }
 
   const membership = await storage.getUserFamilyMembership(userId, familyId);
 
