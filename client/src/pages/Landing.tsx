@@ -141,8 +141,8 @@ export default function Landing() {
   const isPending = loginMutation.isPending || registerMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="dark sticky top-0 z-50 w-full backdrop-blur-xl bg-gray-950/85 border-b border-white/10">
+    <div className="dark min-h-screen bg-background">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-gray-950/85 border-b border-white/10">
         <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-4 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <img src={logo} alt="Kindora" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
