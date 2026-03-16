@@ -145,6 +145,7 @@ export default function Home() {
   const { data: rawEvents = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events?familyId=' + activeFamilyId],
     enabled: isAuthenticated && !!activeFamilyId,
+    refetchOnMount: 'always',
   });
 
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
