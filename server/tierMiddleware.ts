@@ -9,6 +9,8 @@ const TIER_RANK: Record<SubscriptionTier, number> = {
   care: 2,
 };
 
+const BETA_MODE = process.env.BETA_MODE === "true";
+
 async function getUserTier(userId: string): Promise<SubscriptionTier> {
   const user = await storage.getUser(userId);
   const tier = (user?.subscriptionTier as SubscriptionTier) || "free";
@@ -17,6 +19,8 @@ async function getUserTier(userId: string): Promise<SubscriptionTier> {
 
 function requireTier(minimumTier: SubscriptionTier): RequestHandler {
   return async (req: any, res, next) => {
+    if (BETA_MODE) return next();
+
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
