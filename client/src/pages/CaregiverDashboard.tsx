@@ -200,6 +200,9 @@ export default function CaregiverDashboard() {
   );
 
   const [recentlyLoggedMedId, setRecentlyLoggedMedId] = useState<string | null>(null);
+  const [logDialogMed, setLogDialogMed] = useState<{ id: string; name: string; dosage: string } | null>(null);
+  const [logNotes, setLogNotes] = useState('');
+  const [logStatus, setLogStatus] = useState('given');
 
   const logMedicationMutation = useMutation({
     mutationFn: async ({ medicationId, status, notes, medicationName }: { medicationId: string; status: string; notes?: string; medicationName?: string }) => {
@@ -636,8 +639,7 @@ export default function CaregiverDashboard() {
                                   <Button
                                     size="sm"
                                     className="bg-green-500/20 text-green-300 border border-green-500/30 min-h-[44px]"
-                                    onClick={() => logMedicationMutation.mutate({ medicationId: med.id, status: 'given', medicationName: med.name })}
-                                    disabled={logMedicationMutation.isPending}
+                                    onClick={() => { setLogDialogMed({ id: med.id, name: med.name, dosage: med.dosage }); setLogNotes(''); setLogStatus('given'); }}
                                     data-testid={`button-log-med-${med.id}`}
                                   >
                                     <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -1087,6 +1089,70 @@ export default function CaregiverDashboard() {
           </CardContent>
         </Card>}
       </div>
+    {/* Log Medication Dialog */}
+    {logDialogMed && (
+      <Dialog open={!!logDialogMed} onOpenChange={(v) => { if (!v) setLogDialogMed(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pill className="h-4 w-4 text-amber-400" />
+              Log Dose
+            </DialogTitle>
+            <DialogDescription>
+              {logDialogMed.name} — {logDialogMed.dosage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Status</Label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'given', label: 'Given', color: 'bg-green-500/20 text-green-300 border-green-500/30' },
+                  { value: 'skipped', label: 'Skipped', color: 'bg-muted text-muted-foreground border-border' },
+                  { value: 'refused', label: 'Refused', color: 'bg-red-500/20 text-red-300 border-red-500/30' },
+                ].map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => setLogStatus(s.value)}
+                    className={"flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-all " + (logStatus === s.value ? s.color + " ring-2 ring-offset-1 ring-offset-background ring-current" : "bg-card border-border text-muted-foreground")}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea
+                value={logNotes}
+                onChange={(e) => setLogNotes(e.target.value)}
+                placeholder="Any issues, observations, or comments about this dose..."
+                className="resize-none text-sm"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLogDialogMed(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                logMedicationMutation.mutate({
+                  medicationId: logDialogMed.id,
+                  status: logStatus,
+                  notes: logNotes.trim() || undefined,
+                  medicationName: logDialogMed.name,
+                });
+                setLogDialogMed(null);
+              }}
+              disabled={logMedicationMutation.isPending}
+              className={logStatus === 'given' ? 'bg-green-600 hover:bg-green-700' : logStatus === 'refused' ? 'bg-destructive' : ''}
+            >
+              Confirm {logStatus === 'given' ? 'Given' : logStatus === 'skipped' ? 'Skipped' : 'Refused'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
     </div>
   );
 }
