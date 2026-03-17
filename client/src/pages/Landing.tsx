@@ -24,6 +24,17 @@ export default function Landing() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
 
+  // Force dark mode on html element while on the landing page so all
+  // CSS variables (inputs, buttons, etc.) resolve correctly regardless of user theme preference.
+  useEffect(() => {
+    const html = document.documentElement;
+    const hadDark = html.classList.contains('dark');
+    html.classList.add('dark');
+    return () => {
+      if (!hadDark) html.classList.remove('dark');
+    };
+  }, []);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('invite');
