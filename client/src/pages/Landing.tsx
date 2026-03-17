@@ -588,24 +588,28 @@ export default function Landing() {
 
           {/* Bottom row: AI Import + Kira */}
           <div className="grid md:grid-cols-2 gap-6">
-            {/* AI Schedule Import */}
+            {/* AI Data Import */}
             <div className="bg-card border border-border rounded-xl p-6 hover-elevate relative overflow-hidden" data-testid="card-ai-import">
               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-primary/8 to-transparent rounded-bl-full pointer-events-none" />
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-orange-600 shadow-lg w-fit mb-4">
                 <Wand2 className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-2">AI Schedule Import</h3>
+              <h3 className="text-lg font-bold text-foreground mb-2">AI Data Import</h3>
               <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Paste a school newsletter, doctor's discharge summary, or activity email. Kindora's AI reads it and creates calendar events automatically — no manual entry.
+                Paste medication lists, children's activity schedules, school newsletters, or discharge summaries. Kindora's AI parses the data and automatically places each item on the relevant dates — no manual entry.
               </p>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2 text-sm text-muted-foreground">
                   <Check className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                  <span>Extracts every date, time, location, and recurrence pattern</span>
+                  <span>Medications, kids' schedules, appointments, and more</span>
                 </li>
                 <li className="flex items-start gap-2 text-sm text-muted-foreground">
                   <Check className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                  <span>Review and confirm before anything is added to the calendar</span>
+                  <span>AI maps each item to the right date automatically</span>
+                </li>
+                <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                  <Check className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                  <span>Review and confirm before anything is saved</span>
                 </li>
               </ul>
             </div>
