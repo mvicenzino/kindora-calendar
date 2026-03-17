@@ -20,7 +20,9 @@ import {
   Pill,
   ClipboardList,
   MessageSquare,
-  Loader2
+  Loader2,
+  Expand,
+  X
 } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 
@@ -33,6 +35,7 @@ export default function DemoWelcome() {
   const [persona, setPersona] = useState<Persona>("family");
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [videoExpanded, setVideoExpanded] = useState(false);
 
   // Check if we have a demo token in the URL (fallback for when cookies don't work)
   useEffect(() => {
@@ -132,6 +135,32 @@ export default function DemoWelcome() {
         </div>
       </header>
 
+      {/* Video Lightbox */}
+      {videoExpanded && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setVideoExpanded(false)}
+        >
+          <button
+            onClick={() => setVideoExpanded(false)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            data-testid="button-video-close"
+            aria-label="Close video"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <video
+            src={heroVideo}
+            autoPlay
+            loop
+            controls
+            playsInline
+            className="max-w-[90vw] max-h-[85vh] rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[90vh] flex items-center">
         {/* Full-width Video Background */}
@@ -147,6 +176,17 @@ export default function DemoWelcome() {
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/70 to-slate-900/80" />
           <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-transparent to-teal-500/20" />
         </div>
+
+        {/* Expand video button */}
+        <button
+          onClick={() => setVideoExpanded(true)}
+          className="absolute bottom-5 right-5 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white/80 hover:text-white text-sm font-medium transition-all"
+          data-testid="button-video-expand"
+          aria-label="Expand video"
+        >
+          <Expand className="w-4 h-4" />
+          <span>Watch video</span>
+        </button>
 
         {/* Content */}
         <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
