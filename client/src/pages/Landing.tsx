@@ -207,7 +207,7 @@ export default function Landing() {
 
       {/* Auth Modal Overlay */}
       {authMode !== "none" && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="dark fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setAuthMode("none")} />
           <div className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl p-6 sm:p-8" data-testid="auth-modal">
             <button
@@ -302,7 +302,7 @@ export default function Landing() {
               <Button
                 type="submit"
                 disabled={isPending}
-                className="w-full"
+                className="w-full text-white"
                 data-testid="button-submit-auth"
               >
                 {isPending ? "Please wait..." : authMode === "login" ? "Sign In" : "Create Account"}
