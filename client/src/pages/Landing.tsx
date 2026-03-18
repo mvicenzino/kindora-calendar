@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink, Expand } from "lucide-react";
 import heroVideo from "@assets/generated_videos/kindora_family_hero_smooth.mp4";
+import promoVideo from "@assets/generated_videos/chaotic_to_calm_family_transformation.mp4";
 
 const logo = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
@@ -389,7 +390,7 @@ export default function Landing() {
             <X className="w-6 h-6" />
           </button>
           <video
-            src={heroVideo}
+            src={promoVideo}
             autoPlay
             loop
             controls
@@ -423,7 +424,7 @@ export default function Landing() {
           aria-label="Watch video in full screen"
         >
           <Expand className="w-4 h-4" />
-          <span>Watch video</span>
+          <span>Why Kindora</span>
         </button>
 
         <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
