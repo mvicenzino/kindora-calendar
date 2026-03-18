@@ -320,8 +320,6 @@ export async function setupAuth(app: Express) {
         await storage.createFamily(demoUserId, { name: "Your Family", createdBy: demoUserId });
       }
 
-      await seedDemoAccount(storage, demoUserId, tzOffset);
-
       const sessionUser = createLocalUserSession(demoUserId, `${demoUserId}@example.com`, "Demo", "User");
 
       (req as any).session.passport = { user: sessionUser };
@@ -330,7 +328,12 @@ export async function setupAuth(app: Express) {
           console.error("Session save error:", saveErr);
           return res.redirect("/");
         }
+        // Redirect immediately so the browser isn't waiting on seeding
         res.redirect("/");
+        // Seed demo data in background after response is sent (in-memory, fast)
+        seedDemoAccount(storage, demoUserId, tzOffset).catch((err) => {
+          console.error("Background demo seed error:", err);
+        });
       });
     } catch (error) {
       console.error("Demo login error:", error);
