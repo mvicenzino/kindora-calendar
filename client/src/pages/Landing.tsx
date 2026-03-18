@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink, Expand } from "lucide-react";
 import heroVideo from "@assets/generated_videos/kindora_family_hero_smooth.mp4";
-import promoVideo from "@assets/generated_videos/chaotic_to_calm_family_transformation.mp4";
 
 const logo = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
@@ -375,7 +374,7 @@ export default function Landing() {
         </div>
       )}
 
-      {/* Video Lightbox */}
+      {/* Why Kindora Lightbox */}
       {videoExpanded && (
         <div
           className="fixed inset-0 z-[200] flex items-center justify-center bg-black/92 backdrop-blur-sm"
@@ -385,19 +384,22 @@ export default function Landing() {
             onClick={() => setVideoExpanded(false)}
             className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
             data-testid="button-video-lightbox-close"
-            aria-label="Close video"
+            aria-label="Close"
           >
             <X className="w-6 h-6" />
           </button>
-          <video
-            src={promoVideo}
-            autoPlay
-            loop
-            controls
-            playsInline
-            className="max-w-[90vw] max-h-[85vh] rounded-xl shadow-2xl"
+          <div
+            className="w-[90vw] max-w-4xl rounded-xl overflow-hidden shadow-2xl"
+            style={{ height: "min(85vh, 56.25vw)" }}
             onClick={(e) => e.stopPropagation()}
-          />
+          >
+            <iframe
+              src="https://kindora-animation.replit.app"
+              className="w-full h-full border-0"
+              allow="autoplay; fullscreen"
+              title="Why Kindora"
+            />
+          </div>
         </div>
       )}
 
