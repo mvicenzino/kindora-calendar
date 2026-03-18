@@ -48,7 +48,11 @@ interface ParseResult {
 }
 
 
-export default function ImportSchedule() {
+interface ImportScheduleProps {
+  onClose?: () => void;
+}
+
+export default function ImportSchedule({ onClose }: ImportScheduleProps = {}) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -211,7 +215,11 @@ export default function ImportSchedule() {
           title: "Schedule Imported!",
           description: `Successfully added ${data.imported} event(s) to your calendar${skippedNote}`,
         });
-        setLocation("/");
+        if (onClose) {
+          onClose();
+        } else {
+          setLocation("/");
+        }
       }
     },
     onError: (error: Error) => {

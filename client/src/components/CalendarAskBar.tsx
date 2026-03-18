@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react";
-import { Sparkles, X, ArrowRight, Loader2, CalendarDays, CheckCircle2, Plus, Mic, MicOff } from "lucide-react";
+import { Sparkles, X, ArrowRight, Loader2, CalendarDays, CheckCircle2, Plus, Mic, MicOff, Upload } from "lucide-react";
 import { format } from "date-fns";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Event } from "@shared/schema";
 import { mapEventFromDb, type UiEvent } from "@shared/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ImportSchedule from "@/pages/ImportSchedule";
 
 interface QueryResult {
   type?: undefined;
@@ -51,6 +53,8 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
   const [placeholder, setPlaceholder] = useState(ALL_EXAMPLES[0]);
   const [isFocused, setIsFocused] = useState(false);
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+
+  const [importOpen, setImportOpen] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -255,10 +259,10 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
 
   return (
     <div ref={panelRef} className="relative w-full px-3 py-2 border-b border-border bg-background/80 backdrop-blur-sm">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto flex items-center gap-2">
         {/* Main input row */}
         <div
-          className={`flex items-center gap-2 rounded-full px-3 py-2 transition-all duration-200 border ${
+          className={`flex-1 flex items-center gap-2 rounded-full px-3 py-2 transition-all duration-200 border ${
             isListening
               ? "bg-red-500/8 border-red-400/40 shadow-[0_0_0_3px_rgba(239,68,68,0.08)]"
               : isFocused
@@ -366,126 +370,147 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
           )}
         </div>
 
-        {/* Permission denied banner */}
-        {voiceState === 'denied' && (
-          <div className="mt-1.5 flex items-start gap-2 px-3 py-2 bg-destructive/8 border border-destructive/20 rounded-lg">
-            <MicOff className="w-3.5 h-3.5 text-destructive flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-destructive leading-snug">
-              Microphone access blocked. Enable it in your browser settings, then refresh the page.
-              <span className="text-muted-foreground"> Wispr Flow and Typeless work automatically — just focus the input and dictate.</span>
-            </p>
-            <button onClick={() => setVoiceState('idle')} className="flex-shrink-0 text-destructive/60 hover:text-destructive">
-              <X className="w-3 h-3" />
+        {/* Import schedule button */}
+        <button
+          onClick={() => setImportOpen(true)}
+          data-testid="button-import-schedule"
+          aria-label="Import schedule"
+          title="Import schedule"
+          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover-elevate border border-border bg-muted/60"
+        >
+          <Upload className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Permission denied banner */}
+      {voiceState === 'denied' && (
+        <div className="mt-1.5 flex items-start gap-2 px-3 py-2 bg-destructive/8 border border-destructive/20 rounded-lg">
+          <MicOff className="w-3.5 h-3.5 text-destructive flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-destructive leading-snug">
+            Microphone access blocked. Enable it in your browser settings, then refresh the page.
+            <span className="text-muted-foreground"> Wispr Flow and Typeless work automatically — just focus the input and dictate.</span>
+          </p>
+          <button onClick={() => setVoiceState('idle')} className="flex-shrink-0 text-destructive/60 hover:text-destructive">
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
+      {/* Floating answer panel */}
+      {hasAnswer && (
+        <div
+          className={`absolute left-3 right-3 top-full mt-1 z-50 rounded-xl overflow-hidden shadow-2xl bg-card border ${
+            isCreated ? "border-primary/30" : "border-border"
+          }`}
+          style={{
+            backdropFilter: "blur(24px) saturate(1.6)",
+            WebkitBackdropFilter: "blur(24px) saturate(1.6)",
+            boxShadow: isCreated
+              ? "0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px hsl(var(--primary) / 0.1)"
+              : "0 8px 32px rgba(0,0,0,0.12)",
+          }}
+        >
+          {/* Answer header */}
+          <div className="flex items-start gap-2.5 p-3 pb-2">
+            <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 ${
+              isCreated ? "bg-primary/15 border border-primary/30" : "bg-primary/10 border border-primary/20"
+            }`}>
+              {isCreated
+                ? <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                : <Sparkles className="w-3.5 h-3.5 text-primary" />
+              }
+            </div>
+            <div className="flex-1 min-w-0">
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : (
+                <p className="text-sm text-foreground leading-relaxed">{result?.answer}</p>
+              )}
+            </div>
+            <button
+              onClick={handleClear}
+              className="flex-shrink-0 text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors"
+              data-testid="button-answer-dismiss"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
-        )}
 
-        {/* Floating answer panel */}
-        {hasAnswer && (
-          <div
-            className={`absolute left-3 right-3 top-full mt-1 z-50 rounded-xl overflow-hidden shadow-2xl bg-card border ${
-              isCreated ? "border-primary/30" : "border-border"
-            }`}
-            style={{
-              backdropFilter: "blur(24px) saturate(1.6)",
-              WebkitBackdropFilter: "blur(24px) saturate(1.6)",
-              boxShadow: isCreated
-                ? "0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px hsl(var(--primary) / 0.1)"
-                : "0 8px 32px rgba(0,0,0,0.12)",
-            }}
-          >
-            {/* Answer header */}
-            <div className="flex items-start gap-2.5 p-3 pb-2">
-              <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 ${
-                isCreated ? "bg-primary/15 border border-primary/30" : "bg-primary/10 border border-primary/20"
-              }`}>
-                {isCreated
-                  ? <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                  : <Sparkles className="w-3.5 h-3.5 text-primary" />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                {error ? (
-                  <p className="text-sm text-destructive">{error}</p>
-                ) : (
-                  <p className="text-sm text-foreground leading-relaxed">{result?.answer}</p>
-                )}
-              </div>
+          {/* Created event card */}
+          {isCreated && result.type === 'event_created' && (
+            <div className="px-3 pb-3">
               <button
-                onClick={handleClear}
-                className="flex-shrink-0 text-muted-foreground hover:text-foreground p-0.5 rounded transition-colors"
-                data-testid="button-answer-dismiss"
-                aria-label="Dismiss"
+                onClick={() => handleEventClick(result.event)}
+                data-testid="ask-created-event"
+                className="w-full text-left rounded-lg px-3 py-2.5 transition-all hover-elevate border border-primary/20"
+                style={{ background: 'hsl(var(--primary) / 0.06)' }}
               >
-                <X className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: getCategoryColor(result.event.category) }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{result.event.title}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <CalendarDays className="w-3 h-3" />
+                      {format(new Date(result.event.startTime), "EEE, MMM d")} at{" "}
+                      {format(new Date(result.event.startTime), "h:mm a")}
+                    </p>
+                    {result.event.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">{result.event.description}</p>
+                    )}
+                  </div>
+                </div>
               </button>
+              <p className="text-[10px] text-muted-foreground mt-1.5 px-0.5">Tap event to open details</p>
             </div>
+          )}
 
-            {/* Created event card */}
-            {isCreated && result.type === 'event_created' && (
-              <div className="px-3 pb-3">
+          {/* Relevant events from a query */}
+          {!isCreated && result && (result as QueryResult).events?.length > 0 && (
+            <div className="px-3 pb-3 space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-0.5">
+                Matching events
+              </p>
+              {(result as QueryResult).events.map((event) => (
                 <button
-                  onClick={() => handleEventClick(result.event)}
-                  data-testid="ask-created-event"
-                  className="w-full text-left rounded-lg px-3 py-2.5 transition-all hover-elevate border border-primary/20"
-                  style={{ background: 'hsl(var(--primary) / 0.06)' }}
+                  key={event.id}
+                  onClick={() => handleEventClick(event)}
+                  data-testid={`ask-result-event-${event.id}`}
+                  className="w-full text-left rounded-lg px-3 py-2 transition-all hover-elevate bg-muted/40 border border-border"
                 >
                   <div className="flex items-center gap-2.5">
                     <div
                       className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: getCategoryColor(result.event.category) }}
+                      style={{ backgroundColor: getCategoryColor(event.category) }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{result.event.title}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <CalendarDays className="w-3 h-3" />
-                        {format(new Date(result.event.startTime), "EEE, MMM d")} at{" "}
-                        {format(new Date(result.event.startTime), "h:mm a")}
+                        {format(new Date(event.startTime), "EEE, MMM d")} at{" "}
+                        {format(new Date(event.startTime), "h:mm a")}
                       </p>
-                      {result.event.description && (
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{result.event.description}</p>
-                      )}
                     </div>
                   </div>
                 </button>
-                <p className="text-[10px] text-muted-foreground mt-1.5 px-0.5">Tap event to open details</p>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-            {/* Relevant events from a query */}
-            {!isCreated && result && (result as QueryResult).events?.length > 0 && (
-              <div className="px-3 pb-3 space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-0.5">
-                  Matching events
-                </p>
-                {(result as QueryResult).events.map((event) => (
-                  <button
-                    key={event.id}
-                    onClick={() => handleEventClick(event)}
-                    data-testid={`ask-result-event-${event.id}`}
-                    className="w-full text-left rounded-lg px-3 py-2 transition-all hover-elevate bg-muted/40 border border-border"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="w-2 h-2 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: getCategoryColor(event.category) }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{event.title}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <CalendarDays className="w-3 h-3" />
-                          {format(new Date(event.startTime), "EEE, MMM d")} at{" "}
-                          {format(new Date(event.startTime), "h:mm a")}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Import Dialog */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Schedule</DialogTitle>
+          </DialogHeader>
+          <ImportSchedule onClose={() => setImportOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
