@@ -24,7 +24,7 @@ import {
   Expand,
   X
 } from "lucide-react";
-import heroVideo from "@assets/generated_videos/kindora_family_hero_no_calendar.mp4";
+import heroVideo from "@assets/generated_videos/kindora_family_hero_smooth.mp4";
 
 const logo = "/kindora-logo.jpeg";
 
