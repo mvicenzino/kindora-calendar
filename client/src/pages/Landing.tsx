@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
 import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink, Expand } from "lucide-react";
-import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
+import heroVideo from "@assets/generated_videos/kindora_family_hero_no_calendar.mp4";
 
 const logo = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
