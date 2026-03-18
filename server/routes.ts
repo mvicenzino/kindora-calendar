@@ -4203,6 +4203,16 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  app.get("/api/admin/feedback", isAuthenticated, async (req: any, res) => {
+    const userId: string = req.user?.id ?? "";
+    const email: string = req.user?.email ?? "";
+    if (userId !== "google-110610540501901085708" && email !== "mvicenzino@gmail.com") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    const entries = await storage.getAllBetaFeedback();
+    res.json(entries);
+  });
+
   // NLP Calendar Ask — answers natural language questions about the family's events
   app.post("/api/calendar/ask", isAuthenticated, requireCare, async (req: any, res) => {
     try {

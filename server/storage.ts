@@ -127,6 +127,7 @@ export interface IStorage {
 
   // Beta Feedback
   submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback>;
+  getAllBetaFeedback(): Promise<BetaFeedback[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1086,6 +1087,10 @@ export class MemStorage implements IStorage {
     };
     return entry;
   }
+
+  async getAllBetaFeedback(): Promise<BetaFeedback[]> {
+    return [];
+  }
 }
 
 // DrizzleStorage implementation
@@ -1941,6 +1946,10 @@ class DrizzleStorage implements IStorage {
     }).returning();
     return result[0];
   }
+
+  async getAllBetaFeedback(): Promise<BetaFeedback[]> {
+    return this.db.select().from(betaFeedback).orderBy(desc(betaFeedback.createdAt));
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2406,6 +2415,10 @@ class DemoAwareStorage implements IStorage {
 
   async submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback> {
     return this.persistentStorage.submitBetaFeedback(data);
+  }
+
+  async getAllBetaFeedback(): Promise<BetaFeedback[]> {
+    return this.persistentStorage.getAllBetaFeedback();
   }
 }
 

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, User, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock } from "lucide-react";
+import { Check, Crown, User, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock, MessageSquare, Mail, Calendar as CalendarIcon } from "lucide-react";
 import { useCalendarTextSize, TEXT_SCALE_LABELS, TEXT_SCALE_SIZES } from "@/hooks/useCalendarTextSize";
 import type { CalendarTextScale } from "@/hooks/useCalendarTextSize";
 import { Slider } from "@/components/ui/slider";
@@ -542,7 +542,75 @@ function PushNotificationsCard() {
   );
 }
 
+function FeedbackReview() {
+  const { data: entries = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/feedback"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (entries.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-12 text-center">
+          <MessageSquare className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">No feedback submitted yet.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">{entries.length} submission{entries.length !== 1 ? "s" : ""}</p>
+      </div>
+      {entries.map((entry: any) => (
+        <Card key={entry.id} data-testid={`card-feedback-${entry.id}`}>
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-[11px] font-semibold text-primary">{entry.name?.[0]?.toUpperCase() || "?"}</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">{entry.name}</p>
+                  <a href={`mailto:${entry.email}`} className="text-xs text-primary flex items-center gap-1 hover:underline">
+                    <Mail className="w-3 h-3" />
+                    {entry.email}
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground flex-shrink-0">
+                <CalendarIcon className="w-3 h-3" />
+                {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+              </div>
+            </div>
+            <div className="bg-muted/40 rounded-md px-3 py-2.5 border border-border">
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{entry.comments}</p>
+            </div>
+            {entry.userId && (
+              <p className="text-[10px] text-muted-foreground/60">User ID: {entry.userId}</p>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+const ADMIN_USER_ID = "google-110610540501901085708";
+const ADMIN_EMAIL = "mvicenzino@gmail.com";
+
 export default function AccountSettings({ initialTab }: { initialTab?: string }) {
+  const { user } = useAuth();
+  const isAdmin = user?.id === ADMIN_USER_ID || user?.email === ADMIN_EMAIL;
   const defaultTab = initialTab || "account";
 
   return (
@@ -571,6 +639,12 @@ export default function AccountSettings({ initialTab }: { initialTab?: string })
               <Sparkles className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Kira</span>
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="feedback" className="flex-1" data-testid="tab-feedback">
+                <MessageSquare className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Feedback</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="account" className="mt-0">
@@ -588,6 +662,12 @@ export default function AccountSettings({ initialTab }: { initialTab?: string })
           <TabsContent value="kira" className="mt-0">
             <KiraProfile />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="feedback" className="mt-0">
+              <FeedbackReview />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
