@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -124,6 +124,9 @@ export interface IStorage {
   trackAdvisorConversation(userId: string): Promise<void>;
   getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined>;
   getAllAdvisorUsage(): Promise<AdvisorUsage[]>;
+
+  // Beta Feedback
+  submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback>;
 }
 
 export class MemStorage implements IStorage {
@@ -1071,6 +1074,18 @@ export class MemStorage implements IStorage {
       (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
     );
   }
+
+  async submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback> {
+    const entry: BetaFeedback = {
+      id: randomUUID(),
+      userId: data.userId ?? null,
+      name: data.name,
+      email: data.email,
+      comments: data.comments,
+      createdAt: new Date(),
+    };
+    return entry;
+  }
 }
 
 // DrizzleStorage implementation
@@ -1916,6 +1931,16 @@ class DrizzleStorage implements IStorage {
   async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
     return this.db.select().from(advisorUsage).orderBy(desc(advisorUsage.lastMessageAt));
   }
+
+  async submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback> {
+    const result = await this.db.insert(betaFeedback).values({
+      userId: data.userId ?? null,
+      name: data.name,
+      email: data.email,
+      comments: data.comments,
+    }).returning();
+    return result[0];
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2377,6 +2402,10 @@ class DemoAwareStorage implements IStorage {
 
   async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
     return this.persistentStorage.getAllAdvisorUsage();
+  }
+
+  async submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback> {
+    return this.persistentStorage.submitBetaFeedback(data);
   }
 }
 

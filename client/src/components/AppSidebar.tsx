@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2 } from "lucide-react";
 import HelpDrawer from "./HelpDrawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -11,7 +11,14 @@ import {
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnreadMessages } from "@/hooks/useUnreadMessages";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 const logo = "/kindora-logo.jpeg";
 
@@ -38,6 +45,38 @@ export default function AppSidebar() {
   const { unreadCount } = useUnreadMessages();
   const { setOpenMobile } = useSidebar();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackName, setFeedbackName] = useState("");
+  const [feedbackEmail, setFeedbackEmail] = useState("");
+  const [feedbackComments, setFeedbackComments] = useState("");
+  const { toast } = useToast();
+
+  const feedbackMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/feedback", {
+        name: feedbackName.trim(),
+        email: feedbackEmail.trim(),
+        comments: feedbackComments.trim(),
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Thank you for your feedback!", description: "We read every response and use it to improve Kindora." });
+      setFeedbackOpen(false);
+      setFeedbackName("");
+      setFeedbackEmail("");
+      setFeedbackComments("");
+    },
+    onError: () => {
+      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  function openFeedback() {
+    setFeedbackName(user?.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : "");
+    setFeedbackEmail(user?.email || "");
+    setFeedbackOpen(true);
+  }
 
   const { data: userRole } = useQuery({
     queryKey: ["/api/family/" + activeFamilyId + "/role"],
@@ -151,6 +190,10 @@ export default function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter className="px-3 py-2">
+          <button onClick={openFeedback} data-testid="button-beta-feedback" className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-0.5 group-data-[collapsible=icon]:justify-center" title="Share Beta Feedback">
+            <MessageSquarePlus className="w-4 h-4 flex-shrink-0" />
+            <span className="text-[11px] font-medium group-data-[collapsible=icon]:hidden">Beta Feedback</span>
+          </button>
           <button onClick={function() { setHelpOpen(true); }} className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-1 group-data-[collapsible=icon]:justify-center" title="Help and Support">
             <HelpCircle className="w-4 h-4 flex-shrink-0" />
             <span className="text-[11px] font-medium group-data-[collapsible=icon]:hidden">Help & Support</span>
@@ -173,6 +216,78 @@ export default function AppSidebar() {
         </SidebarFooter>
       </Sidebar>
       <HelpDrawer open={helpOpen} onClose={function() { setHelpOpen(false); }} />
+
+      <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="w-4 h-4 text-primary" />
+              Share Your Feedback
+            </DialogTitle>
+            <DialogDescription>
+              You're one of our first beta users. Your experience helps shape Kindora — tell us what's working, what's missing, or anything on your mind.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="feedback-name" className="text-xs">Your name</Label>
+                <Input
+                  id="feedback-name"
+                  data-testid="input-feedback-name"
+                  value={feedbackName}
+                  onChange={(e) => setFeedbackName(e.target.value)}
+                  placeholder="Jane Smith"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="feedback-email" className="text-xs">Email</Label>
+                <Input
+                  id="feedback-email"
+                  data-testid="input-feedback-email"
+                  type="email"
+                  value={feedbackEmail}
+                  onChange={(e) => setFeedbackEmail(e.target.value)}
+                  placeholder="jane@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="feedback-comments" className="text-xs">Comments</Label>
+              <Textarea
+                id="feedback-comments"
+                data-testid="input-feedback-comments"
+                value={feedbackComments}
+                onChange={(e) => setFeedbackComments(e.target.value)}
+                placeholder="What's working well? What would make Kindora more useful for your family?"
+                className="resize-none min-h-[120px]"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="ghost" onClick={() => setFeedbackOpen(false)} data-testid="button-feedback-cancel">
+                Cancel
+              </Button>
+              <Button
+                onClick={() => feedbackMutation.mutate()}
+                disabled={feedbackMutation.isPending || !feedbackName.trim() || !feedbackEmail.trim() || !feedbackComments.trim()}
+                data-testid="button-feedback-submit"
+              >
+                {feedbackMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Sending…
+                  </>
+                ) : (
+                  "Send Feedback"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

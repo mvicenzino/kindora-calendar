@@ -498,6 +498,19 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
 
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 
+export const betaFeedback = pgTable("beta_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  comments: text("comments").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBetaFeedbackSchema = createInsertSchema(betaFeedback).omit({ id: true, createdAt: true });
+export type InsertBetaFeedback = z.infer<typeof insertBetaFeedbackSchema>;
+export type BetaFeedback = typeof betaFeedback.$inferSelect;
+
 // Family Member types
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 export type FamilyMember = typeof familyMembers.$inferSelect;
