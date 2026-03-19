@@ -107,12 +107,12 @@ declare module 'http' {
   }
 }
 app.use(express.json({
-  limit: "1mb",
+  limit: "20mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+app.use(express.urlencoded({ extended: false, limit: "20mb" }));
 
 app.use("/attached_assets", express.static(path.resolve(import.meta.dirname, "../attached_assets")));
 
