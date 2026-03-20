@@ -476,6 +476,39 @@ function EntryCard({ entry, members, onEdit }: { entry: any; members: FamilyMemb
 
 // ── Timeline View ──────────────────────────────────────────────────────────
 
+function kiraTimelineSummary(entry: any): string {
+  const sev = entry.overallSeverity ?? 0;
+  const energy = entry.energyLevel ?? 0;
+  const triggers: string[] = entry.triggers ?? [];
+  const moodLabel = entry.moodEmoji ? MOOD_OPTIONS.find((m: any) => m.emoji === entry.moodEmoji)?.label : null;
+
+  let base = "";
+  if (sev <= 2) base = "A genuinely good day";
+  else if (sev <= 4) base = "A manageable day";
+  else if (sev <= 6) base = "A moderate day with some symptom activity";
+  else if (sev <= 8) base = "A tough day with elevated symptoms";
+  else base = "A very hard day — symptoms were severe";
+
+  let energyNote = "";
+  if (energy >= 7) energyNote = " — energy was solid";
+  else if (energy <= 3) energyNote = " — energy was quite low";
+
+  if (entry.anaphylaxisAlert) return `${base}${energyNote}, with a reaction event flagged. Worth reviewing with your care team.`;
+
+  let triggerNote = "";
+  if (triggers.length > 0) {
+    const listed = triggers.slice(0, 2).join(" and ");
+    triggerNote = ` ${listed} may have been a contributing factor.`;
+  } else {
+    triggerNote = ".";
+  }
+
+  let moodNote = "";
+  if (moodLabel && sev <= 5) moodNote = ` Mood tracked as ${moodLabel.toLowerCase()}.`;
+
+  return `${base}${energyNote}${triggerNote}${moodNote}`;
+}
+
 function TimelineView({ entries, memberId, members }: { entries: any[]; memberId: string; members: FamilyMember[] }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const today = new Date();
@@ -485,11 +518,26 @@ function TimelineView({ entries, memberId, members }: { entries: any[]; memberId
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
   const startDow = monthStart.getDay();
 
+  const filteredEntries = useMemo(() =>
+    entries.filter(e => !memberId || memberId === "all" || e.memberId === memberId),
+    [entries, memberId]
+  );
+
   const entriesByDate = useMemo(() => {
     const map: Record<string, any> = {};
-    entries.filter(e => !memberId || memberId === "all" || e.memberId === memberId).forEach(e => { map[e.date] = e; });
+    filteredEntries.forEach(e => { map[e.date] = e; });
     return map;
-  }, [entries, memberId]);
+  }, [filteredEntries]);
+
+  const monthEntries = useMemo(() =>
+    filteredEntries
+      .filter(e => {
+        const d = parseISO(e.date);
+        return d >= monthStart && d <= monthEnd;
+      })
+      .sort((a, b) => b.date.localeCompare(a.date)),
+    [filteredEntries, monthStart, monthEnd]
+  );
 
   return (
     <div className="space-y-4">
@@ -512,7 +560,7 @@ function TimelineView({ entries, memberId, members }: { entries: any[]; memberId
           const key = format(day, "yyyy-MM-dd");
           const entry = entriesByDate[key];
           const isToday = isSameDay(day, today);
-          const moodLabel = entry?.moodEmoji ? MOOD_OPTIONS.find(m => m.emoji === entry.moodEmoji)?.label : null;
+          const moodLabel = entry?.moodEmoji ? MOOD_OPTIONS.find((m: any) => m.emoji === entry.moodEmoji)?.label : null;
           const tooltipLines = entry ? [
             `${format(day, "MMMM d")}`,
             `Severity: ${entry.overallSeverity}/10 (${severityLabel(entry.overallSeverity)})`,
@@ -525,13 +573,13 @@ function TimelineView({ entries, memberId, members }: { entries: any[]; memberId
               key={key}
               title={tooltipLines}
               data-testid={`calendar-day-${key}`}
-              className={`aspect-square rounded-md flex flex-col items-center justify-center text-[10px] font-medium relative cursor-default ${
+              className={`aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium relative cursor-default ${
                 entry ? severityColor(entry.overallSeverity) + " text-white" : "bg-muted/20 text-muted-foreground"
               } ${isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}`}
             >
-              <span>{format(day, "d")}</span>
+              <span className="text-[9px] leading-none opacity-80">{format(day, "d")}</span>
               {entry?.moodEmoji
-                ? <span className="text-[9px] leading-none">{entry.moodEmoji}</span>
+                ? <span className="text-base leading-none">{entry.moodEmoji}</span>
                 : entry?.overallSeverity
                   ? <span className="text-[8px] opacity-70 leading-none">{severityLabel(entry.overallSeverity)?.slice(0, 3)}</span>
                   : null
@@ -556,6 +604,34 @@ function TimelineView({ entries, memberId, members }: { entries: any[]; memberId
           </div>
         ))}
       </div>
+
+      {monthEntries.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center gap-2 pb-1">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <p className="text-xs font-semibold text-foreground">Kira's read on this month</p>
+          </div>
+          {monthEntries.map(entry => {
+            const moodLabel = entry.moodEmoji ? MOOD_OPTIONS.find((m: any) => m.emoji === entry.moodEmoji)?.label : null;
+            return (
+              <div key={entry.date} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-muted/20 border border-border/40">
+                <span className="text-2xl leading-none mt-0.5 flex-shrink-0" title={moodLabel ?? undefined}>
+                  {entry.moodEmoji ?? "·"}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground leading-none mb-1">
+                    {format(parseISO(entry.date), "EEEE, MMMM d")}
+                    {entry.anaphylaxisAlert && (
+                      <span className="ml-2 text-red-400 text-[10px] font-bold">⚠ Reaction</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{kiraTimelineSummary(entry)}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
