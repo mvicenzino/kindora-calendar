@@ -254,6 +254,16 @@ export default function Advisor() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent, greeting]);
 
+  // Pre-fill message input from Health page "Discuss with Kira" button
+  useEffect(() => {
+    const healthContext = sessionStorage.getItem("kira_health_context");
+    if (healthContext) {
+      setInput(healthContext);
+      sessionStorage.removeItem("kira_health_context");
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    }
+  }, []);
+
   const generateGreeting = useCallback(async () => {
     if (isGreeting || greetingDone) return;
 

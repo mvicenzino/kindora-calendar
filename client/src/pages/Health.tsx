@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, subDays } from "date-fns";
-import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X, Users } from "lucide-react";
+import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X, Users, Sparkles } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,10 +171,18 @@ function LogForm({ memberId, members, existingEntry, onClose }: {
       }
       return apiRequest("POST", "/api/symptoms", payload);
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/symptoms"] });
       toast({ title: isEdit ? "Entry updated" : "Entry logged", description: `Symptom log saved for ${format(parseISO(form.date), "MMMM d")}` });
       onClose();
+      if (!isEdit && (variables.overallSeverity ?? 0) >= 7) {
+        setTimeout(() => {
+          toast({
+            title: "Kira is here for you",
+            description: "That sounds like a hard day. Kira can help you think through it — find her in the sidebar.",
+          });
+        }, 800);
+      }
     },
     onError: () => toast({ title: "Error", description: "Failed to save entry", variant: "destructive" }),
   });
@@ -685,6 +694,7 @@ function TrendsView({ entries, memberId }: { entries: any[]; memberId: string })
 
 function ReportsView({ entries, memberId, members }: { entries: any[]; members: FamilyMember[]; memberId: string }) {
   const [range, setRange] = useState("30");
+  const [, navigate] = useLocation();
 
   const filtered = useMemo(() => {
     const cutoff = format(subDays(new Date(), parseInt(range)), "yyyy-MM-dd");
@@ -830,6 +840,52 @@ function ReportsView({ entries, memberId, members }: { entries: any[]; members: 
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+
+          {/* Kira integration card */}
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/8 via-primary/4 to-purple-500/5">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground mb-0.5">Talk to Kira about this</p>
+                  <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                    Kira can help you make sense of these patterns, prepare questions for your doctor, or just process a hard stretch.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const topTriggers = Object.entries(triggerCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                      const systemAvgs = Object.entries(systemTotals)
+                        .map(([sys, vals]) => ({ sys, avg: (vals as number[]).reduce((a, b) => a + b, 0) / (vals as number[]).length }))
+                        .sort((a, b) => b.avg - a.avg).slice(0, 3);
+                      const memberName = member?.name ?? "the tracked member";
+                      const lines = [
+                        `I'd like your help understanding some health patterns from the last ${range} days.`,
+                        ``,
+                        `Summary for ${memberName} (${filtered.length} entries):`,
+                        `• Average severity: ${avgSeverity}/10`,
+                        `• Good days (≤3 severity): ${goodDays}`,
+                        `• Severe days (≥7 severity): ${badDays}`,
+                        anaphylaxisDays > 0 ? `• ⚠ Anaphylaxis events: ${anaphylaxisDays}` : null,
+                        topTriggers.length > 0 ? `• Top triggers: ${topTriggers.map(([t, c]) => `${t} (${c}×)`).join(", ")}` : null,
+                        systemAvgs.length > 0 ? `• Most affected systems: ${systemAvgs.map(s => `${BODY_SYSTEMS.find(b => b.key === s.sys)?.label ?? s.sys} (${s.avg.toFixed(1)}/10)`).join(", ")}` : null,
+                        ``,
+                        `Can you help me understand what these patterns might mean and what I should bring up with a doctor?`,
+                      ].filter(Boolean).join("\n");
+                      sessionStorage.setItem("kira_health_context", lines);
+                      navigate("/advisor");
+                    }}
+                    data-testid="button-discuss-with-kira"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                    Discuss with Kira
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
