@@ -62,7 +62,7 @@ export default function About() {
             </p>
 
             <p>
-              That was our life a few years ago. Our kids were young, full of activities and appointments that seemed to multiply weekly. Our parents were getting older, and the complexity of keeping them safe, healthy, and not alone was growing in ways we hadn't anticipated. We were juggling two entirely different care systems in our heads, with no good tools to help.
+              That was our life a few years ago. Our son was young, full of activities and appointments that seemed to multiply weekly. Our parents were getting older, and the complexity of keeping them safe, healthy, and not alone was growing in ways we hadn't anticipated. We were juggling two entirely different care systems in our heads, with no good tools to help.
             </p>
 
             <p>
