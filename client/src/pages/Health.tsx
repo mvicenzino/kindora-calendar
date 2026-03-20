@@ -503,16 +503,30 @@ function TimelineView({ entries, memberId, members }: { entries: any[]; memberId
           const key = format(day, "yyyy-MM-dd");
           const entry = entriesByDate[key];
           const isToday = isSameDay(day, today);
+          const moodLabel = entry?.moodEmoji ? MOOD_OPTIONS.find(m => m.emoji === entry.moodEmoji)?.label : null;
+          const tooltipLines = entry ? [
+            `${format(day, "MMMM d")}`,
+            `Severity: ${entry.overallSeverity}/10 (${severityLabel(entry.overallSeverity)})`,
+            `Energy: ${entry.energyLevel}/10`,
+            moodLabel ? `Mood: ${moodLabel}` : null,
+            entry.anaphylaxisAlert ? "⚠ Reaction flagged" : null,
+          ].filter(Boolean).join("\n") : format(day, "MMMM d");
           return (
             <div
               key={key}
+              title={tooltipLines}
               data-testid={`calendar-day-${key}`}
-              className={`aspect-square rounded-md flex flex-col items-center justify-center text-[10px] font-medium relative ${
+              className={`aspect-square rounded-md flex flex-col items-center justify-center text-[10px] font-medium relative cursor-default ${
                 entry ? severityColor(entry.overallSeverity) + " text-white" : "bg-muted/20 text-muted-foreground"
               } ${isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}`}
             >
               <span>{format(day, "d")}</span>
-              {entry?.overallSeverity && <span className="text-[8px] opacity-80">{entry.overallSeverity}</span>}
+              {entry?.moodEmoji
+                ? <span className="text-[9px] leading-none">{entry.moodEmoji}</span>
+                : entry?.overallSeverity
+                  ? <span className="text-[8px] opacity-70 leading-none">{severityLabel(entry.overallSeverity)?.slice(0, 3)}</span>
+                  : null
+              }
             </div>
           );
         })}
