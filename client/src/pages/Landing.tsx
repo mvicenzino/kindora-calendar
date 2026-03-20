@@ -1,89 +1,25 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill } from "lucide-react";
 import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
 import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-
-type AuthMode = "none" | "login" | "register";
+import { useEffect } from "react";
 
 export default function Landing() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
-  const [authMode, setAuthMode] = useState<AuthMode>("none");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
 
+  // Check for invite code in URL and store it
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('invite');
     if (inviteCode) {
       localStorage.setItem('pendingInviteCode', inviteCode);
     }
-    const authError = urlParams.get('auth_error');
-    if (authError) {
-      toast({
-        title: "Sign-in issue",
-        description: "There was a problem signing in. Please try again.",
-        variant: "destructive",
-      });
-      window.history.replaceState({}, '', '/');
-    }
   }, []);
-
-  const loginMutation = useMutation({
-    mutationFn: async (data: { email: string; password: string }) => {
-      const res = await apiRequest("POST", "/api/auth/login", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setAuthMode("none");
-      setEmail("");
-      setPassword("");
-    },
-    onError: (error: Error) => {
-      const msg = error.message.includes("401") ? "Invalid email or password" : "Login failed. Please try again.";
-      toast({ title: "Sign-in failed", description: msg, variant: "destructive" });
-    },
-  });
-
-  const registerMutation = useMutation({
-    mutationFn: async (data: { email: string; password: string; firstName: string; lastName: string }) => {
-      const res = await apiRequest("POST", "/api/auth/register", data);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      setAuthMode("none");
-      setEmail("");
-      setPassword("");
-      setFirstName("");
-      setLastName("");
-    },
-    onError: (error: Error) => {
-      const msg = error.message.includes("409") ? "An account with this email already exists. Try signing in instead." : "Registration failed. Please try again.";
-      toast({ title: "Sign-up failed", description: msg, variant: "destructive" });
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (authMode === "login") {
-      loginMutation.mutate({ email, password });
-    } else if (authMode === "register") {
-      registerMutation.mutate({ email, password, firstName, lastName });
-    }
-  };
 
   const handleSocialClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -116,8 +52,6 @@ export default function Landing() {
     }
   ];
 
-  const isPending = loginMutation.isPending || registerMutation.isPending;
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
       {/* Header */}
@@ -135,7 +69,7 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => setLocation("/")}
-                  className="bg-white text-slate-900 text-xs sm:text-sm px-2 sm:px-3"
+                  className="bg-white text-slate-900 hover:bg-white/90 text-xs sm:text-sm px-2 sm:px-3"
                   data-testid="button-open-app"
                 >
                   Open Calendar
@@ -144,7 +78,7 @@ export default function Landing() {
                   size="sm"
                   onClick={() => (window.location.href = "/api/logout")}
                   variant="outline"
-                  className="border-white text-white bg-white/5 backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3"
+                  className="border-white text-white hover:bg-white/10 text-xs sm:text-sm px-2 sm:px-3"
                   data-testid="button-logout"
                 >
                   <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -157,27 +91,24 @@ export default function Landing() {
                 <Button
                   size="sm"
                   onClick={() => (window.location.href = "/api/login/demo")}
-                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0 text-xs sm:text-sm px-2 sm:px-3"
+                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0 text-xs sm:text-sm px-2 sm:px-3"
                   data-testid="button-demo"
                 >
                   Try Demo
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => setAuthMode("login")}
-                  variant="outline"
-                  className="border-white text-white bg-white/5 backdrop-blur-sm text-xs sm:text-sm px-2 sm:px-3"
+                  onClick={() => (window.location.href = "/auth/google")}
+                  className="bg-white text-slate-800 hover:bg-white/90 text-xs sm:text-sm px-2 sm:px-3 font-medium"
                   data-testid="button-login"
                 >
-                  Sign In
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setAuthMode("register")}
-                  className="bg-white text-slate-900 text-xs sm:text-sm px-2 sm:px-3"
-                  data-testid="button-register"
-                >
-                  Sign Up
+                  <svg className="w-4 h-4 mr-1.5" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Sign in with Google
                 </Button>
               </>
             )}
@@ -185,165 +116,9 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Auth Modal Overlay */}
-      {authMode !== "none" && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setAuthMode("none")} />
-          <div className="relative w-full max-w-md bg-slate-800 border border-white/20 rounded-2xl shadow-2xl p-6 sm:p-8" data-testid="auth-modal">
-            <button
-              onClick={() => setAuthMode("none")}
-              className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
-              data-testid="button-close-auth"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-6">
-              <img src={calendoraIcon} alt="Kindora" className="w-10 h-10 rounded-lg" />
-              <div>
-                <h2 className="text-xl font-bold text-white">
-                  {authMode === "login" ? "Welcome Back" : "Create Account"}
-                </h2>
-                <p className="text-sm text-white/60">
-                  {authMode === "login" ? "Sign in to your account" : "Join Kindora for free"}
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {authMode === "register" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="firstName" className="text-sm text-white/80">First Name</Label>
-                    <div className="relative">
-                      <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                      <Input
-                        id="firstName"
-                        type="text"
-                        placeholder="First name"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        required
-                        className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
-                        data-testid="input-first-name"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="lastName" className="text-sm text-white/80">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      type="text"
-                      placeholder="Last name"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
-                      data-testid="input-last-name"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-sm text-white/80">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
-                    data-testid="input-email"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm text-white/80">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder={authMode === "register" ? "At least 6 characters" : "Your password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={authMode === "register" ? 6 : undefined}
-                    className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-teal-400"
-                    data-testid="input-password"
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isPending}
-                className="w-full bg-gradient-to-r from-purple-500 to-teal-500 text-white border-0"
-                data-testid="button-submit-auth"
-              >
-                {isPending ? "Please wait..." : authMode === "login" ? "Sign In" : "Create Account"}
-              </Button>
-            </form>
-
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/20" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-slate-800 px-3 text-white/50">or</span>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() => { window.location.href = "/api/login"; }}
-              className="w-full border-white/20 text-white bg-white/5 backdrop-blur-sm"
-              data-testid="button-google-signin"
-            >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-              Continue with Google
-            </Button>
-
-            <div className="mt-5 text-center">
-              {authMode === "login" ? (
-                <p className="text-sm text-white/60">
-                  Don't have an account?{" "}
-                  <button
-                    onClick={() => { setAuthMode("register"); setEmail(""); setPassword(""); }}
-                    className="text-teal-300 hover:text-teal-200 font-medium"
-                    data-testid="button-switch-to-register"
-                  >
-                    Sign up for free
-                  </button>
-                </p>
-              ) : (
-                <p className="text-sm text-white/60">
-                  Already have an account?{" "}
-                  <button
-                    onClick={() => { setAuthMode("login"); setEmail(""); setPassword(""); }}
-                    className="text-teal-300 hover:text-teal-200 font-medium"
-                    data-testid="button-switch-to-login"
-                  >
-                    Sign in
-                  </button>
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[90vh] flex items-center">
+        {/* Full-width Video Background */}
         <div className="absolute inset-0 w-full h-full">
           <video
             src={heroVideo}
@@ -353,10 +128,13 @@ export default function Landing() {
             playsInline
             className="w-full h-full object-cover"
           />
+          {/* Dark gradient overlay for readability */}
           <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/70 to-slate-900/80" />
+          {/* Colorful gradient accents */}
           <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-transparent to-teal-500/20" />
         </div>
 
+        {/* Content */}
         <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
           <div className="max-w-6xl mx-auto">
             <div className="max-w-3xl">
@@ -372,26 +150,6 @@ export default function Landing() {
               <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
                 For families, caregivers, and trusted providers. One calendar that keeps everyone on the same page—from daily schedules to medical appointments.
               </p>
-
-              {!isAuthenticated && (
-                <div className="flex flex-wrap gap-3 mb-8">
-                  <Button
-                    onClick={() => setAuthMode("register")}
-                    className="bg-white text-slate-900 text-base px-6"
-                    data-testid="button-hero-signup"
-                  >
-                    Get Started Free
-                  </Button>
-                  <Button
-                    onClick={() => (window.location.href = "/api/login/demo")}
-                    variant="outline"
-                    className="border-white/40 text-white bg-white/5 backdrop-blur-sm text-base px-6"
-                    data-testid="button-hero-demo"
-                  >
-                    Try Demo
-                  </Button>
-                </div>
-              )}
 
               <div className="flex flex-wrap gap-6 text-sm text-white/80">
                 <div className="flex items-center gap-2">
@@ -527,7 +285,7 @@ export default function Landing() {
               </div>
               <div className="text-center md:text-left">
                 <p className="text-white font-semibold mb-2">For Caregivers</p>
-                <p className="text-white/70 leading-relaxed text-sm">
+                <p className="text-white/70 text-sm leading-relaxed">
                   See your schedule, log medications, track your hours, and calculate your pay—all in one dashboard.
                 </p>
               </div>
@@ -540,6 +298,7 @@ export default function Landing() {
       <footer className="border-t border-white/10 px-4 md:px-6 py-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col items-center gap-4">
+            {/* Social Media Icons */}
             <div className="flex items-center gap-4">
               <a
                 href="#"
@@ -570,6 +329,7 @@ export default function Landing() {
               </a>
             </div>
             
+            {/* Copyright Text */}
             <div className="text-center space-y-2">
               <p className="text-white/60 text-sm">
                 © 2025 Kindora Family, Inc. Keeping families connected and coordinated.

@@ -1,15 +1,14 @@
 import * as client from "openid-client";
 import { Strategy, type VerifyFunction } from "openid-client/passport";
+
 import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import pg from "pg";
-import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { seedDemoAccount } from "./demoSeed";
-import { randomUUID } from "crypto";
 
 const getOidcConfig = memoize(
   async () => {
@@ -24,31 +23,12 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
-  const dbUrl = process.env.DATABASE_URL!;
-  const poolerUrl = dbUrl.replace(
-    /(@ep-[^.]+)(\.)/,
-    '$1-pooler$2'
-  );
-  const sessionPool = new pg.Pool({
-    connectionString: poolerUrl,
-    max: 1,
-    min: 0,
-    idleTimeoutMillis: 5000,
-    connectionTimeoutMillis: 3000,
-    allowExitOnIdle: true,
-  });
-  sessionPool.on('error', (err: Error) => {
-    console.error('Session pool error (non-fatal):', err.message);
-  });
   const sessionStore = new pgStore({
-    pool: sessionPool,
+    conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
-    pruneSessionInterval: false,
-    errorLog: (err: Error) => {
-      console.error('Session store error:', err.message);
-    },
+    pool: { max: 3, idleTimeoutMillis: 30000 },
   });
   return session({
     secret: process.env.SESSION_SECRET!,
@@ -57,27 +37,11 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: true,
+      sameSite: "none",
       maxAge: sessionTtl,
     },
   });
-}
-
-function createLocalUserSession(userId: string, email: string, firstName: string, lastName: string, profileImageUrl?: string | null) {
-  return {
-    claims: {
-      sub: userId,
-      email,
-      first_name: firstName,
-      last_name: lastName,
-      profile_image_url: profileImageUrl || null,
-      exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600,
-    },
-    access_token: "local-auth",
-    refresh_token: null,
-    expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 3600,
-  };
 }
 
 function updateUserSession(
@@ -90,41 +54,57 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
+async function upsertUser(
+  claims: any,
+) {
+  await storage.upsertUser({
+    id: String(claims["sub"]),
+    email: claims["email"],
+    firstName: claims["first_name"],
+    lastName: claims["last_name"],
+    profileImageUrl: claims["profile_image_url"],
+  });
+}
+
 export async function setupAuth(app: Express) {
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
-
   const config = await getOidcConfig();
+
+  const verify: VerifyFunction = async (
+    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
+    verified: passport.AuthenticateCallback
+  ) => {
+    const user = {};
+    updateUserSession(user, tokens);
+    const claims = tokens.claims();
+    if (claims) {
+      await upsertUser(claims);
+      
+      // Seed demo account if this is a demo user (for testing)
+      const userId = String(claims["sub"]);
+      if (userId.startsWith("demo-")) {
+        try {
+          await seedDemoAccount(storage, userId);
+        } catch (error) {
+          console.log("Demo seeding (may already be seeded):", error);
+        }
+      }
+    }
+    
+    verified(null, user);
+  };
+
+  // Keep track of registered strategies
   const registeredStrategies = new Set<string>();
 
+  // Helper function to ensure strategy exists for a domain
   const ensureStrategy = (domain: string) => {
     const strategyName = `replitauth:${domain}`;
     if (!registeredStrategies.has(strategyName)) {
-      const verify: VerifyFunction = async (
-        tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-        verified: passport.AuthenticateCallback
-      ) => {
-        const claims = tokens.claims() as any;
-        const user: any = {};
-        updateUserSession(user, tokens);
-
-        await storage.upsertUser({
-          id: claims["sub"],
-          email: claims["email"],
-          firstName: claims["first_name"],
-          lastName: claims["last_name"],
-          profileImageUrl: claims["profile_image_url"],
-          authProvider: "google",
-        });
-
-        verified(null, user);
-      };
-
       const strategy = new Strategy(
         {
           name: strategyName,
@@ -132,12 +112,67 @@ export async function setupAuth(app: Express) {
           scope: "openid email profile offline_access",
           callbackURL: `https://${domain}/api/callback`,
         },
-        verify
+        verify,
       );
       passport.use(strategy);
       registeredStrategies.add(strategyName);
     }
   };
+
+  // Google OAuth strategy (only if env vars are configured)
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(
+      new GoogleStrategy(
+        {
+          clientID: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          callbackURL:
+            process.env.GOOGLE_CALLBACK_URL ||
+            "https://calendora.replit.app/auth/google/callback",
+          scope: ["openid", "email", "profile"],
+        },
+        async (accessToken, refreshToken, profile, done) => {
+          try {
+            const email = profile.emails?.[0]?.value ?? "";
+            const firstName = profile.name?.givenName ?? "";
+            const lastName = profile.name?.familyName ?? "";
+            const profileImageUrl = profile.photos?.[0]?.value ?? null;
+            const googleUserId = `google-${profile.id}`;
+
+            await storage.upsertUser({
+              id: googleUserId,
+              email,
+              firstName,
+              lastName,
+              profileImageUrl,
+            });
+
+            const user = {
+              claims: {
+                sub: googleUserId,
+                email,
+                first_name: firstName,
+                last_name: lastName,
+                profile_image_url: profileImageUrl,
+                exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60, // 1 week
+              },
+              access_token: accessToken,
+              refresh_token: refreshToken ?? null,
+              expires_at: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+            };
+
+            done(null, user);
+          } catch (error) {
+            done(error as Error);
+          }
+        }
+      )
+    );
+    console.log("Google OAuth strategy registered");
+  }
+
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
     ensureStrategy(req.hostname);
@@ -151,183 +186,158 @@ export async function setupAuth(app: Express) {
     ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
-      failureRedirect: "/landing",
+      failureRedirect: "/api/login",
     })(req, res, next);
   });
 
-  app.post("/api/auth/register", async (req, res) => {
-    try {
-      const { email, password, firstName, lastName } = req.body;
-
-      if (!email || !password || !firstName) {
-        return res.status(400).json({ message: "Email, password, and first name are required" });
-      }
-
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
-
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        return res.status(409).json({ message: "An account with this email already exists" });
-      }
-
-      const passwordHash = await bcrypt.hash(password, 12);
-      const userId = randomUUID();
-
-      const user = await storage.upsertUser({
-        id: userId,
-        email,
-        firstName,
-        lastName: lastName || null,
-        passwordHash,
-        authProvider: "local",
-      });
-
-      const sessionUser = createLocalUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
-
-      (req as any).session.passport = { user: sessionUser };
-      (req as any).session.save((err: any) => {
-        if (err) {
-          console.error("Session save error during register:", err);
-          return res.status(500).json({ message: "Failed to create session" });
-        }
-        res.json({
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-        });
-      });
-    } catch (error: any) {
-      console.error("Registration error:", error);
-      res.status(500).json({ message: "Registration failed" });
+  // Google OAuth routes
+  app.get("/auth/google", (req, res, next) => {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      return res.redirect("/api/login");
     }
+    passport.authenticate("google", {
+      scope: ["openid", "email", "profile"],
+    })(req, res, next);
   });
 
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { email, password } = req.body;
-
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
-      }
-
-      const user = await storage.getUserByEmail(email);
-      if (!user || !user.passwordHash) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
-
-      const isValid = await bcrypt.compare(password, user.passwordHash);
-      if (!isValid) {
-        return res.status(401).json({ message: "Invalid email or password" });
-      }
-
-      const sessionUser = createLocalUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
-
-      (req as any).session.passport = { user: sessionUser };
-      (req as any).session.save((err: any) => {
+  app.get("/auth/google/callback", (req, res, next) => {
+    passport.authenticate("google", {
+      failureRedirect: "/",
+    })(req, res, () => {
+      // Explicitly save session before redirect to ensure it's persisted
+      req.session.save((err) => {
         if (err) {
-          console.error("Session save error during login:", err);
-          return res.status(500).json({ message: "Failed to create session" });
+          console.error("Google OAuth session save error:", err);
         }
-        res.json({
-          id: user.id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-        });
+        res.redirect("/");
       });
-    } catch (error: any) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Login failed" });
-    }
+    });
   });
 
   app.get("/api/logout", (req, res) => {
-    const user = (req as any).user || (req as any).session?.passport?.user;
-    const isOidcUser = user?.access_token && user.access_token !== "local-auth";
+    const user = req.user as any;
+    const isGoogleUser =
+      user?.claims?.sub && String(user.claims.sub).startsWith("google-");
+    const isDemoUser =
+      user?.claims?.sub && String(user.claims.sub).startsWith("demo-");
 
-    if (isOidcUser) {
-      req.logout(() => {
+    req.logout(() => {
+      if (isGoogleUser || isDemoUser) {
+        // Google and demo users: just destroy session and redirect home
+        req.session.destroy(() => {
+          res.redirect("/");
+        });
+      } else {
+        // Replit OIDC users: use end-session URL
         res.redirect(
           client.buildEndSessionUrl(config, {
             client_id: process.env.REPL_ID!,
             post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
           }).href
         );
-      });
-    } else {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Logout error:", err);
-        }
-        res.redirect("/");
-      });
-    }
-  });
-
-  app.post("/api/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        console.error("Logout error:", err);
       }
-      res.json({ success: true });
     });
   });
 
+  // Demo/Guest login for testing
   app.get("/api/login/demo", async (req, res) => {
     try {
+      // Generate a unique demo user ID
       const demoUserId = `demo-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-      await storage.upsertUser({
-        id: demoUserId,
+      
+      // Create demo user claims
+      const demoClaims = {
+        sub: demoUserId,
         email: `demo-${Date.now()}@example.com`,
-        firstName: "Demo",
-        lastName: "User",
-        authProvider: "demo",
-      });
+        first_name: "Demo",
+        last_name: "User",
+        profile_image_url: null,
+        exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+      };
 
+      // Upsert demo user to database
+      await upsertUser(demoClaims);
+
+      // Seed demo account with sample data
       await seedDemoAccount(storage, demoUserId);
 
-      const sessionUser = createLocalUserSession(demoUserId, `${demoUserId}@example.com`, "Demo", "User");
+      // Create demo session
+      const demoUser = {
+        claims: demoClaims,
+        access_token: "demo-token",
+        refresh_token: null,
+        expires_at: demoClaims.exp,
+      };
 
-      (req as any).session.passport = { user: sessionUser };
-      (req as any).session.save((saveErr: any) => {
-        if (saveErr) {
-          console.error("Session save error:", saveErr);
-          return res.redirect("/");
+      // Log in the demo user
+      req.login(demoUser, (err) => {
+        if (err) {
+          console.error("Demo login error:", err);
+          return res.redirect("/api/login");
         }
-        res.redirect(`/demo-welcome?demo_token=${demoUserId}&next=/care`);
+        // Explicitly save session before redirecting to ensure it's persisted
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.redirect("/api/login");
+          }
+          // Redirect with demo token for fallback authentication
+          // This helps work around third-party cookie blocking in iframes
+          // Default destination is the Caregiver Dashboard
+          res.redirect(`/demo-welcome?demo_token=${demoUserId}&next=/care`);
+        });
       });
     } catch (error) {
       console.error("Demo login error:", error);
-      res.redirect("/");
+      res.redirect("/api/login");
     }
   });
 
+  // Demo token verification - fallback for when cookies don't work
   app.post("/api/auth/demo-verify", async (req, res) => {
     try {
       const { demoToken } = req.body;
-
+      
       if (!demoToken || !demoToken.startsWith("demo-")) {
         return res.status(400).json({ message: "Invalid demo token" });
       }
 
+      // Verify the demo user exists
       const user = await storage.getUser(demoToken);
       if (!user) {
         return res.status(404).json({ message: "Demo user not found" });
       }
 
-      const sessionUser = createLocalUserSession(user.id, user.email || `${demoToken}@example.com`, user.firstName || "Demo", user.lastName || "User");
+      // Create demo session
+      const demoClaims = {
+        sub: demoToken,
+        email: user.email || `${demoToken}@example.com`,
+        first_name: user.firstName || "Demo",
+        last_name: user.lastName || "User",
+        profile_image_url: user.profileImageUrl,
+        exp: Math.floor(Date.now() / 1000) + 86400,
+      };
 
-      (req as any).session.passport = { user: sessionUser };
-      (req as any).session.save((saveErr: any) => {
-        if (saveErr) {
-          console.error("Demo verify session save error:", saveErr);
-          return res.status(500).json({ message: "Failed to save session" });
+      const demoUser = {
+        claims: demoClaims,
+        access_token: "demo-token",
+        refresh_token: null,
+        expires_at: demoClaims.exp,
+      };
+
+      // Log in the demo user
+      req.login(demoUser, (err) => {
+        if (err) {
+          console.error("Demo verify login error:", err);
+          return res.status(500).json({ message: "Failed to establish session" });
         }
-        res.json({ success: true, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName } });
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("Demo verify session save error:", saveErr);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          res.json({ success: true, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName } });
+        });
       });
     } catch (error) {
       console.error("Demo verify error:", error);
@@ -337,6 +347,7 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // API key bypass for server-to-server calls (e.g., Langly)
   const apiKey = req.headers['x-api-key'] as string;
   if (apiKey && process.env.LANGLY_API_KEY && apiKey === process.env.LANGLY_API_KEY) {
     (req as any).user = {
@@ -346,35 +357,30 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     return next();
   }
 
-  const user = (req as any).user;
-  if (user && user.claims?.sub) {
-    const now = Math.floor(Date.now() / 1000);
-    if (!user.expires_at || now <= user.expires_at) {
-      return next();
-    }
+  const user = req.user as any;
 
-    if (user.refresh_token && user.access_token !== "local-auth") {
-      try {
-        const config = await getOidcConfig();
-        const tokenResponse = await client.refreshTokenGrant(config, user.refresh_token);
-        updateUserSession(user, tokenResponse);
-        return next();
-      } catch (error) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-    }
-
+  if (!req.isAuthenticated() || !user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  const sessionData = (req as any).session?.passport?.user;
-  if (sessionData && sessionData.claims?.sub) {
-    const now = Math.floor(Date.now() / 1000);
-    if (!sessionData.expires_at || now <= sessionData.expires_at) {
-      (req as any).user = sessionData;
-      return next();
-    }
+  const now = Math.floor(Date.now() / 1000);
+  if (now <= user.expires_at) {
+    return next();
   }
 
-  return res.status(401).json({ message: "Unauthorized" });
+  const refreshToken = user.refresh_token;
+  if (!refreshToken) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
+
+  try {
+    const config = await getOidcConfig();
+    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+    updateUserSession(user, tokenResponse);
+    return next();
+  } catch (error) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
+  }
 };
