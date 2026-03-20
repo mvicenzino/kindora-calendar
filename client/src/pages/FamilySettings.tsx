@@ -440,6 +440,7 @@ export default function FamilySettings() {
   const { activeFamilyId } = useActiveFamily();
   const { toast } = useToast();
   const { user } = useAuth();
+  const isDemoMode = user?.id?.startsWith('demo-') ?? false;
   const [caregiverEmail, setCaregiverEmail] = useState("");
   const [familyMemberEmail, setFamilyMemberEmail] = useState("");
   const [joinCode, setJoinCode] = useState("");
@@ -596,6 +597,11 @@ export default function FamilySettings() {
 
   const { data: scheduleData, isLoading: isLoadingSchedule } = useQuery<{ schedule: WeeklySummarySchedule }>({
     queryKey: ['/api/weekly-summary-schedule', activeFamilyId],
+    queryFn: async () => {
+      const res = await fetch(`/api/weekly-summary-schedule?familyId=${activeFamilyId}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch schedule');
+      return res.json();
+    },
     enabled: !!activeFamilyId,
   });
 
@@ -632,15 +638,30 @@ export default function FamilySettings() {
   });
 
   const handleScheduleToggle = (enabled: boolean) => {
-    updateScheduleMutation.mutate({ isEnabled: enabled });
+    updateScheduleMutation.mutate({
+      isEnabled: enabled,
+      dayOfWeek: scheduleData?.schedule.dayOfWeek ?? '0',
+      timeOfDay: scheduleData?.schedule.timeOfDay ?? '08:00',
+      timezone: scheduleData?.schedule.timezone ?? 'America/New_York',
+    });
   };
 
   const handleDayChange = (day: string) => {
-    updateScheduleMutation.mutate({ dayOfWeek: day });
+    updateScheduleMutation.mutate({
+      isEnabled: scheduleData?.schedule.isEnabled ?? false,
+      dayOfWeek: day,
+      timeOfDay: scheduleData?.schedule.timeOfDay ?? '08:00',
+      timezone: scheduleData?.schedule.timezone ?? 'America/New_York',
+    });
   };
 
   const handleTimeChange = (time: string) => {
-    updateScheduleMutation.mutate({ timeOfDay: time });
+    updateScheduleMutation.mutate({
+      isEnabled: scheduleData?.schedule.isEnabled ?? false,
+      dayOfWeek: scheduleData?.schedule.dayOfWeek ?? '0',
+      timeOfDay: time,
+      timezone: scheduleData?.schedule.timezone ?? 'America/New_York',
+    });
   };
 
   const { data: bridgeTokens, isLoading: isLoadingBridgeTokens } = useQuery<EmergencyBridgeToken[]>({
@@ -1105,6 +1126,13 @@ export default function FamilySettings() {
                           variant="outline"
                           size="sm"
                           onClick={async () => {
+                            if (isDemoMode) {
+                              toast({
+                                title: "Demo Mode",
+                                description: "Email sending is disabled in demo mode. Sign up to use this feature!",
+                              });
+                              return;
+                            }
                             try {
                               const res = await apiRequest('POST', '/api/send-weekly-summary', {});
                               const data = await res.json();
