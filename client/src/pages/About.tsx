@@ -62,11 +62,11 @@ export default function About() {
             </p>
 
             <p>
-              That was my life a few years ago. My kids were young, full of activities and appointments that seemed to multiply weekly. My parents were getting older, and the complexity of keeping them safe, healthy, and not alone was growing in ways I hadn't anticipated. I was juggling two entirely different care systems in my head, with no good tools to help.
+              That was our life a few years ago. Our kids were young, full of activities and appointments that seemed to multiply weekly. Our parents were getting older, and the complexity of keeping them safe, healthy, and not alone was growing in ways we hadn't anticipated. We were juggling two entirely different care systems in our heads, with no good tools to help.
             </p>
 
             <p>
-              I tried everything. Google Calendar was fine for my own schedule but terrible for sharing context with caregivers. Group texts worked until they didn't — too noisy, too scattered, nothing searchable. Apps built for parents didn't handle eldercare. Apps built for eldercare didn't handle kids. Nothing understood that families today aren't one-dimensional.
+              We tried everything. Google Calendar was fine for our own schedules but terrible for sharing context with caregivers. Group texts worked until they didn't — too noisy, too scattered, nothing searchable. Apps built for parents didn't handle eldercare. Apps built for eldercare didn't handle kids. Nothing understood that families today aren't one-dimensional.
             </p>
 
             <div className="bg-muted/40 border border-border rounded-xl p-6 my-8">
@@ -75,7 +75,7 @@ export default function About() {
                 The moment Kindora clicked
               </p>
               <p className="text-base text-muted-foreground leading-relaxed">
-                I was trying to brief a home health aide about my dad's medication schedule, my sister about an upcoming specialist visit, and my wife about a schedule change for our son — all on the same Tuesday afternoon. Three separate conversations, three separate apps, zero coordination. I thought: <em>why doesn't something exist that holds all of this together?</em> A family operating system. One place for all the people, all the schedules, all the information that keeps a family functioning.
+                We were trying to brief a home health aide about our dad's medication schedule, our sister about an upcoming specialist visit, and our spouse about a schedule change for our son — all on the same Tuesday afternoon. Three separate conversations, three separate apps, zero coordination. We thought: <em>why doesn't something exist that holds all of this together?</em> A family operating system. One place for all the people, all the schedules, all the information that keeps a family functioning.
               </p>
             </div>
 
@@ -84,7 +84,7 @@ export default function About() {
             </p>
 
             <p>
-              I built Kindora to be the tool I wished existed. A private, shared space where the whole care team — family members, professional caregivers, healthcare providers — can see what they need to see, coordinate in real time, and not drop the ball on the things that actually matter. A calendar that understands context. Messaging that lives next to the events it's about. A place to store documents, track medications, and keep memories.
+              We built Kindora to be the tool we wished existed. A private, shared space where the whole care team — family members, professional caregivers, healthcare providers — can see what they need to see, coordinate in real time, and not drop the ball on the things that actually matter. A calendar that understands context. Messaging that lives next to the events it's about. A place to store documents, track medications, and keep memories.
             </p>
 
             <p>
@@ -92,7 +92,7 @@ export default function About() {
             </p>
 
             <p>
-              We're still early. Kindora is in beta, which means we're learning alongside families every day. If you're in the sandwich generation, if you're caring for someone you love while also raising someone you love, we built this for you. I hope it helps.
+              We're still early. Kindora is in beta, which means we're learning alongside families every day. If you're in the sandwich generation, if you're caring for someone you love while also raising someone you love, we built this for you. We hope it helps.
             </p>
           </div>
 
