@@ -197,17 +197,28 @@ function LogForm({ memberId, members, existingEntry, onClose }: {
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Energy Level <span className="normal-case font-normal">(1 = exhausted, 10 = great)</span></label>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Energy Level</label>
         <ScorePicker value={form.energyLevel} onChange={v => setForm(f => ({ ...f, energyLevel: v }))} />
+        <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
+          <span>1 = exhausted</span>
+          <span>10 = great</span>
+        </div>
       </div>
 
       <div className="space-y-1.5">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Overall Symptom Severity <span className="normal-case font-normal">(1 = barely noticeable, 10 = severe)</span></label>
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Overall Symptom Severity</label>
         <ScorePicker value={form.overallSeverity} onChange={v => setForm(f => ({ ...f, overallSeverity: v }))} />
+        <div className="flex justify-between text-[10px] text-muted-foreground px-0.5">
+          <span>1 = minimal</span>
+          <span>10 = severe</span>
+        </div>
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Body Systems Affected</label>
+        <div className="flex items-baseline justify-between">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Body Systems Affected</label>
+          <span className="text-[10px] text-muted-foreground">1 = minimal · 10 = severe</span>
+        </div>
         <div className="space-y-2">
           {BODY_SYSTEMS.map(sys => {
             const Icon = sys.icon;
