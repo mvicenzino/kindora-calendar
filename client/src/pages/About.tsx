@@ -75,7 +75,7 @@ export default function About() {
                 The moment Kindora clicked
               </p>
               <p className="text-base text-muted-foreground leading-relaxed">
-                We were trying to brief a home health aide about our dad's medication schedule, our sister about an upcoming specialist visit, and our spouse about a schedule change for our son — all on the same Tuesday afternoon. Three separate conversations, three separate apps, zero coordination. We thought: <em>why doesn't something exist that holds all of this together?</em> A family operating system. One place for all the people, all the schedules, all the information that keeps a family functioning.
+                We were trying to brief a home health aide about our mom's medication schedule, our son's pediatrician about an upcoming visit, and coordinate school lunch and aftercare plans for our son — all on the same Tuesday afternoon. Three separate conversations, three separate apps, zero coordination. We thought: <em>why doesn't something exist that holds all of this together?</em> A family operating system. One place for all the people, all the schedules, all the information that keeps a family functioning.
               </p>
             </div>
 
