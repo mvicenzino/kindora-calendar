@@ -903,7 +903,7 @@ export default function Health() {
   const entryToEdit = editEntry?._preselect ? null : editEntry;
 
   return (
-    <div className="p-3 md:p-4 max-w-2xl mx-auto space-y-4">
+    <div className="p-3 md:p-4 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold flex items-center gap-2" data-testid="text-health-title">
