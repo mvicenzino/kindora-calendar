@@ -517,6 +517,7 @@ export const symptomEntries = pgTable("symptom_entries", {
   familyId: varchar("family_id").notNull(),
   memberId: varchar("member_id").notNull(),
   date: text("date").notNull(), // YYYY-MM-DD
+  moodEmoji: varchar("mood_emoji"), // e.g. '😄','🙂','😐','😔','😢','😤','😴','🤒'
   energyLevel: integer("energy_level"), // 1-10
   overallSeverity: integer("overall_severity"), // 1-10
   reactionFlag: varchar("reaction_flag").default("none"), // 'none','mild','moderate','severe','anaphylaxis'

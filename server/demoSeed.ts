@@ -1613,6 +1613,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     // Systems: skin, gi, cardio, respiratory, neuro, musculo, mood
     const emmaSymptomDays: Array<{
       daysAgo: number;
+      moodEmoji: string;
       energy: number;
       severity: number;
       reaction: "none" | "mild" | "moderate" | "severe";
@@ -1622,6 +1623,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     }> = [
       {
         daysAgo: 14,
+        moodEmoji: "🙂",
         energy: 7, severity: 3, reaction: "none",
         triggers: [],
         notes: "Good day — Emma went to school, ate well, no notable flares.",
@@ -1633,6 +1635,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 13,
+        moodEmoji: "😐",
         energy: 5, severity: 5, reaction: "mild",
         triggers: ["food", "stress"],
         notes: "Ate school cafeteria pizza — mild hives on arms, some GI cramping. School test stress didn't help.",
@@ -1644,6 +1647,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 12,
+        moodEmoji: "😢",
         energy: 3, severity: 8, reaction: "moderate",
         triggers: ["food", "stress", "exertion"],
         notes: "Rough day. Stayed home from school. Flushing across chest, severe nausea, brain fog all morning. Benadryl at noon helped.",
@@ -1655,6 +1659,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 11,
+        moodEmoji: "😔",
         energy: 4, severity: 5, reaction: "none",
         triggers: [],
         notes: "Still recovering. Low-trigger foods only. Fatigue lingering but no new reactions.",
@@ -1666,6 +1671,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 10,
+        moodEmoji: "🙂",
         energy: 7, severity: 2, reaction: "none",
         triggers: [],
         notes: "Much better! Back at school, kept to safe foods. Energy almost normal.",
@@ -1677,6 +1683,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 9,
+        moodEmoji: "😄",
         energy: 8, severity: 2, reaction: "none",
         triggers: [],
         notes: "Great day. Soccer practice went fine — no inhaler needed. Ate home-cooked dinner only.",
@@ -1688,6 +1695,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 8,
+        moodEmoji: "😐",
         energy: 5, severity: 6, reaction: "mild",
         triggers: ["heat", "exertion"],
         notes: "Hot afternoon at recess triggered facial flushing and heart racing. Better after rest indoors and hydration.",
@@ -1699,6 +1707,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 7,
+        moodEmoji: "😢",
         energy: 2, severity: 9, reaction: "severe",
         triggers: ["heat", "stress", "unknown"],
         notes: "Worst day in weeks. Anaphylaxis-like episode after gym class — throat tightness, widespread hives, dizziness. Epi-pen used, went to urgent care. Stable by evening.",
@@ -1710,6 +1719,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 6,
+        moodEmoji: "😴",
         energy: 3, severity: 7, reaction: "none",
         triggers: [],
         notes: "Home resting after yesterday. Still shaky and exhausted. Liquid diet, lots of water.",
@@ -1721,6 +1731,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 5,
+        moodEmoji: "😔",
         energy: 5, severity: 4, reaction: "none",
         triggers: [],
         notes: "Slow recovery continues. Ate a safe meal, short walk outside. Starting to feel human again.",
@@ -1732,6 +1743,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 4,
+        moodEmoji: "🙂",
         energy: 7, severity: 3, reaction: "none",
         triggers: [],
         notes: "Back to school half-day. Managed well, rested after. Safe foods only.",
@@ -1743,6 +1755,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 3,
+        moodEmoji: "😄",
         energy: 8, severity: 2, reaction: "none",
         triggers: [],
         notes: "Full day at school — art class went great! Ate packed lunch, no reactions.",
@@ -1754,6 +1767,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 2,
+        moodEmoji: "😤",
         energy: 6, severity: 5, reaction: "mild",
         triggers: ["stress", "food"],
         notes: "Big test today — stress triggered GI flare and some itching. Manageable with antihistamine.",
@@ -1765,6 +1779,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 1,
+        moodEmoji: "😔",
         energy: 5, severity: 5, reaction: "none",
         triggers: ["stress"],
         notes: "Still a bit off after yesterday. Low energy, some brain fog. Skipped soccer practice.",
@@ -1782,6 +1797,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
           familyId,
           memberId: daughter.id,
           date: ds(subDays(today, day.daysAgo)),
+          moodEmoji: day.moodEmoji,
           energyLevel: day.energy,
           overallSeverity: day.severity,
           reactionFlag: day.reaction,
@@ -1795,6 +1811,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     // --- Marilyn's symptom log (Mom's Care Calendar, eldercare pattern) ---
     const marilynSymptomDays: Array<{
       daysAgo: number;
+      moodEmoji: string;
       energy: number;
       severity: number;
       reaction: "none" | "mild" | "moderate" | "severe";
@@ -1804,6 +1821,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     }> = [
       {
         daysAgo: 13,
+        moodEmoji: "😐",
         energy: 5, severity: 5, reaction: "none",
         triggers: ["activity"],
         notes: "Tired after morning PT session but spirits good. Knee pain moderate.",
@@ -1815,6 +1833,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 12,
+        moodEmoji: "🙂",
         energy: 6, severity: 4, reaction: "none",
         triggers: [],
         notes: "Better rest last night. BP steady 128/76. Did the garden walk with Maya.",
@@ -1826,6 +1845,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 11,
+        moodEmoji: "😔",
         energy: 4, severity: 6, reaction: "none",
         triggers: ["activity", "sleep"],
         notes: "Didn't sleep well — up twice. Swollen ankles by afternoon. Elevated BP 148/88, called Dr. Patel.",
@@ -1837,6 +1857,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 10,
+        moodEmoji: "😴",
         energy: 3, severity: 7, reaction: "none",
         triggers: ["stress", "sleep"],
         notes: "Hard day. Chest tightness in the morning, very short of breath on stairs. David came by which helped mood.",
@@ -1848,6 +1869,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 9,
+        moodEmoji: "😔",
         energy: 4, severity: 6, reaction: "none",
         triggers: [],
         notes: "Cardiology appointment — medication adjusted. Spent the afternoon resting. Apple strudel at café was a highlight.",
@@ -1859,6 +1881,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 8,
+        moodEmoji: "😐",
         energy: 5, severity: 5, reaction: "none",
         triggers: [],
         notes: "New medication seems to be helping. Less chest tightness. Did the exercises Maya showed her.",
@@ -1870,6 +1893,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 6,
+        moodEmoji: "🙂",
         energy: 6, severity: 4, reaction: "none",
         triggers: [],
         notes: "Good energy for Marilyn. BP 130/80, much better. Watched her favorite show and did light stretching.",
@@ -1881,6 +1905,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 5,
+        moodEmoji: "😄",
         energy: 7, severity: 3, reaction: "none",
         triggers: [],
         notes: "Best day in two weeks! Marilyn called Sarah herself and chatted for 20 minutes. Appetite good.",
@@ -1892,6 +1917,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 4,
+        moodEmoji: "😐",
         energy: 5, severity: 5, reaction: "none",
         triggers: ["activity"],
         notes: "PT day — knee was worse than usual. Iced it after. Still cheerful, talked about Sunday dinner.",
@@ -1903,6 +1929,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 3,
+        moodEmoji: "🙂",
         energy: 6, severity: 4, reaction: "none",
         triggers: [],
         notes: "Good rest. BP stable. Marilyn asked when the grandkids are visiting — Sunday can't come soon enough.",
@@ -1914,6 +1941,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 2,
+        moodEmoji: "😐",
         energy: 5, severity: 5, reaction: "none",
         triggers: ["activity"],
         notes: "Did a bit too much — tried to tidy her room. Hip ache by afternoon. Maya reminded her to let us help.",
@@ -1925,6 +1953,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       },
       {
         daysAgo: 1,
+        moodEmoji: "🙂",
         energy: 6, severity: 4, reaction: "none",
         triggers: [],
         notes: "Feeling good ahead of the family visit. BP 126/78. Did gentle morning stretches with Maya.",
@@ -1942,6 +1971,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
           familyId: careFamilyId,
           memberId: grandma.id,
           date: ds(subDays(today, day.daysAgo)),
+          moodEmoji: day.moodEmoji,
           energyLevel: day.energy,
           overallSeverity: day.severity,
           reactionFlag: day.reaction,

@@ -1106,7 +1106,7 @@ export class MemStorage implements IStorage {
   async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
     const id = randomUUID();
     const now = new Date();
-    const newEntry: SymptomEntry = { ...entry, id, createdAt: now, triggers: entry.triggers ?? null, notes: entry.notes ?? null, energyLevel: entry.energyLevel ?? null, overallSeverity: entry.overallSeverity ?? null, reactionFlag: entry.reactionFlag ?? "none" };
+    const newEntry: SymptomEntry = { ...entry, id, createdAt: now, moodEmoji: entry.moodEmoji ?? null, triggers: entry.triggers ?? null, notes: entry.notes ?? null, energyLevel: entry.energyLevel ?? null, overallSeverity: entry.overallSeverity ?? null, reactionFlag: entry.reactionFlag ?? "none" };
     this.symptomEntriesMap.set(id, newEntry);
     const ratings: SymptomSystemRating[] = systems.map(s => {
       const rid = randomUUID();

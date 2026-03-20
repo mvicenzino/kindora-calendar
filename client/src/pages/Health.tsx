@@ -84,9 +84,21 @@ function ScorePicker({ value, onChange }: { value: number | null; onChange: (v: 
 
 // ── Log Entry Form ─────────────────────────────────────────────────────────
 
+const MOOD_OPTIONS = [
+  { emoji: "😄", label: "Thriving" },
+  { emoji: "🙂", label: "Good" },
+  { emoji: "😐", label: "Okay" },
+  { emoji: "😔", label: "Low" },
+  { emoji: "😢", label: "Struggling" },
+  { emoji: "😤", label: "Frustrated" },
+  { emoji: "😴", label: "Exhausted" },
+  { emoji: "🤒", label: "Unwell" },
+];
+
 interface FormState {
   date: string;
   memberId: string;
+  moodEmoji: string | null;
   energyLevel: number | null;
   overallSeverity: number | null;
   reactionFlag: string;
@@ -99,6 +111,7 @@ function defaultForm(memberId: string): FormState {
   return {
     date: format(new Date(), "yyyy-MM-dd"),
     memberId,
+    moodEmoji: null,
     energyLevel: null,
     overallSeverity: null,
     reactionFlag: "none",
@@ -122,6 +135,7 @@ function LogForm({ memberId, members, existingEntry, onClose }: {
       return {
         date: existingEntry.date,
         memberId: existingEntry.memberId,
+        moodEmoji: existingEntry.moodEmoji ?? null,
         energyLevel: existingEntry.energyLevel ?? null,
         overallSeverity: existingEntry.overallSeverity ?? null,
         reactionFlag: existingEntry.reactionFlag ?? "none",
@@ -143,6 +157,7 @@ function LogForm({ memberId, members, existingEntry, onClose }: {
       const payload = {
         memberId: data.memberId,
         date: data.date,
+        moodEmoji: data.moodEmoji ?? null,
         energyLevel: data.energyLevel,
         overallSeverity: data.overallSeverity,
         reactionFlag: data.reactionFlag,
@@ -193,6 +208,29 @@ function LogForm({ memberId, members, existingEntry, onClose }: {
               {members.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Mood / How are they feeling?</label>
+        <div className="flex flex-wrap gap-2">
+          {MOOD_OPTIONS.map(opt => (
+            <button
+              key={opt.emoji}
+              type="button"
+              onClick={() => setForm(f => ({ ...f, moodEmoji: f.moodEmoji === opt.emoji ? null : opt.emoji }))}
+              data-testid={`mood-${opt.label.toLowerCase()}`}
+              title={opt.label}
+              className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border text-sm transition-all ${
+                form.moodEmoji === opt.emoji
+                  ? "border-primary bg-primary/10 shadow-sm scale-105"
+                  : "border-border bg-muted/40 hover-elevate"
+              }`}
+            >
+              <span className="text-xl leading-none">{opt.emoji}</span>
+              <span className={`text-[10px] font-medium ${form.moodEmoji === opt.emoji ? "text-primary" : "text-muted-foreground"}`}>{opt.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -340,9 +378,23 @@ function EntryCard({ entry, members, onEdit }: { entry: any; members: FamilyMemb
     <Card data-testid={`card-entry-${entry.id}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
-          <div>
-            <p className="text-sm font-semibold text-foreground">{format(parseISO(entry.date), "EEEE, MMMM d")}</p>
-            {member && <p className="text-xs text-muted-foreground">{member.name}</p>}
+          <div className="flex items-center gap-3">
+            {entry.moodEmoji && (
+              <span
+                className="text-3xl leading-none flex-shrink-0"
+                title={MOOD_OPTIONS.find(m => m.emoji === entry.moodEmoji)?.label}
+                data-testid={`mood-display-${entry.id}`}
+              >
+                {entry.moodEmoji}
+              </span>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-foreground">{format(parseISO(entry.date), "EEEE, MMMM d")}</p>
+              {member && <p className="text-xs text-muted-foreground">{member.name}</p>}
+              {entry.moodEmoji && (
+                <p className="text-xs text-muted-foreground">{MOOD_OPTIONS.find(m => m.emoji === entry.moodEmoji)?.label}</p>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {entry.reactionFlag && entry.reactionFlag !== "none" && (
