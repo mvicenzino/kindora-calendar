@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, subDays } from "date-fns";
-import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X } from "lucide-react";
+import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X, Users } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -776,6 +776,66 @@ function ReportsView({ entries, memberId, members }: { entries: any[]; members: 
   );
 }
 
+// ── Member Pill Strip ──────────────────────────────────────────────────────
+
+function MemberPillStrip({ members, selectedMemberId, onSelect, todayLoggedIds }: {
+  members: FamilyMember[];
+  selectedMemberId: string;
+  onSelect: (id: string) => void;
+  todayLoggedIds: Set<string>;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+      <button
+        onClick={() => onSelect("all")}
+        data-testid="button-member-all"
+        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium flex-shrink-0 transition-colors border ${
+          selectedMemberId === "all"
+            ? "bg-primary text-primary-foreground border-primary"
+            : "bg-muted/40 text-muted-foreground border-border hover-elevate"
+        }`}
+      >
+        <Users className="w-3.5 h-3.5" />
+        All
+      </button>
+
+      {members.map(m => {
+        const isSelected = selectedMemberId === m.id;
+        const loggedToday = todayLoggedIds.has(m.id);
+        const firstName = m.name.split(" ")[0];
+        return (
+          <button
+            key={m.id}
+            onClick={() => onSelect(m.id)}
+            data-testid={`button-member-${m.id}`}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium flex-shrink-0 transition-colors border ${
+              isSelected
+                ? "border-transparent text-foreground"
+                : "bg-muted/40 text-muted-foreground border-border hover-elevate"
+            }`}
+            style={isSelected ? {
+              backgroundColor: `${m.color}20`,
+              borderColor: `${m.color}50`,
+              color: "hsl(var(--foreground))",
+            } : undefined}
+          >
+            <div
+              className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+              style={{ backgroundColor: m.color }}
+            >
+              {m.name[0]?.toUpperCase()}
+            </div>
+            <span className="whitespace-nowrap">{firstName}</span>
+            {loggedToday && (
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" title="Logged today" />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Main Health Page ───────────────────────────────────────────────────────
 
 export default function Health() {
@@ -789,21 +849,40 @@ export default function Health() {
     enabled: !!activeFamilyId,
   });
 
-  const { data: entries = [], isLoading } = useQuery<any[]>({
-    queryKey: ["/api/symptoms", activeFamilyId, selectedMemberId],
-    queryFn: () => {
-      const params = new URLSearchParams();
-      if (selectedMemberId !== "all") params.set("memberId", selectedMemberId);
-      return fetch(`/api/symptoms?${params}`).then(r => r.json());
-    },
+  // Always fetch all entries so the pill strip can show logged-today dots
+  const { data: allEntries = [], isLoading } = useQuery<any[]>({
+    queryKey: ["/api/symptoms", activeFamilyId],
+    queryFn: () => fetch("/api/symptoms").then(r => r.json()),
     enabled: !!activeFamilyId,
   });
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
-  const todayEntry = entries.find(e => e.date === todayStr && (selectedMemberId === "all" || e.memberId === selectedMemberId));
 
-  function openNew() {
-    setEditEntry(null);
+  // Which member IDs have a log entry today
+  const todayLoggedIds = useMemo(() =>
+    new Set(allEntries.filter(e => e.date === todayStr).map(e => e.memberId)),
+    [allEntries, todayStr]
+  );
+
+  // Filtered entries for the selected view
+  const entries = useMemo(() =>
+    selectedMemberId === "all"
+      ? allEntries
+      : allEntries.filter(e => e.memberId === selectedMemberId),
+    [allEntries, selectedMemberId]
+  );
+
+  // Members who haven't logged today (for the prompt)
+  const notLoggedToday = useMemo(() => {
+    if (selectedMemberId !== "all") {
+      const m = members.find(m => m.id === selectedMemberId);
+      return !todayLoggedIds.has(selectedMemberId) && m ? [m] : [];
+    }
+    return members.filter(m => !todayLoggedIds.has(m.id));
+  }, [members, todayLoggedIds, selectedMemberId]);
+
+  function openNew(preselectedMemberId?: string) {
+    setEditEntry(preselectedMemberId ? { _preselect: preselectedMemberId } : null);
     setFormOpen(true);
   }
 
@@ -812,13 +891,20 @@ export default function Health() {
     setFormOpen(true);
   }
 
-  const defaultMemberId = selectedMemberId === "all"
-    ? (members[0]?.id ?? "")
-    : selectedMemberId;
+  // The member ID to pre-fill in the form
+  const defaultMemberId = useMemo(() => {
+    if (editEntry?._preselect) return editEntry._preselect;
+    if (editEntry?.memberId) return editEntry.memberId;
+    if (selectedMemberId !== "all") return selectedMemberId;
+    return members[0]?.id ?? "";
+  }, [editEntry, selectedMemberId, members]);
+
+  // The actual entry to edit (null if _preselect stub)
+  const entryToEdit = editEntry?._preselect ? null : editEntry;
 
   return (
     <div className="p-3 md:p-4 max-w-2xl mx-auto space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-base font-semibold flex items-center gap-2" data-testid="text-health-title">
             <Activity className="w-4 h-4 text-primary" />
@@ -826,35 +912,45 @@ export default function Health() {
           </h1>
           <p className="text-xs text-muted-foreground">Daily health log for complex conditions</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-            <SelectTrigger className="text-xs w-32" data-testid="select-member-filter">
-              <SelectValue placeholder="All members" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All members</SelectItem>
-              {members.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Button size="icon" onClick={openNew} data-testid="button-new-entry">
-            <Plus className="w-4 h-4" />
-          </Button>
-        </div>
+        <Button size="icon" onClick={() => openNew()} data-testid="button-new-entry">
+          <Plus className="w-4 h-4" />
+        </Button>
       </div>
 
-      {!todayEntry && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium">No entry yet today</p>
-              <p className="text-xs text-muted-foreground">How is {selectedMemberId !== "all" && members.find(m => m.id === selectedMemberId)?.name ? members.find(m => m.id === selectedMemberId)!.name : "everyone"} feeling?</p>
-            </div>
-            <Button size="sm" onClick={openNew} data-testid="button-log-today">
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
-              Log Today
-            </Button>
-          </CardContent>
-        </Card>
+      {members.length > 0 && (
+        <MemberPillStrip
+          members={members}
+          selectedMemberId={selectedMemberId}
+          onSelect={setSelectedMemberId}
+          todayLoggedIds={todayLoggedIds}
+        />
+      )}
+
+      {notLoggedToday.length > 0 && (
+        <div className="space-y-2">
+          {notLoggedToday.map(m => (
+            <Card key={m.id} className="border-primary/20 bg-primary/5">
+              <CardContent className="p-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+                    style={{ backgroundColor: m.color }}
+                  >
+                    {m.name[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{m.name.split(" ")[0]} hasn't logged today</p>
+                    <p className="text-xs text-muted-foreground">How are they feeling?</p>
+                  </div>
+                </div>
+                <Button size="sm" onClick={() => openNew(m.id)} data-testid={`button-log-today-${m.id}`}>
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Log
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       <Tabs defaultValue="log" className="space-y-3">
@@ -923,13 +1019,13 @@ export default function Health() {
       <Dialog open={formOpen} onOpenChange={open => { if (!open) { setFormOpen(false); setEditEntry(null); } }}>
         <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto" data-testid="dialog-symptom-form">
           <DialogHeader>
-            <DialogTitle>{editEntry ? "Edit Entry" : "Log Symptoms"}</DialogTitle>
+            <DialogTitle>{entryToEdit ? "Edit Entry" : "Log Symptoms"}</DialogTitle>
           </DialogHeader>
           {members.length > 0 && (
             <LogForm
               memberId={defaultMemberId}
               members={members}
-              existingEntry={editEntry}
+              existingEntry={entryToEdit}
               onClose={() => { setFormOpen(false); setEditEntry(null); }}
             />
           )}
