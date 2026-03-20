@@ -476,6 +476,26 @@ function EntryCard({ entry, members, onEdit }: { entry: any; members: FamilyMemb
 
 // ── Timeline View ──────────────────────────────────────────────────────────
 
+function kiraCellSummary(entry: any): string {
+  const sev = entry.overallSeverity ?? 0;
+  const energy = entry.energyLevel ?? 0;
+  const triggers: string[] = entry.triggers ?? [];
+
+  if (entry.anaphylaxisAlert) return "Reaction flagged";
+
+  let tone = "";
+  if (sev <= 2) tone = "Good day";
+  else if (sev <= 4) tone = "Manageable";
+  else if (sev <= 6) tone = "Moderate";
+  else if (sev <= 8) tone = "Tough day";
+  else tone = "Very severe";
+
+  if (triggers.length > 0) return `${tone} · ${triggers[0]}`;
+  if (energy >= 7) return `${tone} · High energy`;
+  if (energy <= 3) return `${tone} · Low energy`;
+  return tone;
+}
+
 function kiraTimelineSummary(entry: any): string {
   const sev = entry.overallSeverity ?? 0;
   const energy = entry.energyLevel ?? 0;
@@ -573,16 +593,20 @@ function TimelineView({ entries, memberId, members }: { entries: any[]; memberId
               key={key}
               title={tooltipLines}
               data-testid={`calendar-day-${key}`}
-              className={`aspect-square rounded-md flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium relative cursor-default ${
+              className={`aspect-square rounded-md flex flex-col items-center justify-between py-1.5 px-1 relative cursor-default ${
                 entry ? severityColor(entry.overallSeverity) + " text-white" : "bg-muted/20 text-muted-foreground"
               } ${isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}`}
             >
-              <span className="text-[9px] leading-none opacity-80">{format(day, "d")}</span>
+              <span className="text-xs font-bold leading-none w-full text-center">{format(day, "d")}</span>
               {entry?.moodEmoji
-                ? <span className="text-base leading-none">{entry.moodEmoji}</span>
+                ? <span className="text-2xl leading-none">{entry.moodEmoji}</span>
                 : entry?.overallSeverity
-                  ? <span className="text-[8px] opacity-70 leading-none">{severityLabel(entry.overallSeverity)?.slice(0, 3)}</span>
-                  : null
+                  ? <span className="text-[11px] font-semibold opacity-80 leading-none">{severityLabel(entry.overallSeverity)?.slice(0, 3)}</span>
+                  : <span />
+              }
+              {entry
+                ? <span className="text-[8px] leading-tight text-center opacity-85 w-full truncate px-0.5">{kiraCellSummary(entry)}</span>
+                : <span />
               }
             </div>
           );
