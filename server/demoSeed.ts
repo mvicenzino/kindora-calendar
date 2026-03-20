@@ -1601,6 +1601,359 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
       parentMessageId: c1_thread4_root.id,
     });
 
+    // ============================================
+    // SYMPTOM TRACKER DEMO DATA
+    // Emma (MCAS/tickborne-like) in Your Family
+    // Marilyn (eldercare) in Mom's Care Calendar
+    // ============================================
+
+    const ds = (d: Date) => d.toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // --- Emma's symptom log (14 days, MCAS-like pattern) ---
+    // Systems: skin, gi, cardio, respiratory, neuro, musculo, mood
+    const emmaSymptomDays: Array<{
+      daysAgo: number;
+      energy: number;
+      severity: number;
+      reaction: "none" | "mild" | "moderate" | "severe";
+      triggers: string[];
+      notes: string;
+      systems: { system: string; severity: number }[];
+    }> = [
+      {
+        daysAgo: 14,
+        energy: 7, severity: 3, reaction: "none",
+        triggers: [],
+        notes: "Good day — Emma went to school, ate well, no notable flares.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 2 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 13,
+        energy: 5, severity: 5, reaction: "mild",
+        triggers: ["food", "stress"],
+        notes: "Ate school cafeteria pizza — mild hives on arms, some GI cramping. School test stress didn't help.",
+        systems: [
+          { system: "skin", severity: 6 }, { system: "gi", severity: 7 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 4 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 5 },
+        ],
+      },
+      {
+        daysAgo: 12,
+        energy: 3, severity: 8, reaction: "moderate",
+        triggers: ["food", "stress", "exertion"],
+        notes: "Rough day. Stayed home from school. Flushing across chest, severe nausea, brain fog all morning. Benadryl at noon helped.",
+        systems: [
+          { system: "skin", severity: 8 }, { system: "gi", severity: 9 },
+          { system: "cardio", severity: 7 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 8 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 7 },
+        ],
+      },
+      {
+        daysAgo: 11,
+        energy: 4, severity: 5, reaction: "none",
+        triggers: [],
+        notes: "Still recovering. Low-trigger foods only. Fatigue lingering but no new reactions.",
+        systems: [
+          { system: "skin", severity: 4 }, { system: "gi", severity: 5 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 6 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 5 },
+        ],
+      },
+      {
+        daysAgo: 10,
+        energy: 7, severity: 2, reaction: "none",
+        triggers: [],
+        notes: "Much better! Back at school, kept to safe foods. Energy almost normal.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 1 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 9,
+        energy: 8, severity: 2, reaction: "none",
+        triggers: [],
+        notes: "Great day. Soccer practice went fine — no inhaler needed. Ate home-cooked dinner only.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 2 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 1 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 8,
+        energy: 5, severity: 6, reaction: "mild",
+        triggers: ["heat", "exertion"],
+        notes: "Hot afternoon at recess triggered facial flushing and heart racing. Better after rest indoors and hydration.",
+        systems: [
+          { system: "skin", severity: 7 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 8 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 5 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 7,
+        energy: 2, severity: 9, reaction: "severe",
+        triggers: ["heat", "stress", "unknown"],
+        notes: "Worst day in weeks. Anaphylaxis-like episode after gym class — throat tightness, widespread hives, dizziness. Epi-pen used, went to urgent care. Stable by evening.",
+        systems: [
+          { system: "skin", severity: 10 }, { system: "gi", severity: 8 },
+          { system: "cardio", severity: 9 }, { system: "respiratory", severity: 9 },
+          { system: "neuro", severity: 7 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 9 },
+        ],
+      },
+      {
+        daysAgo: 6,
+        energy: 3, severity: 7, reaction: "none",
+        triggers: [],
+        notes: "Home resting after yesterday. Still shaky and exhausted. Liquid diet, lots of water.",
+        systems: [
+          { system: "skin", severity: 5 }, { system: "gi", severity: 6 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 8 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 8 },
+        ],
+      },
+      {
+        daysAgo: 5,
+        energy: 5, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Slow recovery continues. Ate a safe meal, short walk outside. Starting to feel human again.",
+        systems: [
+          { system: "skin", severity: 3 }, { system: "gi", severity: 4 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 5 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 5 },
+        ],
+      },
+      {
+        daysAgo: 4,
+        energy: 7, severity: 3, reaction: "none",
+        triggers: [],
+        notes: "Back to school half-day. Managed well, rested after. Safe foods only.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 2 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 3,
+        energy: 8, severity: 2, reaction: "none",
+        triggers: [],
+        notes: "Full day at school — art class went great! Ate packed lunch, no reactions.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 1 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 2,
+        energy: 6, severity: 5, reaction: "mild",
+        triggers: ["stress", "food"],
+        notes: "Big test today — stress triggered GI flare and some itching. Manageable with antihistamine.",
+        systems: [
+          { system: "skin", severity: 5 }, { system: "gi", severity: 7 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 5 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 6 },
+        ],
+      },
+      {
+        daysAgo: 1,
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["stress"],
+        notes: "Still a bit off after yesterday. Low energy, some brain fog. Skipped soccer practice.",
+        systems: [
+          { system: "skin", severity: 3 }, { system: "gi", severity: 5 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 6 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 5 },
+        ],
+      },
+    ];
+
+    for (const day of emmaSymptomDays) {
+      await storage.createSymptomEntry(
+        {
+          familyId,
+          memberId: daughter.id,
+          date: ds(subDays(today, day.daysAgo)),
+          energyLevel: day.energy,
+          overallSeverity: day.severity,
+          reactionFlag: day.reaction,
+          triggers: day.triggers,
+          notes: day.notes,
+        },
+        day.systems
+      );
+    }
+
+    // --- Marilyn's symptom log (Mom's Care Calendar, eldercare pattern) ---
+    const marilynSymptomDays: Array<{
+      daysAgo: number;
+      energy: number;
+      severity: number;
+      reaction: "none" | "mild" | "moderate" | "severe";
+      triggers: string[];
+      notes: string;
+      systems: { system: string; severity: number }[];
+    }> = [
+      {
+        daysAgo: 13,
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["activity"],
+        notes: "Tired after morning PT session but spirits good. Knee pain moderate.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 7 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 12,
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Better rest last night. BP steady 128/76. Did the garden walk with Maya.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 11,
+        energy: 4, severity: 6, reaction: "none",
+        triggers: ["activity", "sleep"],
+        notes: "Didn't sleep well — up twice. Swollen ankles by afternoon. Elevated BP 148/88, called Dr. Patel.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 8 }, { system: "respiratory", severity: 5 },
+          { system: "neuro", severity: 4 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 6 },
+        ],
+      },
+      {
+        daysAgo: 10,
+        energy: 3, severity: 7, reaction: "none",
+        triggers: ["stress", "sleep"],
+        notes: "Hard day. Chest tightness in the morning, very short of breath on stairs. David came by which helped mood.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 4 },
+          { system: "cardio", severity: 9 }, { system: "respiratory", severity: 8 },
+          { system: "neuro", severity: 4 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 7 },
+        ],
+      },
+      {
+        daysAgo: 9,
+        energy: 4, severity: 6, reaction: "none",
+        triggers: [],
+        notes: "Cardiology appointment — medication adjusted. Spent the afternoon resting. Apple strudel at café was a highlight.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 7 }, { system: "respiratory", severity: 6 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 8,
+        energy: 5, severity: 5, reaction: "none",
+        triggers: [],
+        notes: "New medication seems to be helping. Less chest tightness. Did the exercises Maya showed her.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 6,
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Good energy for Marilyn. BP 130/80, much better. Watched her favorite show and did light stretching.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 5,
+        energy: 7, severity: 3, reaction: "none",
+        triggers: [],
+        notes: "Best day in two weeks! Marilyn called Sarah herself and chatted for 20 minutes. Appetite good.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 4,
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["activity"],
+        notes: "PT day — knee was worse than usual. Iced it after. Still cheerful, talked about Sunday dinner.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 8 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 3,
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Good rest. BP stable. Marilyn asked when the grandkids are visiting — Sunday can't come soon enough.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 2,
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["activity"],
+        notes: "Did a bit too much — tried to tidy her room. Hip ache by afternoon. Maya reminded her to let us help.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 7 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 1,
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Feeling good ahead of the family visit. BP 126/78. Did gentle morning stretches with Maya.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 2 },
+        ],
+      },
+    ];
+
+    for (const day of marilynSymptomDays) {
+      await storage.createSymptomEntry(
+        {
+          familyId: careFamilyId,
+          memberId: grandma.id,
+          date: ds(subDays(today, day.daysAgo)),
+          energyLevel: day.energy,
+          overallSeverity: day.severity,
+          reactionFlag: day.reaction,
+          triggers: day.triggers,
+          notes: day.notes,
+        },
+        day.systems
+      );
+    }
+
+    const totalSymptomEntries = emmaSymptomDays.length + marilynSymptomDays.length;
+
     console.log(`Demo account seeded:`);
     console.log(`   Your Family: ${familyEvents.length} events, 4 members (3 family + 1 caregiver)`);
     console.log(`   Your Family Care: ${familyMedications.length} kids meds, ${jennyTimeEntries.length} Jenny timesheet entries ($18/hr)`);
@@ -1610,6 +1963,7 @@ export async function seedDemoAccount(storage: IStorage, userId: string, tzOffse
     console.log(`   Time Tracking: ${jennyTimeEntries.length} Jenny entries ($18/hr) + ${timeEntries.length} Maya entries ($28/hr)`);
     console.log(`   Care Documents: ${careDocuments.length} in Mom's Care vault, ${familyDocuments.length} in Your Family Calendar`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
+    console.log(`   Symptom Tracker: ${totalSymptomEntries} entries (${emmaSymptomDays.length} Emma MCAS + ${marilynSymptomDays.length} Marilyn elder)`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
   } catch (error) {
