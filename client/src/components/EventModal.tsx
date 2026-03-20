@@ -1,17 +1,20 @@
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile, Tag, Flag } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
 import { useState, useEffect, useRef } from 'react';
 import type { UiFamilyMember } from "@shared/types";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import EventNotesSection from "./EventNotesSection";
+import { EVENT_CATEGORIES, CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 
 type RecurrenceRule = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | null;
 type EndCondition = 'never' | 'after' | 'on';
@@ -23,9 +26,15 @@ interface Event {
   startTime: Date;
   endTime: Date;
   memberIds: string[];
+  category?: EventCategory;
   recurrenceRule?: RecurrenceRule;
   recurrenceEndDate?: Date | null;
   recurrenceCount?: string | null;
+  rrule?: string | null;
+  isRecurringParent?: boolean;
+  isImportant?: boolean;
+  _isVirtualOccurrence?: boolean;
+  _parentEventId?: string;
 }
 
 interface EventModalProps {
@@ -61,9 +70,13 @@ export default function EventModal({
   members,
   selectedDate,
 }: EventModalProps) {
-  const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const { toast } = useToast();
+  const { can, isLoading: roleLoading } = useUserRole();
   const { activeFamilyId } = useActiveFamily();
-  const isReadOnly = roleLoading || isCaregiver;
+  const canEdit = !roleLoading && can('canEditEvents');
+  const canCreate = !roleLoading && can('canCreateEvents');
+  const canDelete = !roleLoading && can('canDeleteEvents');
+  const isReadOnly = roleLoading || (!canEdit && !canCreate);
   const defaultDate = selectedDate || new Date();
   const defaultTimes = getDefaultTimes();
   const [title, setTitle] = useState("");
@@ -73,11 +86,29 @@ export default function EventModal({
   const [startDate, setStartDate] = useState(format(defaultDate, 'yyyy-MM-dd'));
   const [startTime, setStartTime] = useState(defaultTimes.start);
   const [endTime, setEndTime] = useState(defaultTimes.end);
+  const [category, setCategory] = useState<EventCategory>('other');
+  const [isImportant, setIsImportant] = useState(false);
   const [isSometimeToday, setIsSometimeToday] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
   
+  // When start time changes, shift end time to maintain the same duration (min 1 hour)
+  const handleStartTimeChange = (newStart: string) => {
+    setStartTime(newStart);
+    const [sh, sm] = startTime.split(':').map(Number);
+    const [eh, em] = endTime.split(':').map(Number);
+    const prevDuration = (eh * 60 + em) - (sh * 60 + sm);
+    const duration = prevDuration > 0 ? prevDuration : 60;
+    const [nh, nm] = newStart.split(':').map(Number);
+    const newEndMins = Math.min(nh * 60 + nm + duration, 23 * 60 + 59);
+    const newEh = Math.floor(newEndMins / 60);
+    const newEm = newEndMins % 60;
+    setEndTime(`${String(newEh).padStart(2, '0')}:${String(newEm).padStart(2, '0')}`);
+  };
+
   // Recurrence state
   const [recurrenceRule, setRecurrenceRule] = useState<RecurrenceRule>(null);
   const [endCondition, setEndCondition] = useState<EndCondition>('never');
@@ -86,6 +117,30 @@ export default function EventModal({
   const [showRecurrenceDropdown, setShowRecurrenceDropdown] = useState(false);
   const recurrenceDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Parse an RRULE string into component state values
+  const parseRRule = (rrule: string): { rule: RecurrenceRule; endCondition: EndCondition; count: string; untilDate: string } => {
+    const parts: Record<string, string> = {};
+    rrule.split(';').forEach(p => { const [k, v] = p.split('='); if (k && v !== undefined) parts[k] = v; });
+    const freq = parts['FREQ'];
+    const interval = parseInt(parts['INTERVAL'] || '1', 10);
+    let rule: RecurrenceRule = null;
+    if (freq === 'DAILY') rule = 'daily';
+    else if (freq === 'WEEKLY' && interval === 2) rule = 'biweekly';
+    else if (freq === 'WEEKLY') rule = 'weekly';
+    else if (freq === 'MONTHLY') rule = 'monthly';
+    else if (freq === 'YEARLY') rule = 'yearly';
+    let ec: EndCondition = 'never';
+    let count = '10';
+    let untilDate = '';
+    if (parts['COUNT']) { ec = 'after'; count = parts['COUNT']; }
+    else if (parts['UNTIL']) {
+      ec = 'on';
+      const u = parts['UNTIL'].replace('Z', '').split('T')[0];
+      if (u.length === 8) untilDate = `${u.slice(0,4)}-${u.slice(4,6)}-${u.slice(6,8)}`;
+    }
+    return { rule, endCondition: ec, count, untilDate };
+  };
+
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -93,8 +148,11 @@ export default function EventModal({
       setDescription("");
       setMemberId("");
       setSelectedMemberIds([]);
+      setCategory('other');
+      setIsImportant(false);
       setMemberSearch("");
       setShowMemberDropdown(false);
+      setShowCategoryDropdown(false);
       setRecurrenceRule(null);
       setEndCondition('never');
       setRecurrenceCount("10");
@@ -108,24 +166,49 @@ export default function EventModal({
     if (!isOpen) return;
     
     if (event) {
-      // Editing existing event
       setTitle(event.title || "");
       setDescription(event.description || "");
       const eventMemberIds = event.memberIds || [];
       setSelectedMemberIds(eventMemberIds);
       setMemberId(eventMemberIds[0] || members[0]?.id || "");
+      setCategory(event.category || 'other');
+      setIsImportant(event.isImportant || false);
       setStartDate(format(event.startTime, 'yyyy-MM-dd'));
       setStartTime(format(event.startTime, 'HH:mm'));
       setEndTime(format(event.endTime, 'HH:mm'));
       setIsSometimeToday(false);
+      // Restore recurrence from rrule string or legacy field
+      if (event.rrule) {
+        const parsed = parseRRule(event.rrule);
+        setRecurrenceRule(parsed.rule);
+        setEndCondition(parsed.endCondition);
+        setRecurrenceCount(parsed.count);
+        setRecurrenceEndDate(parsed.untilDate);
+      } else if (event.recurrenceRule) {
+        setRecurrenceRule(event.recurrenceRule);
+        setEndCondition(event.recurrenceCount ? 'after' : event.recurrenceEndDate ? 'on' : 'never');
+        setRecurrenceCount(event.recurrenceCount || '10');
+        setRecurrenceEndDate(event.recurrenceEndDate ? format(new Date(event.recurrenceEndDate), 'yyyy-MM-dd') : '');
+      } else {
+        setRecurrenceRule(null);
+        setEndCondition('never');
+        setRecurrenceCount('10');
+        setRecurrenceEndDate('');
+      }
     } else {
-      // New event - set defaults with current time rounded to nearest 15 min
-      const times = getDefaultTimes();
       setTitle("");
       setDescription("");
-      setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-      setStartTime(times.start);
-      setEndTime(times.end);
+      if (selectedDate && (selectedDate.getHours() !== 0 || selectedDate.getMinutes() !== 0)) {
+        setStartDate(format(selectedDate, 'yyyy-MM-dd'));
+        setStartTime(format(selectedDate, 'HH:mm'));
+        const end = new Date(selectedDate.getTime() + 60 * 60 * 1000);
+        setEndTime(format(end, 'HH:mm'));
+      } else {
+        const times = getDefaultTimes();
+        setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+        setStartTime(times.start);
+        setEndTime(times.end);
+      }
       setIsSometimeToday(false);
       
       // Auto-select first member if available
@@ -136,7 +219,6 @@ export default function EventModal({
     }
   }, [event, selectedDate, isOpen, members]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -145,13 +227,16 @@ export default function EventModal({
       if (recurrenceDropdownRef.current && !recurrenceDropdownRef.current.contains(e.target as Node)) {
         setShowRecurrenceDropdown(false);
       }
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) {
+        setShowCategoryDropdown(false);
+      }
     };
     
-    if (showMemberDropdown || showRecurrenceDropdown) {
+    if (showMemberDropdown || showRecurrenceDropdown || showCategoryDropdown) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showMemberDropdown, showRecurrenceDropdown]);
+  }, [showMemberDropdown, showRecurrenceDropdown, showCategoryDropdown]);
 
   const toggleMember = (id: string) => {
     setSelectedMemberIds(prev => {
@@ -181,25 +266,58 @@ export default function EventModal({
     m.name.toLowerCase().includes(memberSearch.toLowerCase())
   );
 
+  const buildRRuleString = (): string | null => {
+    if (!recurrenceRule) return null;
+    
+    const freqMap: Record<string, string> = {
+      'daily': 'DAILY',
+      'weekly': 'WEEKLY',
+      'biweekly': 'WEEKLY',
+      'monthly': 'MONTHLY',
+      'yearly': 'YEARLY',
+    };
+    
+    const freq = freqMap[recurrenceRule];
+    if (!freq) return null;
+    
+    const parts = [`FREQ=${freq}`];
+    if (recurrenceRule === 'biweekly') parts.push('INTERVAL=2');
+    
+    if (endCondition === 'after' && recurrenceCount) {
+      parts.push(`COUNT=${recurrenceCount}`);
+    } else if (endCondition === 'on' && recurrenceEndDate) {
+      const untilDate = new Date(`${recurrenceEndDate}T23:59:59`);
+      parts.push(`UNTIL=${untilDate.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z/, 'Z')}`);
+    }
+    
+    return parts.join(';');
+  };
+
   const handleSave = () => {
-    // If "Sometime Today", use end of day times
+    if (!title.trim()) {
+      toast({ title: "Title required", description: "Please enter an event title.", variant: "destructive" });
+      return;
+    }
+    if (selectedMemberIds.length === 0) {
+      toast({ title: "Select a family member", description: "At least one family member must be assigned to this event.", variant: "destructive" });
+      return;
+    }
+    if (!isSometimeToday) {
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      if (sh * 60 + sm >= eh * 60 + em) {
+        toast({ title: "Invalid time range", description: "End time must be after start time.", variant: "destructive" });
+        return;
+      }
+    }
+
     const actualStartTime = isSometimeToday ? '23:58' : startTime;
     const actualEndTime = isSometimeToday ? '23:59' : endTime;
     
     const startDateTime = new Date(`${startDate}T${actualStartTime}`);
     const endDateTime = new Date(`${startDate}T${actualEndTime}`);
 
-    // Calculate recurrence end based on end condition
-    let finalRecurrenceEndDate: Date | null = null;
-    let finalRecurrenceCount: string | null = null;
-    
-    if (recurrenceRule) {
-      if (endCondition === 'after') {
-        finalRecurrenceCount = recurrenceCount;
-      } else if (endCondition === 'on' && recurrenceEndDate) {
-        finalRecurrenceEndDate = new Date(`${recurrenceEndDate}T23:59:59`);
-      }
-    }
+    const rruleString = buildRRuleString();
 
     onSave({
       ...(event?.id && { id: event.id }),
@@ -208,9 +326,9 @@ export default function EventModal({
       startTime: startDateTime,
       endTime: endDateTime,
       memberIds: selectedMemberIds,
-      recurrenceRule: recurrenceRule,
-      recurrenceEndDate: finalRecurrenceEndDate,
-      recurrenceCount: finalRecurrenceCount,
+      category,
+      rrule: rruleString,
+      isImportant,
     });
     onClose();
   };
@@ -233,40 +351,50 @@ export default function EventModal({
   const selectedMember = members.find(m => m.id === memberId);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-3xl max-h-[90vh] flex flex-col">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-2xl flex flex-col gap-0"
+        style={{
+          maxHeight: 'min(90dvh, 90vh)',
+          background: 'transparent',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 25px 60px -12px rgba(0,0,0,0.5)',
+        }}
+      >
         <DialogTitle className="sr-only">
           {event?.id ? 'Edit Event' : 'Create New Event'}
         </DialogTitle>
         <DialogDescription className="sr-only">
           {event?.id ? 'Edit your event details' : 'Create a new calendar event'}
         </DialogDescription>
-        {/* Dark background container with scrollable content */}
-        <div className="bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex flex-col flex-1 overflow-hidden">
-          {/* Scrollable form content */}
-          <div className="flex-1 overflow-y-auto px-6 md:px-8 pt-6 md:pt-8 pb-4 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl md:text-2xl font-bold text-white">
-                {event?.id ? 'Edit Event' : 'Create New Event'}
+        <div className="flex flex-col flex-1 overflow-hidden" style={{ background: 'hsl(var(--card) / 0.95)', backdropFilter: 'blur(40px)' }}>
+          {/* Header */}
+          <div className="px-5 md:px-6 pt-4 pb-3 flex items-center justify-between gap-3" style={{ borderBottom: '1px solid hsl(var(--border) / 0.4)' }}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/15">
+                <Calendar className="w-4 h-4 text-primary" />
+              </div>
+              <h2 className="text-base font-bold text-foreground">
+                {event?.id ? 'Edit Event' : 'New Event'}
               </h2>
-              <button
-                onClick={onClose}
-                className="w-9 h-9 rounded-full border border-white/50 flex items-center justify-center text-white hover:bg-white/10 transition-all flex-shrink-0"
-                data-testid="button-close-modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              style={{ background: 'hsl(var(--muted) / 0.4)' }}
+              data-testid="button-close-modal"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
-            {/* Divider */}
-            <div className="h-px bg-white/20" />
+          {/* Scrollable form content */}
+          <div className="flex-1 overflow-y-auto px-5 md:px-6 pt-4 pb-4 space-y-4">
 
             {/* Form content */}
             <div className="space-y-4 md:space-y-5">
             {/* Event Title */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-white">
+              <Label className="text-sm font-medium text-foreground">
                 Event Title <span className="text-red-400">*</span>
               </Label>
               <Input
@@ -274,7 +402,7 @@ export default function EventModal({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Team meeting, Soccer practice..."
                 data-testid="input-event-title"
-                className="bg-white/15 border border-white/40 rounded-2xl text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/50 h-12"
+                className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12"
                 autoFocus
                 disabled={isReadOnly}
               />
@@ -282,129 +410,199 @@ export default function EventModal({
 
             {/* Description */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-white">Description</Label>
+              <Label className="text-sm font-medium text-foreground">Description</Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add event details..."
                 data-testid="input-event-description"
-                className="bg-white/15 border border-white/40 rounded-2xl text-white placeholder:text-white/50 focus:border-purple-400 focus:ring-purple-400/50 resize-none"
+                className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 resize-none"
                 rows={3}
                 disabled={isReadOnly}
               />
             </div>
 
-            {/* Date and Family Members */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Date */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-white flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Date
-                </Label>
-                <Input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="bg-white/15 border border-white/40 rounded-2xl text-white px-4 py-3 h-12 focus:border-purple-400 focus:ring-purple-400/50 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                  data-testid="input-event-date"
+            {/* Category Selector */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Category
+              </Label>
+              <div className="relative" ref={categoryDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => !isReadOnly && setShowCategoryDropdown(!showCategoryDropdown)}
+                  className="w-full bg-muted/50 border border-border rounded-2xl px-4 py-3 h-12 flex items-center justify-between text-left text-foreground transition-all hover:bg-muted"
+                  data-testid="button-category-select"
                   disabled={isReadOnly}
-                />
-              </div>
-
-              {/* Family Members - Multi-select Typeahead */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-white flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Family Members <span className="text-red-400">*</span>
-                </Label>
-                <div className="relative" ref={dropdownRef}>
-                  <div className="bg-white/15 border border-white/40 rounded-2xl p-2 min-h-12 flex flex-wrap items-center gap-2">
-                    {selectedMemberIds.map(id => {
-                      const member = members.find(m => m.id === id);
-                      return member ? (
-                        <div
-                          key={id}
-                          className="flex items-center gap-2 bg-white/20 rounded-lg px-2 py-1"
-                        >
-                          <Avatar className="h-5 w-5">
-                            <AvatarFallback 
-                              className="text-xs text-white"
-                              style={{ backgroundColor: member.color }}
-                            >
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-white text-sm">{member.name}</span>
-                          {!isReadOnly && (
-                            <button
-                              onClick={() => removeMember(id)}
-                              className="text-white/70 hover:text-white ml-1"
-                              data-testid={`button-remove-member-${id}`}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      ) : null;
-                    })}
-                    <input
-                      type="text"
-                      value={memberSearch}
-                      onChange={(e) => {
-                        setMemberSearch(e.target.value);
-                        setShowMemberDropdown(true);
-                      }}
-                      onFocus={() => setShowMemberDropdown(true)}
-                      placeholder="Type to add family members..."
-                      className="flex-1 min-w-[150px] bg-transparent text-white placeholder:text-white/50 outline-none text-sm"
-                      data-testid="input-member-search"
-                      disabled={isReadOnly}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: CATEGORY_CONFIG[category].color }}
                     />
+                    <span className="text-sm font-medium">{CATEGORY_CONFIG[category].label}</span>
+                    <span className="text-xs text-muted-foreground hidden sm:inline">{CATEGORY_CONFIG[category].description}</span>
                   </div>
+                  <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                {showCategoryDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-lg z-50 max-h-64 overflow-y-auto">
+                    {EVENT_CATEGORIES.map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          setCategory(cat);
+                          setShowCategoryDropdown(false);
+                        }}
+                        className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-all border-b border-border last:border-0 ${category === cat ? 'bg-muted' : ''}`}
+                        data-testid={`option-category-${cat}`}
+                      >
+                        <div
+                          className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: CATEGORY_CONFIG[cat].color }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-foreground text-sm font-medium">{CATEGORY_CONFIG[cat].label}</span>
+                          <span className="text-muted-foreground text-xs ml-2">{CATEGORY_CONFIG[cat].description}</span>
+                        </div>
+                        {category === cat && (
+                          <div className="w-4 h-4 rounded-full border-2 border-border bg-muted flex-shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
-                  {/* Dropdown menu */}
-                  {showMemberDropdown && filteredMembers.length > 0 && !isReadOnly && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-gradient-to-br from-[#4A5A6A] to-[#5A6A7A] border border-white/40 rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto">
-                      {filteredMembers.map(member => (
-                        <button
-                          key={member.id}
-                          onClick={() => {
-                            toggleMember(member.id);
-                            setMemberSearch("");
-                          }}
-                          className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/10 transition-all border-b border-white/10 last:border-0 ${
-                            selectedMemberIds.includes(member.id) ? 'bg-white/15' : ''
-                          }`}
-                          data-testid={`option-member-${member.id}`}
-                        >
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback 
-                              className="text-xs text-white"
-                              style={{ backgroundColor: member.color }}
-                            >
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-white text-sm flex-1">{member.name}</span>
-                          {selectedMemberIds.includes(member.id) && (
-                            <div className="w-4 h-4 rounded border border-white bg-white/30" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+            {/* Important Flag */}
+            <div className="flex items-start justify-between gap-3 px-4 py-3 bg-muted/40 border border-border rounded-2xl">
+              <div className="flex items-start gap-2.5 min-w-0">
+                <Flag className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isImportant ? 'text-orange-500 fill-orange-500' : 'text-muted-foreground'}`} />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">Mark as Important</p>
+                  <p className="text-xs text-muted-foreground">Fires a toast reminder 30, 15, and 5 minutes before the event</p>
                 </div>
+              </div>
+              <Switch
+                checked={isImportant}
+                onCheckedChange={setIsImportant}
+                disabled={isReadOnly}
+                data-testid="toggle-important"
+                className="flex-shrink-0 mt-0.5"
+              />
+            </div>
+
+            {/* Date — always full width */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Date
+              </Label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="bg-muted/50 border border-border rounded-2xl px-4 py-3 h-12 focus:border-purple-400 focus:ring-purple-400/50 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                data-testid="input-event-date"
+                disabled={isReadOnly}
+              />
+            </div>
+
+            {/* Family Members - Multi-select Typeahead — always full width */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Family Members <span className="text-red-400">*</span>
+              </Label>
+              <div className="relative" ref={dropdownRef}>
+                <div className="bg-muted/50 border border-border rounded-2xl p-2 min-h-12 flex flex-wrap items-center gap-2">
+                  {selectedMemberIds.map(id => {
+                    const member = members.find(m => m.id === id);
+                    return member ? (
+                      <div
+                        key={id}
+                        className="flex items-center gap-2 bg-muted rounded-lg px-2 py-1"
+                      >
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback
+                            className="text-xs text-white"
+                            style={{ backgroundColor: member.color }}
+                          >
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-foreground text-sm">{member.name}</span>
+                        {!isReadOnly && (
+                          <button
+                            onClick={() => removeMember(id)}
+                            className="text-muted-foreground hover:text-foreground ml-1"
+                            data-testid={`button-remove-member-${id}`}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ) : null;
+                  })}
+                  <input
+                    type="text"
+                    value={memberSearch}
+                    onChange={(e) => {
+                      setMemberSearch(e.target.value);
+                      setShowMemberDropdown(true);
+                    }}
+                    onFocus={() => setShowMemberDropdown(true)}
+                    placeholder="Type to add family members..."
+                    className="flex-1 min-w-[120px] bg-transparent text-foreground placeholder:text-muted-foreground outline-none text-sm py-1"
+                    data-testid="input-member-search"
+                    disabled={isReadOnly}
+                  />
+                </div>
+
+                {/* Dropdown menu */}
+                {showMemberDropdown && filteredMembers.length > 0 && !isReadOnly && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-lg z-50 max-h-48 overflow-y-auto">
+                    {filteredMembers.map(member => (
+                      <button
+                        key={member.id}
+                        onClick={() => {
+                          toggleMember(member.id);
+                          setMemberSearch("");
+                        }}
+                        className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-muted/50 transition-all border-b border-border last:border-0 ${
+                          selectedMemberIds.includes(member.id) ? 'bg-muted' : ''
+                        }`}
+                        data-testid={`option-member-${member.id}`}
+                      >
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback
+                            className="text-xs text-white"
+                            style={{ backgroundColor: member.color }}
+                          >
+                            {member.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-foreground text-sm flex-1">{member.name}</span>
+                        {selectedMemberIds.includes(member.id) && (
+                          <div className="w-4 h-4 rounded border border-border bg-muted" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Sometime Today Toggle */}
-            <div className="flex items-center justify-between bg-white/15 border border-white/40 rounded-2xl p-4">
+            <div className="flex items-center justify-between bg-muted/50 border border-border rounded-2xl p-4">
               <div>
-                <Label className="text-sm font-medium text-white cursor-pointer block">
+                <Label className="text-sm font-medium text-foreground cursor-pointer block">
                   Sometime Today
                 </Label>
-                <p className="text-xs text-white/70">No specific time needed</p>
+                <p className="text-xs text-muted-foreground">No specific time needed</p>
               </div>
               <Switch
                 checked={isSometimeToday}
@@ -416,24 +614,24 @@ export default function EventModal({
 
             {/* Start and End Times */}
             {!isSometimeToday && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-white flex items-center gap-2">
+                  <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     From
                   </Label>
                   <Input
                     type="time"
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    onChange={(e) => handleStartTimeChange(e.target.value)}
                     data-testid="input-start-time"
-                    className="bg-white/15 border border-white/40 rounded-2xl text-white focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
+                    className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
                     disabled={isReadOnly}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-white flex items-center gap-2">
+                  <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     To
                   </Label>
@@ -442,7 +640,7 @@ export default function EventModal({
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                     data-testid="input-end-time"
-                    className="bg-white/15 border border-white/40 rounded-2xl text-white focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
+                    className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
                     disabled={isReadOnly}
                   />
                 </div>
@@ -452,7 +650,7 @@ export default function EventModal({
             {/* Recurrence Section - Only show when creating new events */}
             {!event?.id && !isReadOnly && (
               <div className="space-y-3">
-                <Label className="text-sm font-medium text-white flex items-center gap-2">
+                <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <Repeat className="w-4 h-4" />
                   Repeat
                 </Label>
@@ -463,14 +661,14 @@ export default function EventModal({
                     type="button"
                     onClick={() => setShowRecurrenceDropdown(!showRecurrenceDropdown)}
                     data-testid="button-recurrence-selector"
-                    className="w-full bg-white/15 border border-white/40 rounded-2xl text-white px-4 py-3 text-left hover:bg-white/20 transition-all flex items-center justify-between"
+                    className="w-full bg-muted/50 border border-border rounded-2xl text-foreground px-4 py-3 text-left hover:bg-muted transition-all flex items-center justify-between"
                   >
                     <span>{getRecurrenceLabel()}</span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${showRecurrenceDropdown ? 'rotate-180' : ''}`} />
                   </button>
                   
                   {showRecurrenceDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-gradient-to-br from-[#4A5A6A] to-[#5A6A7A] border border-white/40 rounded-2xl shadow-lg z-50 overflow-hidden">
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-lg z-50 overflow-hidden">
                       {recurrenceOptions.map((option) => (
                         <button
                           key={option.value ?? 'none'}
@@ -483,8 +681,8 @@ export default function EventModal({
                             }
                           }}
                           data-testid={`option-recurrence-${option.value ?? 'none'}`}
-                          className={`w-full px-4 py-3 text-left hover:bg-white/10 transition-all border-b border-white/10 last:border-0 ${
-                            recurrenceRule === option.value ? 'bg-white/15 text-white' : 'text-white/80'
+                          className={`w-full px-4 py-3 text-left hover:bg-muted/50 transition-all border-b border-border last:border-0 ${
+                            recurrenceRule === option.value ? 'bg-muted text-foreground' : 'text-muted-foreground'
                           }`}
                         >
                           {option.label}
@@ -497,7 +695,7 @@ export default function EventModal({
                 {/* End Condition - Only show when recurrence is selected */}
                 {recurrenceRule && (
                   <div className="space-y-3 pt-2">
-                    <Label className="text-sm font-medium text-white/80">Ends</Label>
+                    <Label className="text-sm font-medium text-muted-foreground">Ends</Label>
                     
                     {/* End condition buttons */}
                     <div className="flex flex-wrap gap-2">
@@ -508,7 +706,7 @@ export default function EventModal({
                         className={`flex-1 min-w-[70px] py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                           endCondition === 'never'
                             ? 'bg-purple-600 text-white border border-purple-400'
-                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
+                            : 'bg-muted/50 text-muted-foreground border border-border hover:bg-muted'
                         }`}
                       >
                         Never
@@ -520,7 +718,7 @@ export default function EventModal({
                         className={`flex-1 min-w-[70px] py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                           endCondition === 'after'
                             ? 'bg-purple-600 text-white border border-purple-400'
-                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
+                            : 'bg-muted/50 text-muted-foreground border border-border hover:bg-muted'
                         }`}
                       >
                         After
@@ -532,7 +730,7 @@ export default function EventModal({
                         className={`flex-1 min-w-[70px] py-2 px-3 rounded-xl text-sm font-medium transition-all ${
                           endCondition === 'on'
                             ? 'bg-purple-600 text-white border border-purple-400'
-                            : 'bg-white/10 text-white/70 border border-white/20 hover:bg-white/15'
+                            : 'bg-muted/50 text-muted-foreground border border-border hover:bg-muted'
                         }`}
                       >
                         On Date
@@ -541,8 +739,8 @@ export default function EventModal({
                     
                     {/* After X occurrences input */}
                     {endCondition === 'after' && (
-                      <div className="flex items-center gap-3 bg-white/10 rounded-2xl p-3 border border-white/20">
-                        <span className="text-white/70 text-sm">After</span>
+                      <div className="flex items-center gap-3 bg-muted/50 rounded-2xl p-3 border border-border">
+                        <span className="text-muted-foreground text-sm">After</span>
                         <Input
                           type="number"
                           min="2"
@@ -550,26 +748,55 @@ export default function EventModal({
                           value={recurrenceCount}
                           onChange={(e) => setRecurrenceCount(e.target.value)}
                           data-testid="input-recurrence-count"
-                          className="w-20 bg-white/15 border border-white/40 rounded-xl text-white text-center h-10"
+                          className="w-20 bg-muted/50 border border-border rounded-xl text-center h-10"
                         />
-                        <span className="text-white/70 text-sm">occurrences</span>
+                        <span className="text-muted-foreground text-sm">occurrences</span>
                       </div>
                     )}
                     
                     {/* On specific date input */}
                     {endCondition === 'on' && (
-                      <div className="flex items-center gap-3 bg-white/10 rounded-2xl p-3 border border-white/20">
-                        <span className="text-white/70 text-sm">Until</span>
+                      <div className="flex items-center gap-3 bg-muted/50 rounded-2xl p-3 border border-border">
+                        <span className="text-muted-foreground text-sm">Until</span>
                         <Input
                           type="date"
                           value={recurrenceEndDate}
                           onChange={(e) => setRecurrenceEndDate(e.target.value)}
                           min={startDate}
                           data-testid="input-recurrence-end-date"
-                          className="flex-1 bg-white/15 border border-white/40 rounded-xl text-white h-10"
+                          className="flex-1 bg-muted/50 border border-border rounded-xl h-10"
                         />
                       </div>
                     )}
+
+                    {/* Preview of next occurrences */}
+                    {recurrenceRule && (() => {
+                      const previewDates: Date[] = [];
+                      const base = new Date(`${startDate}T${isSometimeToday ? '12:00' : startTime}`);
+                      let current = new Date(base);
+                      for (let i = 0; i < 3; i++) {
+                        switch (recurrenceRule) {
+                          case 'daily': current = addDays(current, 1); break;
+                          case 'weekly': current = addWeeks(current, 1); break;
+                          case 'biweekly': current = addWeeks(current, 2); break;
+                          case 'monthly': current = addMonths(current, 1); break;
+                          case 'yearly': current = addYears(current, 1); break;
+                        }
+                        previewDates.push(new Date(current));
+                      }
+                      return (
+                        <div className="bg-muted/50 rounded-xl p-3 border border-border" data-testid="recurrence-preview">
+                          <p className="text-muted-foreground text-xs mb-1.5">Next occurrences:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {previewDates.map((d, i) => (
+                              <span key={i} className="text-muted-foreground text-xs bg-muted px-2 py-0.5 rounded-full">
+                                {format(d, 'MMM d, yyyy')}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
@@ -578,11 +805,11 @@ export default function EventModal({
             {/* Notes Section - Only show when editing existing events */}
             {event?.id && activeFamilyId && (
               <div className="space-y-3">
-                <Label className="text-sm font-medium text-white flex items-center gap-2">
+                <Label className="text-sm font-medium text-foreground flex items-center gap-2">
                   <MessageCircle className="w-4 h-4" />
                   Notes & Conversation
                 </Label>
-                <div className="bg-white/5 rounded-2xl border border-white/20 overflow-hidden">
+                <div className="bg-muted/50 rounded-2xl border border-border overflow-hidden">
                   <EventNotesSection
                     eventId={event.id}
                     familyId={activeFamilyId}
@@ -595,8 +822,8 @@ export default function EventModal({
 
             {/* Notes hint for new events */}
             {!event?.id && (
-              <div className="bg-white/5 border border-white/20 rounded-2xl p-4">
-                <div className="flex items-center gap-2 text-white/60">
+              <div className="bg-muted/50 border border-border rounded-2xl p-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <MessageCircle className="w-4 h-4" />
                   <span className="text-sm">Notes can be added after creating the event</span>
                 </div>
@@ -605,39 +832,62 @@ export default function EventModal({
             </div>
           </div>
 
-          {/* Sticky Footer with Action Buttons */}
-          <div className="border-t border-white/20 px-6 md:px-8 py-4 bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex-shrink-0">
+          {/* Footer */}
+          <div
+            className="px-5 md:px-6 py-3 flex-shrink-0"
+            style={{ borderTop: '1px solid hsl(var(--border) / 0.4)' }}
+          >
             <div className="flex items-center justify-between gap-3">
               {event?.id && onDelete && !isReadOnly && (
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    onDelete(event.id!);
-                    onClose();
-                  }}
-                  data-testid="button-delete-event"
-                  className="bg-red-600 hover:bg-red-700 text-white border border-white/50 rounded-lg"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      data-testid="button-delete-event"
+                      className="rounded-lg text-xs"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{event.title}"? This cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel data-testid="button-delete-cancel">Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => { onDelete(event.id!); onClose(); }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        data-testid="button-delete-confirm"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
               
-              <div className="flex gap-3 ml-auto">
+              <div className="flex gap-2 ml-auto">
                 <Button
                   variant="ghost"
+                  size="sm"
                   onClick={onClose}
                   data-testid="button-cancel"
-                  className="text-white border border-white/50 rounded-lg hover:bg-white/10"
+                  className="rounded-lg text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
+                  size="sm"
                   onClick={handleSave}
-                  disabled={!title.trim() || selectedMemberIds.length === 0 || isReadOnly}
+                  disabled={isReadOnly}
                   data-testid="button-save-event"
-                  className="bg-purple-600 hover:bg-purple-700 text-white border border-white/50 rounded-lg disabled:opacity-50"
-                  title={isReadOnly ? 'You cannot create or edit events' : !title.trim() ? 'Please enter an event title' : selectedMemberIds.length === 0 ? 'Please select at least one family member' : ''}
+                  className="rounded-lg text-xs"
                 >
                   {event?.id ? 'Update Event' : 'Create Event'}
                 </Button>

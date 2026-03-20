@@ -1,5 +1,6 @@
 import { type IStorage } from "./storage";
-import { addDays, subDays, setHours, setMinutes, startOfToday } from "date-fns";
+import { addDays, subDays } from "date-fns";
+import { CATEGORY_CONFIG } from "@shared/schema";
 
 // Sample memory photos for demo events - Family with Kids
 const FAMILY_PHOTOS = {
@@ -26,7 +27,7 @@ const CARE_PHOTOS = {
  * This demonstrates the full spectrum of Kindora's features for families
  * who are caring for both children and elderly parents.
  */
-export async function seedDemoAccount(storage: IStorage, userId: string): Promise<void> {
+export async function seedDemoAccount(storage: IStorage, userId: string, tzOffsetMinutes: number = 0): Promise<void> {
   try {
     // Get the user's primary family (created automatically when user is upserted)
     const families = await storage.getUserFamilies(userId);
@@ -34,7 +35,19 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       throw new Error(`No families found for user ${userId}`);
     }
     
-    const today = startOfToday();
+    const now = new Date();
+    // Calculate the user's local "today" (their date may differ from server UTC date near midnight)
+    const userNow = new Date(now.getTime() - tzOffsetMinutes * 60 * 1000);
+    const today = new Date(Date.UTC(userNow.getUTCFullYear(), userNow.getUTCMonth(), userNow.getUTCDate()));
+
+    // Helper to create dates at specific hours in user's local timezone
+    // getTimezoneOffset() returns positive for west of UTC (e.g. 300 for EST = UTC-5)
+    // Creates the correct UTC time so the browser displays it at the intended local hour
+    const localTime = (baseDate: Date, hour: number, minute: number = 0): Date => {
+      const d = new Date(baseDate);
+      d.setUTCHours(hour, minute, 0, 0);
+      return new Date(d.getTime() + tzOffsetMinutes * 60 * 1000);
+    };
     
     // ============================================
     // CREATE DEMO USERS FOR OTHER FAMILY MEMBERS
@@ -94,36 +107,30 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     await storage.addUserToFamily(michaelId, familyId, "member");
     await storage.addUserToFamily(jennyId, familyId, "member");
 
-    // Create family members - the core family
+    // Create family members - 3 family + 1 caregiver
     const mom = await storage.createFamilyMember(familyId, {
       name: "You (Sarah)",
-      color: "#E879F9", // Purple - represents the demo user
-      avatar: null,
-    });
-
-    const dad = await storage.createFamilyMember(familyId, {
-      name: "Michael",
-      color: "#2DD4BF", // Teal
+      color: "#E879F9",
       avatar: null,
     });
 
     const daughter = await storage.createFamilyMember(familyId, {
       name: "Emma",
-      color: "#F472B6", // Pink - 12 years old
+      color: "#F472B6",
       avatar: null,
     });
 
     const son = await storage.createFamilyMember(familyId, {
       name: "Lucas",
-      color: "#60A5FA", // Blue - 8 years old
+      color: "#60A5FA",
       avatar: null,
     });
 
-    // Add a caregiver to the family calendar - babysitter
     const babysitter = await storage.createFamilyMember(familyId, {
-      name: "Jenny (Babysitter)",
-      color: "#F97316", // Orange - trusted caregiver
+      name: "Jenny",
+      color: "#F97316",
       avatar: null,
+      role: "caregiver",
     });
 
     // Family events - mix of memories and upcoming activities
@@ -132,37 +139,41 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         title: "Emma's Soccer Championship",
         description: "What a game! Emma scored the winning goal in overtime. The whole team celebrated!",
-        startTime: setMinutes(setHours(subDays(today, 3), 14), 0),
-        endTime: setMinutes(setHours(subDays(today, 3), 16), 0),
-        memberIds: [daughter.id, mom.id, dad.id],
-        color: daughter.color,
+        startTime: localTime(subDays(today, 3), 14, 0),
+        endTime: localTime(subDays(today, 3), 16, 0),
+        memberIds: [daughter.id, mom.id],
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: FAMILY_PHOTOS.soccerGame,
       },
       {
         title: "Family Movie Night",
         description: "Watched the new animated movie with homemade popcorn. Lucas picked the movie this time!",
-        startTime: setMinutes(setHours(subDays(today, 5), 19), 0),
-        endTime: setMinutes(setHours(subDays(today, 5), 21), 30),
-        memberIds: [mom.id, dad.id, daughter.id, son.id],
-        color: mom.color,
+        startTime: localTime(subDays(today, 5), 19, 0),
+        endTime: localTime(subDays(today, 5), 21, 30),
+        memberIds: [mom.id, daughter.id, son.id],
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.movieNight,
       },
       {
         title: "Lucas's Piano Recital",
         description: "His first big performance! He played 'Für Elise' perfectly. So proud of his practice!",
-        startTime: setMinutes(setHours(subDays(today, 7), 15), 0),
-        endTime: setMinutes(setHours(subDays(today, 7), 16), 30),
-        memberIds: [son.id, mom.id, dad.id, daughter.id],
-        color: son.color,
+        startTime: localTime(subDays(today, 7), 15, 0),
+        endTime: localTime(subDays(today, 7), 16, 30),
+        memberIds: [son.id, mom.id, daughter.id],
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: FAMILY_PHOTOS.pianoRecital,
       },
       {
         title: "Jenny Babysat - Anniversary Dinner",
         description: "Jenny took the kids to the park and made dinner. Kids loved it! We had a wonderful anniversary dinner.",
-        startTime: setMinutes(setHours(subDays(today, 10), 17), 0),
-        endTime: setMinutes(setHours(subDays(today, 10), 22), 0),
+        startTime: localTime(subDays(today, 10), 17, 0),
+        endTime: localTime(subDays(today, 10), 22, 0),
         memberIds: [babysitter.id, daughter.id, son.id],
-        color: babysitter.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
         completed: true,
       },
@@ -171,29 +182,72 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         title: "School Drop-off",
         description: "Emma has early math club, Lucas regular drop-off",
-        startTime: setMinutes(setHours(today, 7), 30),
-        endTime: setMinutes(setHours(today, 8), 15),
+        startTime: localTime(today, 7, 30),
+        endTime: localTime(today, 8, 15),
         memberIds: [mom.id, daughter.id, son.id],
-        color: mom.color,
+        color: CATEGORY_CONFIG['school'].color,
+        category: 'school' as const,
         photoUrl: null,
         completed: true,
       },
       {
         title: "Grocery Run",
         description: "Need items for Sunday dinner at Grandma Marilyn's",
-        startTime: setMinutes(setHours(today, 10), 0),
-        endTime: setMinutes(setHours(today, 11), 30),
+        startTime: localTime(today, 10, 0),
+        endTime: localTime(today, 11, 30),
         memberIds: [mom.id],
-        color: mom.color,
+        color: CATEGORY_CONFIG['errands'].color,
+        category: 'errands' as const,
+        photoUrl: null,
+      },
+      {
+        title: "Work Call - Project Review",
+        description: "Quarterly review with the team, dial in from home",
+        startTime: localTime(today, 9, 0),
+        endTime: localTime(today, 9, 45),
+        memberIds: [mom.id],
+        color: CATEGORY_CONFIG['work'].color,
+        category: 'work' as const,
+        photoUrl: null,
+      },
+      {
+        title: "Lunch with Lisa",
+        description: "Catching up at the cafe on Main St",
+        startTime: localTime(today, 12, 0),
+        endTime: localTime(today, 13, 0),
+        memberIds: [mom.id],
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
+        photoUrl: null,
+      },
+      {
+        title: "Emma - Art Class",
+        description: "Watercolor session at the community center",
+        startTime: localTime(today, 14, 30),
+        endTime: localTime(today, 15, 30),
+        memberIds: [daughter.id],
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: null,
       },
       {
         title: "Lucas Soccer Practice",
         description: "Don't forget shin guards! Coach mentioned early pickup today",
-        startTime: setMinutes(setHours(today, 16), 0),
-        endTime: setMinutes(setHours(today, 17), 30),
-        memberIds: [son.id, dad.id],
-        color: son.color,
+        startTime: localTime(today, 16, 0),
+        endTime: localTime(today, 17, 30),
+        memberIds: [son.id, mom.id],
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
+        photoUrl: null,
+      },
+      {
+        title: "Family Dinner",
+        description: "Taco Tuesday! Kids helping with prep tonight",
+        startTime: localTime(today, 18, 0),
+        endTime: localTime(today, 19, 0),
+        memberIds: [mom.id, daughter.id, son.id],
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: null,
       },
 
@@ -201,73 +255,81 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         title: "Emma's Dentist Checkup",
         description: "Regular 6-month cleaning at Dr. Chen's office",
-        startTime: setMinutes(setHours(addDays(today, 1), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 1), 10), 0),
+        startTime: localTime(addDays(today, 1), 9, 0),
+        endTime: localTime(addDays(today, 1), 10, 0),
         memberIds: [daughter.id, mom.id],
-        color: daughter.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
         title: "Parent-Teacher Conference",
         description: "Meeting with Lucas's teacher Mrs. Rodriguez about his reading progress",
-        startTime: setMinutes(setHours(addDays(today, 2), 16), 0),
-        endTime: setMinutes(setHours(addDays(today, 2), 17), 0),
-        memberIds: [mom.id, dad.id],
-        color: son.color,
+        startTime: localTime(addDays(today, 2), 16, 0),
+        endTime: localTime(addDays(today, 2), 17, 0),
+        memberIds: [mom.id],
+        color: CATEGORY_CONFIG['school'].color,
+        category: 'school' as const,
         photoUrl: null,
       },
       {
         title: "Family Dinner at Grandma's",
         description: "Sunday dinner with Grandma Marilyn - bringing her favorite apple pie!",
-        startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
-        endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
-        memberIds: [mom.id, dad.id, daughter.id, son.id],
-        color: mom.color,
+        startTime: localTime(addDays(today, 3), 17, 0),
+        endTime: localTime(addDays(today, 3), 20, 0),
+        memberIds: [mom.id, daughter.id, son.id],
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.familyDinner,
       },
       {
         title: "Emma's Ballet Dress Rehearsal",
         description: "Spring recital is next week - full costume required",
-        startTime: setMinutes(setHours(addDays(today, 4), 16), 0),
-        endTime: setMinutes(setHours(addDays(today, 4), 18), 0),
+        startTime: localTime(addDays(today, 4), 16, 0),
+        endTime: localTime(addDays(today, 4), 18, 0),
         memberIds: [daughter.id, mom.id],
-        color: daughter.color,
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: null,
       },
       {
         title: "Date Night - Jenny Babysitting",
         description: "Jenny watching the kids! She'll do homework help and bedtime routine. Trying that new Italian place downtown.",
-        startTime: setMinutes(setHours(addDays(today, 5), 18), 0),
-        endTime: setMinutes(setHours(addDays(today, 5), 23), 0),
-        memberIds: [mom.id, dad.id, babysitter.id, daughter.id, son.id],
-        color: babysitter.color,
+        startTime: localTime(addDays(today, 5), 18, 0),
+        endTime: localTime(addDays(today, 5), 23, 0),
+        memberIds: [mom.id, babysitter.id, daughter.id, son.id],
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: null,
       },
       {
         title: "Lucas's Basketball Tournament",
         description: "All-day tournament at Riverside Community Center. Pack snacks!",
-        startTime: setMinutes(setHours(addDays(today, 6), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 6), 16), 0),
-        memberIds: [son.id, dad.id, mom.id],
-        color: son.color,
+        startTime: localTime(addDays(today, 6), 9, 0),
+        endTime: localTime(addDays(today, 6), 16, 0),
+        memberIds: [son.id, mom.id],
+        color: CATEGORY_CONFIG['activities'].color,
+        category: 'activities' as const,
         photoUrl: null,
       },
       {
         title: "Beach Day Adventure",
         description: "End of school year celebration! Sunscreen, towels, and sandcastle supplies",
-        startTime: setMinutes(setHours(addDays(today, 7), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 7), 17), 0),
-        memberIds: [mom.id, dad.id, daughter.id, son.id],
-        color: dad.color,
+        startTime: localTime(addDays(today, 7), 10, 0),
+        endTime: localTime(addDays(today, 7), 17, 0),
+        memberIds: [mom.id, daughter.id, son.id],
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: FAMILY_PHOTOS.beachDay,
       },
       {
         title: "Jenny - After School Pickup",
         description: "Jenny picking up both kids. Mom at work meeting. Snacks in pantry, homework before screen time!",
-        startTime: setMinutes(setHours(addDays(today, 8), 15), 0),
-        endTime: setMinutes(setHours(addDays(today, 8), 18), 0),
+        startTime: localTime(addDays(today, 8), 15, 0),
+        endTime: localTime(addDays(today, 8), 18, 0),
         memberIds: [babysitter.id, daughter.id, son.id],
-        color: babysitter.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
     ];
@@ -316,6 +378,158 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
         content: "Don't forget to pack the cooler with sports drinks and snacks. We need to be there by 8:30am for warmups.",
         parentNoteId: null,
       });
+    }
+
+    // ============================================
+    // CAREGIVER DATA for "Your Family Calendar"
+    // Jenny the babysitter - pay tracking
+    // ============================================
+
+    // Set Jenny's hourly babysitting rate
+    await storage.setCaregiverPayRate(familyId, jennyId, "18.00", "USD");
+
+    // Time entries for Jenny - past babysitting sessions
+    const jennyTimeEntries = [
+      {
+        hoursWorked: "5.0",
+        entryDate: subDays(today, 10),
+        notes: "Anniversary dinner cover — kids to park, dinner, bedtime routine",
+      },
+      {
+        hoursWorked: "3.5",
+        entryDate: subDays(today, 7),
+        notes: "Saturday afternoon — helped Emma with art project, Lucas soccer practice pickup",
+      },
+      {
+        hoursWorked: "4.0",
+        entryDate: subDays(today, 4),
+        notes: "After-school cover — homework help and snacks, both kids",
+      },
+      {
+        hoursWorked: "2.5",
+        entryDate: subDays(today, 2),
+        notes: "Quick Tuesday cover — school pickup and dinner prep",
+      },
+      {
+        hoursWorked: "5.0",
+        entryDate: addDays(today, 5),
+        notes: "Date night — full evening including bedtime",
+      },
+    ];
+
+    for (const entry of jennyTimeEntries) {
+      await storage.createCaregiverTimeEntry(familyId, jennyId, entry, "18.00");
+    }
+
+    // ============================================
+    // MEDICATIONS for "Your Family Calendar"
+    // Kids' medications — shows the full feature
+    // ============================================
+
+    const familyMedications = [
+      {
+        memberId: son.id,
+        name: "Albuterol Inhaler",
+        dosage: "90mcg/puff, 2 puffs",
+        frequency: "As needed",
+        scheduledTimes: [] as string[],
+        instructions: "Use before exercise or when wheezing. Shake well. Rinse mouth after. Keep spare at school.",
+        isActive: true,
+      },
+      {
+        memberId: daughter.id,
+        name: "Cetirizine (Zyrtec)",
+        dosage: "10mg",
+        frequency: "Once daily",
+        scheduledTimes: ["08:00"],
+        instructions: "Daily allergy medication. Take with breakfast. Can cause drowsiness.",
+        isActive: true,
+      },
+      {
+        memberId: son.id,
+        name: "Fluticasone Nasal Spray",
+        dosage: "1 spray each nostril",
+        frequency: "Once daily",
+        scheduledTimes: ["08:00"],
+        instructions: "Shake before use. 2 week ramp-up before full effect. Don't skip days.",
+        isActive: true,
+      },
+    ];
+
+    const createdFamilyMedications: Array<{ id: string; name: string }> = [];
+    for (const med of familyMedications) {
+      const created = await storage.createMedication(familyId, med);
+      createdFamilyMedications.push({ id: created.id, name: created.name });
+    }
+
+    // Recent medication logs for the kids
+    const getFamMedId = (name: string) => createdFamilyMedications.find(m => m.name === name)?.id;
+    type MedStatus2 = "given" | "skipped" | "refused";
+    const familyMedLogs: Array<{
+      medicationId: string;
+      administeredBy: string;
+      scheduledTime: Date;
+      administeredAt: Date;
+      status: MedStatus2;
+      notes?: string;
+    }> = [
+      {
+        medicationId: getFamMedId("Cetirizine (Zyrtec)")!,
+        administeredBy: userId,
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 10),
+        status: "given",
+        notes: "Gave with breakfast, high pollen day today",
+      },
+      {
+        medicationId: getFamMedId("Fluticasone Nasal Spray")!,
+        administeredBy: userId,
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 12),
+        status: "given",
+      },
+      {
+        medicationId: getFamMedId("Cetirizine (Zyrtec)")!,
+        administeredBy: userId,
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
+        status: "given",
+      },
+      {
+        medicationId: getFamMedId("Fluticasone Nasal Spray")!,
+        administeredBy: userId,
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
+        status: "given",
+      },
+      {
+        medicationId: getFamMedId("Cetirizine (Zyrtec)")!,
+        administeredBy: michaelId,
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 30),
+        status: "given",
+        notes: "Michael gave before school — Sarah had early meeting",
+      },
+      {
+        medicationId: getFamMedId("Fluticasone Nasal Spray")!,
+        administeredBy: michaelId,
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 32),
+        status: "skipped",
+        notes: "Forgot in the morning rush — will double-check tomorrow",
+      },
+      {
+        medicationId: getFamMedId("Albuterol Inhaler")!,
+        administeredBy: userId,
+        scheduledTime: localTime(subDays(today, 3), 16, 0),
+        administeredAt: localTime(subDays(today, 3), 16, 5),
+        status: "given",
+        notes: "Lucas used before soccer practice — did great, no issues during practice",
+      },
+    ];
+
+    for (const log of familyMedLogs) {
+      await storage.createMedicationLog(familyId, log);
     }
 
     // ============================================
@@ -411,30 +625,33 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         title: "Physical Therapy Session",
         description: "Great progress today! Mom walked 50 feet with the walker. Maya supervised the exercises.",
-        startTime: setMinutes(setHours(subDays(today, 2), 10), 0),
-        endTime: setMinutes(setHours(subDays(today, 2), 11), 0),
+        startTime: localTime(subDays(today, 2), 10, 0),
+        endTime: localTime(subDays(today, 2), 11, 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: CARE_PHOTOS.physicalTherapy,
         completed: true,
       },
       {
         title: "Cardiology Follow-up",
         description: "Dr. Patel is pleased with her heart rhythm. Medication is working well. Next checkup in 3 months.",
-        startTime: setMinutes(setHours(subDays(today, 4), 14), 0),
-        endTime: setMinutes(setHours(subDays(today, 4), 15), 30),
+        startTime: localTime(subDays(today, 4), 14, 0),
+        endTime: localTime(subDays(today, 4), 15, 30),
         memberIds: [grandma.id, coordinator.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: CARE_PHOTOS.doctorVisit,
         completed: true,
       },
       {
         title: "Grandkids Visit",
         description: "Emma and Lucas came to see Grandma! They played cards and she taught them to make cookies. Such precious memories.",
-        startTime: setMinutes(setHours(subDays(today, 5), 15), 0),
-        endTime: setMinutes(setHours(subDays(today, 5), 18), 0),
+        startTime: localTime(subDays(today, 5), 15, 0),
+        endTime: localTime(subDays(today, 5), 18, 0),
         memberIds: [grandma.id, coordinator.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: CARE_PHOTOS.familyVisit,
         completed: true,
       },
@@ -443,47 +660,52 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         title: "Morning Medication",
         description: "Blood pressure meds, heart medication, and vitamin D. Take with breakfast.",
-        startTime: setMinutes(setHours(today, 8), 0),
-        endTime: setMinutes(setHours(today, 8), 30),
+        startTime: localTime(today, 8, 0),
+        endTime: localTime(today, 8, 30),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
         completed: true,
       },
       {
         title: "Maya - Morning Care",
         description: "Help with bathing, breakfast prep, and light housekeeping. Check medication box is organized.",
-        startTime: setMinutes(setHours(today, 9), 0),
-        endTime: setMinutes(setHours(today, 12), 0),
+        startTime: localTime(today, 9, 0),
+        endTime: localTime(today, 12, 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: CARE_PHOTOS.nurseVisit,
       },
       {
         title: "Lunch + Afternoon Meds",
         description: "Light lunch, afternoon heart medication. Maya leaves at 12 - David checking in by phone at 2pm.",
-        startTime: setMinutes(setHours(today, 12), 0),
-        endTime: setMinutes(setHours(today, 13), 0),
+        startTime: localTime(today, 12, 0),
+        endTime: localTime(today, 13, 0),
         memberIds: [grandma.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
         title: "David's Phone Check-in",
         description: "Brother calling to chat and make sure Mom is comfortable. She loves hearing about his garden!",
-        startTime: setMinutes(setHours(today, 14), 0),
-        endTime: setMinutes(setHours(today, 14), 30),
+        startTime: localTime(today, 14, 0),
+        endTime: localTime(today, 14, 30),
         memberIds: [grandma.id, brother.id],
-        color: brother.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
         title: "Evening Medication",
         description: "Evening heart meds and sleep aid. You'll stop by to help with dinner.",
-        startTime: setMinutes(setHours(today, 18), 0),
-        endTime: setMinutes(setHours(today, 19), 0),
+        startTime: localTime(today, 18, 0),
+        endTime: localTime(today, 19, 0),
         memberIds: [grandma.id, coordinator.id],
-        color: coordinator.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
 
@@ -491,82 +713,91 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         title: "Exercise Session with Maya",
         description: "Working on balance exercises and stair climbing. Goal: independent outdoor walking",
-        startTime: setMinutes(setHours(addDays(today, 1), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 1), 11), 0),
+        startTime: localTime(addDays(today, 1), 10, 0),
+        endTime: localTime(addDays(today, 1), 11, 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
         title: "Maya - Morning Care",
         description: "Regular morning routine. Will prep meals for the next two days.",
-        startTime: setMinutes(setHours(addDays(today, 1), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 1), 12), 0),
+        startTime: localTime(addDays(today, 1), 9, 0),
+        endTime: localTime(addDays(today, 1), 12, 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
         title: "Podiatrist Appointment",
         description: "Foot care checkup - important for diabetes management. David is driving.",
-        startTime: setMinutes(setHours(addDays(today, 2), 11), 0),
-        endTime: setMinutes(setHours(addDays(today, 2), 12), 0),
+        startTime: localTime(addDays(today, 2), 11, 0),
+        endTime: localTime(addDays(today, 2), 12, 0),
         memberIds: [grandma.id, brother.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
         title: "Social Worker Visit - Helen",
         description: "Quarterly check-in to review care plan and discuss any additional support needs.",
-        startTime: setMinutes(setHours(addDays(today, 3), 14), 0),
-        endTime: setMinutes(setHours(addDays(today, 3), 15), 0),
+        startTime: localTime(addDays(today, 3), 14, 0),
+        endTime: localTime(addDays(today, 3), 15, 0),
         memberIds: [grandma.id, coordinator.id],
-        color: coordinator.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
         title: "Family Dinner at Mom's",
         description: "Everyone coming over! Kids excited to see Grandma. Bringing the apple pie she loves.",
-        startTime: setMinutes(setHours(addDays(today, 3), 17), 0),
-        endTime: setMinutes(setHours(addDays(today, 3), 20), 0),
+        startTime: localTime(addDays(today, 3), 17, 0),
+        endTime: localTime(addDays(today, 3), 20, 0),
         memberIds: [grandma.id, coordinator.id, brother.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['social'].color,
+        category: 'social' as const,
         photoUrl: null,
       },
       {
         title: "Ophthalmologist - Glaucoma Check",
         description: "Annual eye exam. You're taking Mom. Bring current medication list.",
-        startTime: setMinutes(setHours(addDays(today, 5), 9), 0),
-        endTime: setMinutes(setHours(addDays(today, 5), 10), 30),
+        startTime: localTime(addDays(today, 5), 9, 0),
+        endTime: localTime(addDays(today, 5), 10, 30),
         memberIds: [grandma.id, coordinator.id],
-        color: grandma.color,
+        color: CATEGORY_CONFIG['medical'].color,
+        category: 'medical' as const,
         photoUrl: null,
       },
       {
         title: "Exercise Session with Maya",
         description: "Continuing balance work. If weather is nice, will practice outdoor walking.",
-        startTime: setMinutes(setHours(addDays(today, 4), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 4), 11), 0),
+        startTime: localTime(addDays(today, 4), 10, 0),
+        endTime: localTime(addDays(today, 4), 11, 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
       {
         title: "Pharmacy - Prescription Refills",
         description: "Pick up monthly medications. Blood pressure, heart meds, vitamin D, and sleep aid.",
-        startTime: setMinutes(setHours(addDays(today, 6), 10), 0),
-        endTime: setMinutes(setHours(addDays(today, 6), 10), 30),
+        startTime: localTime(addDays(today, 6), 10, 0),
+        endTime: localTime(addDays(today, 6), 10, 30),
         memberIds: [coordinator.id],
-        color: coordinator.color,
+        color: CATEGORY_CONFIG['errands'].color,
+        category: 'errands' as const,
         photoUrl: null,
       },
       {
         title: "Maya - Extended Care Day",
         description: "Maya staying longer so you can attend Lucas's tournament. Will handle all meals and meds.",
-        startTime: setMinutes(setHours(addDays(today, 6), 8), 0),
-        endTime: setMinutes(setHours(addDays(today, 6), 18), 0),
+        startTime: localTime(addDays(today, 6), 8, 0),
+        endTime: localTime(addDays(today, 6), 18, 0),
         memberIds: [grandma.id, nurseAide.id],
-        color: nurseAide.color,
+        color: CATEGORY_CONFIG['caregiving'].color,
+        category: 'caregiving' as const,
         photoUrl: null,
       },
     ];
@@ -706,24 +937,24 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: mayaId, // Maya gave morning meds
-        scheduledTime: setMinutes(setHours(today, 8), 0),
-        administeredAt: setMinutes(setHours(today, 8), 10),
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 10),
         status: "given",
         notes: "Blood pressure looked good this morning - 128/78",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(today, 8), 0),
-        administeredAt: setMinutes(setHours(today, 8), 12),
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 12),
         status: "given",
         notes: "Given with oatmeal and blueberries",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(today, 8), 0),
-        administeredAt: setMinutes(setHours(today, 8), 15),
+        scheduledTime: localTime(today, 8, 0),
+        administeredAt: localTime(today, 8, 15),
         status: "given",
       },
       
@@ -731,46 +962,46 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: userId, // Sarah (demo user)
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 5),
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
         status: "given",
         notes: "Visiting in the morning - gave meds before heading to work",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 5),
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 5),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 8), 8),
+        scheduledTime: localTime(subDays(today, 1), 8, 0),
+        administeredAt: localTime(subDays(today, 1), 8, 8),
         status: "given",
       },
       {
         medicationId: getMedId("Baby Aspirin")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 12), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 12), 30),
+        scheduledTime: localTime(subDays(today, 1), 12, 0),
+        administeredAt: localTime(subDays(today, 1), 12, 30),
         status: "given",
         notes: "Took with lunch - chicken soup and crackers",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: davidId, // David (brother)
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 18), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 18), 15),
+        scheduledTime: localTime(subDays(today, 1), 18, 0),
+        administeredAt: localTime(subDays(today, 1), 18, 15),
         status: "given",
         notes: "Stopped by for dinner visit",
       },
       {
         medicationId: getMedId("Trazodone")!,
         administeredBy: davidId,
-        scheduledTime: setMinutes(setHours(subDays(today, 1), 21), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 1), 21), 0),
+        scheduledTime: localTime(subDays(today, 1), 21, 0),
+        administeredAt: localTime(subDays(today, 1), 21, 0),
         status: "skipped",
         notes: "Mom said she's been sleeping well, decided to skip tonight",
       },
@@ -779,37 +1010,37 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 20),
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 20),
         status: "given",
         notes: "Slightly late - was helping with PT exercises first",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 22),
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 22),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 8), 25),
+        scheduledTime: localTime(subDays(today, 2), 8, 0),
+        administeredAt: localTime(subDays(today, 2), 8, 25),
         status: "given",
       },
       {
         medicationId: getMedId("Baby Aspirin")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 12), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 12), 0),
+        scheduledTime: localTime(subDays(today, 2), 12, 0),
+        administeredAt: localTime(subDays(today, 2), 12, 0),
         status: "given",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 2), 18), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 2), 19), 0),
+        scheduledTime: localTime(subDays(today, 2), 18, 0),
+        administeredAt: localTime(subDays(today, 2), 19, 0),
         status: "given",
         notes: "Running late from work, gave as soon as I arrived",
       },
@@ -818,37 +1049,37 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 10),
+        scheduledTime: localTime(subDays(today, 3), 8, 0),
+        administeredAt: localTime(subDays(today, 3), 8, 10),
         status: "given",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 10),
+        scheduledTime: localTime(subDays(today, 3), 8, 0),
+        administeredAt: localTime(subDays(today, 3), 8, 10),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 8), 15),
+        scheduledTime: localTime(subDays(today, 3), 8, 0),
+        administeredAt: localTime(subDays(today, 3), 8, 15),
         status: "refused",
         notes: "Mom wasn't feeling well, said it was making her nauseous. Will try again tomorrow.",
       },
       {
         medicationId: getMedId("Baby Aspirin")!,
         administeredBy: mayaId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 12), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 12), 15),
+        scheduledTime: localTime(subDays(today, 3), 12, 0),
+        administeredAt: localTime(subDays(today, 3), 12, 15),
         status: "given",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: davidId,
-        scheduledTime: setMinutes(setHours(subDays(today, 3), 18), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 3), 18), 30),
+        scheduledTime: localTime(subDays(today, 3), 18, 0),
+        administeredAt: localTime(subDays(today, 3), 18, 30),
         status: "given",
         notes: "Picked up dinner, stayed to give evening meds",
       },
@@ -857,23 +1088,23 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       {
         medicationId: getMedId("Lisinopril")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 45),
+        scheduledTime: localTime(subDays(today, 4), 8, 0),
+        administeredAt: localTime(subDays(today, 4), 7, 45),
         status: "given",
         notes: "Early dose before cardiology appointment",
       },
       {
         medicationId: getMedId("Metoprolol")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 45),
+        scheduledTime: localTime(subDays(today, 4), 8, 0),
+        administeredAt: localTime(subDays(today, 4), 7, 45),
         status: "given",
       },
       {
         medicationId: getMedId("Vitamin D3")!,
         administeredBy: userId,
-        scheduledTime: setMinutes(setHours(subDays(today, 4), 8), 0),
-        administeredAt: setMinutes(setHours(subDays(today, 4), 7), 50),
+        scheduledTime: localTime(subDays(today, 4), 8, 0),
+        administeredAt: localTime(subDays(today, 4), 7, 50),
         status: "given",
       },
     ];
@@ -884,12 +1115,172 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
     }
 
     // ============================================
+    // CARE DOCUMENTS for Mom's Care Calendar
+    // ============================================
+
+    const careDocuments = [
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Medicare Supplemental Insurance Card",
+        description: "Marilyn's Medicare Part B + Supplemental (Plan G) coverage. Always carry to appointments.",
+        documentType: "insurance" as const,
+        fileName: "insurance_card_marilyn.jpg",
+        fileUrl: "/attached_assets/stock_images/nurse_visiting_elder_6f5a0aa9.jpg",
+        fileSize: "248000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Cardiology Care Plan – Dr. Patel",
+        description: "Updated care plan from Dr. Patel after the March cardiology visit. Includes medication adjustments and activity guidelines.",
+        documentType: "care_plan" as const,
+        fileName: "care_plan_cardiology_march.jpg",
+        fileUrl: "/attached_assets/stock_images/doctor_elderly_patie_c7a84ec4.jpg",
+        fileSize: "312000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Physical Therapy Progress Report",
+        description: "12-week PT progress report. Balance improved 60%, walker dependency reduced. Goal: independent outdoor walking by June.",
+        documentType: "medical" as const,
+        fileName: "pt_progress_report_q1.jpg",
+        fileUrl: "/attached_assets/stock_images/elderly_person_physi_801b2c25.jpg",
+        fileSize: "285000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: null,
+        uploadedBy: userId,
+        title: "Durable Power of Attorney",
+        description: "Sarah Johnson named as POA for healthcare and financial decisions. Notarized March 2024. Keep copy accessible.",
+        documentType: "legal" as const,
+        fileName: "power_of_attorney_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/elderly_grandmother__1b2dd55b.jpg",
+        fileSize: "195000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: mayaId,
+        title: "Daily Medication Schedule",
+        description: "Maya's detailed medication administration schedule. Includes timing, food requirements, and what to watch for.",
+        documentType: "care_plan" as const,
+        fileName: "medication_schedule_current.jpg",
+        fileUrl: "/attached_assets/stock_images/nurse_visiting_elder_6f5a0aa9.jpg",
+        fileSize: "167000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: grandma.id,
+        uploadedBy: userId,
+        title: "Ophthalmology Report – Glaucoma Monitor",
+        description: "Annual glaucoma monitoring results. Pressure stable at 16mm Hg. Continue current eye drops. Follow-up in 12 months.",
+        documentType: "medical" as const,
+        fileName: "eye_exam_glaucoma_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/doctor_elderly_patie_c7a84ec4.jpg",
+        fileSize: "221000",
+        mimeType: "image/jpeg",
+      },
+    ];
+
+    for (const doc of careDocuments) {
+      await storage.createCareDocument(careFamilyId, {
+        ...doc,
+        memberId: doc.memberId || undefined,
+      });
+    }
+
+    // ============================================
+    // CARE DOCUMENTS for Your Family Calendar
+    // ============================================
+
+    const familyDocuments = [
+      {
+        memberId: daughter.id,
+        uploadedBy: userId,
+        title: "Emma's Immunization Record",
+        description: "Up-to-date vaccination record for school enrollment. MMR, DTaP, Varicella, HPV all current. Next flu shot due October.",
+        documentType: "medical" as const,
+        fileName: "emma_immunization_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_piano__e17f7106.jpg",
+        fileSize: "198000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: son.id,
+        uploadedBy: userId,
+        title: "Liam's Asthma Action Plan",
+        description: "Dr. Rivera's updated asthma management plan. Green zone: Albuterol PRN. Yellow zone: 2 puffs + call office. Red zone: ER.",
+        documentType: "care_plan" as const,
+        fileName: "liam_asthma_action_plan.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_soccer_29d1c0c9.jpg",
+        fileSize: "224000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: daughter.id,
+        uploadedBy: userId,
+        title: "Emma's Annual School Physical",
+        description: "Required physical for 4th grade. Cleared for all PE activities including swimming and contact sports. Vision 20/20.",
+        documentType: "medical" as const,
+        fileName: "emma_school_physical_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_piano__e17f7106.jpg",
+        fileSize: "176000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: null,
+        uploadedBy: userId,
+        title: "Family Emergency Contact Sheet",
+        description: "Emergency contacts, doctors, preferred hospital (Mercy General), insurance numbers, and allergy list for all family members.",
+        documentType: "other" as const,
+        fileName: "family_emergency_contacts.jpg",
+        fileUrl: "/attached_assets/stock_images/family_dinner_table__181f0ecf.jpg",
+        fileSize: "145000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: null,
+        uploadedBy: userId,
+        title: "Homeowner's Insurance Policy",
+        description: "State Farm policy #SF-2024-88821. Renewal due April 15. Coverage: $450k dwelling, $180k personal property, $100k liability.",
+        documentType: "insurance" as const,
+        fileName: "homeowners_insurance_2024.jpg",
+        fileUrl: "/attached_assets/stock_images/family_beach_day_oce_a7a6744f.jpg",
+        fileSize: "312000",
+        mimeType: "image/jpeg",
+      },
+      {
+        memberId: son.id,
+        uploadedBy: userId,
+        title: "Liam's Allergy Test Results",
+        description: "Allergy panel from April. Positive: tree pollen (high), dust mites (moderate), peanuts (trace — carry EpiPen). Retest in 18 months.",
+        documentType: "medical" as const,
+        fileName: "liam_allergy_panel_april.jpg",
+        fileUrl: "/attached_assets/stock_images/child_playing_soccer_29d1c0c9.jpg",
+        fileSize: "258000",
+        mimeType: "image/jpeg",
+      },
+    ];
+
+    for (const doc of familyDocuments) {
+      await storage.createCareDocument(familyId, {
+        ...doc,
+        memberId: doc.memberId || undefined,
+      });
+    }
+
+    // ============================================
     // FAMILY MESSAGES - Impressive Threaded Conversations
     // ============================================
 
     // Helper to create timestamps at specific hours on specific days
     const msgTime = (daysAgo: number, hour: number, minute: number = 0) => 
-      setMinutes(setHours(subDays(today, daysAgo), hour), minute);
+      localTime(subDays(today, daysAgo), hour, minute);
 
     // ========================================
     // FAMILY 1: Your Family - Kids & Activities
@@ -1210,13 +1601,399 @@ export async function seedDemoAccount(storage: IStorage, userId: string): Promis
       parentMessageId: c1_thread4_root.id,
     });
 
+    // ============================================
+    // SYMPTOM TRACKER DEMO DATA
+    // Emma (MCAS/tickborne-like) in Your Family
+    // Marilyn (eldercare) in Mom's Care Calendar
+    // ============================================
+
+    const ds = (d: Date) => d.toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // --- Emma's symptom log (14 days, MCAS-like pattern) ---
+    // Systems: skin, gi, cardio, respiratory, neuro, musculo, mood
+    const emmaSymptomDays: Array<{
+      daysAgo: number;
+      moodEmoji: string;
+      energy: number;
+      severity: number;
+      reaction: "none" | "mild" | "moderate" | "severe";
+      triggers: string[];
+      notes: string;
+      systems: { system: string; severity: number }[];
+    }> = [
+      {
+        daysAgo: 14,
+        moodEmoji: "🙂",
+        energy: 7, severity: 3, reaction: "none",
+        triggers: [],
+        notes: "Good day — Emma went to school, ate well, no notable flares.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 2 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 13,
+        moodEmoji: "😐",
+        energy: 5, severity: 5, reaction: "mild",
+        triggers: ["food", "stress"],
+        notes: "Ate school cafeteria pizza — mild hives on arms, some GI cramping. School test stress didn't help.",
+        systems: [
+          { system: "skin", severity: 6 }, { system: "gi", severity: 7 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 4 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 5 },
+        ],
+      },
+      {
+        daysAgo: 12,
+        moodEmoji: "😢",
+        energy: 3, severity: 8, reaction: "moderate",
+        triggers: ["food", "stress", "exertion"],
+        notes: "Rough day. Stayed home from school. Flushing across chest, severe nausea, brain fog all morning. Benadryl at noon helped.",
+        systems: [
+          { system: "skin", severity: 8 }, { system: "gi", severity: 9 },
+          { system: "cardio", severity: 7 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 8 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 7 },
+        ],
+      },
+      {
+        daysAgo: 11,
+        moodEmoji: "😔",
+        energy: 4, severity: 5, reaction: "none",
+        triggers: [],
+        notes: "Still recovering. Low-trigger foods only. Fatigue lingering but no new reactions.",
+        systems: [
+          { system: "skin", severity: 4 }, { system: "gi", severity: 5 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 6 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 5 },
+        ],
+      },
+      {
+        daysAgo: 10,
+        moodEmoji: "🙂",
+        energy: 7, severity: 2, reaction: "none",
+        triggers: [],
+        notes: "Much better! Back at school, kept to safe foods. Energy almost normal.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 1 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 9,
+        moodEmoji: "😄",
+        energy: 8, severity: 2, reaction: "none",
+        triggers: [],
+        notes: "Great day. Soccer practice went fine — no inhaler needed. Ate home-cooked dinner only.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 2 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 1 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 8,
+        moodEmoji: "😐",
+        energy: 5, severity: 6, reaction: "mild",
+        triggers: ["heat", "exertion"],
+        notes: "Hot afternoon at recess triggered facial flushing and heart racing. Better after rest indoors and hydration.",
+        systems: [
+          { system: "skin", severity: 7 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 8 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 5 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 7,
+        moodEmoji: "😢",
+        energy: 2, severity: 9, reaction: "severe",
+        triggers: ["heat", "stress", "unknown"],
+        notes: "Worst day in weeks. Anaphylaxis-like episode after gym class — throat tightness, widespread hives, dizziness. Epi-pen used, went to urgent care. Stable by evening.",
+        systems: [
+          { system: "skin", severity: 10 }, { system: "gi", severity: 8 },
+          { system: "cardio", severity: 9 }, { system: "respiratory", severity: 9 },
+          { system: "neuro", severity: 7 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 9 },
+        ],
+      },
+      {
+        daysAgo: 6,
+        moodEmoji: "😴",
+        energy: 3, severity: 7, reaction: "none",
+        triggers: [],
+        notes: "Home resting after yesterday. Still shaky and exhausted. Liquid diet, lots of water.",
+        systems: [
+          { system: "skin", severity: 5 }, { system: "gi", severity: 6 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 8 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 8 },
+        ],
+      },
+      {
+        daysAgo: 5,
+        moodEmoji: "😔",
+        energy: 5, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Slow recovery continues. Ate a safe meal, short walk outside. Starting to feel human again.",
+        systems: [
+          { system: "skin", severity: 3 }, { system: "gi", severity: 4 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 5 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 5 },
+        ],
+      },
+      {
+        daysAgo: 4,
+        moodEmoji: "🙂",
+        energy: 7, severity: 3, reaction: "none",
+        triggers: [],
+        notes: "Back to school half-day. Managed well, rested after. Safe foods only.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 2 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 3,
+        moodEmoji: "😄",
+        energy: 8, severity: 2, reaction: "none",
+        triggers: [],
+        notes: "Full day at school — art class went great! Ate packed lunch, no reactions.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 1 }, { system: "respiratory", severity: 1 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 2 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 2,
+        moodEmoji: "😤",
+        energy: 6, severity: 5, reaction: "mild",
+        triggers: ["stress", "food"],
+        notes: "Big test today — stress triggered GI flare and some itching. Manageable with antihistamine.",
+        systems: [
+          { system: "skin", severity: 5 }, { system: "gi", severity: 7 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 5 }, { system: "musculo", severity: 3 }, { system: "mood", severity: 6 },
+        ],
+      },
+      {
+        daysAgo: 1,
+        moodEmoji: "😔",
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["stress"],
+        notes: "Still a bit off after yesterday. Low energy, some brain fog. Skipped soccer practice.",
+        systems: [
+          { system: "skin", severity: 3 }, { system: "gi", severity: 5 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 6 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 5 },
+        ],
+      },
+    ];
+
+    for (const day of emmaSymptomDays) {
+      await storage.createSymptomEntry(
+        {
+          familyId,
+          memberId: daughter.id,
+          date: ds(subDays(today, day.daysAgo)),
+          moodEmoji: day.moodEmoji,
+          energyLevel: day.energy,
+          overallSeverity: day.severity,
+          reactionFlag: day.reaction,
+          triggers: day.triggers,
+          notes: day.notes,
+        },
+        day.systems
+      );
+    }
+
+    // --- Marilyn's symptom log (Mom's Care Calendar, eldercare pattern) ---
+    const marilynSymptomDays: Array<{
+      daysAgo: number;
+      moodEmoji: string;
+      energy: number;
+      severity: number;
+      reaction: "none" | "mild" | "moderate" | "severe";
+      triggers: string[];
+      notes: string;
+      systems: { system: string; severity: number }[];
+    }> = [
+      {
+        daysAgo: 13,
+        moodEmoji: "😐",
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["activity"],
+        notes: "Tired after morning PT session but spirits good. Knee pain moderate.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 7 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 12,
+        moodEmoji: "🙂",
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Better rest last night. BP steady 128/76. Did the garden walk with Maya.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 11,
+        moodEmoji: "😔",
+        energy: 4, severity: 6, reaction: "none",
+        triggers: ["activity", "sleep"],
+        notes: "Didn't sleep well — up twice. Swollen ankles by afternoon. Elevated BP 148/88, called Dr. Patel.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 8 }, { system: "respiratory", severity: 5 },
+          { system: "neuro", severity: 4 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 6 },
+        ],
+      },
+      {
+        daysAgo: 10,
+        moodEmoji: "😴",
+        energy: 3, severity: 7, reaction: "none",
+        triggers: ["stress", "sleep"],
+        notes: "Hard day. Chest tightness in the morning, very short of breath on stairs. David came by which helped mood.",
+        systems: [
+          { system: "skin", severity: 2 }, { system: "gi", severity: 4 },
+          { system: "cardio", severity: 9 }, { system: "respiratory", severity: 8 },
+          { system: "neuro", severity: 4 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 7 },
+        ],
+      },
+      {
+        daysAgo: 9,
+        moodEmoji: "😔",
+        energy: 4, severity: 6, reaction: "none",
+        triggers: [],
+        notes: "Cardiology appointment — medication adjusted. Spent the afternoon resting. Apple strudel at café was a highlight.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 7 }, { system: "respiratory", severity: 6 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 8,
+        moodEmoji: "😐",
+        energy: 5, severity: 5, reaction: "none",
+        triggers: [],
+        notes: "New medication seems to be helping. Less chest tightness. Did the exercises Maya showed her.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 6 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 6,
+        moodEmoji: "🙂",
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Good energy for Marilyn. BP 130/80, much better. Watched her favorite show and did light stretching.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 5,
+        moodEmoji: "😄",
+        energy: 7, severity: 3, reaction: "none",
+        triggers: [],
+        notes: "Best day in two weeks! Marilyn called Sarah herself and chatted for 20 minutes. Appetite good.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 2 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 4 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 4,
+        moodEmoji: "😐",
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["activity"],
+        notes: "PT day — knee was worse than usual. Iced it after. Still cheerful, talked about Sunday dinner.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 8 }, { system: "mood", severity: 3 },
+        ],
+      },
+      {
+        daysAgo: 3,
+        moodEmoji: "🙂",
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Good rest. BP stable. Marilyn asked when the grandkids are visiting — Sunday can't come soon enough.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 3 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 2 },
+        ],
+      },
+      {
+        daysAgo: 2,
+        moodEmoji: "😐",
+        energy: 5, severity: 5, reaction: "none",
+        triggers: ["activity"],
+        notes: "Did a bit too much — tried to tidy her room. Hip ache by afternoon. Maya reminded her to let us help.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 3 },
+          { system: "cardio", severity: 5 }, { system: "respiratory", severity: 4 },
+          { system: "neuro", severity: 3 }, { system: "musculo", severity: 7 }, { system: "mood", severity: 4 },
+        ],
+      },
+      {
+        daysAgo: 1,
+        moodEmoji: "🙂",
+        energy: 6, severity: 4, reaction: "none",
+        triggers: [],
+        notes: "Feeling good ahead of the family visit. BP 126/78. Did gentle morning stretches with Maya.",
+        systems: [
+          { system: "skin", severity: 1 }, { system: "gi", severity: 2 },
+          { system: "cardio", severity: 4 }, { system: "respiratory", severity: 3 },
+          { system: "neuro", severity: 2 }, { system: "musculo", severity: 5 }, { system: "mood", severity: 2 },
+        ],
+      },
+    ];
+
+    for (const day of marilynSymptomDays) {
+      await storage.createSymptomEntry(
+        {
+          familyId: careFamilyId,
+          memberId: grandma.id,
+          date: ds(subDays(today, day.daysAgo)),
+          moodEmoji: day.moodEmoji,
+          energyLevel: day.energy,
+          overallSeverity: day.severity,
+          reactionFlag: day.reaction,
+          triggers: day.triggers,
+          notes: day.notes,
+        },
+        day.systems
+      );
+    }
+
+    const totalSymptomEntries = emmaSymptomDays.length + marilynSymptomDays.length;
+
     console.log(`Demo account seeded:`);
-    console.log(`   Your Family: ${familyEvents.length} events, 5 members (including babysitter)`);
+    console.log(`   Your Family: ${familyEvents.length} events, 4 members (3 family + 1 caregiver)`);
+    console.log(`   Your Family Care: ${familyMedications.length} kids meds, ${jennyTimeEntries.length} Jenny timesheet entries ($18/hr)`);
     console.log(`   Mom's Care Calendar: ${careEvents.length} events, 5 members (with caregivers)`);
-    console.log(`   Medications: ${medications.length} meds tracked for Marilyn`);
-    console.log(`   Medication Logs: ${medicationLogs.length} dose records (given/skipped/refused)`);
-    console.log(`   Time Tracking: ${timeEntries.length} time entries for Maya ($28/hr) - 27hrs total`);
+    console.log(`   Mom's Medications: ${medications.length} meds tracked for Marilyn`);
+    console.log(`   Medication Logs: ${medicationLogs.length + familyMedLogs.length} dose records (given/skipped/refused)`);
+    console.log(`   Time Tracking: ${jennyTimeEntries.length} Jenny entries ($18/hr) + ${timeEntries.length} Maya entries ($28/hr)`);
+    console.log(`   Care Documents: ${careDocuments.length} in Mom's Care vault, ${familyDocuments.length} in Your Family Calendar`);
     console.log(`   Family Messages: 37 threaded messages across 8 conversation threads`);
+    console.log(`   Symptom Tracker: ${totalSymptomEntries} entries (${emmaSymptomDays.length} Emma MCAS + ${marilynSymptomDays.length} Marilyn elder)`);
     console.log(`   Total: ${familyEvents.length + careEvents.length} events showing sandwich generation life`);
     
   } catch (error) {

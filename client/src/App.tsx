@@ -1,69 +1,228 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
+import { Component, useEffect } from "react";
+import type { ReactNode } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { HelmetProvider } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
-import { ActiveFamilyProvider } from "@/contexts/ActiveFamilyContext";
+import { ActiveFamilyProvider, useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import Landing from "@/pages/Landing";
+import Intro from "@/pages/Intro";
 import Home from "@/pages/Home";
 import Memories from "@/pages/Memories";
 import Onboarding from "@/pages/Onboarding";
 import EventWizard from "@/pages/EventWizard";
 import DemoWelcome from "@/pages/DemoWelcome";
-import FamilySettings from "@/pages/FamilySettings";
 import CaregiverDashboard from "@/pages/CaregiverDashboard";
 import Messages from "@/pages/Messages";
 import Documents from "@/pages/Documents";
 import EmergencyBridge from "@/pages/EmergencyBridge";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
+import Help from "@/pages/Help";
+import About from "@/pages/About";
+import Support from "@/pages/Support";
+import AccountSettings from "@/pages/AccountSettings";
+import Advisor from "@/pages/Advisor";
+import Health from "@/pages/Health";
+import NotFound from "@/pages/not-found";
+import AppSidebar from "@/components/AppSidebar";
+import Header from "@/components/Header";
+import ThemeToggle from "@/components/ThemeToggle";
+import FamilySelector from "@/components/FamilySelector";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { useMessageNotifications } from "@/hooks/useMessageNotifications";
+import SmartReminders from "@/components/SmartReminders";
 
-import ImportSchedule from "@/pages/ImportSchedule";
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: "" };
+  }
+  static getDerivedStateFromError(err: Error) {
+    return { hasError: true, error: err?.message || "Unknown error" };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100svh", padding: "2rem", background: "#1a1a2e", color: "#fff", textAlign: "center", gap: "1.25rem" }}>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#f97316", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.5rem" }}>
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+          </div>
+          <p style={{ fontSize: "1.5rem", fontWeight: 700, letterSpacing: "-0.02em" }}>Kindora</p>
+          <p style={{ fontSize: "1rem", fontWeight: 600, color: "#fff" }}>Something went wrong</p>
+          <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.55)", maxWidth: "300px", lineHeight: 1.5 }}>{this.state.error || "An unexpected error occurred."}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ marginTop: "0.5rem", padding: "0.75rem 2rem", borderRadius: "10px", background: "#f97316", color: "#fff", fontWeight: 700, border: "none", cursor: "pointer", fontSize: "1rem", letterSpacing: "0.01em" }}
+          >
+            Reload App
+          </button>
+          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", marginTop: "0.25rem" }}>If this keeps happening, contact support@kindora.ai</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const sidebarStyle = {
+  "--sidebar-width": "12rem",
+  "--sidebar-width-icon": "3rem",
+};
+
+function DemoBanner() {
+  const { user } = useAuth();
+  if (!user?.id?.startsWith('demo-')) return null;
+  return (
+    <div
+      className="flex items-center justify-center gap-3 px-4 py-2 text-sm font-medium flex-wrap"
+      style={{ background: "rgba(249,115,22,0.12)", borderBottom: "1px solid rgba(249,115,22,0.25)", color: "rgba(249,115,22,0.95)" }}
+      data-testid="banner-demo-mode"
+    >
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+        <span>You&apos;re in demo mode — events and changes are temporary and won&apos;t be saved</span>
+      </span>
+      <a
+        href="/api/logout"
+        className="underline underline-offset-2 font-semibold hover:opacity-80 transition-opacity whitespace-nowrap"
+        data-testid="link-demo-signup"
+      >
+        Sign up free to save your data
+      </a>
+    </div>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
+  useMessageNotifications();
+  return (
+    <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+      <div className="flex h-screen w-full bg-background">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col flex-1 min-w-0">
+          <header className="sticky top-0 z-50 flex items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40 bg-background/90 backdrop-blur-xl" data-testid="header-main">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <FamilySelector />
+            </div>
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <Header />
+            </div>
+          </header>
+          <DemoBanner />
+          <main className="flex-1 overflow-y-auto">
+            {children}
+          </main>
+        </SidebarInset>
+      </div>
+      <SmartReminders />
+    </SidebarProvider>
+  );
+}
+
+// Redirects freshly-signed-up users (no family yet) to onboarding
+function NewUserGuard() {
+  const { families, familiesLoaded } = useActiveFamily();
+  const [location, navigate] = useLocation();
+  useEffect(() => {
+    const exemptPaths = ["/onboarding", "/onboarding/wizard", "/demo-welcome"];
+    if (familiesLoaded && families !== undefined && families.length === 0 && !exemptPaths.includes(location)) {
+      navigate("/onboarding");
+    }
+  }, [families, familiesLoaded, location, navigate]);
+  return null;
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
-        <div className="text-white">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "#111318" }}>
+        <div className="text-center">
+          <div className="w-14 h-14 border-4 border-white/10 border-t-orange-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-lg font-semibold text-white mb-1">Kindora</p>
+          <p className="text-sm text-white/50">Loading your family calendar…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <Switch>
-      <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/demo-welcome" component={DemoWelcome} />
-          <Route path="/" component={Home} />
-          <Route path="/care" component={CaregiverDashboard} />
-          <Route path="/messages" component={Messages} />
-          <Route path="/documents" component={Documents} />
-
-          <Route path="/import" component={ImportSchedule} />
-          <Route path="/memories" component={Memories} />
-          <Route path="/family" component={FamilySettings} />
-          <Route path="/onboarding" component={Onboarding} />
-          <Route path="/onboarding/wizard" component={EventWizard} />
-        </>
-      )}
-    </Switch>
+    <>
+      {/* NewUserGuard must live OUTSIDE Switch — components with no `path` prop
+          are treated as "*" catch-alls by wouter's Switch, so placing it inside
+          caused it to intercept every URL before AppShell could render. */}
+      {isAuthenticated && <NewUserGuard />}
+      <Switch>
+        <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
+        <Route path="/terms" component={Terms} />
+        <Route path="/privacy" component={Privacy} />
+        <Route path="/help" component={Help} />
+        <Route path="/about" component={About} />
+        <Route path="/support" component={Support} />
+        <Route path="/intro" component={Intro} />
+        {!isAuthenticated ? (
+          <>
+            <Route path="/" component={Landing} />
+            <Route component={NotFound} />
+          </>
+        ) : (
+          <>
+            <Route path="/onboarding" component={Onboarding} />
+            <Route path="/onboarding/wizard" component={EventWizard} />
+            <Route path="/demo-welcome" component={DemoWelcome} />
+            {/* Catch-all Route renders AppShell for all other authenticated paths */}
+            <Route>
+              {() => (
+                <AppShell>
+                  <Switch>
+                    <Route path="/" component={Home} />
+                    <Route path="/care" component={CaregiverDashboard} />
+                    <Route path="/messages" component={Messages} />
+                    <Route path="/documents" component={Documents} />
+                    <Route path="/memories" component={Memories} />
+                    <Route path="/advisor" component={Advisor} />
+                    <Route path="/health" component={Health} />
+                    <Route path="/settings/family">{() => <AccountSettings initialTab="family" />}</Route>
+                    <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
+                    <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>
+                    <Route path="/settings">{() => <AccountSettings />}</Route>
+                    <Route>{() => <Redirect to="/" />}</Route>
+                  </Switch>
+                </AppShell>
+              )}
+            </Route>
+          </>
+        )}
+      </Switch>
+    </>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ActiveFamilyProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ActiveFamilyProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <HelmetProvider>
+        <QueryClientProvider client={queryClient}>
+          <ActiveFamilyProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </ActiveFamilyProvider>
+        </QueryClientProvider>
+      </HelmetProvider>
+    </ErrorBoundary>
   );
 }
 

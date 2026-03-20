@@ -1,4 +1,4 @@
-import { ROLE_PERMISSIONS, type FamilyRole } from "@shared/schema";
+import { ROLE_PERMISSIONS, type FamilyRole, type PermissionKey } from "@shared/schema";
 import type { IStorage } from "./storage";
 
 export interface PermissionContext {
@@ -7,18 +7,12 @@ export interface PermissionContext {
   role: FamilyRole;
 }
 
-// User ID set by API key bypass in replitAuth.ts for server-to-server calls
-const API_KEY_USER_ID = '21601610';
 
 export async function getUserFamilyRole(
   storage: IStorage,
   userId: string,
   familyId: string
 ): Promise<FamilyRole | null> {
-  // API key users (e.g. Langly, OpenClaw) get admin access to all families
-  if (userId === API_KEY_USER_ID) {
-    return 'owner' as FamilyRole;
-  }
 
   const membership = await storage.getUserFamilyMembership(userId, familyId);
 
@@ -29,12 +23,12 @@ export async function getUserFamilyRole(
   return (membership.role as FamilyRole) || null;
 }
 
-export function checkPermission(role: FamilyRole, permission: keyof typeof ROLE_PERMISSIONS[FamilyRole]): boolean {
+export function checkPermission(role: FamilyRole, permission: PermissionKey): boolean {
   const permissions = ROLE_PERMISSIONS[role];
   return permissions?.[permission] ?? false;
 }
 
-export function hasPermission(context: PermissionContext, permission: keyof typeof ROLE_PERMISSIONS[FamilyRole]): boolean {
+export function hasPermission(context: PermissionContext, permission: PermissionKey): boolean {
   return checkPermission(context.role, permission);
 }
 
@@ -45,8 +39,12 @@ export class PermissionError extends Error {
   }
 }
 
-export function requirePermission(context: PermissionContext, permission: keyof typeof ROLE_PERMISSIONS[FamilyRole]): void {
+export function requirePermission(context: PermissionContext, permission: PermissionKey): void {
   if (!hasPermission(context, permission)) {
     throw new PermissionError(`Permission denied: ${permission}`);
   }
+}
+
+export function getPermissionsForRole(role: FamilyRole): Record<PermissionKey, boolean> {
+  return { ...ROLE_PERMISSIONS[role] };
 }

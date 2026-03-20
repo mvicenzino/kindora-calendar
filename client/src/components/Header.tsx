@@ -1,12 +1,9 @@
-import { Search, Image, MessageCircle, FileText, X, Upload } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ProfileMenu from "@/components/ProfileMenu";
-import FamilySelector from "@/components/FamilySelector";
 import AlertsPanel from "@/components/AlertsPanel";
 import type { UiFamilyMember } from "@shared/types";
-import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
 
 interface HeaderProps {
   members?: UiFamilyMember[];
@@ -17,10 +14,7 @@ interface HeaderProps {
 }
 
 export default function Header({ members = [], onMemberColorChange, onSearchClick, onAddMember, onDeleteMember }: HeaderProps) {
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
-  
-  // Check if user is in demo mode
   const isDemoMode = user?.id?.startsWith('demo-') ?? false;
 
   const handleExitDemo = () => {
@@ -28,101 +22,37 @@ export default function Header({ members = [], onMemberColorChange, onSearchClic
   };
 
   return (
-    <header className="relative z-[60] w-full" data-testid="header-main">
-      {/* Main header bar with Tesla-inspired glow */}
-      <div className="titanium-glass tesla-glow-bar shadow-lg">
-        <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-2 sm:py-3">
-          {/* Left: Logo */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg" data-testid="icon-logo" />
-            <div className="flex flex-col leading-tight">
-              <span className="text-base sm:text-lg md:text-xl font-extrabold text-orange-300 app-title">Kindora</span>
-              <span className="text-[10px] sm:text-xs font-medium text-white/80 tracking-wide hidden sm:block">CALENDAR</span>
-            </div>
-          </div>
-
-          {/* Right: Action buttons */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            {/* Bulk Upload button - prominent for easy discovery */}
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-white border-orange-400/50 bg-gradient-to-r from-orange-500/30 to-amber-500/30 px-2 sm:px-3 gap-1"
-              onClick={() => setLocation('/import')}
-              data-testid="button-bulk-upload"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline text-xs font-medium">Bulk Upload</span>
-            </Button>
-            {/* Exit Demo button - only visible in demo mode */}
-            {isDemoMode && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-white border-red-400/50 bg-red-500/20 px-2 sm:px-3 gap-1"
-                onClick={handleExitDemo}
-                data-testid="button-exit-demo"
-              >
-                <X className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline text-xs font-medium">Exit Demo</span>
-              </Button>
-            )}
-            <AlertsPanel />
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/20"
-              aria-label="Messages"
-              onClick={() => setLocation('/messages')}
-              data-testid="button-messages"
-            >
-              <MessageCircle className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/20"
-              aria-label="Documents"
-              onClick={() => setLocation('/documents')}
-              data-testid="button-documents"
-            >
-              <FileText className="w-4 h-4" />
-            </Button>
-
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/20"
-              aria-label="Memories"
-              onClick={() => setLocation('/memories')}
-              data-testid="button-memories"
-            >
-              <Image className="w-4 h-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="text-white border border-white/20 hidden sm:flex"
-              aria-label="Search events"
-              onClick={onSearchClick}
-              data-testid="button-search"
-            >
-              <Search className="w-4 h-4" />
-            </Button>
-            <ProfileMenu 
-              members={members} 
-              onMemberColorChange={onMemberColorChange || (() => {})} 
-              onAddMember={onAddMember} 
-              onDeleteMember={onDeleteMember} 
-            />
-          </div>
-        </div>
-      </div>
-      
-      {/* Family selector row - separate for better mobile layout */}
-      <div className="titanium-glass border-t-0 border-b border-white/10 px-3 sm:px-4 md:px-6 py-2">
-        <FamilySelector />
-      </div>
-    </header>
+    <div className="flex items-center gap-1">
+      {isDemoMode && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-destructive border-destructive/30 gap-1"
+          onClick={handleExitDemo}
+          data-testid="button-exit-demo"
+        >
+          <X className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline text-xs">Exit Demo</span>
+        </Button>
+      )}
+      <AlertsPanel />
+      {onSearchClick && (
+        <Button
+          size="icon"
+          variant="ghost"
+          aria-label="Search events"
+          onClick={onSearchClick}
+          data-testid="button-search"
+        >
+          <Search className="w-4 h-4" />
+        </Button>
+      )}
+      <ProfileMenu
+        members={members}
+        onMemberColorChange={onMemberColorChange || (() => {})}
+        onAddMember={onAddMember}
+        onDeleteMember={onDeleteMember}
+      />
+    </div>
   );
 }

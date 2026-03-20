@@ -20,10 +20,13 @@ import {
   Pill,
   ClipboardList,
   MessageSquare,
-  Loader2
+  Loader2,
+  Expand,
+  X
 } from "lucide-react";
-import heroVideo from "@assets/generated_videos/family_chaos_to_harmony_montage.mp4";
-import calendoraIcon from "@assets/generated_images/simple_clean_calendar_logo.png";
+import heroVideo from "@assets/generated_videos/kindora_family_hero_smooth.mp4";
+
+const logo = "/kindora-logo.jpeg";
 
 type Persona = "family" | "caregiver";
 
@@ -32,12 +35,13 @@ export default function DemoWelcome() {
   const [persona, setPersona] = useState<Persona>("family");
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [videoExpanded, setVideoExpanded] = useState(false);
 
   // Check if we have a demo token in the URL (fallback for when cookies don't work)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const demoToken = urlParams.get("demo_token");
-    const nextPath = urlParams.get("next") || "/care"; // Default to Caregiver Dashboard
+    const nextPath = urlParams.get("next") || "/";
     
     if (demoToken) {
       // Store the token and destination
@@ -77,8 +81,8 @@ export default function DemoWelcome() {
   // Show loading state while verifying demo token
   if (isVerifying) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center">
-        <div className="text-center text-white">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center text-foreground">
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
           <p className="text-xl">Setting up your demo account...</p>
         </div>
@@ -89,13 +93,12 @@ export default function DemoWelcome() {
   // Show error if verification failed
   if (verificationError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center">
-        <div className="text-center text-white max-w-md px-4">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center text-foreground max-w-md px-4">
           <p className="text-xl mb-4">Something went wrong</p>
-          <p className="text-white/70 mb-6">{verificationError}</p>
+          <p className="text-muted-foreground mb-6">{verificationError}</p>
           <Button
-            onClick={() => window.location.href = "/api/login/demo"}
-            className="bg-gradient-to-r from-purple-500 to-teal-500 text-white"
+            onClick={() => window.location.href = `/api/login/demo?tz=${new Date().getTimezoneOffset()}`}
           >
             Try Again
           </Button>
@@ -105,20 +108,17 @@ export default function DemoWelcome() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-white/5 border-b border-white/20 shadow-lg">
+      <header className="sticky top-0 z-50 w-full backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="flex items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-10 h-10 rounded-lg" />
-            <span className="text-xl app-title">
-              <span className="font-extrabold text-orange-300">Kindora</span> <span className="font-medium text-white">Calendar</span>
-            </span>
+            <img src={logo} alt="Kindora" className="w-10 h-10 rounded-lg" />
+            <span className="text-xl app-title font-extrabold text-orange-300">Kindora</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
               onClick={() => setLocation("/")}
-              className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
               data-testid="button-try-demo"
             >
               Try Demo
@@ -126,7 +126,6 @@ export default function DemoWelcome() {
             <Button
               onClick={() => (window.location.href = "/api/logout")}
               variant="outline"
-              className="border-white text-white hover:bg-white/10"
               data-testid="button-logout"
             >
               <LogOut className="w-4 h-4 mr-2" />
@@ -135,6 +134,32 @@ export default function DemoWelcome() {
           </div>
         </div>
       </header>
+
+      {/* Video Lightbox */}
+      {videoExpanded && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+          onClick={() => setVideoExpanded(false)}
+        >
+          <button
+            onClick={() => setVideoExpanded(false)}
+            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            data-testid="button-video-close"
+            aria-label="Close video"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <video
+            src={heroVideo}
+            autoPlay
+            loop
+            controls
+            playsInline
+            className="max-w-[90vw] max-h-[85vh] rounded-xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[90vh] flex items-center">
@@ -152,12 +177,23 @@ export default function DemoWelcome() {
           <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 via-transparent to-teal-500/20" />
         </div>
 
+        {/* Expand video button */}
+        <button
+          onClick={() => setVideoExpanded(true)}
+          className="absolute bottom-5 right-5 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white/80 hover:text-white text-sm font-medium transition-all"
+          data-testid="button-video-expand"
+          aria-label="Expand video"
+        >
+          <Expand className="w-4 h-4" />
+          <span>Watch video</span>
+        </button>
+
         {/* Content */}
         <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
           <div className="max-w-6xl mx-auto">
             <div className="max-w-3xl">
               {/* Persona Toggle */}
-              <div className="inline-flex items-center gap-1 p-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6">
+              <div className="inline-flex items-center gap-1 p-1 rounded-full bg-black/20 backdrop-blur-md border border-white/20 mb-6">
                 <button
                   onClick={() => setPersona("family")}
                   className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
@@ -199,7 +235,7 @@ export default function DemoWelcome() {
                     You're juggling soccer practice and doctor's appointments. School plays and physical therapy. Kids' homework and Mom's medications. <strong className="text-teal-300">We get it.</strong>
                   </p>
 
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-8">
+                  <div className="bg-black/20 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-8">
                     <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                       <ArrowRight className="w-5 h-5 text-teal-400" />
                       Explore Two Demo Calendars
@@ -210,15 +246,14 @@ export default function DemoWelcome() {
                     <div className="flex flex-wrap gap-3">
                       <Button
                         onClick={() => setLocation("/")}
-                        className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0"
                         data-testid="button-continue-demo"
                       >
                         Start Coordinating Now
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = "/api/login")}
+                        onClick={() => (window.location.href = "/?signIn=1")}
                         variant="outline"
-                        className="border-white text-white hover:bg-white/10 bg-white/5 backdrop-blur-sm"
+                        className="border-white text-white bg-white/5 backdrop-blur-sm"
                         data-testid="button-sign-in-now"
                       >
                         Sign In to Start
@@ -236,7 +271,7 @@ export default function DemoWelcome() {
                     Track your hours, log medications, and stay connected with the families you care for. <strong className="text-amber-300">All in one place.</strong>
                   </p>
 
-                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-8">
+                  <div className="bg-black/20 backdrop-blur-md border border-white/20 rounded-2xl p-6 mb-8">
                     <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
                       <ArrowRight className="w-5 h-5 text-amber-400" />
                       How It Works for Caregivers
@@ -247,15 +282,14 @@ export default function DemoWelcome() {
                     <div className="flex flex-wrap gap-3">
                       <Button
                         onClick={() => setLocation("/")}
-                        className="bg-gradient-to-r from-teal-500 to-amber-500 text-white hover:from-teal-600 hover:to-amber-600 border-0"
                         data-testid="button-continue-demo-caregiver"
                       >
                         See the Caregiver Dashboard
                       </Button>
                       <Button
-                        onClick={() => (window.location.href = "/api/login")}
+                        onClick={() => (window.location.href = "/?signUp=1")}
                         variant="outline"
-                        className="border-white text-white hover:bg-white/10 bg-white/5 backdrop-blur-sm"
+                        className="border-white text-white bg-white/5 backdrop-blur-sm"
                         data-testid="button-get-invited"
                       >
                         Get Invited by a Family
@@ -288,10 +322,10 @@ export default function DemoWelcome() {
       <section className="relative py-20 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               One App, Two Worlds
             </h2>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Seamlessly manage your family's busy life while coordinating care for your aging parents
             </p>
           </div>
@@ -309,28 +343,28 @@ export default function DemoWelcome() {
                 <Baby className="w-8 h-8 text-purple-300" />
               </div>
               
-              <h3 className="text-2xl font-bold text-white mb-4">Kids, School & Activities</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-4">Kids, School & Activities</h3>
               
               <ul className="space-y-3 mb-6">
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-pink-400" />
                   Soccer games & ballet recitals
                 </li>
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-purple-400" />
                   Parent-teacher conferences
                 </li>
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-blue-400" />
                   Dentist appointments & checkups
                 </li>
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-teal-400" />
                   Date nights & family outings
                 </li>
               </ul>
 
-              <p className="text-white/60 text-sm italic">
+              <p className="text-muted-foreground text-sm italic">
                 "Finally, my husband and I can see Emma's ballet AND Lucas's basketball on the same calendar!"
               </p>
             </div>
@@ -347,28 +381,28 @@ export default function DemoWelcome() {
                 <Stethoscope className="w-8 h-8 text-teal-300" />
               </div>
               
-              <h3 className="text-2xl font-bold text-white mb-4">Eldercare & Caregivers</h3>
+              <h3 className="text-2xl font-bold text-foreground mb-4">Eldercare & Caregivers</h3>
               
               <ul className="space-y-3 mb-6">
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-amber-400" />
                   Home health aide visits
                 </li>
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-teal-400" />
                   Physical therapy sessions
                 </li>
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-purple-400" />
                   Doctor appointments & follow-ups
                 </li>
-                <li className="flex items-center gap-3 text-white/80">
+                <li className="flex items-center gap-3 text-muted-foreground">
                   <div className="w-2 h-2 rounded-full bg-pink-400" />
                   Medication schedules & reminders
                 </li>
               </ul>
 
-              <p className="text-white/60 text-sm italic">
+              <p className="text-muted-foreground text-sm italic">
                 "My brother and I can finally coordinate Mom's care without 50 text messages a day."
               </p>
             </div>
@@ -377,17 +411,17 @@ export default function DemoWelcome() {
       </section>
 
       {/* For Caregivers Section */}
-      <section className="relative py-20 px-4 md:px-6 bg-gradient-to-b from-black/10 to-transparent">
+      <section className="relative py-20 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-teal-500/20 to-amber-500/20 backdrop-blur-md border border-teal-400/30 mb-4">
               <Heart className="w-4 h-4 text-teal-300" />
-              <span className="text-sm font-medium text-white">For Professional Caregivers</span>
+              <span className="text-sm font-medium text-foreground">For Professional Caregivers</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Tools Built for Your Workday
             </h2>
-            <p className="text-xl text-white/70 max-w-2xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Everything you need to manage your care work professionally
             </p>
           </div>
@@ -398,8 +432,8 @@ export default function DemoWelcome() {
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500/30 to-amber-500/30 flex items-center justify-center mb-4 border border-teal-400/30">
                 <Clock className="w-6 h-6 text-teal-300" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Time Tracking</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Time Tracking</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Log your hours with one tap. Track weekly and total time across all the families you work with.
               </p>
             </div>
@@ -409,8 +443,8 @@ export default function DemoWelcome() {
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500/30 to-amber-500/30 flex items-center justify-center mb-4 border border-teal-400/30">
                 <DollarSign className="w-6 h-6 text-amber-300" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Pay Visibility</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Pay Visibility</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Set your hourly rate and see your earnings calculated automatically. Know exactly what you've earned.
               </p>
             </div>
@@ -420,8 +454,8 @@ export default function DemoWelcome() {
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500/30 to-amber-500/30 flex items-center justify-center mb-4 border border-teal-400/30">
                 <Pill className="w-6 h-6 text-teal-300" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Medication Logging</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Medication Logging</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Record when medications are given, skipped, or refused. Create a clear record for the family.
               </p>
             </div>
@@ -431,97 +465,97 @@ export default function DemoWelcome() {
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500/30 to-amber-500/30 flex items-center justify-center mb-4 border border-teal-400/30">
                 <MessageSquare className="w-6 h-6 text-amber-300" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Family Messaging</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Family Messaging</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Stay connected with the family through threaded messages. Share updates, ask questions, coordinate care.
               </p>
             </div>
           </div>
 
           <div className="mt-12 text-center">
-            <p className="text-white/60 text-lg italic mb-6">
+            <p className="text-muted-foreground text-lg italic mb-6">
               "I used to lose track of my hours and forget what I was owed. Now it's all in one place."
             </p>
-            <p className="text-white/40 text-sm">— Maya, Home Health Aide</p>
+            <p className="text-muted-foreground text-sm">— Maya, Home Health Aide</p>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="relative py-20 px-4 md:px-6 bg-gradient-to-b from-transparent to-black/20">
+      <section className="relative py-20 px-4 md:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
               Built for Real Families
             </h2>
-            <p className="text-xl text-white/70">
+            <p className="text-xl text-muted-foreground">
               Features designed by caregivers, for caregivers
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Feature 1 */}
-            <div className="group p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 flex items-center justify-center mb-4 border border-white/20">
-                <Shield className="w-6 h-6 text-white" />
+            <div className="group p-6 rounded-2xl bg-card border border-border transition-all hover-elevate">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4 border border-border">
+                <Shield className="w-6 h-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Role-Based Access</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-foreground mb-2">Role-Based Access</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Invite caregivers to view and complete tasks without letting them change your family's schedule. You control who sees what.
               </p>
             </div>
 
             {/* Feature 2 */}
-            <div className="group p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 flex items-center justify-center mb-4 border border-white/20">
-                <Users className="w-6 h-6 text-white" />
+            <div className="group p-6 rounded-2xl bg-card border border-border transition-all hover-elevate">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4 border border-border">
+                <Users className="w-6 h-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Multiple Calendars</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-foreground mb-2">Multiple Calendars</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Keep your family's chaos separate from Mom's care schedule. Switch between calendars with one tap.
               </p>
             </div>
 
             {/* Feature 3 */}
-            <div className="group p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 flex items-center justify-center mb-4 border border-white/20">
-                <Calendar className="w-6 h-6 text-white" />
+            <div className="group p-6 rounded-2xl bg-card border border-border transition-all hover-elevate">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4 border border-border">
+                <Calendar className="w-6 h-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Color-Coded Members</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-foreground mb-2">Color-Coded Members</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Each family member gets their own color. See at a glance who has what scheduled - kids, parents, or caregivers.
               </p>
             </div>
 
             {/* Feature 4 */}
-            <div className="group p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 flex items-center justify-center mb-4 border border-white/20">
-                <Camera className="w-6 h-6 text-white" />
+            <div className="group p-6 rounded-2xl bg-card border border-border transition-all hover-elevate">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4 border border-border">
+                <Camera className="w-6 h-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Photo Memories</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-foreground mb-2">Photo Memories</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Attach photos to events and turn your calendar into a family scrapbook. Remember the soccer goals and the grandkid visits.
               </p>
             </div>
 
             {/* Feature 5 */}
-            <div className="group p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 flex items-center justify-center mb-4 border border-white/20">
-                <Clock className="w-6 h-6 text-white" />
+            <div className="group p-6 rounded-2xl bg-card border border-border transition-all hover-elevate">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4 border border-border">
+                <Clock className="w-6 h-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Complete & Track</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-foreground mb-2">Complete & Track</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Mark events as done. Know when the home aide finished their visit or when medications were given.
               </p>
             </div>
 
             {/* Feature 6 */}
-            <div className="group p-6 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 hover:border-white/30 transition-all hover-elevate">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-teal-500/20 flex items-center justify-center mb-4 border border-white/20">
-                <Heart className="w-6 h-6 text-white" />
+            <div className="group p-6 rounded-2xl bg-card border border-border transition-all hover-elevate">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4 border border-border">
+                <Heart className="w-6 h-6 text-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Share with Love</h3>
-              <p className="text-white/70 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-foreground mb-2">Share with Love</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 Invite siblings to coordinate care, share calendars with healthcare providers, and keep everyone in the loop.
               </p>
             </div>
@@ -534,26 +568,26 @@ export default function DemoWelcome() {
         <div className="max-w-4xl mx-auto text-center">
           {persona === "family" ? (
             <>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
                 Ready to bring calm to the chaos?
               </h2>
-              <p className="text-xl text-white/70 mb-8">
+              <p className="text-xl text-muted-foreground mb-8">
                 Start with the demo, then create your real account to keep your data forever.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Button
                   onClick={() => setLocation("/")}
                   size="lg"
-                  className="bg-gradient-to-r from-purple-500 to-teal-500 text-white hover:from-purple-600 hover:to-teal-600 border-0 px-8"
+                  className="px-8"
                   data-testid="button-explore-demo-bottom"
                 >
                   Start Coordinating Now
                 </Button>
                 <Button
-                  onClick={() => (window.location.href = "/api/login")}
+                  onClick={() => (window.location.href = "/?signIn=1")}
                   size="lg"
                   variant="outline"
-                  className="border-white text-white hover:bg-white/10 px-8"
+                  className="px-8"
                   data-testid="button-sign-in-bottom"
                 >
                   Sign In Now
@@ -562,26 +596,26 @@ export default function DemoWelcome() {
             </>
           ) : (
             <>
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
                 Ready to simplify your care work?
               </h2>
-              <p className="text-xl text-white/70 mb-8">
+              <p className="text-xl text-muted-foreground mb-8">
                 Ask the families you work with to invite you to their Kindora Calendar.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Button
                   onClick={() => setLocation("/")}
                   size="lg"
-                  className="bg-gradient-to-r from-teal-500 to-amber-500 text-white hover:from-teal-600 hover:to-amber-600 border-0 px-8"
+                  className="px-8"
                   data-testid="button-explore-demo-bottom-caregiver"
                 >
                   See the Caregiver Dashboard
                 </Button>
                 <Button
-                  onClick={() => (window.location.href = "/api/login")}
+                  onClick={() => (window.location.href = "/?signUp=1")}
                   size="lg"
                   variant="outline"
-                  className="border-white text-white hover:bg-white/10 px-8"
+                  className="px-8"
                   data-testid="button-get-invited-bottom"
                 >
                   Get Invited by a Family
@@ -593,16 +627,16 @@ export default function DemoWelcome() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-8 px-4 md:px-6">
+      <footer className="border-t border-border py-8 px-4 md:px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={calendoraIcon} alt="Kindora Calendar" className="w-8 h-8 rounded-lg" />
-            <span className="text-sm text-white/60">
-              Kindora Calendar - Made with love for caregivers everywhere
+            <img src={logo} alt="Kindora" className="w-8 h-8 rounded-lg" />
+            <span className="text-sm text-muted-foreground">
+              Kindora — Made with love for caregivers everywhere
             </span>
           </div>
-          <p className="text-sm text-white/40">
-            © 2025 Kindora Family, Inc. Keeping families connected and coordinated.
+          <p className="text-sm text-muted-foreground">
+            © 2026 Kindora Family, Inc. Keeping families connected and coordinated.
           </p>
         </div>
       </footer>

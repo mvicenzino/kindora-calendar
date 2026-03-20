@@ -1,9 +1,23 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { format, isSameDay } from "date-fns";
-import { Plus, Calendar, Clock } from "lucide-react";
+import { Plus, Clock, CalendarDays, X } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
+
+function getRelativeLuminance(hex: string): number {
+  const clean = hex.replace('#', '');
+  if (clean.length < 6) return 0.5;
+  const r = parseInt(clean.slice(0, 2), 16) / 255;
+  const g = parseInt(clean.slice(2, 4), 16) / 255;
+  const b = parseInt(clean.slice(4, 6), 16) / 255;
+  const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function getContrastText(hex: string): string {
+  return getRelativeLuminance(hex) > 0.35 ? '#111827' : '#ffffff';
+}
 
 interface Event {
   id: string;
@@ -11,6 +25,7 @@ interface Event {
   startTime: Date;
   endTime: Date;
   color: string;
+  category?: string;
   memberId?: string;
   members?: Member[];
   description?: string;
@@ -31,7 +46,7 @@ interface DayEventsDialogProps {
   events: Event[];
   members: Member[];
   onEventClick: (event: Event) => void;
-  onAddEvent: () => void;
+  onAddEvent?: () => void;
 }
 
 export default function DayEventsDialog({
@@ -47,23 +62,16 @@ export default function DayEventsDialog({
     .filter(e => isSameDay(new Date(e.startTime), date))
     .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-  const getMember = (event: Event) => {
-    if (event.members && event.members.length > 0) {
-      return event.members[0];
-    }
-    if (event.memberId) {
-      return members.find(m => m.id === event.memberId);
-    }
-    return undefined;
-  };
-
   const formatTime = (startTime: Date, endTime: Date) => {
     const start = new Date(startTime);
     const end = new Date(endTime);
     if (start.getHours() === 23 && start.getMinutes() === 58) {
       return "Anytime";
     }
-    return `${format(start, 'h:mm a')} - ${format(end, 'h:mm a')}`;
+    const sameAmPm = format(start, 'a') === format(end, 'a');
+    return sameAmPm
+      ? `${format(start, 'h:mm')} - ${format(end, 'h:mm a')}`
+      : `${format(start, 'h:mm a')} - ${format(end, 'h:mm a')}`;
   };
 
   const handleEventClick = (event: Event) => {
@@ -73,92 +81,151 @@ export default function DayEventsDialog({
 
   const handleAddEvent = () => {
     onClose();
-    onAddEvent();
+    onAddEvent?.();
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] border-white/20 text-white max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-white text-xl">
-            <Calendar className="w-5 h-5" />
-            {format(date, 'EEEE, MMMM d')}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent
+        className="sm:max-w-sm p-0 border-0 overflow-hidden rounded-2xl max-h-[80vh] flex flex-col gap-0"
+        style={{
+          background: 'transparent',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.06), 0 25px 60px -12px rgba(0,0,0,0.5)',
+        }}
+      >
+        <DialogTitle className="sr-only">Events for {format(date, 'MMMM d')}</DialogTitle>
+        <DialogDescription className="sr-only">View all events for this day</DialogDescription>
 
-        <div className="mt-2">
-          {dayEvents.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-8 h-8 text-white/40" />
+        {/* Header */}
+        <div
+          className="px-4 pt-3.5 pb-3 relative"
+          style={{ borderBottom: '1px solid hsl(var(--border) / 0.4)' }}
+        >
+          <div className="absolute inset-0 backdrop-blur-2xl" style={{ background: 'hsl(var(--card) / 0.9)' }} />
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary/15">
+                <CalendarDays className="w-3.5 h-3.5 text-primary" />
               </div>
-              <p className="text-white/60 mb-4">No events scheduled</p>
-              <Button
+              <div>
+                <p className="text-sm font-bold text-foreground">{format(date, 'EEEE')}</p>
+                <p className="text-[10px] text-muted-foreground">{format(date, 'MMMM d, yyyy')}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              style={{ background: 'hsl(var(--muted) / 0.4)' }}
+              data-testid="button-close-day-events"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Events list */}
+        <div
+          className="flex-1 overflow-y-auto"
+          style={{ background: 'hsl(var(--card) / 0.92)', backdropFilter: 'blur(40px)' }}
+        >
+          {dayEvents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 px-4">
+              <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center mb-3">
+                <CalendarDays className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">No events scheduled</p>
+              {onAddEvent && <Button
                 onClick={handleAddEvent}
-                className="bg-purple-500 hover:bg-purple-600 text-white"
+                size="sm"
+                className="h-8 text-xs rounded-lg"
                 data-testid="button-add-event-empty"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-3 h-3 mr-1.5" />
                 Add Event
-              </Button>
+              </Button>}
             </div>
           ) : (
-            <>
-              <ScrollArea className="max-h-[400px] pr-2">
-                <div className="space-y-2">
-                  {dayEvents.map((event) => {
-                    const member = getMember(event);
-                    return (
-                      <button
-                        key={event.id}
-                        onClick={() => handleEventClick(event)}
-                        data-testid={`day-event-${event.id}`}
-                        className="w-full text-left p-3 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        style={{ 
-                          backgroundColor: `${event.color}CC`,
-                          borderLeft: `4px solid ${event.color}`
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className={`font-semibold text-white truncate ${event.completed ? 'line-through opacity-70' : ''}`}>
-                              {event.title}
-                            </h3>
-                            <div className="flex items-center gap-2 mt-1 text-white/80 text-sm">
-                              <Clock className="w-3 h-3" />
-                              <span>{formatTime(event.startTime, event.endTime)}</span>
-                            </div>
-                          </div>
-                          {member && (
-                            <Avatar className="w-8 h-8 border-2 border-white/30 flex-shrink-0">
-                              <AvatarFallback 
-                                style={{ backgroundColor: member.color }}
-                                className="text-white text-xs font-bold"
-                              >
-                                {member.name.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
+            <div className="px-3 py-2 space-y-1.5">
+              {dayEvents.map((event) => {
+                const eventColor = event.color || '#64748B';
+                const categoryConfig = CATEGORY_CONFIG[(event.category as EventCategory) || 'other'];
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => handleEventClick(event)}
+                    data-testid={`day-event-${event.id}`}
+                    className="w-full text-left rounded-xl transition-all active:scale-[0.98] overflow-hidden"
+                    style={{
+                      background: `${eventColor}10`,
+                      boxShadow: `inset 0 0 0 1px ${eventColor}20`,
+                    }}
+                  >
+                    <div className="flex items-center gap-3 px-3 py-2.5">
+                      <div
+                        className="w-1 h-8 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: eventColor }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-semibold text-foreground truncate ${event.completed ? 'line-through opacity-60' : ''}`}>
+                          {event.title}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Clock className="w-2.5 h-2.5 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">{formatTime(event.startTime, event.endTime)}</span>
+                          {categoryConfig && (
+                            <>
+                              <span className="text-muted-foreground/30 text-[10px]">·</span>
+                              <span className="text-[10px] text-muted-foreground">{categoryConfig.label}</span>
+                            </>
                           )}
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-
-              <div className="mt-4 pt-4 border-t border-white/20">
-                <Button
-                  onClick={handleAddEvent}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20"
-                  data-testid="button-add-event-for-day"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Event
-                </Button>
-              </div>
-            </>
+                      </div>
+                      {event.members && event.members.length > 0 && (
+                        <div className="flex -space-x-1 flex-shrink-0">
+                          {event.members.slice(0, 2).map((m) => (
+                            <Avatar key={m.id} className="h-5 w-5 border border-card">
+                              <AvatarFallback
+                                className="text-[8px] font-bold"
+                                style={{
+                                  backgroundColor: m.color,
+                                  color: getContrastText(m.color),
+                                }}
+                              >
+                                {m.name?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
+
+        {/* Bottom add button */}
+        {dayEvents.length > 0 && (
+          <div
+            className="px-3 py-2.5"
+            style={{
+              background: 'hsl(var(--card) / 0.95)',
+              borderTop: '1px solid hsl(var(--border) / 0.4)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+            {onAddEvent && <Button
+              onClick={handleAddEvent}
+              variant="ghost"
+              className="w-full h-8 text-xs rounded-lg"
+              data-testid="button-add-event-for-day"
+            >
+              <Plus className="w-3 h-3 mr-1.5" />
+              Add Event
+            </Button>}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

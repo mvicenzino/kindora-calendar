@@ -25,15 +25,16 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
   const [uploading, setUploading] = useState(false);
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const { toast } = useToast();
-  const { isCaregiver, isLoading: roleLoading } = useUserRole();
+  const { can, isLoading: roleLoading } = useUserRole();
   const { activeFamilyId } = useActiveFamily();
-  const isReadOnly = roleLoading || isCaregiver;
+  const canEditEvents = !roleLoading && can('canEditEvents');
+  const canDeleteEvents = !roleLoading && can('canDeleteEvents');
+  const isReadOnly = roleLoading || !canEditEvents;
 
   const { data: currentUser } = useQuery<User>({
     queryKey: ['/api/auth/user'],
   });
 
-  // Defensive wrapper for onEdit to prevent programmatic invocation by caregivers
   const handleEdit = () => {
     if (isReadOnly) return;
     onEdit();
@@ -231,15 +232,15 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
           {/* Back Side - Full Details */}
           <div 
-            className={`w-full rounded-3xl shadow-2xl bg-gradient-to-br from-[#3A4A5A] via-[#4A5A6A] to-[#5A6A7A] p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto max-h-[90vh] transition-opacity duration-300 ${isFlipped ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'}`}
+            className={`w-full rounded-3xl shadow-2xl bg-card p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto max-h-[90vh] transition-opacity duration-300 ${isFlipped ? 'opacity-100' : 'opacity-0 pointer-events-none absolute inset-0'}`}
           >
               {/* Header */}
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-xl md:text-2xl font-bold text-white">Event Details</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-foreground">Event Details</h2>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={handleFlip}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
+                    className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-foreground hover-elevate transition-all flex-shrink-0"
                     data-testid="button-flip-back"
                   >
                     <RotateCcw className="w-4 h-4" />
@@ -247,7 +248,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   {!isReadOnly && (
                     <button
                       onClick={handleEdit}
-                      className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
+                      className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-foreground hover-elevate transition-all flex-shrink-0"
                       data-testid="button-edit-event"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -255,7 +256,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   )}
                   <button
                     onClick={onClose}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/30 flex items-center justify-center text-white hover:bg-white/20 transition-all flex-shrink-0"
+                    className="w-10 h-10 rounded-full bg-muted/50 border border-border flex items-center justify-center text-foreground hover-elevate transition-all flex-shrink-0"
                     data-testid="button-close-back"
                   >
                     <X className="w-4 h-4" />
@@ -264,8 +265,8 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               </div>
 
               {/* Event Title Card with Members */}
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                <h3 className="text-lg md:text-xl font-bold text-white mb-3 truncate">{event.title}</h3>
+              <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
+                <h3 className="text-lg md:text-xl font-bold text-foreground mb-3 truncate">{event.title}</h3>
                 <div className="flex items-center justify-between">
                   {/* Notes indicator - lower left */}
                   {(event.noteCount ?? 0) > 0 ? (
@@ -274,7 +275,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                         e.stopPropagation();
                         setNotesModalOpen(true);
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 border border-white/30 text-white hover:bg-white/25 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 border border-border text-foreground hover-elevate transition-all"
                       data-testid={`notes-indicator-back-${event.id}`}
                     >
                       <MessageSquare className="w-4 h-4" />
@@ -287,7 +288,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   {/* Member avatars - lower right */}
                   <div className="flex -space-x-2 flex-shrink-0">
                     {event.members?.slice(0, 4).map((member) => (
-                      <Avatar key={member.id} className="h-10 w-10 border-2 border-white/40">
+                      <Avatar key={member.id} className="h-10 w-10 border-2 border-border">
                         <AvatarFallback
                           className="text-white font-semibold text-xs"
                           style={{ backgroundColor: member.color }}
@@ -302,7 +303,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
               {/* Photo Section */}
               {event.photoUrl ? (
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 overflow-hidden">
+                <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-3 overflow-hidden">
                   <div className="relative">
                     <img
                       src={event.photoUrl}
@@ -313,7 +314,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                     {!isReadOnly && (
                       <button
                         onClick={handleDeletePhoto}
-                        className="absolute top-3 right-3 w-9 h-9 rounded-full bg-red-500/95 border border-white/40 flex items-center justify-center text-white hover:bg-red-600 transition-all shadow-lg"
+                        className="absolute top-3 right-3 w-9 h-9 rounded-full bg-destructive border border-destructive/40 flex items-center justify-center text-destructive-foreground hover-elevate transition-all shadow-lg"
                         data-testid="button-delete-photo"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -322,9 +323,9 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                   </div>
                 </div>
               ) : !isReadOnly ? (
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 text-center">
-                  <Upload className="w-10 h-10 text-white/40 mx-auto mb-3" />
-                  <p className="text-white/70 mb-4 text-sm">Add a photo to create a memory</p>
+                <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-6 text-center">
+                  <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground mb-4 text-sm">Add a photo to create a memory</p>
                   <label className="cursor-pointer">
                     <input
                       type="file"
@@ -333,7 +334,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                       className="hidden"
                       data-testid="input-photo-upload"
                     />
-                    <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-all font-medium text-sm shadow-lg">
+                    <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl transition-all font-medium text-sm shadow-lg">
                       <Upload className="w-4 h-4" />
                       {uploading ? 'Uploading...' : 'Upload Photo'}
                     </span>
@@ -343,19 +344,19 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
               {/* Date & Time */}
               <div className="grid grid-cols-2 gap-2 md:gap-3">
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 md:p-4">
-                  <div className="flex items-center gap-2 text-white/60 mb-1 md:mb-2">
+                <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-3 md:p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1 md:mb-2">
                     <Calendar className="w-4 h-4" />
                     <span className="text-xs font-medium uppercase tracking-wide">Date</span>
                   </div>
-                  <p className="text-white font-semibold text-sm md:text-base">{format(event.startTime, 'MMM d, yyyy')}</p>
+                  <p className="text-foreground font-semibold text-sm md:text-base">{format(event.startTime, 'MMM d, yyyy')}</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-3 md:p-4">
-                  <div className="flex items-center gap-2 text-white/60 mb-1 md:mb-2">
+                <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-3 md:p-4">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1 md:mb-2">
                     <Clock className="w-4 h-4" />
                     <span className="text-xs font-medium uppercase tracking-wide">Time</span>
                   </div>
-                  <p className="text-white font-semibold text-sm md:text-base">
+                  <p className="text-foreground font-semibold text-sm md:text-base">
                     {format(event.startTime, 'h:mm a')} - {format(event.endTime, 'h:mm a')}
                   </p>
                 </div>
@@ -363,9 +364,9 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
 
               {/* Description */}
               {event.description && (
-                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4">
-                  <h4 className="text-xs font-medium text-white/60 mb-2 uppercase tracking-wide">Description</h4>
-                  <p className="text-white/95 leading-relaxed text-sm md:text-base">{event.description}</p>
+                <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
+                  <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Description</h4>
+                  <p className="text-foreground leading-relaxed text-sm md:text-base">{event.description}</p>
                 </div>
               )}
 
@@ -383,7 +384,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                 {!isReadOnly && (
                   <Button
                     onClick={handleEdit}
-                    className="flex-1 bg-purple-500 hover:bg-purple-600 text-white shadow-lg"
+                    className="flex-1"
                     data-testid="button-edit-bottom"
                   >
                     <Edit2 className="w-4 h-4 mr-2" />
@@ -393,7 +394,7 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                 <Button
                   onClick={onClose}
                   variant="outline"
-                  className={`${!isReadOnly ? 'flex-1' : 'w-full'} border-white/40 text-white hover:bg-white/10 bg-white/5`}
+                  className={`${!isReadOnly ? 'flex-1' : 'w-full'}`}
                   data-testid="button-close-bottom"
                 >
                   Close

@@ -1,16 +1,81 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage, NotFoundError } from "./storage";
+import { registerAdvisorRoutes } from "./advisorRoutes";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { getUserFamilyRole, PermissionError, hasPermission } from "./permissions";
+import { requireFamily, requireCare } from "./tierMiddleware";
+import { setupGoogleAuth } from "./googleAuth";
+import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
 import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
-import { startOfWeek, endOfWeek, format, addDays } from "date-fns";
+import { startOfWeek, endOfWeek, format, addDays, subDays } from "date-fns";
+import OpenAI from "openai";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
 import { parseScheduleFromText, parseScheduleFromImage, parseScheduleFromPdf, type ParsedScheduleEvent } from "./scheduleParser";
 import { parseICalData } from "./icalParser";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
+import { sql } from "drizzle-orm";
+import { db } from "./db";
+import type Stripe from "stripe";
+
+let cachedFamilyPlanPriceId: string | null = null;
+
+async function getOrCreateFamilyPlanPrice(stripe: Stripe): Promise<string> {
+  if (cachedFamilyPlanPriceId) return cachedFamilyPlanPriceId;
+
+  const knownPriceId = "price_1T3I35QiL2ZGFBUjx2Q6WxHA";
+  try {
+    const price = await stripe.prices.retrieve(knownPriceId);
+    if (price.active && price.unit_amount === 700) {
+      cachedFamilyPlanPriceId = knownPriceId;
+      return knownPriceId;
+    }
+  } catch {}
+
+  const products = await stripe.products.search({
+    query: 'name~"Kindora Family Plan"',
+    limit: 1,
+  });
+
+  let productId: string;
+  if (products.data.length > 0) {
+    productId = products.data[0].id;
+  } else {
+    const product = await stripe.products.create({
+      name: "Kindora Family Plan",
+      description: "Family calendar with unlimited members, caregiver tools, weekly email summaries, and more.",
+    });
+    productId = product.id;
+    console.log("Created Stripe product:", productId);
+  }
+
+  const prices = await stripe.prices.list({
+    product: productId,
+    active: true,
+    type: "recurring",
+    limit: 10,
+  });
+
+  const matchingPrice = prices.data.find(p => p.unit_amount === 700 && p.currency === "usd");
+  if (matchingPrice) {
+    cachedFamilyPlanPriceId = matchingPrice.id;
+    return cachedFamilyPlanPriceId;
+  }
+
+  const price = await stripe.prices.create({
+    product: productId,
+    unit_amount: 700,
+    currency: "usd",
+    recurring: { interval: "month" },
+  });
+  cachedFamilyPlanPriceId = price.id;
+  console.log("Created Stripe price:", price.id);
+  return cachedFamilyPlanPriceId;
+}
 
 // Helper function to get familyId from request or fallback to user's first family
 async function getFamilyId(req: any, userId: string): Promise<string | null> {
@@ -31,69 +96,113 @@ async function getFamilyId(req: any, userId: string): Promise<string | null> {
   return familyId ?? null;
 }
 
-// Helper function to calculate next occurrence date based on recurrence rule
+import rruleLib from 'rrule';
+const { RRule } = rruleLib;
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
+
+function legacyRuleToRRule(rule: string, startTime: Date, endDate?: Date | null, count?: string | null): string {
+  const freqMap: Record<string, string> = {
+    'daily': 'DAILY',
+    'weekly': 'WEEKLY',
+    'biweekly': 'WEEKLY',
+    'monthly': 'MONTHLY',
+    'yearly': 'YEARLY',
+  };
+  const freq = freqMap[rule];
+  if (!freq) return '';
+  
+  let parts = [`FREQ=${freq}`];
+  if (rule === 'biweekly') parts.push('INTERVAL=2');
+  if (count) parts.push(`COUNT=${count}`);
+  else if (endDate) parts.push(`UNTIL=${endDate.toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')}`);
+  
+  return parts.join(';');
+}
+
+function expandRRuleOccurrences(
+  parentEvent: any,
+  rangeStart: Date,
+  rangeEnd: Date,
+  maxOccurrences: number = 500
+): any[] {
+  const rruleString = parentEvent.rrule;
+  if (!rruleString) return [];
+
+  try {
+    const dtstart = new Date(parentEvent.startTime);
+    const rule = RRule.fromString(rruleString);
+    const fullRule = new RRule({
+      ...rule.origOptions,
+      dtstart,
+    });
+
+    const occurrences = fullRule.between(rangeStart, rangeEnd, true).slice(0, maxOccurrences);
+    const duration = new Date(parentEvent.endTime).getTime() - dtstart.getTime();
+
+    return occurrences.map((occDate, index) => ({
+      ...parentEvent,
+      id: `${parentEvent.id}_occ_${index}`,
+      startTime: occDate,
+      endTime: new Date(occDate.getTime() + duration),
+      recurringEventId: parentEvent.id,
+      _isVirtualOccurrence: true,
+      _occurrenceIndex: index,
+      _parentEventId: parentEvent.id,
+    }));
+  } catch (err) {
+    console.error("Error expanding RRULE:", err, "for event:", parentEvent.id);
+    return [];
+  }
+}
+
 function getNextDate(currentDate: Date, rule: string): Date {
   const next = new Date(currentDate);
   switch (rule) {
-    case 'daily':
-      next.setDate(next.getDate() + 1);
-      break;
-    case 'weekly':
-      next.setDate(next.getDate() + 7);
-      break;
-    case 'biweekly':
-      next.setDate(next.getDate() + 14);
-      break;
-    case 'monthly':
-      next.setMonth(next.getMonth() + 1);
-      break;
-    case 'yearly':
-      next.setFullYear(next.getFullYear() + 1);
-      break;
+    case 'daily': next.setDate(next.getDate() + 1); break;
+    case 'weekly': next.setDate(next.getDate() + 7); break;
+    case 'biweekly': next.setDate(next.getDate() + 14); break;
+    case 'monthly': next.setMonth(next.getMonth() + 1); break;
+    case 'yearly': next.setFullYear(next.getFullYear() + 1); break;
   }
   return next;
 }
 
-// Helper function to create recurring events
 async function createRecurringEvents(
-  storageInstance: typeof storage, 
-  familyId: string, 
+  storageInstance: typeof storage,
+  familyId: string,
   eventData: any
 ): Promise<any[]> {
   const createdEvents: any[] = [];
   const { recurrenceRule, recurrenceEndDate, recurrenceCount, ...baseEventData } = eventData;
-  
-  // Guard: if no valid recurrence rule, just create a single event
+
   if (!recurrenceRule || typeof recurrenceRule !== 'string') {
     const event = await storageInstance.createEvent(familyId, baseEventData);
     return [event];
   }
-  
-  // Validate count if provided
+
   const parsedCount = recurrenceCount ? parseInt(recurrenceCount, 10) : null;
   if (parsedCount !== null && (isNaN(parsedCount) || parsedCount < 2)) {
     throw new Error("Recurrence count must be at least 2");
   }
-  
-  // Determine limits based on end condition
+
   const hasCount = parsedCount !== null;
   const hasEndDate = recurrenceEndDate !== null && recurrenceEndDate !== undefined;
   const maxYearsAhead = 2;
   const absoluteMaxDate = new Date(new Date().setFullYear(new Date().getFullYear() + maxYearsAhead));
   const endDateLimit = hasEndDate ? new Date(recurrenceEndDate) : absoluteMaxDate;
-  
-  // Max occurrences: use count if specified, otherwise use a high number for date-limited or default
-  const maxIterations = hasCount ? parsedCount : 500; // 500 is safety cap for date-limited
-  
-  // Create the first event with all recurrence metadata
+  const maxIterations = hasCount ? parsedCount : 500;
+
   const firstEvent = await storageInstance.createEvent(familyId, {
     ...baseEventData,
     recurrenceRule,
     recurrenceEndDate: recurrenceEndDate || null,
     recurrenceCount: recurrenceCount || null,
   });
-  
-  // Update the first event to set its own recurringEventId while preserving all recurrence metadata
+
   await storageInstance.updateEvent(firstEvent.id, familyId, {
     recurringEventId: firstEvent.id,
     recurrenceRule: recurrenceRule as 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly',
@@ -102,26 +211,17 @@ async function createRecurringEvents(
   });
   firstEvent.recurringEventId = firstEvent.id;
   createdEvents.push(firstEvent);
-  
-  // Use persisted firstEvent timestamps to ensure storage-normalized times are used
+
   let currentStartTime = new Date(firstEvent.startTime);
   let currentEndTime = new Date(firstEvent.endTime);
   const duration = currentEndTime.getTime() - currentStartTime.getTime();
-  
+
   for (let i = 1; i < maxIterations; i++) {
     currentStartTime = getNextDate(currentStartTime, recurrenceRule);
     currentEndTime = new Date(currentStartTime.getTime() + duration);
-    
-    // Check end date limit BEFORE creating the event (use >= to honor "end on date" precisely)
-    if (hasEndDate && currentStartTime >= endDateLimit) {
-      break;
-    }
-    
-    // Enforce absolute max date to prevent runaway generation
-    if (currentStartTime > absoluteMaxDate) {
-      break;
-    }
-    
+    if (hasEndDate && currentStartTime >= endDateLimit) break;
+    if (currentStartTime > absoluteMaxDate) break;
+
     const recurringEvent = await storageInstance.createEvent(familyId, {
       ...baseEventData,
       startTime: currentStartTime,
@@ -129,17 +229,63 @@ async function createRecurringEvents(
       recurrenceRule,
       recurrenceEndDate: recurrenceEndDate || null,
       recurrenceCount: recurrenceCount || null,
-      recurringEventId: firstEvent.id, // Link to first event in series
+      recurringEventId: firstEvent.id,
     });
     createdEvents.push(recurringEvent);
   }
-  
+
   return createdEvents;
 }
 
+// ── Real-time SSE notification infrastructure ──────────────────────────────
+const sseClients = new Map<string, Set<any>>();
+
+function pushSSEEvent(userId: string, eventName: string, data: object) {
+  const conns = sseClients.get(userId);
+  if (!conns || conns.size === 0) return;
+  const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const res of Array.from(conns)) {
+    try { res.write(payload); } catch {}
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve animation assets from public/animation/ before Vite's catch-all intercepts
+  app.use('/animation', express.static(path.join(process.cwd(), 'public', 'animation'), {
+    setHeaders: (res) => {
+      res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    }
+  }));
+
   // Setup authentication
   await setupAuth(app);
+  setupGoogleAuth(app);
+
+  // ── SSE notification stream ──────────────────────────────────────────────
+  app.get("/api/notifications/stream", isAuthenticated, (req: any, res) => {
+    const userId = req.user.claims.sub;
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    if (!sseClients.has(userId)) sseClients.set(userId, new Set());
+    sseClients.get(userId)!.add(res);
+
+    res.write('event: connected\ndata: {}\n\n');
+
+    const keepalive = setInterval(() => {
+      try { res.write(':keepalive\n\n'); } catch {}
+    }, 25000);
+
+    req.on('close', () => {
+      clearInterval(keepalive);
+      sseClients.get(userId)?.delete(res);
+    });
+  });
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Auth user endpoint
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -155,6 +301,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
+
+  app.patch("/api/auth/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { firstName, lastName } = req.body;
+      if (!firstName || !firstName.trim()) {
+        return res.status(400).json({ message: "First name is required" });
+      }
+      const cleanFirst = firstName.trim().replace(/[<>]/g, '');
+      const cleanLast = lastName ? lastName.trim().replace(/[<>]/g, '') : null;
+      const updated = await storage.upsertUser({ id: userId, firstName: cleanFirst, lastName: cleanLast });
+      const { passwordHash, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
     }
   });
 
@@ -205,6 +370,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching family by ID:", error);
       res.status(500).json({ error: "Failed to fetch family" });
+    }
+  });
+
+  app.post("/api/families", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name } = req.body;
+
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: "Family name is required" });
+      }
+
+      const sanitizedName = name.replace(/[<>]/g, '').trim().slice(0, 100);
+      const family = await storage.createFamily(userId, { name: sanitizedName, createdBy: userId });
+      res.status(201).json(family);
+    } catch (error) {
+      console.error("Error creating family:", error);
+      res.status(500).json({ error: "Failed to create family" });
+    }
+  });
+
+  app.put("/api/families/:familyId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.params.familyId;
+      const { name } = req.body;
+
+      const membership = await storage.getUserFamilyMembership(userId, familyId);
+      if (!membership || membership.role !== 'owner') {
+        return res.status(403).json({ error: "Only family owners can update family settings" });
+      }
+
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ error: "Family name is required" });
+      }
+
+      const sanitizedName = name.replace(/[<>]/g, '').trim().slice(0, 100);
+      const updated = await storage.updateFamily(familyId, { name: sanitizedName });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating family:", error);
+      res.status(500).json({ error: "Failed to update family" });
     }
   });
 
@@ -304,7 +511,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "You are not a member of this family" });
       }
       
-      res.json({ role });
+      const permissions = role ? getPermissionsForRole(role) : null;
+      res.json({ role, permissions });
     } catch (error) {
       console.error("Error fetching user role:", error);
       res.status(500).json({ error: "Failed to fetch user role" });
@@ -614,19 +822,17 @@ Visit Kindora Calendar: ${joinUrl}
           const errorMessage = errorDetails.errors?.[0]?.message || errorDetails.message || errorText;
           
           if (response.status === 400 || response.status === 403) {
-            return res.status(400).json({
-              error: "Email sending failed: Sender verification or permission issue",
-              details: errorMessage,
-              provider: "sendgrid",
-              fix: "1. Verify your sender email (mvicenzino@gmail.com) in SendGrid dashboard. 2. Check that your API key has 'Mail Send' permissions."
-            });
+            console.warn('SendGrid email failed (permission/verification), returning invite code anyway');
+          } else {
+            console.warn('SendGrid email failed (credits/other), returning invite code anyway');
           }
           
-          return res.status(500).json({
-            error: "Failed to send email via SendGrid",
-            details: errorMessage,
-            provider: "sendgrid",
-            fix: "Check SendGrid dashboard for sender verification and API key status"
+          return res.json({ 
+            success: true,
+            message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
+            inviteCode: family.inviteCode,
+            emailFailed: true,
+            provider: "sendgrid"
           });
         }
 
@@ -635,6 +841,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.json({ 
           success: true,
           message: "Invitation email sent successfully",
+          inviteCode: family.inviteCode,
           provider: "sendgrid"
         });
       } else {
@@ -946,19 +1153,17 @@ Visit Kindora Calendar: ${joinUrl}
           const errorMessage = errorDetails.errors?.[0]?.message || errorDetails.message || errorText;
           
           if (response.status === 400 || response.status === 403) {
-            return res.status(400).json({
-              error: "Email sending failed: Sender verification or permission issue",
-              details: errorMessage,
-              provider: "sendgrid",
-              fix: "1. Verify your sender email (mvicenzino@gmail.com) in SendGrid dashboard. 2. Check that your API key has 'Mail Send' permissions."
-            });
+            console.warn('SendGrid forward-invite failed (permission/verification), returning invite code anyway');
+          } else {
+            console.warn('SendGrid forward-invite failed (credits/other), returning invite code anyway');
           }
           
-          return res.status(500).json({
-            error: "Failed to send email via SendGrid",
-            details: errorMessage,
-            provider: "sendgrid",
-            fix: "Check SendGrid dashboard for sender verification and API key status"
+          return res.json({ 
+            success: true,
+            message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
+            inviteCode,
+            emailFailed: true,
+            provider: "sendgrid"
           });
         }
 
@@ -967,6 +1172,7 @@ Visit Kindora Calendar: ${joinUrl}
         return res.json({ 
           success: true,
           message: "Invitation email sent successfully",
+          inviteCode,
           provider: "sendgrid"
         });
       } else {
@@ -1140,6 +1346,21 @@ Visit Kindora Calendar: ${joinUrl}
       }
       const events = await storage.getEvents(familyId);
       
+      const rangeStartParam = req.query.start as string | undefined;
+      const rangeEndParam = req.query.end as string | undefined;
+      const rangeStart = rangeStartParam ? new Date(rangeStartParam) : new Date(new Date().setMonth(new Date().getMonth() - 3));
+      const rangeEnd = rangeEndParam ? new Date(rangeEndParam) : new Date(new Date().setFullYear(new Date().getFullYear() + 2));
+
+      const expandedEvents: any[] = [];
+      for (const event of events) {
+        if (event.isRecurringParent && event.rrule) {
+          const occurrences = expandRRuleOccurrences(event, rangeStart, rangeEnd);
+          expandedEvents.push(...occurrences);
+        } else if (!event.isRecurringParent) {
+          expandedEvents.push(event);
+        }
+      }
+      
       const allNotes = await storage.getAllEventNotesForFamily(familyId);
       
       const notesByEvent = new Map<string, typeof allNotes>();
@@ -1151,8 +1372,9 @@ Visit Kindora Calendar: ${joinUrl}
       
       const authorCache = new Map<string, any>();
       const eventsWithNotes = await Promise.all(
-        events.map(async (event) => {
-          const notes = notesByEvent.get(event.id) || [];
+        expandedEvents.map(async (event) => {
+          const parentId = event._parentEventId || event.id;
+          const notes = notesByEvent.get(parentId) || [];
           const sortedNotes = [...notes].sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
@@ -1213,10 +1435,20 @@ Visit Kindora Calendar: ${joinUrl}
       
       const eventData = result.data;
       
-      // Handle recurring events
-      if (eventData.recurrenceRule) {
+      if (eventData.rrule) {
+        const parentEvent = await storage.createEvent(familyId, {
+          ...eventData,
+          isRecurringParent: true,
+          recurringEventId: undefined,
+        });
+        await storage.updateEvent(parentEvent.id, familyId, {
+          recurringEventId: parentEvent.id,
+        });
+        parentEvent.recurringEventId = parentEvent.id;
+        res.status(201).json(parentEvent);
+      } else if (eventData.recurrenceRule) {
         const createdEvents = await createRecurringEvents(storage, familyId, eventData);
-        res.status(201).json(createdEvents[0]); // Return the first event
+        res.status(201).json(createdEvents[0]);
       } else {
         const event = await storage.createEvent(familyId, eventData);
         res.status(201).json(event);
@@ -1258,10 +1490,14 @@ Visit Kindora Calendar: ${joinUrl}
       
       const createdEvents: any[] = [];
       
+      const skipped: string[] = [];
+
       for (const eventData of eventsData) {
         const result = insertEventSchema.safeParse(eventData);
         if (!result.success) {
-          console.warn("Skipping invalid event:", result.error.message);
+          const msg = `"${eventData.title ?? 'untitled'}": ${result.error.message}`;
+          console.warn("Skipping invalid event:", msg);
+          skipped.push(msg);
           continue;
         }
         
@@ -1272,6 +1508,8 @@ Visit Kindora Calendar: ${joinUrl}
       res.status(201).json({ 
         success: true, 
         imported: createdEvents.length,
+        skipped: skipped.length,
+        skippedReasons: skipped,
         source: source || "manual",
         events: createdEvents 
       });
@@ -1561,10 +1799,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found for user" });
       }
       
-      // Verify user is a member of this family
       const role = await getUserFamilyRole(storage, userId, familyId);
       if (!role) {
         return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canSendMessages')) {
+        return res.status(403).json({ error: "You don't have permission to send messages" });
       }
       
       const noteData = {
@@ -1621,8 +1863,8 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(404).json({ error: "Note not found" });
       }
       
-      // Allow deletion if user is the author or has owner/member role
-      if (noteToDelete.authorUserId !== userId && role === 'caregiver') {
+      const context = { userId, familyId, role };
+      if (noteToDelete.authorUserId !== userId && !hasPermission(context, 'canDeleteMessages')) {
         return res.status(403).json({ error: "You can only delete your own notes" });
       }
       
@@ -1701,7 +1943,76 @@ Visit Kindora Calendar: ${joinUrl}
 
   // Medication Routes (protected) - Medication tracking for caregivers
   // Get all medications for a family
-  app.get("/api/medications", isAuthenticated, async (req: any, res) => {
+
+  app.post("/api/medications/import-ai", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) return res.status(400).json({ error: "No family found" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ error: "Not a family member" });
+      if (!hasPermission({ userId, familyId, role }, 'canManageMedications')) {
+        return res.status(403).json({ error: "No permission to manage medications" });
+      }
+      const { text, imageBase64, mimeType, documentId } = req.body;
+      if (!text && !imageBase64 && !documentId) return res.status(400).json({ error: "Provide text, imageBase64, or documentId" });
+
+      // If documentId provided, fetch the actual file from object storage
+      let finalImageBase64 = imageBase64;
+      let finalMimeType = mimeType;
+      let finalText = text;
+
+      if (documentId) {
+        try {
+          const doc = await storage.getCareDocument(documentId, familyId);
+          if (!doc) return res.status(404).json({ error: "Document not found" });
+
+          const objectStorageService = new ObjectStorageService();
+          const file = await objectStorageService.getObjectEntityFile(doc.fileUrl);
+          const [buffer] = await file.download();
+          finalImageBase64 = buffer.toString('base64');
+          finalMimeType = doc.mimeType || 'application/pdf';
+        } catch (err: any) {
+          console.error("Error fetching vault document:", err.message);
+          return res.status(500).json({ error: "Could not read document from vault" });
+        }
+      }
+
+      const prompt = "You are a medication extraction assistant. Extract all medications from the provided content. Return ONLY a valid JSON array of objects with fields: name, dosage, frequency, scheduledTimes (array), instructions (string or null). No markdown, no explanation. Return [] if none found.";
+      let responseText = "";
+      if (finalImageBase64) {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{ role: "user", content: [
+            { type: "image_url", image_url: { url: "data:" + (finalMimeType || "image/jpeg") + ";base64," + finalImageBase64 } },
+            { type: "text", text: prompt }
+          ]}],
+          max_tokens: 1000,
+        });
+        responseText = completion.choices[0]?.message?.content || "";
+      } else {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: prompt },
+            { role: "user", content: finalText || "" }
+          ],
+          max_tokens: 1000,
+        });
+        responseText = completion.choices[0]?.message?.content || "";
+      }
+      console.log("[MedImport] AI response:", responseText.slice(0, 300));
+      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) return res.json({ medications: [], count: 0 });
+      const medications = JSON.parse(jsonMatch[0]);
+      res.json({ medications, count: medications.length });
+    } catch (error: any) {
+      console.error("Error parsing medications:", error?.message || error);
+      res.status(500).json({ error: "Failed to parse medications" });
+    }
+  });
+
+  app.get("/api/medications", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -1782,7 +2093,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Create a medication (owners and members only)
-  app.post("/api/medications", isAuthenticated, async (req: any, res) => {
+  app.post("/api/medications", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -1795,9 +2106,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can create medications
-      if (role === 'caregiver') {
-        return res.status(403).json({ error: "Caregivers cannot create medications" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageMedications')) {
+        return res.status(403).json({ error: "You don't have permission to manage medications" });
       }
       
       const result = insertMedicationSchema.safeParse(req.body);
@@ -1827,9 +2138,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can update medications
-      if (role === 'caregiver') {
-        return res.status(403).json({ error: "Caregivers cannot update medications" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageMedications')) {
+        return res.status(403).json({ error: "You don't have permission to manage medications" });
       }
       
       const medication = await storage.updateMedication(req.params.id, familyId, req.body);
@@ -1857,9 +2168,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can delete medications
-      if (role === 'caregiver') {
-        return res.status(403).json({ error: "Caregivers cannot delete medications" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageMedications')) {
+        return res.status(403).json({ error: "You don't have permission to manage medications" });
       }
       
       await storage.deleteMedication(req.params.id, familyId);
@@ -1965,6 +2276,11 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canLogMedications')) {
+        return res.status(403).json({ error: "You don't have permission to log medications" });
+      }
+      
       // Verify the medication exists
       const medication = await storage.getMedication(req.params.medicationId, familyId);
       if (!medication) {
@@ -2019,7 +2335,11 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      const messages = await storage.getFamilyMessages(familyId);
+      const allMessages = await storage.getFamilyMessages(familyId);
+      // Caregivers only see messages tagged as 'caregiver' type
+      const messages = role === 'caregiver'
+        ? allMessages.filter((m: any) => m.messageType === 'caregiver')
+        : allMessages;
       
       // Enrich messages with author info
       const enrichedMessages = await Promise.all(messages.map(async (message) => {
@@ -2057,10 +2377,18 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // All family members (including caregivers) can send messages
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canSendMessages')) {
+        return res.status(403).json({ error: "You don't have permission to send messages" });
+      }
+      
+      // Auto-set messageType: caregivers always send 'caregiver' messages
+      // owners/members can specify type, defaulting to 'family'
+      const messageType = role === 'caregiver' ? 'caregiver' : (req.body.messageType || 'family');
       const messageData = {
         ...req.body,
         authorUserId: userId,
+        messageType,
       };
       
       const result = insertFamilyMessageSchema.safeParse(messageData);
@@ -2083,7 +2411,24 @@ Visit Kindora Calendar: ${joinUrl}
           role: membership?.role || 'member',
         } : null,
       };
-      
+
+      // Push real-time notification to all other family members
+      const authorName = author
+        ? [author.firstName, author.lastName].filter(Boolean).join(' ') || author.email || 'Someone'
+        : 'Someone';
+      const familyMembers = await storage.getFamilyMembershipsWithUsers(familyId);
+      for (const fm of familyMembers) {
+        if (fm.userId !== userId) {
+          pushSSEEvent(fm.userId, 'new-message', {
+            id: message.id,
+            content: message.content,
+            familyId: message.familyId,
+            authorName,
+            authorAvatar: author?.profileImageUrl || null,
+          });
+        }
+      }
+
       res.status(201).json(enrichedMessage);
     } catch (error) {
       console.error("Error creating family message:", error);
@@ -2112,7 +2457,8 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(404).json({ error: "Message not found" });
       }
       
-      if (message.authorUserId !== userId && role !== 'owner') {
+      const context = { userId, familyId, role };
+      if (message.authorUserId !== userId && !hasPermission(context, 'canDeleteMessages')) {
         return res.status(403).json({ error: "You can only delete your own messages" });
       }
       
@@ -2169,9 +2515,13 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "Valid hourly rate is required" });
       }
       
-      // Determine target user (owners can set for others)
+      // Determine target user (users with canManagePayRates can set for others)
       let targetUserId = userId;
-      if (caregiverUserId && role === 'owner') {
+      if (caregiverUserId && caregiverUserId !== userId) {
+        const context = { userId, familyId, role };
+        if (!hasPermission(context, 'canManagePayRates')) {
+          return res.status(403).json({ error: "You don't have permission to set pay rates for other users" });
+        }
         targetUserId = caregiverUserId;
       }
       
@@ -2184,7 +2534,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Get user's time entries
-  app.get("/api/caregiver/time-entries", isAuthenticated, async (req: any, res) => {
+  app.get("/api/caregiver/time-entries", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2207,7 +2557,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Create a new time entry
-  app.post("/api/caregiver/time-entries", isAuthenticated, async (req: any, res) => {
+  app.post("/api/caregiver/time-entries", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2566,10 +2916,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "Family ID is required" });
       }
       
-      // Check if user has permission to manage this setting (owner/member only)
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can configure weekly summaries" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageWeeklySummary')) {
+        return res.status(403).json({ error: "You don't have permission to manage weekly summaries" });
       }
       
       const schedule = await storage.upsertWeeklySummarySchedule(familyId, {
@@ -2777,7 +3131,7 @@ Visit Kindora Calendar: ${joinUrl}
   // ========== Care Documents Routes ==========
   
   // Get all care documents for a family
-  app.get("/api/care-documents", isAuthenticated, async (req: any, res) => {
+  app.get("/api/care-documents", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2846,9 +3200,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can upload documents
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can upload documents" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canUploadDocuments')) {
+        return res.status(403).json({ error: "You don't have permission to upload documents" });
       }
       
       const { fileName, contentType } = req.body;
@@ -2881,7 +3235,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
   
   // Create a care document record after upload
-  app.post("/api/care-documents", isAuthenticated, async (req: any, res) => {
+  app.post("/api/care-documents", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2894,9 +3248,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can upload documents
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can upload documents" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canUploadDocuments')) {
+        return res.status(403).json({ error: "You don't have permission to upload documents" });
       }
       
       const { title, documentType, description, memberId, fileUrl, fileName, fileSize, mimeType } = req.body;
@@ -2949,9 +3303,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can delete documents
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can delete documents" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canDeleteDocuments')) {
+        return res.status(403).json({ error: "You don't have permission to delete documents" });
       }
       
       await storage.deleteCareDocument(req.params.id, familyId);
@@ -3019,8 +3373,13 @@ Visit Kindora Calendar: ${joinUrl}
       }
       
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || (role !== 'owner' && role !== 'member')) {
-        return res.status(403).json({ error: "Only family owners and members can import from Google Drive" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canImportSchedules')) {
+        return res.status(403).json({ error: "You don't have permission to import from Google Drive" });
       }
       
       const { fileId, title, documentType, description, memberId } = req.body;
@@ -3132,7 +3491,7 @@ Visit Kindora Calendar: ${joinUrl}
   // ========================================
   
   // Get emergency bridge tokens for a family (authenticated)
-  app.get("/api/emergency-bridge/tokens", isAuthenticated, async (req: any, res) => {
+  app.get("/api/emergency-bridge/tokens", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3145,9 +3504,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can view tokens
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can view emergency bridge tokens" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       const tokens = await storage.getEmergencyBridgeTokens(familyId);
@@ -3159,7 +3518,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
   
   // Create an emergency bridge token (authenticated)
-  app.post("/api/emergency-bridge/tokens", isAuthenticated, async (req: any, res) => {
+  app.post("/api/emergency-bridge/tokens", isAuthenticated, requireCare, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3172,9 +3531,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can create tokens
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can create emergency bridge tokens" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       const { label, expiresInHours } = req.body;
@@ -3221,9 +3580,9 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You are not a member of this family" });
       }
       
-      // Only owners and members can revoke tokens
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can revoke emergency bridge tokens" });
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       await storage.revokeEmergencyBridgeToken(req.params.id, familyId);
@@ -3253,8 +3612,13 @@ Visit Kindora Calendar: ${joinUrl}
       }
       
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (role !== 'owner' && role !== 'member') {
-        return res.status(403).json({ error: "Only family owners and members can send emergency bridge emails" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageEmergencyBridge')) {
+        return res.status(403).json({ error: "You don't have permission to manage emergency bridge tokens" });
       }
       
       const family = await storage.getFamilyById(familyId);
@@ -3418,10 +3782,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission to manage invoices (owners and members only)
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can scan for invoices" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canImportSchedules')) {
+        return res.status(403).json({ error: "You don't have permission to scan for invoices" });
       }
 
       const daysBack = req.body.daysBack || 30;
@@ -3507,10 +3875,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission to add to calendar
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can add invoices to calendar" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageInvoices')) {
+        return res.status(403).json({ error: "You don't have permission to manage invoices" });
       }
 
       // Get invoice
@@ -3544,8 +3916,9 @@ Visit Kindora Calendar: ${joinUrl}
         description: eventDescription,
         startTime,
         endTime,
-        memberIds: [], // No specific member assigned
+        memberIds: [],
         color: financialColor,
+        category: 'financial',
       });
 
       // Update invoice status
@@ -3569,10 +3942,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can dismiss invoices" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageInvoices')) {
+        return res.status(403).json({ error: "You don't have permission to manage invoices" });
       }
 
       await storage.updateParsedInvoiceStatus(invoiceId, familyId, 'dismissed');
@@ -3594,10 +3971,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
 
-      // Verify user has permission
       const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || role === 'caregiver') {
-        return res.status(403).json({ error: "Only family owners and members can delete invoices" });
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canManageInvoices')) {
+        return res.status(403).json({ error: "You don't have permission to manage invoices" });
       }
 
       await storage.deleteParsedInvoice(invoiceId, familyId);
@@ -3629,6 +4010,618 @@ Visit Kindora Calendar: ${joinUrl}
 
     return res.redirect(`/?import=${encodeURIComponent(params.toString())}`);
   });
+
+  // ==================== STRIPE SUBSCRIPTION ROUTES ====================
+
+  app.get("/api/stripe/config", isAuthenticated, async (_req, res) => {
+    try {
+      const publishableKey = await getStripePublishableKey();
+      res.json({ publishableKey });
+    } catch (error: any) {
+      console.error("Error fetching Stripe config:", error);
+      res.status(500).json({ message: "Failed to load payment configuration" });
+    }
+  });
+
+  app.get("/api/subscription/status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      res.json({
+        tier: user.subscriptionTier || "free",
+        status: user.subscriptionStatus || "inactive",
+        stripeCustomerId: user.stripeCustomerId || null,
+        stripeSubscriptionId: user.stripeSubscriptionId || null,
+      });
+    } catch (error: any) {
+      console.error("Error fetching subscription status:", error);
+      res.status(500).json({ message: "Failed to fetch subscription status" });
+    }
+  });
+
+  app.post("/api/checkout/create-session", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const stripe = await getUncachableStripeClient();
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+
+      const priceId = await getOrCreateFamilyPlanPrice(stripe);
+
+      let customerId = user.stripeCustomerId;
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          name: user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : (user.firstName || user.email || undefined),
+          metadata: { userId: user.id },
+        });
+        customerId = customer.id;
+        await storage.updateUserSubscription(user.id, {
+          stripeCustomerId: customer.id,
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: "subscription",
+        payment_method_types: ["card"],
+        line_items: [{ price: priceId, quantity: 1 }],
+        subscription_data: {
+          trial_period_days: 14,
+        },
+        success_url: `${baseUrl}/settings?subscription=success`,
+        cancel_url: `${baseUrl}/settings?subscription=cancelled`,
+        metadata: { userId: user.id },
+      });
+
+      res.json({ url: session.url });
+    } catch (error: any) {
+      console.error("Error creating checkout session:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  app.post("/api/subscription/cancel", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ message: "No active subscription found" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: true,
+      });
+
+      await storage.updateUserSubscription(user.id, {
+        subscriptionStatus: "canceling",
+      });
+
+      res.json({ message: "Subscription will cancel at end of billing period" });
+    } catch (error: any) {
+      console.error("Error canceling subscription:", error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+
+  app.post("/api/subscription/reactivate", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!user.stripeSubscriptionId) {
+        return res.status(400).json({ message: "No subscription found" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+      });
+
+      await storage.updateUserSubscription(user.id, {
+        subscriptionStatus: "active",
+      });
+
+      res.json({ message: "Subscription reactivated" });
+    } catch (error: any) {
+      console.error("Error reactivating subscription:", error);
+      res.status(500).json({ message: "Failed to reactivate subscription" });
+    }
+  });
+
+  app.post("/api/checkout/create-portal-session", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const user = await storage.getUser(userId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!user.stripeCustomerId) {
+        return res.status(400).json({ message: "No billing account found" });
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${baseUrl}/settings`,
+      });
+
+      res.json({ url: portalSession.url });
+    } catch (error: any) {
+      console.error("Error creating portal session:", error);
+      res.status(500).json({ message: "Failed to create billing portal session" });
+    }
+  });
+
+
+  app.delete("/api/admin/cleanup-user/:email", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const requestingUserId = req.user.claims.sub;
+      if (requestingUserId !== '21601610') {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      const email = decodeURIComponent(req.params.email);
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userFamilies = await storage.getUserFamilies(user.id);
+      for (const family of userFamilies) {
+        await storage.leaveFamily(user.id, family.id);
+        const remainingMembers = await storage.getFamilyMembershipsWithUsers(family.id);
+        if (remainingMembers.length === 0) {
+          await storage.deleteFamily(family.id);
+        }
+      }
+      await storage.deleteUser(user.id);
+      res.json({ message: `Cleaned up user ${email} and ${userFamilies.length} families` });
+    } catch (error: any) {
+      console.error("Cleanup error:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get("/api/admin/feedback", isAuthenticated, async (req: any, res) => {
+    const userId: string = req.user?.id ?? "";
+    const email: string = req.user?.email ?? "";
+    if (userId !== "google-110610540501901085708" && email !== "mvicenzino@gmail.com") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    const entries = await storage.getAllBetaFeedback();
+    res.json(entries);
+  });
+
+  // NLP Calendar Ask — answers natural language questions about the family's events
+  app.post("/api/calendar/ask", isAuthenticated, requireCare, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { question, familyId: bodyFamilyId, localNow, tzOffsetMinutes } = req.body;
+
+      if (!question?.trim()) {
+        return res.status(400).json({ error: "Question is required" });
+      }
+
+      const familyId = bodyFamilyId || await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found" });
+      }
+
+      // Check permission
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      const [allEvents, familyMembers] = await Promise.all([
+        storage.getEvents(familyId),
+        storage.getFamilyMembers(familyId),
+      ]);
+
+      // Build member name map
+      const memberMap: Record<string, string> = {};
+      for (const m of familyMembers) {
+        memberMap[m.id] = m.name;
+      }
+
+      const now = new Date();
+
+      // Use the client's local time if provided, so "today/tomorrow" resolve correctly
+      const clientOffset = typeof tzOffsetMinutes === 'number' ? tzOffsetMinutes : 0;
+      const clientLocalNow = localNow
+        ? new Date(new Date(localNow).getTime() - clientOffset * 60000)
+        : new Date(now.getTime() - clientOffset * 60000);
+
+      const rangeStart = subDays(now, 30);
+      const rangeEnd = addDays(now, 365);
+
+      const relevantEvents = allEvents.filter(e => {
+        const start = new Date(e.startTime);
+        return start >= rangeStart && start <= rangeEnd;
+      });
+
+      const eventContext = relevantEvents.map(e => {
+        const memberNames = (e.memberIds || []).map((id: string) => memberMap[id] || id).join(', ') || 'everyone';
+        const dateStr = format(new Date(e.startTime), 'EEE MMM d, yyyy');
+        const timeStr = `${format(new Date(e.startTime), 'h:mm a')} – ${format(new Date(e.endTime), 'h:mm a')}`;
+        const note = e.description ? ` | Note: ${e.description.slice(0, 100)}` : '';
+        return `[${e.id}] "${e.title}" | ${e.category || 'other'} | ${dateStr} ${timeStr} | Members: ${memberNames}${note}`;
+      }).join('\n');
+
+      const todayStr = format(clientLocalNow, 'EEEE, MMMM d, yyyy');
+      const tomorrowStr = format(addDays(clientLocalNow, 1), 'EEEE, MMMM d, yyyy');
+      const currentYear = clientLocalNow.getFullYear();
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4.1",
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful family calendar assistant embedded in the Kindora app.
+The user's current local date and time is: ${format(clientLocalNow, 'EEEE, MMMM d, yyyy h:mm a')} (year ${currentYear}).
+Today = ${todayStr}. Tomorrow = ${tomorrowStr}.
+
+You handle two types of requests:
+
+1. ADD EVENT: User wants to create/add/schedule/put an event on the calendar.
+   Return JSON: { "intent": "add", "answer": "<confirmation sentence>", "event": { "title": "<string>", "startTime": "<ISO 8601 datetime>", "endTime": "<ISO 8601 datetime>", "category": "<one of: medical|school|activities|errands|financial|social|caregiving|work|other>", "description": "<optional string or null>", "location": "<optional string or null>" } }
+
+   CRITICAL TIME RULES — follow these exactly, without exception:
+   - If the user says a specific time (e.g. "at 10am", "at 3:30pm", "at noon"), you MUST use that EXACT time. Do NOT substitute a different hour. Do NOT round or adjust.
+   - "10am" = 10:00, "10:00am" = 10:00, "3pm" = 15:00, "3:30pm" = 15:30, "noon" = 12:00, "midnight" = 00:00.
+   - If only start time is given, set endTime = startTime + 1 hour.
+   - If NO time is mentioned at all, default startTime to 19:00 (7:00 PM) and endTime to 20:00 (8:00 PM).
+   - Express all times in the user's LOCAL time (not UTC). Use format: "YYYY-MM-DDTHH:MM:SS" with no timezone suffix.
+   - "today" = ${todayStr}, "tomorrow" = ${tomorrowStr}.
+   - If no year specified, use the next upcoming occurrence (${currentYear} if not yet passed, otherwise ${currentYear + 1}).
+   - Infer category from context: birthday/dinner/party → social, doctor/hospital/medical → medical, school/homework/class → school, errands/chores/mail/store → errands, etc.
+
+2. QUERY: User is asking a question about existing events.
+   Return JSON: { "intent": "query", "answer": "<natural language response, 1–3 sentences>", "eventIds": ["<id>", ...] }
+   Only include IDs from the event list below. Max 5 IDs.
+
+Always return valid JSON matching one of the two formats above.`,
+          },
+          {
+            role: "user",
+            content: `Family events (next 12 months):\n${eventContext || '(no events scheduled)'}\n\nRequest: ${question.trim()}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+      });
+
+      const raw = completion.choices[0]?.message?.content || '{}';
+      let parsed: any = {};
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = { intent: 'query', answer: raw, eventIds: [] };
+      }
+
+      // Handle ADD EVENT intent
+      if (parsed.intent === 'add' && parsed.event) {
+        const { title, startTime, endTime, category, description, location } = parsed.event;
+
+        if (!title || !startTime || !endTime) {
+          return res.json({
+            answer: "I understood you want to add an event, but I couldn't determine all the required details. Please try again with a title and date.",
+            events: [],
+          });
+        }
+
+        // Build description — include location if provided since there's no dedicated field
+        const resolvedCategory = String(category || 'other');
+        const locationNote = location ? `Location: ${location}` : null;
+        const fullDescription = [description, locationNote].filter(Boolean).join('\n') || null;
+
+        // Pick a color based on category
+        const categoryColors: Record<string, string> = {
+          medical: '#E53E3E', school: '#3B82F6', activities: '#8B5CF6',
+          errands: '#F59E0B', financial: '#10B981', social: '#EC4899',
+          caregiving: '#F97316', work: '#6366F1', other: '#64748B',
+        };
+        const color = categoryColors[resolvedCategory] || '#64748B';
+
+        // AI returns times in the user's local timezone (no tz suffix).
+        // Convert to UTC by adding back the client's offset before storing.
+        const localToUtc = (isoLocal: string) => {
+          const localMs = new Date(isoLocal).getTime();
+          return new Date(localMs + clientOffset * 60000);
+        };
+
+        const newEvent = await storage.createEvent(familyId, {
+          title: String(title),
+          startTime: localToUtc(startTime),
+          endTime: localToUtc(endTime),
+          category: resolvedCategory as 'medical' | 'school' | 'activities' | 'errands' | 'financial' | 'social' | 'caregiving' | 'work' | 'other',
+          description: fullDescription,
+          memberIds: [],
+          color,
+        });
+
+        return res.json({
+          type: 'event_created',
+          answer: parsed.answer || `I added "${title}" to your calendar.`,
+          event: newEvent,
+        });
+      }
+
+      // Handle QUERY intent (existing behaviour)
+      const idSet = new Set<string>(parsed.eventIds || []);
+      const matchedEvents = relevantEvents.filter(e => idSet.has(e.id));
+
+      res.json({
+        answer: parsed.answer || "I couldn't find an answer based on your calendar.",
+        events: matchedEvents,
+      });
+    } catch (error) {
+      console.error("Calendar ask error:", error);
+      res.status(500).json({ error: "Failed to answer your question" });
+    }
+  });
+
+  // Public support contact form — no auth required
+  app.post("/api/support", async (req, res) => {
+    const { name, email, subject, message } = req.body;
+    if (!name?.trim() || !email?.trim() || !message?.trim()) {
+      return res.status(400).json({ error: "name, email, and message are required" });
+    }
+
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    const fromEmail = process.env.EMAIL_FROM_ADDRESS || "noreply@kindora.ai";
+    const toEmail = "mvicenzino@gmail.com";
+
+    if (sendgridApiKey) {
+      try {
+        await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sendgridApiKey}`,
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: toEmail }] }],
+            from: { email: fromEmail, name: "Kindora Support" },
+            reply_to: { email, name },
+            subject: `[Kindora Support] ${subject || "General inquiry"} — from ${name}`,
+            content: [
+              {
+                type: "text/plain",
+                value: `New support message from Kindora\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject || "General inquiry"}\n\n---\n\n${message}\n\n---\nReply directly to this email to respond to ${name}.`,
+              },
+              {
+                type: "text/html",
+                value: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#f97316;padding:16px 24px;border-radius:8px 8px 0 0">
+    <h2 style="color:white;margin:0;font-size:18px">New Support Message · Kindora</h2>
+  </div>
+  <div style="background:#ffffff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px;width:80px">Name</td><td style="padding:6px 0;font-weight:600;color:#111827">${name}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Email</td><td style="padding:6px 0"><a href="mailto:${email}" style="color:#f97316">${email}</a></td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Subject</td><td style="padding:6px 0;color:#111827">${subject || "General inquiry"}</td></tr>
+    </table>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:16px">
+      <p style="margin:0;color:#374151;line-height:1.6;white-space:pre-wrap">${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+    </div>
+    <p style="margin-top:16px;font-size:12px;color:#9ca3af">Reply directly to this email to respond to ${name}.</p>
+  </div>
+</div>`,
+              },
+            ],
+          }),
+        });
+      } catch (err) {
+        console.error("Support email send error:", err);
+        // Still return success to the user — don't expose email config errors
+      }
+    } else {
+      // Log to console in dev / if email not configured
+      console.log(`[Support] From: ${name} <${email}> | Subject: ${subject} | Message: ${message}`);
+    }
+
+    res.json({ success: true });
+  });
+
+  // ── Symptom Tracker ────────────────────────────────────────────────────────
+  app.post("/api/symptoms", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) return res.status(400).json({ error: "No family found" });
+      const { systems, ...entryData } = req.body;
+      const entry = await storage.createSymptomEntry(
+        { ...entryData, familyId },
+        systems ?? []
+      );
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating symptom entry:", error);
+      res.status(500).json({ error: "Failed to create symptom entry" });
+    }
+  });
+
+  app.get("/api/symptoms", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) return res.status(400).json({ error: "No family found" });
+      const { memberId, startDate, endDate } = req.query as Record<string, string | undefined>;
+      const entries = await storage.getSymptomEntries(familyId, memberId, startDate, endDate);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching symptom entries:", error);
+      res.status(500).json({ error: "Failed to fetch symptom entries" });
+    }
+  });
+
+  app.get("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const entry = await storage.getSymptomEntry(req.params.id);
+      if (!entry) return res.status(404).json({ error: "Not found" });
+      res.json(entry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch symptom entry" });
+    }
+  });
+
+  app.put("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { systems, ...entryData } = req.body;
+      const entry = await storage.updateSymptomEntry(req.params.id, entryData, systems);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating symptom entry:", error);
+      res.status(500).json({ error: "Failed to update symptom entry" });
+    }
+  });
+
+  app.delete("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteSymptomEntry(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete symptom entry" });
+    }
+  });
+
+  // ── Beta Feedback ──────────────────────────────────────────────────────────
+  app.post("/api/feedback", async (req: any, res) => {
+    const { name, email, comments } = req.body;
+    if (!name?.trim() || !email?.trim() || !comments?.trim()) {
+      return res.status(400).json({ error: "name, email, and comments are required" });
+    }
+
+    const userId = req.user?.id ?? undefined;
+
+    // Save to database
+    try {
+      await storage.submitBetaFeedback({ userId, name: name.trim(), email: email.trim(), comments: comments.trim() });
+    } catch (err) {
+      console.error("[Feedback] DB save error:", err);
+    }
+
+    // Send notification email
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    const fromEmail = process.env.EMAIL_FROM_ADDRESS || "noreply@kindora.ai";
+    const toEmail = "mvicenzino@gmail.com";
+
+    if (sendgridApiKey) {
+      try {
+        await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sendgridApiKey}` },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email: toEmail }] }],
+            from: { email: fromEmail, name: "Kindora Beta" },
+            reply_to: { email, name },
+            subject: `[Kindora Beta Feedback] from ${name}`,
+            content: [
+              {
+                type: "text/plain",
+                value: `New beta feedback from Kindora\n\nName: ${name}\nEmail: ${email}\nUser ID: ${userId || "anonymous"}\n\n---\n\n${comments}`,
+              },
+              {
+                type: "text/html",
+                value: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+  <div style="background:#f97316;padding:16px 24px;border-radius:8px 8px 0 0">
+    <h2 style="color:white;margin:0;font-size:18px">Beta Feedback · Kindora</h2>
+  </div>
+  <div style="background:#ffffff;padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px;width:80px">Name</td><td style="padding:6px 0;font-weight:600;color:#111827">${name}</td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">Email</td><td style="padding:6px 0"><a href="mailto:${email}" style="color:#f97316">${email}</a></td></tr>
+      <tr><td style="padding:6px 0;color:#6b7280;font-size:14px">User ID</td><td style="padding:6px 0;color:#111827">${userId || "anonymous"}</td></tr>
+    </table>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;padding:16px">
+      <p style="margin:0;color:#374151;line-height:1.6;white-space:pre-wrap">${comments.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+    </div>
+    <p style="margin-top:16px;font-size:12px;color:#9ca3af">Reply directly to this email to respond to ${name}.</p>
+  </div>
+</div>`,
+              },
+            ],
+          }),
+        });
+      } catch (err) {
+        console.error("[Feedback] Email send error:", err);
+      }
+    } else {
+      console.log(`[Feedback] ${name} <${email}> (${userId || "anon"}): ${comments}`);
+    }
+
+    res.json({ success: true });
+  });
+
+  // ── Push Notification Routes ──────────────────────────────────────────────
+  const { saveSubscription, deleteSubscription, sendPushToUser } = await import("./pushService");
+
+  app.post("/api/push/subscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { endpoint, keys } = req.body;
+      if (!endpoint || !keys?.p256dh || !keys?.auth) {
+        return res.status(400).json({ error: "Invalid subscription data" });
+      }
+      const sub = await saveSubscription(userId, { endpoint, keys });
+      res.json({ success: true, id: sub.id });
+    } catch (err) {
+      console.error("Push subscribe error:", err);
+      res.status(500).json({ error: "Failed to save subscription" });
+    }
+  });
+
+  app.delete("/api/push/subscribe", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { endpoint } = req.body;
+      if (!endpoint) return res.status(400).json({ error: "endpoint required" });
+      await deleteSubscription(userId, endpoint);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to remove subscription" });
+    }
+  });
+
+  app.post("/api/push/test", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await sendPushToUser(userId, {
+        title: "Kindora",
+        body: "Notifications are working! You'll now get reminders for important events.",
+        url: "/",
+        tag: "kindora-test",
+        important: false,
+      });
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Push test error:", err);
+      res.status(500).json({ error: "Failed to send test notification" });
+    }
+  });
+
+  registerAdvisorRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

@@ -3,6 +3,32 @@ import { pgTable, text, varchar, timestamp, boolean, index, numeric, integer } f
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const EVENT_CATEGORIES = [
+  'medical',
+  'school',
+  'activities',
+  'errands',
+  'financial',
+  'social',
+  'caregiving',
+  'work',
+  'other',
+] as const;
+
+export type EventCategory = typeof EVENT_CATEGORIES[number];
+
+export const CATEGORY_CONFIG: Record<EventCategory, { label: string; color: string; description: string }> = {
+  medical:    { label: 'Medical',     color: '#E53E3E', description: 'Doctor visits, medications, health' },
+  school:     { label: 'School',      color: '#3B82F6', description: 'School drop-offs, classes, homework' },
+  activities: { label: 'Activities',  color: '#8B5CF6', description: 'Sports, lessons, hobbies' },
+  errands:    { label: 'Errands',     color: '#F59E0B', description: 'Shopping, chores, to-dos' },
+  financial:  { label: 'Financial',   color: '#10B981', description: 'Bills, payments, budgeting' },
+  social:     { label: 'Social',      color: '#EC4899', description: 'Parties, playdates, gatherings' },
+  caregiving: { label: 'Caregiving',  color: '#F97316', description: 'Eldercare, therapy, respite' },
+  work:       { label: 'Work',        color: '#6366F1', description: 'Meetings, deadlines, work tasks' },
+  other:      { label: 'Other',       color: '#64748B', description: 'Everything else' },
+};
+
 // Sessions table (MANDATORY for auth)
 export const sessions = pgTable(
   "sessions",
@@ -15,6 +41,9 @@ export const sessions = pgTable(
 );
 
 // Users table (MANDATORY for auth)
+export const SUBSCRIPTION_TIERS = ['free', 'family', 'professional'] as const;
+export type SubscriptionTier = typeof SUBSCRIPTION_TIERS[number];
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey(),
   email: varchar("email").unique(),
@@ -23,6 +52,10 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"),
   authProvider: varchar("auth_provider").default("local"),
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  subscriptionTier: varchar("subscription_tier").default("free"),
+  subscriptionStatus: varchar("subscription_status").default("inactive"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -34,6 +67,9 @@ export const families = pgTable("families", {
   inviteCode: varchar("invite_code").unique().notNull(),
   createdBy: varchar("created_by").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  advisorChildrenContext: text("advisor_children_context"),
+  advisorElderContext: text("advisor_elder_context"),
+  advisorSelfContext: text("advisor_self_context"),
 });
 
 // Family Memberships table (links users to families)
@@ -52,6 +88,7 @@ export const familyMembers = pgTable("family_members", {
   name: text("name").notNull(),
   color: text("color").notNull(),
   avatar: text("avatar"),
+  role: text("role").default("family"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -65,13 +102,17 @@ export const events = pgTable("events", {
   endTime: timestamp("end_time").notNull(),
   memberIds: text("member_ids").array().notNull(),
   color: text("color").notNull(),
+  category: varchar("category").notNull().default("other"),
   photoUrl: text("photo_url"),
   completed: boolean("completed").notNull().default(false),
   completedAt: timestamp("completed_at"),
-  recurrenceRule: varchar("recurrence_rule"), // 'daily', 'weekly', 'biweekly', 'monthly', 'yearly', or null for non-recurring
-  recurrenceEndDate: timestamp("recurrence_end_date"), // When the recurrence ends (optional)
-  recurrenceCount: varchar("recurrence_count"), // Number of occurrences (stored as string, optional)
+  recurrenceRule: varchar("recurrence_rule"), // Legacy: 'daily', 'weekly', 'biweekly', 'monthly', 'yearly'
+  recurrenceEndDate: timestamp("recurrence_end_date"), // Legacy: end date
+  recurrenceCount: varchar("recurrence_count"), // Legacy: occurrence count
   recurringEventId: varchar("recurring_event_id"), // Links instances to the parent/first event in the series
+  rrule: text("rrule"), // RFC 5545 RRULE string (e.g. "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10")
+  isRecurringParent: boolean("is_recurring_parent").default(false), // True if this is the template event for a series
+  isImportant: boolean("is_important").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -130,6 +171,7 @@ export const familyMessages = pgTable("family_messages", {
   familyId: varchar("family_id").notNull(),
   authorUserId: varchar("author_user_id").notNull(), // The logged-in user who sent the message
   content: text("content").notNull(),
+  messageType: varchar("message_type").notNull().default("family"), // 'family' = private, 'caregiver' = visible to caregivers
   parentMessageId: varchar("parent_message_id"), // For threading - references parent message id
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
@@ -231,6 +273,16 @@ export const emergencyBridgeTokens = pgTable("emergency_bridge_tokens", {
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
+// Advisor Usage Tracking — per-user counters for beta analytics
+export const advisorUsage = pgTable("advisor_usage", {
+  userId: varchar("user_id").primaryKey(),
+  totalMessages: integer("total_messages").notNull().default(0),
+  totalGreetings: integer("total_greetings").notNull().default(0),
+  totalConversations: integer("total_conversations").notNull().default(0),
+  firstSeenAt: timestamp("first_seen_at").notNull().default(sql`now()`),
+  lastMessageAt: timestamp("last_message_at"),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -262,13 +314,16 @@ export const insertEventSchema = createInsertSchema(events).omit({
   createdAt: true,
 }).extend({
   title: z.string().min(1, "Title is required").trim(),
-  memberIds: z.array(z.string()), // Allow empty arrays for imported events
+  memberIds: z.array(z.string()),
   startTime: z.coerce.date(),
   endTime: z.coerce.date(),
+  category: z.enum(EVENT_CATEGORIES).default('other'),
   recurrenceRule: z.enum(['daily', 'weekly', 'biweekly', 'monthly', 'yearly']).nullable().optional(),
   recurrenceEndDate: z.coerce.date().nullable().optional(),
   recurrenceCount: z.string().nullable().optional(),
   recurringEventId: z.string().nullable().optional(),
+  rrule: z.string().nullable().optional(),
+  isRecurringParent: z.boolean().nullable().optional(),
 });
 
 export const insertMessageSchema = createInsertSchema(messages).omit({
@@ -431,6 +486,64 @@ export type Family = typeof families.$inferSelect;
 export type InsertFamilyMembership = z.infer<typeof insertFamilyMembershipSchema>;
 export type FamilyMembership = typeof familyMemberships.$inferSelect;
 
+// Push notification subscriptions
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+
+export const betaFeedback = pgTable("beta_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id"),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  comments: text("comments").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBetaFeedbackSchema = createInsertSchema(betaFeedback).omit({ id: true, createdAt: true });
+export type InsertBetaFeedback = z.infer<typeof insertBetaFeedbackSchema>;
+export type BetaFeedback = typeof betaFeedback.$inferSelect;
+
+// Symptom Tracker — daily health log entries
+export const symptomEntries = pgTable("symptom_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  memberId: varchar("member_id").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  moodEmoji: varchar("mood_emoji"), // e.g. '😄','🙂','😐','😔','😢','😤','😴','🤒'
+  energyLevel: integer("energy_level"), // 1-10
+  overallSeverity: integer("overall_severity"), // 1-10
+  reactionFlag: varchar("reaction_flag").default("none"), // 'none','mild','moderate','severe','anaphylaxis'
+  triggers: text("triggers").array(), // ['food','stress','heat',...]
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Per-entry body system severity ratings
+export const symptomSystemRatings = pgTable("symptom_system_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entryId: varchar("entry_id").notNull(),
+  system: varchar("system").notNull(), // 'skin','gi','cardio','respiratory','neuro','musculo','mood'
+  severity: integer("severity").notNull(), // 1-10
+});
+
+export const insertSymptomEntrySchema = createInsertSchema(symptomEntries).omit({ id: true, createdAt: true });
+export type InsertSymptomEntry = z.infer<typeof insertSymptomEntrySchema>;
+export type SymptomEntry = typeof symptomEntries.$inferSelect;
+
+export const insertSymptomSystemRatingSchema = createInsertSchema(symptomSystemRatings).omit({ id: true });
+export type InsertSymptomSystemRating = z.infer<typeof insertSymptomSystemRatingSchema>;
+export type SymptomSystemRating = typeof symptomSystemRatings.$inferSelect;
+
+export type SymptomEntryWithSystems = SymptomEntry & { systems: SymptomSystemRating[] };
+
 // Family Member types
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 export type FamilyMember = typeof familyMembers.$inferSelect;
@@ -487,6 +600,9 @@ export type EmergencyBridgeToken = typeof emergencyBridgeTokens.$inferSelect;
 export type InsertParsedInvoice = z.infer<typeof insertParsedInvoiceSchema>;
 export type ParsedInvoice = typeof parsedInvoices.$inferSelect;
 
+// Advisor Usage types
+export type AdvisorUsage = typeof advisorUsage.$inferSelect;
+
 // Role constants and utilities
 export const FAMILY_ROLES = {
   OWNER: 'owner',
@@ -509,12 +625,18 @@ export const ROLE_PERMISSIONS = {
     canInviteMembers: true,
     canViewMessages: true,
     canSendMessages: true,
+    canDeleteMessages: true,
     canManageMedications: true,
     canLogMedications: true,
     canViewMedications: true,
     canUploadDocuments: true,
     canDeleteDocuments: true,
     canViewDocuments: true,
+    canManageEmergencyBridge: true,
+    canManageWeeklySummary: true,
+    canManageInvoices: true,
+    canImportSchedules: true,
+    canManagePayRates: true,
   },
   [FAMILY_ROLES.MEMBER]: {
     canCreateEvents: true,
@@ -528,12 +650,18 @@ export const ROLE_PERMISSIONS = {
     canInviteMembers: true,
     canViewMessages: true,
     canSendMessages: true,
+    canDeleteMessages: true,
     canManageMedications: true,
     canLogMedications: true,
     canViewMedications: true,
     canUploadDocuments: true,
     canDeleteDocuments: true,
     canViewDocuments: true,
+    canManageEmergencyBridge: true,
+    canManageWeeklySummary: true,
+    canManageInvoices: true,
+    canImportSchedules: true,
+    canManagePayRates: false,
   },
   [FAMILY_ROLES.CAREGIVER]: {
     canCreateEvents: false,
@@ -547,11 +675,21 @@ export const ROLE_PERMISSIONS = {
     canInviteMembers: false,
     canViewMessages: true,
     canSendMessages: true,
+    canDeleteMessages: false,
     canManageMedications: false,
     canLogMedications: true,
     canViewMedications: true,
     canUploadDocuments: false,
     canDeleteDocuments: false,
     canViewDocuments: true,
+    canManageEmergencyBridge: false,
+    canManageWeeklySummary: false,
+    canManageInvoices: false,
+    canImportSchedules: false,
+    canManagePayRates: false,
   },
 } as const;
+
+export type PermissionKey = keyof typeof ROLE_PERMISSIONS[FamilyRole];
+
+export * from './models/chat';

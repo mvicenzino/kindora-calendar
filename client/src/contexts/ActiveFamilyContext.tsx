@@ -8,6 +8,8 @@ interface ActiveFamilyContextType {
   activeFamily: Family | null;
   setActiveFamily: (family: Family | null) => void;
   isLoadingFamily: boolean;
+  families: Family[] | undefined;
+  familiesLoaded: boolean;
 }
 
 const ActiveFamilyContext = createContext<ActiveFamilyContextType | undefined>(undefined);
@@ -69,7 +71,9 @@ export function ActiveFamilyProvider({ children }: { children: ReactNode }) {
       setActiveFamilyId, 
       activeFamily, 
       setActiveFamily,
-      isLoadingFamily: isLoadingFamilies 
+      isLoadingFamily: isLoadingFamilies || (!activeFamilyId && !!families && families.length > 0),
+      families,
+      familiesLoaded: !isLoadingFamilies,
     }}>
       {children}
     </ActiveFamilyContext.Provider>

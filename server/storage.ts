@@ -1,9 +1,9 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, and, inArray, isNull, desc } from "drizzle-orm";
+import { eq, and, inArray, isNull, desc, sql } from "drizzle-orm";
 
 export class NotFoundError extends Error {
   constructor(message: string) {
@@ -17,6 +17,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined>;
+  getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
 
   // Family operations
   createFamily(userId: string, family: InsertFamily): Promise<Family>;
@@ -114,6 +117,24 @@ export interface IStorage {
   createParsedInvoice(familyId: string, userId: string, invoice: Omit<InsertParsedInvoice, 'familyId' | 'createdByUserId'>): Promise<ParsedInvoice>;
   updateParsedInvoiceStatus(id: string, familyId: string, status: string, eventId?: string): Promise<ParsedInvoice>;
   deleteParsedInvoice(id: string, familyId: string): Promise<void>;
+
+  // Advisor Usage Tracking (beta analytics)
+  trackAdvisorMessage(userId: string): Promise<void>;
+  trackAdvisorGreeting(userId: string): Promise<void>;
+  trackAdvisorConversation(userId: string): Promise<void>;
+  getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined>;
+  getAllAdvisorUsage(): Promise<AdvisorUsage[]>;
+
+  // Beta Feedback
+  submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback>;
+  getAllBetaFeedback(): Promise<BetaFeedback[]>;
+
+  // Symptom Tracker
+  createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems>;
+  getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]>;
+  getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined>;
+  updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems>;
+  deleteSymptomEntry(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -131,6 +152,8 @@ export class MemStorage implements IStorage {
   private caregiverTimeEntriesMap: Map<string, CaregiverTimeEntry>;
   private careDocumentsMap: Map<string, CareDocument>;
   private emergencyBridgeTokensMap: Map<string, EmergencyBridgeToken>;
+  private symptomEntriesMap: Map<string, SymptomEntry>;
+  private symptomSystemRatingsMap: Map<string, SymptomSystemRating>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -147,6 +170,8 @@ export class MemStorage implements IStorage {
     this.caregiverTimeEntriesMap = new Map();
     this.careDocumentsMap = new Map();
     this.emergencyBridgeTokensMap = new Map();
+    this.symptomEntriesMap = new Map();
+    this.symptomSystemRatingsMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -186,14 +211,39 @@ export class MemStorage implements IStorage {
       profileImageUrl: user.profileImageUrl ?? existingUser?.profileImageUrl ?? null,
       passwordHash: user.passwordHash ?? existingUser?.passwordHash ?? null,
       authProvider: user.authProvider ?? existingUser?.authProvider ?? "local",
+      stripeCustomerId: existingUser?.stripeCustomerId ?? null,
+      stripeSubscriptionId: existingUser?.stripeSubscriptionId ?? null,
+      subscriptionTier: existingUser?.subscriptionTier ?? "free",
+      subscriptionStatus: existingUser?.subscriptionStatus ?? "inactive",
       createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
     this.users.set(id, userData);
     
-    await this.ensureUserFamily(id);
-    
     return userData;
+  }
+
+  async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+    const updated: User = {
+      ...user,
+      stripeCustomerId: data.stripeCustomerId ?? user.stripeCustomerId,
+      stripeSubscriptionId: data.stripeSubscriptionId !== undefined ? data.stripeSubscriptionId : user.stripeSubscriptionId,
+      subscriptionTier: data.subscriptionTier ?? user.subscriptionTier,
+      subscriptionStatus: data.subscriptionStatus ?? user.subscriptionStatus,
+      updatedAt: new Date(),
+    };
+    this.users.set(userId, updated);
+    return updated;
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.stripeCustomerId === stripeCustomerId);
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    this.users.delete(id);
   }
 
   // Family operations
@@ -209,6 +259,9 @@ export class MemStorage implements IStorage {
       id,
       inviteCode,
       createdAt: new Date(),
+      advisorChildrenContext: familyData.advisorChildrenContext ?? null,
+      advisorElderContext: familyData.advisorElderContext ?? null,
+      advisorSelfContext: familyData.advisorSelfContext ?? null,
     };
     this.families.set(id, family);
     
@@ -355,6 +408,7 @@ export class MemStorage implements IStorage {
       name: insertMember.name,
       color: insertMember.color,
       avatar: insertMember.avatar ?? null,
+      role: insertMember.role ?? "family",
       familyId,
       createdAt: new Date(),
     };
@@ -423,6 +477,13 @@ export class MemStorage implements IStorage {
       familyId,
       description: insertEvent.description || null,
       photoUrl: insertEvent.photoUrl || null,
+      recurrenceRule: insertEvent.recurrenceRule ?? null,
+      recurrenceEndDate: insertEvent.recurrenceEndDate ?? null,
+      recurringEventId: insertEvent.recurringEventId ?? null,
+      recurrenceCount: insertEvent.recurrenceCount ?? null,
+      rrule: insertEvent.rrule ?? null,
+      isRecurringParent: insertEvent.isRecurringParent ?? null,
+      isImportant: insertEvent.isImportant ?? false,
       completed: false,
       completedAt: null,
       createdAt: new Date(),
@@ -982,6 +1043,117 @@ export class MemStorage implements IStorage {
     }
     this.parsedInvoicesMap.delete(id);
   }
+
+  private advisorUsageMap: Map<string, AdvisorUsage> = new Map();
+
+  async trackAdvisorMessage(userId: string): Promise<void> {
+    const now = new Date();
+    const existing = this.advisorUsageMap.get(userId);
+    if (existing) {
+      existing.totalMessages++;
+      existing.lastMessageAt = now;
+    } else {
+      this.advisorUsageMap.set(userId, { userId, totalMessages: 1, totalGreetings: 0, totalConversations: 0, firstSeenAt: now, lastMessageAt: now });
+    }
+  }
+
+  async trackAdvisorGreeting(userId: string): Promise<void> {
+    const now = new Date();
+    const existing = this.advisorUsageMap.get(userId);
+    if (existing) {
+      existing.totalGreetings++;
+    } else {
+      this.advisorUsageMap.set(userId, { userId, totalMessages: 0, totalGreetings: 1, totalConversations: 0, firstSeenAt: now, lastMessageAt: null });
+    }
+  }
+
+  async trackAdvisorConversation(userId: string): Promise<void> {
+    const now = new Date();
+    const existing = this.advisorUsageMap.get(userId);
+    if (existing) {
+      existing.totalConversations++;
+    } else {
+      this.advisorUsageMap.set(userId, { userId, totalMessages: 0, totalGreetings: 0, totalConversations: 1, firstSeenAt: now, lastMessageAt: null });
+    }
+  }
+
+  async getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined> {
+    return this.advisorUsageMap.get(userId);
+  }
+
+  async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
+    return Array.from(this.advisorUsageMap.values()).sort((a, b) =>
+      (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0)
+    );
+  }
+
+  async submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback> {
+    const entry: BetaFeedback = {
+      id: randomUUID(),
+      userId: data.userId ?? null,
+      name: data.name,
+      email: data.email,
+      comments: data.comments,
+      createdAt: new Date(),
+    };
+    return entry;
+  }
+
+  async getAllBetaFeedback(): Promise<BetaFeedback[]> {
+    return [];
+  }
+
+  async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const id = randomUUID();
+    const now = new Date();
+    const newEntry: SymptomEntry = { ...entry, id, createdAt: now, moodEmoji: entry.moodEmoji ?? null, triggers: entry.triggers ?? null, notes: entry.notes ?? null, energyLevel: entry.energyLevel ?? null, overallSeverity: entry.overallSeverity ?? null, reactionFlag: entry.reactionFlag ?? "none" };
+    this.symptomEntriesMap.set(id, newEntry);
+    const ratings: SymptomSystemRating[] = systems.map(s => {
+      const rid = randomUUID();
+      const r: SymptomSystemRating = { id: rid, entryId: id, system: s.system, severity: s.severity };
+      this.symptomSystemRatingsMap.set(rid, r);
+      return r;
+    });
+    return { ...newEntry, systems: ratings };
+  }
+
+  async getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]> {
+    let entries = Array.from(this.symptomEntriesMap.values()).filter(e => e.familyId === familyId);
+    if (memberId) entries = entries.filter(e => e.memberId === memberId);
+    if (startDate) entries = entries.filter(e => e.date >= startDate);
+    if (endDate) entries = entries.filter(e => e.date <= endDate);
+    entries.sort((a, b) => b.date.localeCompare(a.date));
+    return entries.map(e => ({
+      ...e,
+      systems: Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === e.id),
+    }));
+  }
+
+  async getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined> {
+    const entry = this.symptomEntriesMap.get(id);
+    if (!entry) return undefined;
+    return { ...entry, systems: Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id) };
+  }
+
+  async updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const existing = this.symptomEntriesMap.get(id);
+    if (!existing) throw new Error("Symptom entry not found");
+    const updated = { ...existing, ...entry };
+    this.symptomEntriesMap.set(id, updated);
+    if (systems) {
+      Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id).forEach(r => this.symptomSystemRatingsMap.delete(r.id));
+      systems.forEach(s => {
+        const rid = randomUUID();
+        this.symptomSystemRatingsMap.set(rid, { id: rid, entryId: id, system: s.system, severity: s.severity });
+      });
+    }
+    return { ...updated, systems: Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id) };
+  }
+
+  async deleteSymptomEntry(id: string): Promise<void> {
+    this.symptomEntriesMap.delete(id);
+    Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id).forEach(r => this.symptomSystemRatingsMap.delete(r.id));
+  }
 }
 
 // DrizzleStorage implementation
@@ -1039,11 +1211,12 @@ class DrizzleStorage implements IStorage {
     
     let result;
     if (existingUser && existingUser.id !== userData.id) {
-      // User exists with same email but different ID - update the existing user
+      // User exists with same email but different ID - update profile fields only, NEVER change the primary key
+      const { id: _ignored, ...profileUpdate } = userData;
       result = await this.db
         .update(users)
         .set({
-          ...userData,
+          ...profileUpdate,
           updatedAt: new Date(),
         })
         .where(eq(users.id, existingUser.id))
@@ -1063,9 +1236,28 @@ class DrizzleStorage implements IStorage {
         .returning();
     }
     
-    await this.ensureUserFamily(result[0].id);
-    
     return result[0];
+  }
+
+  async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
+    const result = await this.db
+      .update(users)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result[0];
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId)).limit(1);
+    return result[0];
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await this.db.delete(users).where(eq(users.id, id));
   }
 
   // Family operations
@@ -1764,6 +1956,110 @@ class DrizzleStorage implements IStorage {
       throw new NotFoundError(`Parsed invoice with id ${id} not found`);
     }
   }
+
+  async trackAdvisorMessage(userId: string): Promise<void> {
+    await this.db.insert(advisorUsage)
+      .values({ userId, totalMessages: 1, totalGreetings: 0, totalConversations: 0, lastMessageAt: new Date() })
+      .onConflictDoUpdate({
+        target: advisorUsage.userId,
+        set: {
+          totalMessages: sql`${advisorUsage.totalMessages} + 1`,
+          lastMessageAt: new Date(),
+        },
+      });
+  }
+
+  async trackAdvisorGreeting(userId: string): Promise<void> {
+    await this.db.insert(advisorUsage)
+      .values({ userId, totalMessages: 0, totalGreetings: 1, totalConversations: 0 })
+      .onConflictDoUpdate({
+        target: advisorUsage.userId,
+        set: {
+          totalGreetings: sql`${advisorUsage.totalGreetings} + 1`,
+        },
+      });
+  }
+
+  async trackAdvisorConversation(userId: string): Promise<void> {
+    await this.db.insert(advisorUsage)
+      .values({ userId, totalMessages: 0, totalGreetings: 0, totalConversations: 1 })
+      .onConflictDoUpdate({
+        target: advisorUsage.userId,
+        set: {
+          totalConversations: sql`${advisorUsage.totalConversations} + 1`,
+        },
+      });
+  }
+
+  async getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined> {
+    const result = await this.db.select().from(advisorUsage).where(eq(advisorUsage.userId, userId));
+    return result[0];
+  }
+
+  async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
+    return this.db.select().from(advisorUsage).orderBy(desc(advisorUsage.lastMessageAt));
+  }
+
+  async submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback> {
+    const result = await this.db.insert(betaFeedback).values({
+      userId: data.userId ?? null,
+      name: data.name,
+      email: data.email,
+      comments: data.comments,
+    }).returning();
+    return result[0];
+  }
+
+  async getAllBetaFeedback(): Promise<BetaFeedback[]> {
+    return this.db.select().from(betaFeedback).orderBy(desc(betaFeedback.createdAt));
+  }
+
+  async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const [created] = await this.db.insert(symptomEntries).values(entry).returning();
+    let ratings: SymptomSystemRating[] = [];
+    if (systems.length > 0) {
+      ratings = await this.db.insert(symptomSystemRatings).values(systems.map(s => ({ entryId: created.id, system: s.system, severity: s.severity }))).returning();
+    }
+    return { ...created, systems: ratings };
+  }
+
+  async getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]> {
+    const conditions = [eq(symptomEntries.familyId, familyId)];
+    if (memberId) conditions.push(eq(symptomEntries.memberId, memberId));
+    if (startDate) conditions.push(sql`${symptomEntries.date} >= ${startDate}`);
+    if (endDate) conditions.push(sql`${symptomEntries.date} <= ${endDate}`);
+    const rows = await this.db.select().from(symptomEntries).where(and(...conditions)).orderBy(desc(symptomEntries.date));
+    if (rows.length === 0) return [];
+    const entryIds = rows.map((r: SymptomEntry) => r.id);
+    const allRatings: SymptomSystemRating[] = await this.db.select().from(symptomSystemRatings).where(inArray(symptomSystemRatings.entryId, entryIds));
+    return rows.map((row: SymptomEntry) => ({ ...row, systems: allRatings.filter(r => r.entryId === row.id) }));
+  }
+
+  async getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined> {
+    const [entry] = await this.db.select().from(symptomEntries).where(eq(symptomEntries.id, id));
+    if (!entry) return undefined;
+    const ratings = await this.db.select().from(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+    return { ...entry, systems: ratings };
+  }
+
+  async updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const [updated] = await this.db.update(symptomEntries).set(entry).where(eq(symptomEntries.id, id)).returning();
+    let ratings: SymptomSystemRating[] = [];
+    if (systems) {
+      await this.db.delete(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+      if (systems.length > 0) {
+        ratings = await this.db.insert(symptomSystemRatings).values(systems.map(s => ({ entryId: id, system: s.system, severity: s.severity }))).returning();
+      }
+    } else {
+      ratings = await this.db.select().from(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+    }
+    return { ...updated, systems: ratings };
+  }
+
+  async deleteSymptomEntry(id: string): Promise<void> {
+    await this.db.delete(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+    await this.db.delete(symptomEntries).where(eq(symptomEntries.id, id));
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -1807,6 +2103,20 @@ class DemoAwareStorage implements IStorage {
 
   async upsertUser(user: UpsertUser): Promise<User> {
     return this.getStorage(user.id).upsertUser(user);
+  }
+
+  async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
+    return this.getStorage(userId).updateUserSubscription(userId, data);
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
+    const demoUser = await this.demoStorage.getUserByStripeCustomerId(stripeCustomerId);
+    if (demoUser) return demoUser;
+    return this.persistentStorage.getUserByStripeCustomerId(stripeCustomerId);
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    return this.getStorage(id).deleteUser(id);
   }
 
   // Family operations
@@ -2187,6 +2497,58 @@ class DemoAwareStorage implements IStorage {
   async deleteParsedInvoice(id: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteParsedInvoice(id, familyId);
+  }
+
+  async trackAdvisorMessage(userId: string): Promise<void> {
+    if (userId.startsWith('demo-')) return;
+    return this.persistentStorage.trackAdvisorMessage(userId);
+  }
+
+  async trackAdvisorGreeting(userId: string): Promise<void> {
+    if (userId.startsWith('demo-')) return;
+    return this.persistentStorage.trackAdvisorGreeting(userId);
+  }
+
+  async trackAdvisorConversation(userId: string): Promise<void> {
+    if (userId.startsWith('demo-')) return;
+    return this.persistentStorage.trackAdvisorConversation(userId);
+  }
+
+  async getAdvisorUsage(userId: string): Promise<AdvisorUsage | undefined> {
+    if (userId.startsWith('demo-')) return undefined;
+    return this.persistentStorage.getAdvisorUsage(userId);
+  }
+
+  async getAllAdvisorUsage(): Promise<AdvisorUsage[]> {
+    return this.persistentStorage.getAllAdvisorUsage();
+  }
+
+  async submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback> {
+    return this.persistentStorage.submitBetaFeedback(data);
+  }
+
+  async getAllBetaFeedback(): Promise<BetaFeedback[]> {
+    return this.persistentStorage.getAllBetaFeedback();
+  }
+
+  async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    return this.persistentStorage.createSymptomEntry(entry, systems);
+  }
+
+  async getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]> {
+    return this.persistentStorage.getSymptomEntries(familyId, memberId, startDate, endDate);
+  }
+
+  async getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined> {
+    return this.persistentStorage.getSymptomEntry(id);
+  }
+
+  async updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    return this.persistentStorage.updateSymptomEntry(id, entry, systems);
+  }
+
+  async deleteSymptomEntry(id: string): Promise<void> {
+    return this.persistentStorage.deleteSymptomEntry(id);
   }
 }
 

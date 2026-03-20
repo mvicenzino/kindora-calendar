@@ -1,34 +1,41 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
-import { useUserRole } from "@/hooks/useUserRole";
-import Header from "@/components/Header";
-import ViewSwitcherBar from "@/components/ViewSwitcherBar";
+import ViewSwitcherBar, { type CalendarLayout, type CalendarView } from "@/components/ViewSwitcherBar";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
 import MonthView from "@/components/MonthView";
 import TimelineView from "@/components/TimelineView";
+import DayGridView from "@/components/DayGridView";
+import WeekGridView from "@/components/WeekGridView";
+import MonthGridView from "@/components/MonthGridView";
+import YearGridView from "@/components/YearGridView";
 import EventModal from "@/components/EventModal";
-import FlipCardEventDetails from "@/components/FlipCardEventDetails";
+import EventDetailsDialog from "@/components/EventDetailsDialog";
 import MemberModal from "@/components/MemberModal";
 import DayEventsDialog from "@/components/DayEventsDialog";
-import { isToday, isThisWeek, isThisMonth, startOfWeek, endOfWeek, isSameDay, isSameWeek, isSameMonth } from "date-fns";
+import MemberFilterStrip from "@/components/MemberFilterStrip";
+import CalendarAskBar from "@/components/CalendarAskBar";
+import { isSameDay, isSameWeek, isSameMonth } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { FamilyMember, Event, InsertEvent } from "@shared/schema";
+import type { FamilyMember, Event, InsertEvent, EventCategory } from "@shared/schema";
+import { CATEGORY_CONFIG } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const { activeFamilyId, isLoadingFamily } = useActiveFamily();
-  const { isCaregiver, isLoading: isLoadingRole } = useUserRole();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { isCaregiver, can, isLoading: isRoleLoading } = useUserRole();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'day' | 'week' | 'month' | 'timeline'>('day');
+  const [view, setView] = useState<CalendarView>('day');
+  const [layout, setLayout] = useState<CalendarLayout>('grid');
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
@@ -37,6 +44,7 @@ export default function Home() {
   const [eventModalDate, setEventModalDate] = useState<Date | undefined>();
   const [dayEventsOpen, setDayEventsOpen] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date>(new Date());
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [importedEvent, setImportedEvent] = useState<{
     title: string;
     description?: string;
@@ -44,7 +52,6 @@ export default function Home() {
     endTime: Date;
   } | undefined>();
 
-  // Detect Stride import from sessionStorage (saved by inline script in index.html)
   useEffect(() => {
     if (!isAuthenticated || isLoading) return;
 
@@ -67,21 +74,33 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      window.location.href = "/api/login";
+      window.location.href = "/?signIn=1";
     }
   }, [isAuthenticated, isLoading]);
 
-  // Redirect caregivers to the caregiver dashboard
   useEffect(() => {
-    if (!isLoadingRole && isCaregiver) {
-      setLocation('/care');
+    if (!isRoleLoading && isCaregiver) {
+      setLocation("/care");
     }
-  }, [isCaregiver, isLoadingRole, setLocation]);
+  }, [isCaregiver, isRoleLoading, setLocation]);
 
-  // Auto-join family if there's a pending invite code
+  const isDemoMode = user?.id?.startsWith('demo-') ?? false;
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && !isLoadingFamily && !isDemoMode) {
+      if (!activeFamilyId) {
+        const hasSeenIntro = localStorage.getItem("kindora_intro_seen");
+        if (!hasSeenIntro) {
+          setLocation("/intro");
+        } else {
+          setLocation("/onboarding");
+        }
+      }
+    }
+  }, [isAuthenticated, isLoading, isLoadingFamily, activeFamilyId, isDemoMode, setLocation]);
+
+
   const joinFamilyMutation = useMutation({
     mutationFn: async (inviteCode: string) => {
       const res = await apiRequest('POST', '/api/family/join', { inviteCode });
@@ -92,15 +111,15 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       toast({
-        title: "Welcome to the family! 🎉",
-        description: "You've successfully joined the calendar. Start sharing events and memories!",
+        title: "Welcome to the family!",
+        description: "You've successfully joined the calendar.",
       });
       localStorage.removeItem('pendingInviteCode');
     },
     onError: (error: any) => {
       toast({
         title: "Couldn't join family",
-        description: error.message || "The invite code may be invalid. Please try again.",
+        description: error.message || "The invite code may be invalid.",
         variant: "destructive",
       });
       localStorage.removeItem('pendingInviteCode');
@@ -111,7 +130,6 @@ export default function Home() {
     if (isAuthenticated && !isLoading) {
       const pendingInvite = localStorage.getItem('pendingInviteCode');
       if (pendingInvite) {
-        // Auto-join after a short delay to ensure everything is loaded
         setTimeout(() => {
           joinFamilyMutation.mutate(pendingInvite);
         }, 500);
@@ -119,26 +137,46 @@ export default function Home() {
     }
   }, [isAuthenticated, isLoading]);
 
-  // Fetch family members
   const { data: rawMembers = [], isLoading: membersLoading } = useQuery<FamilyMember[]>({
     queryKey: ['/api/family-members', activeFamilyId],
     enabled: isAuthenticated && !!activeFamilyId,
   });
 
-  // Fetch events
   const { data: rawEvents = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events?familyId=' + activeFamilyId],
     enabled: isAuthenticated && !!activeFamilyId,
+    refetchOnMount: 'always',
   });
 
-  // Map to UI types
   const members = useMemo(() => rawMembers.map(mapFamilyMemberFromDb), [rawMembers]);
   const events = useMemo(() => rawEvents.map(e => ({
     ...mapEventFromDb(e),
     members: members.filter(m => e.memberIds.includes(m.id))
   })), [rawEvents, members]);
 
-  // Create event mutation
+  const filteredEvents = useMemo(() => {
+    if (selectedMemberIds.length === 0) return events;
+    return events.filter(e =>
+      e.members?.some(m => selectedMemberIds.includes(m.id)) ||
+      (e as any).memberIds?.some((id: string) => selectedMemberIds.includes(id))
+    );
+  }, [events, selectedMemberIds]);
+
+  const handleToggleMember = useCallback((memberId: string) => {
+    setSelectedMemberIds(prev => {
+      if (prev.includes(memberId)) {
+        const next = prev.filter(id => id !== memberId);
+        return next;
+      } else {
+        return [...prev, memberId];
+      }
+    });
+  }, []);
+
+  const handleSelectAllMembers = useCallback(() => {
+    setSelectedMemberIds([]);
+  }, []);
+
   const createEventMutation = useMutation({
     mutationFn: async (event: InsertEvent) => {
       const res = await apiRequest('POST', '/api/events', { ...event, familyId: activeFamilyId });
@@ -149,7 +187,6 @@ export default function Home() {
     },
   });
 
-  // Update event mutation
   const updateEventMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertEvent> }) => {
       const res = await apiRequest('PUT', `/api/events/${id}`, { ...data, familyId: activeFamilyId });
@@ -160,7 +197,6 @@ export default function Home() {
     },
   });
 
-  // Delete event mutation
   const deleteEventMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest('DELETE', `/api/events/${id}`, { familyId: activeFamilyId });
@@ -170,7 +206,6 @@ export default function Home() {
     },
   });
 
-  // Create member mutation
   const createMemberMutation = useMutation({
     mutationFn: async (member: { name: string; color: string }) => {
       const res = await apiRequest('POST', '/api/family-members', { ...member, familyId: activeFamilyId });
@@ -181,7 +216,6 @@ export default function Home() {
     },
   });
 
-  // Update member color mutation
   const updateMemberColorMutation = useMutation({
     mutationFn: async ({ memberId, color }: { memberId: string; color: string }) => {
       const res = await apiRequest('PUT', `/api/family-members/${memberId}`, { color, familyId: activeFamilyId });
@@ -192,7 +226,6 @@ export default function Home() {
     },
   });
 
-  // Delete member mutation
   const deleteMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
       await apiRequest('DELETE', `/api/family-members/${memberId}`, { familyId: activeFamilyId });
@@ -222,14 +255,16 @@ export default function Home() {
     startTime: Date;
     endTime: Date;
     memberIds: string[];
+    category?: EventCategory;
+    rrule?: string | null;
+    isImportant?: boolean;
   }) => {
     if (eventData.memberIds.length === 0) return;
-    
-    const firstMember = members.find(m => m.id === eventData.memberIds[0]);
-    if (!firstMember) return;
+
+    const cat = eventData.category || 'other';
+    const color = CATEGORY_CONFIG[cat].color;
 
     if (eventData.id) {
-      // Update existing event
       await updateEventMutation.mutateAsync({
         id: eventData.id,
         data: {
@@ -238,24 +273,40 @@ export default function Home() {
           startTime: eventData.startTime,
           endTime: eventData.endTime,
           memberIds: eventData.memberIds,
-          color: firstMember.color,
+          category: cat,
+          color,
+          isImportant: eventData.isImportant ?? false,
         },
       });
     } else {
-      // Create new event
       await createEventMutation.mutateAsync({
         title: eventData.title,
         description: eventData.description || undefined,
         startTime: eventData.startTime,
         endTime: eventData.endTime,
         memberIds: eventData.memberIds,
-        color: firstMember.color,
+        category: cat,
+        color,
+        isImportant: eventData.isImportant ?? false,
+        ...(eventData.rrule && { rrule: eventData.rrule, isRecurringParent: true }),
       });
     }
   };
 
+  const handleEventDrop = useCallback(async (event: UiEvent, newStart: Date, newEnd: Date) => {
+    const realId = event.id.includes('_occ_') ? event.id.split('_occ_')[0] : event.id;
+    await updateEventMutation.mutateAsync({
+      id: realId,
+      data: {
+        startTime: newStart,
+        endTime: newEnd,
+      },
+    });
+  }, [updateEventMutation]);
+
   const handleDeleteEvent = async (eventId: string) => {
-    await deleteEventMutation.mutateAsync(eventId);
+    const realId = eventId.includes('_occ_') ? eventId.split('_occ_')[0] : eventId;
+    await deleteEventMutation.mutateAsync(realId);
   };
 
   const handleAddEvent = () => {
@@ -283,123 +334,183 @@ export default function Home() {
     setCurrentDate(date);
   };
 
-  // Filter events for each view (already mapped to UI types)
-  const todayEvents = events
+  const todayEvents = filteredEvents
     .filter(e => isSameDay(e.startTime, currentDate))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  const weekEvents = events
+  const weekEvents = filteredEvents
     .filter(e => isSameWeek(e.startTime, currentDate, { weekStartsOn: 0 }))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  const monthEvents = events
+  const monthEvents = filteredEvents
     .filter(e => isSameMonth(e.startTime, currentDate))
     .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
-  const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) : undefined;
+  const selectedEvent = selectedEventId ? (() => {
+    const found = events.find(e => e.id === selectedEventId);
+    if (found) return found;
+    const parentId = selectedEventId.includes('_occ_') ? selectedEventId.split('_occ_')[0] : null;
+    if (parentId) {
+      return events.find(e => e.id === parentId) || events.find(e => (e as any)._parentEventId === parentId);
+    }
+    return undefined;
+  })() : undefined;
 
-  // Show loading state while authenticating, hydrating family, or fetching initial data
   if (isLoading || isLoadingFamily || membersLoading || eventsLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570] flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" style={{ boxShadow: '0 0 20px rgba(180, 200, 220, 0.2)' }}></div>
-          <p className="text-white text-lg font-medium tesla-text-primary">Loading your calendar...</p>
+          <div className="w-14 h-14 border-3 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading your calendar...</p>
         </div>
       </div>
     );
   }
 
-  const handleMemberColorChange = async (memberId: string, color: string) => {
-    await updateMemberColorMutation.mutateAsync({ memberId, color });
-  };
-
-  const handleDeleteMember = async (memberId: string) => {
-    await deleteMemberMutation.mutateAsync(memberId);
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
-      {/* Sticky container for both header and view switcher */}
-      <div className="sticky top-0 z-50">
-        <Header 
-          members={members}
-          onMemberColorChange={handleMemberColorChange}
-          onSearchClick={() => setSearchOpen(true)}
-          onAddMember={() => setMemberModalOpen(true)}
-          onDeleteMember={handleDeleteMember}
-        />
-        <ViewSwitcherBar currentView={view} onViewChange={setView} />
+    <div className="flex flex-col h-full">
+      <div className="sticky top-0 z-40">
+        <ViewSwitcherBar currentView={view} onViewChange={setView} layout={layout} onLayoutChange={setLayout} />
+        {members.length > 0 && (
+          <MemberFilterStrip
+            members={members}
+            selectedMemberIds={selectedMemberIds}
+            onToggleMember={handleToggleMember}
+            onSelectAllMembers={handleSelectAllMembers}
+            onAddMember={() => setMemberModalOpen(true)}
+          />
+        )}
+        <CalendarAskBar onSelectEvent={handleEventClick} />
       </div>
-      
+
       <SearchPanel
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
-        events={events}
+        events={filteredEvents}
         onSelectEvent={handleEventClick}
       />
-      
-      {view === 'day' && (
-        <TodayView
-          date={currentDate}
-          events={todayEvents}
-          tasks={tasks}
-          members={members}
-          onEventClick={handleEventClick}
-          onViewChange={setView}
-          onAddEvent={handleAddEvent}
-        />
-      )}
-      
-      {view === 'week' && (
-        <WeekView
-          date={currentDate}
-          events={weekEvents}
-          members={members}
-          onEventClick={handleEventClick}
-          onViewChange={setView}
-          onAddEvent={handleAddEvent}
-          onAddEventForDate={handleAddEventForDate}
-          onDateChange={handleDateChange}
-          onWeekChange={handleWeekChange}
-        />
-      )}
 
-      {view === 'month' && (
-        <MonthView
-          date={currentDate}
-          events={monthEvents}
-          members={members}
-          onEventClick={handleEventClick}
-          onViewChange={setView}
-          onAddEvent={handleAddEvent}
-          onAddEventForDate={handleDayClick}
-          onDateChange={handleDateChange}
-        />
-      )}
+      <div className={`flex-1 ${layout === 'grid' && view !== 'timeline' && view !== 'year' ? 'flex flex-col overflow-hidden' : view === 'year' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+        {view === 'day' && layout === 'grid' && (
+          <DayGridView
+            date={currentDate}
+            events={todayEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleAddEventForDate : undefined}
+            onDateChange={handleDateChange}
+            onEventDrop={can('canEditEvents') ? handleEventDrop : undefined}
+            onEventDelete={can('canDeleteEvents') ? handleDeleteEvent : undefined}
+          />
+        )}
 
-      {view === 'timeline' && (
-        <TimelineView
-          events={events}
-          onEventClick={handleEventClick}
-          onAddEvent={handleAddEvent}
-        />
-      )}
+        {view === 'day' && layout === 'tile' && (
+          <TodayView
+            date={currentDate}
+            events={todayEvents}
+            tasks={tasks}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+          />
+        )}
 
-      {/* Event Details Dialog */}
+        {view === 'week' && layout === 'grid' && (
+          <WeekGridView
+            date={currentDate}
+            events={weekEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleAddEventForDate : undefined}
+            onDateChange={handleDateChange}
+            onWeekChange={handleWeekChange}
+            onEventDrop={can('canEditEvents') ? handleEventDrop : undefined}
+            onEventDelete={can('canDeleteEvents') ? handleDeleteEvent : undefined}
+          />
+        )}
+
+        {view === 'week' && layout === 'tile' && (
+          <WeekView
+            date={currentDate}
+            events={weekEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleAddEventForDate : undefined}
+            onDateChange={handleDateChange}
+            onWeekChange={handleWeekChange}
+          />
+        )}
+
+        {view === 'month' && layout === 'grid' && (
+          <MonthGridView
+            date={currentDate}
+            events={monthEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleDayClick : undefined}
+            onDateChange={handleDateChange}
+            onEventDrop={can('canEditEvents') ? handleEventDrop : undefined}
+          />
+        )}
+
+        {view === 'month' && layout === 'tile' && (
+          <MonthView
+            date={currentDate}
+            events={monthEvents}
+            members={members}
+            onEventClick={handleEventClick}
+            onViewChange={setView}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+            onAddEventForDate={can('canCreateEvents') ? handleDayClick : undefined}
+            onDateChange={handleDateChange}
+          />
+        )}
+
+        {view === 'year' && (
+          <YearGridView
+            date={currentDate}
+            events={filteredEvents}
+            onDateChange={handleDateChange}
+            onMonthClick={(monthDate) => {
+              setCurrentDate(monthDate);
+              setView('month');
+            }}
+            onDayClick={(dayDate) => {
+              setCurrentDate(dayDate);
+              setView('day');
+            }}
+          />
+        )}
+
+        {view === 'timeline' && (
+          <TimelineView
+            events={filteredEvents}
+            onEventClick={handleEventClick}
+            onAddEvent={can('canCreateEvents') ? handleAddEvent : undefined}
+          />
+        )}
+      </div>
+
       {selectedEvent && (
-        <FlipCardEventDetails
+        <EventDetailsDialog
           isOpen={eventDetailsOpen}
           onClose={() => {
             setEventDetailsOpen(false);
             setSelectedEventId(undefined);
           }}
-          onEdit={handleEditFromDetails}
+          onEdit={can('canEditEvents') ? handleEditFromDetails : undefined}
+          onDelete={can('canDeleteEvents') ? handleDeleteEvent : undefined}
           event={selectedEvent}
         />
       )}
 
-      {/* Event Modal */}
       <EventModal
         isOpen={eventModalOpen}
         onClose={() => {
@@ -414,7 +525,10 @@ export default function Home() {
           ...selectedEvent,
           description: selectedEvent.description || undefined,
           startTime: new Date(selectedEvent.startTime),
-          endTime: new Date(selectedEvent.endTime)
+          endTime: new Date(selectedEvent.endTime),
+          category: (selectedEvent.category as EventCategory) || 'other',
+          recurrenceRule: (selectedEvent.recurrenceRule as 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly') || undefined,
+          isRecurringParent: selectedEvent.isRecurringParent ?? undefined,
         } : importedEvent ? {
           title: importedEvent.title,
           description: importedEvent.description,
@@ -434,15 +548,14 @@ export default function Home() {
         }}
       />
 
-      {/* Day Events Dialog - shows all events for a clicked date */}
       <DayEventsDialog
         isOpen={dayEventsOpen}
         onClose={() => setDayEventsOpen(false)}
         date={selectedDayDate}
-        events={events}
+        events={filteredEvents}
         members={members}
         onEventClick={handleEventClick}
-        onAddEvent={() => handleAddEventForDate(selectedDayDate)}
+        onAddEvent={can('canCreateEvents') ? () => handleAddEventForDate(selectedDayDate) : undefined}
       />
     </div>
   );

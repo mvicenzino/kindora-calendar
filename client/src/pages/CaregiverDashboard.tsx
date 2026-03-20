@@ -41,8 +41,7 @@ import {
   Trash2,
   Settings
 } from "lucide-react";
-import { Link, useLocation } from "wouter";
-import Header from "@/components/Header";
+import { useLocation, Link } from "wouter";
 import { useUserRole } from "@/hooks/useUserRole";
 
 type MedicationWithMember = {
@@ -69,7 +68,6 @@ type MedicationLog = {
   administeredByUser?: { id: string; firstName: string; lastName: string };
 };
 
-// Validation schemas for forms with trimmed inputs
 const payRateFormSchema = z.object({
   hourlyRate: z.string().trim().min(1, "Hourly rate is required")
     .refine(val => !isNaN(parseFloat(val.trim())) && parseFloat(val.trim()) > 0, "Rate must be a positive number"),
@@ -89,23 +87,14 @@ type TimeEntryFormValues = z.infer<typeof timeEntryFormSchema>;
 export default function CaregiverDashboard() {
   const { user } = useAuth();
   const { activeFamilyId } = useActiveFamily();
-  const { isCaregiver: isCaregiverRole, isLoading: isLoadingRole } = useUserRole();
+  const { isCaregiver: isCaregiverRole, isOwner, isLoading: isLoadingRole } = useUserRole();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("today");
   
-  // Redirect non-caregivers to the calendar view
-  useEffect(() => {
-    if (!isLoadingRole && !isCaregiverRole && activeFamilyId) {
-      setLocation('/');
-    }
-  }, [isCaregiverRole, isLoadingRole, activeFamilyId, setLocation]);
-  
-  // Time tracking dialog state
   const [showLogHoursDialog, setShowLogHoursDialog] = useState(false);
   const [showPayRateDialog, setShowPayRateDialog] = useState(false);
   
-  // Form instances with zod validation
   const payRateForm = useForm<PayRateFormValues>({
     resolver: zodResolver(payRateFormSchema),
     defaultValues: { hourlyRate: "" },
@@ -140,7 +129,6 @@ export default function CaregiverDashboard() {
     enabled: !!activeFamilyId,
   });
   
-  // Get user's role in this family
   const { data: userRole } = useQuery<{ role: string }>({
     queryKey: [`/api/family/${activeFamilyId}/role`],
     enabled: !!activeFamilyId,
@@ -148,14 +136,10 @@ export default function CaregiverDashboard() {
   
   const isCaregiver = userRole?.role === 'caregiver';
   
-  // Check if user is in demo mode (demo user IDs start with "demo-")
   const isDemoMode = user?.id?.startsWith('demo-');
   
-  // Show time tracking for caregivers OR on the care dashboard page (accessible to anyone)
-  // This allows caregivers and family members testing the feature to use it
-  const showTimeTracking = isCaregiver || isDemoMode || true; // Show for everyone on /care page
+  const showTimeTracking = true; // keep true for beta — BETA_MODE handles gating
   
-  // Time tracking queries - enabled for anyone on this dashboard
   const { data: payRate } = useQuery<CaregiverPayRate | null>({
     queryKey: ['/api/caregiver/pay-rate?familyId=' + activeFamilyId],
     enabled: !!activeFamilyId && showTimeTracking,
@@ -174,10 +158,28 @@ export default function CaregiverDashboard() {
 
   const todayEvents = useMemo(() => {
     const now = new Date();
-    return events
+    const allToday = events
       .filter(e => isToday(e.startTime))
       .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-  }, [events]);
+
+    // For caregivers: show only events tagged to them (name match) or care-related events
+    // or events with no specific member assigned (family-wide)
+    if (isCaregiver && user?.firstName) {
+      const caregiverName = user.firstName.toLowerCase();
+      return allToday.filter(e => {
+        // No members tagged = family-wide event, show to everyone
+        if (!e.members || e.members.length === 0) return true;
+        // Tagged to a member whose name matches the caregiver
+        if (e.members.some(m => m.name.toLowerCase().includes(caregiverName))) return true;
+        // Medical/care events always relevant
+        const isCareRelated = ['doctor','appointment','therapy','medical','medication','check-up','care'].some(k => e.title.toLowerCase().includes(k));
+        if (isCareRelated) return true;
+        return false;
+      });
+    }
+
+    return allToday;
+  }, [events, isCaregiver, user]);
 
   const upcomingEvents = useMemo(() => {
     const now = new Date();
@@ -198,6 +200,9 @@ export default function CaregiverDashboard() {
   );
 
   const [recentlyLoggedMedId, setRecentlyLoggedMedId] = useState<string | null>(null);
+  const [logDialogMed, setLogDialogMed] = useState<{ id: string; name: string; dosage: string } | null>(null);
+  const [logNotes, setLogNotes] = useState('');
+  const [logStatus, setLogStatus] = useState('given');
 
   const logMedicationMutation = useMutation({
     mutationFn: async ({ medicationId, status, notes, medicationName }: { medicationId: string; status: string; notes?: string; medicationName?: string }) => {
@@ -207,6 +212,10 @@ export default function CaregiverDashboard() {
         administeredAt: new Date(),
         familyId: activeFamilyId,
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errData.error || errData.message || 'Failed to log medication - status ' + res.status);
+      }
       return { ...(await res.json()), medicationName, status };
     },
     onSuccess: (data) => {
@@ -231,7 +240,6 @@ export default function CaregiverDashboard() {
     },
   });
   
-  // Time tracking mutations
   const setPayRateMutation = useMutation({
     mutationFn: async (data: PayRateFormValues) => {
       const res = await apiRequest('PUT', '/api/caregiver/pay-rate', {
@@ -338,7 +346,6 @@ export default function CaregiverDashboard() {
   const pendingMeds = medications.filter(m => getMedicationStatus(m) === 'pending');
   const completedMeds = medications.filter(m => getMedicationStatus(m) === 'given');
   
-  // Time tracking calculations
   const thisWeekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
   const thisWeekEnd = endOfWeek(new Date(), { weekStartsOn: 0 });
   
@@ -377,48 +384,36 @@ export default function CaregiverDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#3A4550] via-[#4A5560] to-[#5A6570]">
-      <Header currentView="day" onViewChange={() => {}} />
-      
-      <main className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-3 md:p-4">
+      <div className="max-w-7xl mx-auto space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2 text-white/70">
-              <TimeIcon className="h-5 w-5" />
-              <span className="text-sm font-medium">{timeOfDay.label}</span>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <TimeIcon className="h-4 w-4" />
+              <span className="text-xs font-medium">{timeOfDay.label}{user?.firstName ? ', ' + user.firstName : ''}</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-white" data-testid="text-dashboard-title">
-              Today's Care Dashboard
+            <h1 className="text-sm font-semibold text-foreground" data-testid="text-dashboard-title">
+              {isCaregiver ? 'Your Shift Dashboard' : 'Today\'s Care Dashboard'}
             </h1>
-            <p className="text-white/70" data-testid="text-dashboard-date">
+            <p className="text-xs text-muted-foreground" data-testid="text-dashboard-date">
               {format(new Date(), "EEEE, MMMM d, yyyy")}
             </p>
           </div>
-          
-          <div className="flex gap-2">
-            <Link href="/">
-              <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20" data-testid="link-calendar">
-                <Calendar className="h-4 w-4 mr-2" />
-                Calendar View
-              </Button>
-            </Link>
-          </div>
         </div>
 
-        {/* Priority Alert Banner - Shows when there are urgent actions */}
         {(pendingMeds.length > 0 || medicalEvents.length > 0) && (
           <div 
-            className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/30 backdrop-blur-xl"
+            className="p-3 rounded-md bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20 border border-amber-500/30 backdrop-blur-xl"
             data-testid="banner-priority-alert"
           >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-500/30 animate-pulse">
-                  <AlertCircle className="h-6 w-6 text-amber-200" />
+                <div className="p-2 rounded-md bg-amber-500/30 animate-pulse">
+                  <AlertCircle className="h-4 w-4 text-amber-700 dark:text-amber-200" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Action Needed</h3>
-                  <p className="text-amber-100/80 text-sm">
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Action Needed</h3>
+                  <p className="text-amber-800/80 dark:text-amber-100/80 text-xs">
                     {pendingMeds.length > 0 && (
                       <span className="font-medium">{pendingMeds.length} medication{pendingMeds.length !== 1 ? 's' : ''} pending</span>
                     )}
@@ -431,7 +426,7 @@ export default function CaregiverDashboard() {
               </div>
               {pendingMeds.length > 0 && (
                 <Button
-                  className="bg-amber-500/30 hover:bg-amber-500/40 text-amber-100 border border-amber-400/40 min-h-11"
+                  className="bg-amber-500/30 text-amber-800 dark:text-amber-100 border border-amber-400/40"
                   onClick={() => document.getElementById('medications-section')?.scrollIntoView({ behavior: 'smooth' })}
                   data-testid="button-view-pending-meds"
                 >
@@ -443,83 +438,142 @@ export default function CaregiverDashboard() {
           </div>
         )}
 
-        {/* Stats Summary Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-events">
-            <CardContent className="p-3 md:p-4">
+
+        {/* CAREGIVER HERO: Log Hours — shown first for caregivers */}
+        {isCaregiver && (
+          <div className='rounded-xl border border-primary/30 bg-primary/5 p-4'>
+            <div className='flex items-center justify-between gap-4 flex-wrap'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-widest text-primary/70 mb-1'>Your Shift</p>
+                <p className='text-sm text-foreground font-medium'>Log your hours for today</p>
+                {payRate && <p className='text-xs text-muted-foreground mt-0.5'>Rate: {formatCurrency(parseFloat(payRate.hourlyRate))}/hr</p>}
+              </div>
+              <div className='flex gap-2 flex-wrap'>
+                {!payRate && (
+                  <Button variant='outline' size='sm' className='gap-1.5' onClick={() => setShowPayRateDialog(true)} data-testid='button-set-pay-rate-hero'>
+                    <DollarSign className='h-4 w-4' />Set My Rate
+                  </Button>
+                )}
+                <Button className='gap-2 bg-primary' disabled={!payRate} onClick={() => setShowLogHoursDialog(true)} data-testid='button-log-hours-hero'>
+                  <Clock className='h-4 w-4' />Log Hours
+                </Button>
+              </div>
+            </div>
+            {payRate && (
+              <div className='grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-primary/20'>
+                <div><p className='text-xs text-muted-foreground'>This Week</p><p className='text-lg font-bold text-foreground'>{weeklyHours.toFixed(1)}h</p></div>
+                <div><p className='text-xs text-muted-foreground'>Weekly Earnings</p><p className='text-lg font-bold text-emerald-600 dark:text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* OWNER ACCOUNTABILITY: shown to owners/parents */}
+        {!isCaregiver && payRate && (
+          <div className='rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4'>
+            <div className='flex items-center justify-between gap-4 flex-wrap'>
+              <div>
+                <p className='text-xs font-semibold uppercase tracking-widest text-emerald-700/70 dark:text-emerald-400/70 mb-1'>Caregiver Summary</p>
+                <p className='text-sm text-foreground font-medium'>
+                  {timeEntries[0] ? 'Last logged: ' + format(new Date(timeEntries[0].entryDate), 'MMM d') + ' — ' + parseFloat(timeEntries[0].hoursWorked).toFixed(1) + 'h' : 'No hours logged yet'}
+                </p>
+                {timeEntries[0]?.notes && <p className='text-xs text-muted-foreground mt-1 italic'>'{timeEntries[0].notes}'</p>}
+              </div>
+              <div className='flex gap-4 text-right'>
+                <div><p className='text-xs text-muted-foreground'>This Week</p><p className='text-base font-bold text-foreground'>{weeklyHours.toFixed(1)}h</p><p className='text-xs text-emerald-600 dark:text-emerald-300'>{formatCurrency(weeklyPay)}</p></div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* OWNER: Set pay rate prompt */}
+        {!isCaregiver && !payRate && (
+          <div className='rounded-xl border border-border bg-muted/30 p-4 flex items-center justify-between gap-4'>
+            <div>
+              <p className='text-sm font-medium text-foreground'>Track caregiver hours and pay</p>
+              <p className='text-xs text-muted-foreground mt-0.5'>Set a pay rate to start tracking your caregiver's time and earnings.</p>
+            </div>
+            <Button size='sm' variant='outline' className='gap-1.5 flex-shrink-0' onClick={() => setShowPayRateDialog(true)} data-testid='button-set-pay-rate-owner'>
+              <DollarSign className='h-4 w-4' />Set Rate
+            </Button>
+          </div>
+        )}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card data-testid="card-stat-events">
+            <CardContent className="p-3">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-2 rounded-lg bg-blue-500/20 flex-shrink-0">
-                  <CalendarDays className="h-4 w-4 md:h-5 md:w-5 text-blue-300" />
+                  <CalendarDays className="h-4 w-4 text-blue-300" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xl md:text-2xl font-bold text-white">{todayEvents.length}</p>
-                  <p className="text-xs md:text-sm text-white/60 truncate">Events Today</p>
+                  <p className="text-lg font-bold text-foreground">{todayEvents.length}</p>
+                  <p className="text-xs text-muted-foreground truncate">Events Today</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-medical">
-            <CardContent className="p-3 md:p-4">
+          <Card data-testid="card-stat-medical">
+            <CardContent className="p-3">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-2 rounded-lg bg-red-500/20 flex-shrink-0">
-                  <Heart className="h-4 w-4 md:h-5 md:w-5 text-red-300" />
+                  <Heart className="h-4 w-4 text-red-300" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xl md:text-2xl font-bold text-white">{medicalEvents.length}</p>
-                  <p className="text-xs md:text-sm text-white/60 truncate">Medical Appts</p>
+                  <p className="text-lg font-bold text-foreground">{medicalEvents.length}</p>
+                  <p className="text-xs text-muted-foreground truncate">Medical Appts</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={`backdrop-blur-xl border-white/20 ${pendingMeds.length > 0 ? 'bg-amber-500/15 border-amber-500/30' : 'bg-white/10'}`} data-testid="card-stat-meds-pending">
-            <CardContent className="p-3 md:p-4">
+          <Card className={`${pendingMeds.length > 0 ? 'bg-amber-500/15 border-amber-500/30' : ''}`} data-testid="card-stat-meds-pending">
+            <CardContent className="p-3">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className={`p-2 rounded-lg flex-shrink-0 ${pendingMeds.length > 0 ? 'bg-amber-500/30' : 'bg-amber-500/20'}`}>
-                  <Pill className={`h-4 w-4 md:h-5 md:w-5 ${pendingMeds.length > 0 ? 'text-amber-200' : 'text-amber-300'}`} />
+                  <Pill className={`h-4 w-4 ${pendingMeds.length > 0 ? 'text-amber-700 dark:text-amber-200' : 'text-amber-600 dark:text-amber-300'}`} />
                 </div>
                 <div className="min-w-0">
-                  <p className={`text-xl md:text-2xl font-bold ${pendingMeds.length > 0 ? 'text-amber-100' : 'text-white'}`}>{pendingMeds.length}</p>
-                  <p className={`text-xs md:text-sm truncate ${pendingMeds.length > 0 ? 'text-amber-200/70' : 'text-white/60'}`}>Meds Pending</p>
+                  <p className={`text-lg font-bold ${pendingMeds.length > 0 ? 'text-amber-800 dark:text-amber-100' : 'text-foreground'}`}>{pendingMeds.length}</p>
+                  <p className={`text-xs truncate ${pendingMeds.length > 0 ? 'text-amber-700/70 dark:text-amber-200/70' : 'text-muted-foreground'}`}>Meds Pending</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-stat-meds-done">
-            <CardContent className="p-3 md:p-4">
+          <Card data-testid="card-stat-meds-done">
+            <CardContent className="p-3">
               <div className="flex items-center gap-2 md:gap-3">
                 <div className="p-2 rounded-lg bg-green-500/20 flex-shrink-0">
-                  <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-300" />
+                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-300" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xl md:text-2xl font-bold text-white">{completedMeds.length}</p>
-                  <p className="text-xs md:text-sm text-white/60 truncate">Meds Given</p>
+                  <p className="text-lg font-bold text-foreground">{completedMeds.length}</p>
+                  <p className="text-xs text-muted-foreground truncate">Meds Given</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card id="medications-section" className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-medications">
+        <div className="grid md:grid-cols-2 gap-3">
+          <Card id="medications-section" data-testid="card-medications">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
-              <CardTitle className="text-white flex items-center gap-2">
-                <Pill className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2">
+                <Pill className="h-4 w-4" />
                 Medication Schedule
               </CardTitle>
-              <Badge variant="outline" className="border-white/30 text-white/80">
+              <Badge variant="outline">
                 {medications.length} Total
               </Badge>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px] pr-4">
+              <ScrollArea className="h-[350px] pr-4">
                 {medications.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-white/50">
-                    <Pill className="h-12 w-12 mb-3 opacity-50" />
+                  <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                    <Pill className="h-8 w-8 mb-3 opacity-50" />
                     <p className="text-center">No medications scheduled</p>
-                    <p className="text-sm text-center mt-1">Family members can add medications in settings</p>
+                    <p className="text-xs text-center mt-1">Family members can add medications in settings</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -530,12 +584,12 @@ export default function CaregiverDashboard() {
                       return (
                         <div 
                           key={med.id}
-                          className={`p-4 rounded-xl border ${
+                          className={`p-3 rounded-md border ${
                             status === 'given' 
                               ? 'bg-green-500/10 border-green-500/30' 
                               : status === 'skipped'
-                              ? 'bg-gray-500/10 border-gray-500/30'
-                              : 'bg-white/5 border-white/10'
+                              ? 'bg-muted/50 border-border'
+                              : 'bg-muted/50 border-border'
                           }`}
                           data-testid={`card-medication-${med.id}`}
                         >
@@ -552,17 +606,17 @@ export default function CaregiverDashboard() {
                                 </Avatar>
                               )}
                               <div>
-                                <p className="font-semibold text-white" data-testid={`text-med-name-${med.id}`}>
+                                <p className="text-xs font-semibold text-foreground" data-testid={`text-med-name-${med.id}`}>
                                   {med.name}
                                 </p>
-                                <p className="text-sm text-white/70">{med.dosage} • {med.frequency}</p>
+                                <p className="text-xs text-muted-foreground">{med.dosage} • {med.frequency}</p>
                                 {med.instructions && (
-                                  <p className="text-xs text-white/50 mt-1">{med.instructions}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{med.instructions}</p>
                                 )}
                                 {med.scheduledTimes && med.scheduledTimes.length > 0 && (
                                   <div className="flex gap-1 mt-2">
                                     {med.scheduledTimes.map((time, i) => (
-                                      <Badge key={i} variant="outline" className="text-xs border-white/20 text-white/60">
+                                      <Badge key={i} variant="outline" className="text-xs">
                                         {time}
                                       </Badge>
                                     ))}
@@ -573,20 +627,19 @@ export default function CaregiverDashboard() {
                             <div className="flex flex-col gap-2">
                               {status === 'given' || recentlyLoggedMedId === med.id ? (
                                 <div className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${recentlyLoggedMedId === med.id ? 'bg-green-500/30 animate-pulse' : 'bg-green-500/20'}`}>
-                                  <CheckCircle2 className="h-4 w-4 text-green-300" />
-                                  <span className="text-green-300 text-sm font-medium">Given</span>
+                                  <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-300" />
+                                  <span className="text-green-700 dark:text-green-300 text-xs font-medium">Given</span>
                                 </div>
                               ) : status === 'skipped' ? (
-                                <Badge className="bg-gray-500/20 text-gray-300 border-gray-500/30">
+                                <Badge variant="secondary">
                                   Skipped
                                 </Badge>
                               ) : (
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
-                                    className="bg-green-500/20 text-green-300 hover:bg-green-500/30 border border-green-500/30 min-h-[44px]"
-                                    onClick={() => logMedicationMutation.mutate({ medicationId: med.id, status: 'given', medicationName: med.name })}
-                                    disabled={logMedicationMutation.isPending}
+                                    className="bg-green-500/20 text-green-700 dark:text-green-300 border border-green-500/30 min-h-[44px]"
+                                    onClick={() => { setLogDialogMed({ id: med.id, name: med.name, dosage: med.dosage }); setLogNotes(''); setLogStatus('given'); }}
                                     data-testid={`button-log-med-${med.id}`}
                                   >
                                     <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -605,24 +658,24 @@ export default function CaregiverDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-today-events">
+          <Card data-testid="card-today-events">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
-              <CardTitle className="text-white flex items-center gap-2">
-                <CalendarDays className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4" />
                 Today's Schedule
               </CardTitle>
-              <Badge variant="outline" className="border-white/30 text-white/80">
+              <Badge variant="outline">
                 {todayEvents.length} Events
               </Badge>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px] pr-4">
+              <ScrollArea className="h-[350px] pr-4">
                 {todayEvents.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-8 text-white/50">
-                    <CalendarDays className="h-12 w-12 mb-3 opacity-50" />
+                  <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                    <CalendarDays className="h-8 w-8 mb-3 opacity-50" />
                     <p className="text-center">No events scheduled for today</p>
                     <Link href="/">
-                      <Button variant="ghost" className="text-white/70 mt-2">
+                      <Button variant="ghost" className="mt-2">
                         View calendar
                         <ChevronRight className="h-4 w-4 ml-1" />
                       </Button>
@@ -640,10 +693,10 @@ export default function CaregiverDashboard() {
                       return (
                         <div 
                           key={event.id}
-                          className={`p-4 rounded-xl border ${
+                          className={`p-3 rounded-md border ${
                             isMedical 
                               ? 'bg-red-500/10 border-red-500/30' 
-                              : 'bg-white/5 border-white/10'
+                              : 'bg-muted/50 border-border'
                           }`}
                           data-testid={`card-event-${event.id}`}
                         >
@@ -656,10 +709,10 @@ export default function CaregiverDashboard() {
                               )}
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-white" data-testid={`text-event-title-${event.id}`}>
+                              <p className="text-xs font-semibold text-foreground" data-testid={`text-event-title-${event.id}`}>
                                 {event.title}
                               </p>
-                              <div className="flex items-center gap-2 text-sm text-white/70 mt-1">
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                                 <Clock className="h-3 w-3" />
                                 <span>{format(event.startTime, "h:mm a")}</span>
                               </div>
@@ -668,7 +721,7 @@ export default function CaregiverDashboard() {
                                   {event.members.map((member) => (
                                     <Avatar 
                                       key={member.id} 
-                                      className="h-6 w-6 ring-2 ring-white/20"
+                                      className="h-6 w-6 ring-2 ring-border"
                                     >
                                       <AvatarFallback 
                                         className="text-xs text-white"
@@ -682,7 +735,7 @@ export default function CaregiverDashboard() {
                               )}
                             </div>
                             {event.completed && (
-                              <Badge className="bg-green-500/20 text-green-300 border-green-500/30">
+                              <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">
                                 Done
                               </Badge>
                             )}
@@ -697,42 +750,42 @@ export default function CaregiverDashboard() {
           </Card>
         </div>
 
-        <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-activity">
+        <Card data-testid="card-activity">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
-            <CardTitle className="text-white flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
               Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
             {todayLogs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-white/50">
-                <Activity className="h-12 w-12 mb-3 opacity-50" />
+              <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                <Activity className="h-8 w-8 mb-3 opacity-50" />
                 <p className="text-center">No activity logged today</p>
-                <p className="text-sm text-center mt-1">Medication logs will appear here</p>
+                <p className="text-xs text-center mt-1">Medication logs will appear here</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {todayLogs.slice(0, 10).map((log) => (
                   <div 
                     key={log.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border"
                     data-testid={`card-log-${log.id}`}
                   >
                     <div className={`p-2 rounded-lg ${
-                      log.status === 'given' ? 'bg-green-500/20' : 'bg-gray-500/20'
+                      log.status === 'given' ? 'bg-green-500/20' : 'bg-muted'
                     }`}>
                       {log.status === 'given' ? (
                         <CheckCircle2 className="h-4 w-4 text-green-300" />
                       ) : (
-                        <AlertCircle className="h-4 w-4 text-gray-300" />
+                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="text-white font-medium">
+                      <p className="text-foreground font-medium">
                         {log.medication?.name || 'Medication'} - {log.medication?.dosage}
                       </p>
-                      <p className="text-sm text-white/60">
+                      <p className="text-xs text-muted-foreground">
                         {log.status === 'given' ? 'Given' : 'Skipped'} at {format(new Date(log.administeredAt), "h:mm a")}
                         {log.administeredByUser && (
                           <span> by {log.administeredByUser.firstName}</span>
@@ -746,15 +799,14 @@ export default function CaregiverDashboard() {
           </CardContent>
         </Card>
 
-        {/* Time Tracking Section - Visible for anyone using the care dashboard */}
-        {showTimeTracking && <Card className="bg-white/10 backdrop-blur-xl border-white/20" data-testid="card-time-tracking">
+        {showTimeTracking && <Card data-testid="card-time-tracking">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
             <div>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Timer className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2">
+                <Timer className="h-4 w-4" />
                 Time Tracking
               </CardTitle>
-              <CardDescription className="text-white/60 mt-1">
+              <CardDescription className="mt-1">
                 Log your hours and track pay
               </CardDescription>
             </div>
@@ -764,17 +816,16 @@ export default function CaregiverDashboard() {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                     data-testid="button-set-pay-rate"
                   >
                     <Settings className="h-4 w-4 mr-1" />
                     {payRate ? formatCurrency(parseFloat(payRate.hourlyRate)) + "/hr" : "Set Rate"}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-[#3A4A5A] border-white/20">
+                <DialogContent>
                   <DialogHeader>
-                    <DialogTitle className="text-white">Set Hourly Rate</DialogTitle>
-                    <DialogDescription className="text-white/60">
+                    <DialogTitle>Set Hourly Rate</DialogTitle>
+                    <DialogDescription>
                       Enter your hourly rate. This will be used to calculate pay for new time entries.
                     </DialogDescription>
                   </DialogHeader>
@@ -785,22 +836,22 @@ export default function CaregiverDashboard() {
                         name="hourlyRate"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Hourly Rate (USD)</FormLabel>
+                            <FormLabel>Hourly Rate (USD)</FormLabel>
                             <FormControl>
                               <div className="relative">
-                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/50" />
+                                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                   type="number"
                                   step="0.01"
                                   min="0"
                                   placeholder="28.00"
                                   {...field}
-                                  className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                                  className="pl-10"
                                   data-testid="input-hourly-rate"
                                 />
                               </div>
                             </FormControl>
-                            <FormMessage className="text-red-400" />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -809,7 +860,6 @@ export default function CaregiverDashboard() {
                           type="button"
                           variant="outline"
                           onClick={() => setShowPayRateDialog(false)}
-                          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                           data-testid="button-cancel-rate"
                         >
                           Cancel
@@ -817,7 +867,6 @@ export default function CaregiverDashboard() {
                         <Button
                           type="submit"
                           disabled={setPayRateMutation.isPending}
-                          className="bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
                           data-testid="button-save-rate"
                         >
                           {setPayRateMutation.isPending ? "Saving..." : "Save Rate"}
@@ -831,7 +880,6 @@ export default function CaregiverDashboard() {
               <Dialog open={showLogHoursDialog} onOpenChange={setShowLogHoursDialog}>
                 <DialogTrigger asChild>
                   <Button 
-                    className="bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
                     disabled={!payRate}
                     data-testid="button-log-hours"
                   >
@@ -839,10 +887,10 @@ export default function CaregiverDashboard() {
                     Log Hours
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="bg-[#3A4A5A] border-white/20">
+                <DialogContent>
                   <DialogHeader>
-                    <DialogTitle className="text-white">Log Work Hours</DialogTitle>
-                    <DialogDescription className="text-white/60">
+                    <DialogTitle>Log Work Hours</DialogTitle>
+                    <DialogDescription>
                       Record the hours you worked. Pay will be calculated at {payRate ? formatCurrency(parseFloat(payRate.hourlyRate)) : "$0.00"}/hr.
                     </DialogDescription>
                   </DialogHeader>
@@ -853,16 +901,15 @@ export default function CaregiverDashboard() {
                         name="date"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Date</FormLabel>
+                            <FormLabel>Date</FormLabel>
                             <FormControl>
                               <Input
                                 type="date"
                                 {...field}
-                                className="bg-white/10 border-white/20 text-white"
                                 data-testid="input-work-date"
                               />
                             </FormControl>
-                            <FormMessage className="text-red-400" />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -871,7 +918,7 @@ export default function CaregiverDashboard() {
                         name="hoursWorked"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Hours Worked</FormLabel>
+                            <FormLabel>Hours Worked</FormLabel>
                             <FormControl>
                               <Input
                                 type="number"
@@ -880,7 +927,6 @@ export default function CaregiverDashboard() {
                                 max="24"
                                 placeholder="8.0"
                                 {...field}
-                                className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
                                 data-testid="input-hours-worked"
                               />
                             </FormControl>
@@ -889,7 +935,7 @@ export default function CaregiverDashboard() {
                                 Estimated pay: {formatCurrency(parseFloat(field.value) * parseFloat(payRate.hourlyRate))}
                               </p>
                             )}
-                            <FormMessage className="text-red-400" />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -898,17 +944,17 @@ export default function CaregiverDashboard() {
                         name="notes"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-white">Notes (optional)</FormLabel>
+                            <FormLabel>Notes (optional)</FormLabel>
                             <FormControl>
                               <Textarea
                                 placeholder="What did you work on today?"
                                 {...field}
-                                className="bg-white/10 border-white/20 text-white placeholder:text-white/40 resize-none"
+                                className="resize-none"
                                 rows={3}
                                 data-testid="input-work-notes"
                               />
                             </FormControl>
-                            <FormMessage className="text-red-400" />
+                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -917,7 +963,6 @@ export default function CaregiverDashboard() {
                           type="button"
                           variant="outline"
                           onClick={() => setShowLogHoursDialog(false)}
-                          className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                           data-testid="button-cancel-hours"
                         >
                           Cancel
@@ -925,7 +970,6 @@ export default function CaregiverDashboard() {
                         <Button
                           type="submit"
                           disabled={logTimeMutation.isPending}
-                          className="bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 border border-emerald-500/30"
                           data-testid="button-submit-hours"
                         >
                           {logTimeMutation.isPending ? "Logging..." : "Log Hours"}
@@ -939,68 +983,66 @@ export default function CaregiverDashboard() {
           </CardHeader>
           <CardContent>
             {!payRate ? (
-              <div className="flex flex-col items-center justify-center py-8 text-white/50">
-                <DollarSign className="h-12 w-12 mb-3 opacity-50" />
+              <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                <DollarSign className="h-8 w-8 mb-3 opacity-50" />
                 <p className="text-center">Set your hourly rate to start tracking</p>
-                <p className="text-sm text-center mt-1">Click "Set Rate" above to get started</p>
+                <p className="text-xs text-center mt-1">Click "Set Rate" above to get started</p>
               </div>
             ) : (
-              <div className="space-y-6">
-                {/* Weekly Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-md bg-muted/50 border border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                       <Clock className="h-4 w-4" />
                       This Week
                     </div>
-                    <p className="text-2xl font-bold text-white" data-testid="text-weekly-hours">
+                    <p className="text-lg font-bold text-foreground" data-testid="text-weekly-hours">
                       {weeklyHours.toFixed(1)}h
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                  <div className="p-3 rounded-md bg-muted/50 border border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                       <DollarSign className="h-4 w-4" />
                       Weekly Pay
                     </div>
-                    <p className="text-2xl font-bold text-emerald-300" data-testid="text-weekly-pay">
+                    <p className="text-lg font-bold text-emerald-300" data-testid="text-weekly-pay">
                       {formatCurrency(weeklyPay)}
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                  <div className="p-3 rounded-md bg-muted/50 border border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                       <Timer className="h-4 w-4" />
                       Total Hours
                     </div>
-                    <p className="text-2xl font-bold text-white" data-testid="text-total-hours">
+                    <p className="text-lg font-bold text-foreground" data-testid="text-total-hours">
                       {totalHours.toFixed(1)}h
                     </p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-                    <div className="flex items-center gap-2 text-white/60 text-sm mb-1">
+                  <div className="p-3 rounded-md bg-muted/50 border border-border">
+                    <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
                       <DollarSign className="h-4 w-4" />
                       Total Earned
                     </div>
-                    <p className="text-2xl font-bold text-emerald-300" data-testid="text-total-pay">
+                    <p className="text-lg font-bold text-emerald-300" data-testid="text-total-pay">
                       {formatCurrency(totalPay)}
                     </p>
                   </div>
                 </div>
 
-                {/* Recent Time Entries */}
                 <div>
-                  <h3 className="text-white font-medium mb-3">Recent Entries</h3>
+                  <h3 className="text-foreground text-xs font-medium mb-3">Recent Entries</h3>
                   {timeEntries.length === 0 ? (
-                    <div className="text-center py-6 text-white/50">
+                    <div className="text-center py-6 text-muted-foreground">
                       <p>No time entries yet</p>
-                      <p className="text-sm mt-1">Click "Log Hours" to add your first entry</p>
+                      <p className="text-xs mt-1">Click "Log Hours" to add your first entry</p>
                     </div>
                   ) : (
-                    <ScrollArea className="h-[200px] pr-4">
+                    <ScrollArea className="h-[180px] pr-4">
                       <div className="space-y-2">
                         {timeEntries.slice(0, 10).map((entry) => (
                           <div 
                             key={entry.id}
-                            className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
+                            className="flex items-center justify-between gap-3 p-2 rounded-lg bg-muted/50 border border-border"
                             data-testid={`card-time-entry-${entry.id}`}
                           >
                             <div className="flex items-center gap-3">
@@ -1008,27 +1050,27 @@ export default function CaregiverDashboard() {
                                 <Clock className="h-4 w-4 text-emerald-300" />
                               </div>
                               <div>
-                                <p className="text-white font-medium">
+                                <p className="text-foreground font-medium">
                                   {format(new Date(entry.entryDate), "MMM d, yyyy")}
                                 </p>
-                                <p className="text-sm text-white/60">
+                                <p className="text-xs text-muted-foreground">
                                   {parseFloat(entry.hoursWorked).toFixed(1)} hours @ {formatCurrency(parseFloat(entry.hourlyRateAtTime))}/hr
                                 </p>
                                 {entry.notes && (
-                                  <p className="text-xs text-white/40 mt-1 truncate max-w-[200px]">
+                                  <p className="text-xs text-muted-foreground mt-1 truncate max-w-[200px]">
                                     {entry.notes}
                                   </p>
                                 )}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-emerald-300 font-semibold">
+                              <span className="text-emerald-600 dark:text-emerald-300 font-semibold">
                                 {formatCurrency(parseFloat(entry.calculatedPay))}
                               </span>
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8 text-white/40 hover:text-red-400 hover:bg-red-500/10"
+                                className="text-destructive"
                                 onClick={() => deleteTimeEntryMutation.mutate(entry.id)}
                                 disabled={deleteTimeEntryMutation.isPending}
                                 data-testid={`button-delete-entry-${entry.id}`}
@@ -1046,7 +1088,71 @@ export default function CaregiverDashboard() {
             )}
           </CardContent>
         </Card>}
-      </main>
+      </div>
+    {/* Log Medication Dialog */}
+    {logDialogMed && (
+      <Dialog open={!!logDialogMed} onOpenChange={(v) => { if (!v) setLogDialogMed(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pill className="h-4 w-4 text-amber-400" />
+              Log Dose
+            </DialogTitle>
+            <DialogDescription>
+              {logDialogMed.name} — {logDialogMed.dosage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Status</Label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'given', label: 'Given', color: 'bg-green-500/20 text-green-300 border-green-500/30' },
+                  { value: 'skipped', label: 'Skipped', color: 'bg-muted text-muted-foreground border-border' },
+                  { value: 'refused', label: 'Refused', color: 'bg-red-500/20 text-red-300 border-red-500/30' },
+                ].map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => setLogStatus(s.value)}
+                    className={"flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-all " + (logStatus === s.value ? s.color + " ring-2 ring-offset-1 ring-offset-background ring-current" : "bg-card border-border text-muted-foreground")}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea
+                value={logNotes}
+                onChange={(e) => setLogNotes(e.target.value)}
+                placeholder="Any issues, observations, or comments about this dose..."
+                className="resize-none text-sm"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLogDialogMed(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                logMedicationMutation.mutate({
+                  medicationId: logDialogMed.id,
+                  status: logStatus,
+                  notes: logNotes.trim() || undefined,
+                  medicationName: logDialogMed.name,
+                });
+                setLogDialogMed(null);
+              }}
+              disabled={logMedicationMutation.isPending}
+              className={logStatus === 'given' ? 'bg-green-600 hover:bg-green-700' : logStatus === 'refused' ? 'bg-destructive' : ''}
+            >
+              Confirm {logStatus === 'given' ? 'Given' : logStatus === 'skipped' ? 'Skipped' : 'Refused'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    )}
     </div>
   );
 }
