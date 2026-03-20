@@ -26,6 +26,7 @@ import About from "@/pages/About";
 import Support from "@/pages/Support";
 import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
+import Health from "@/pages/Health";
 import NotFound from "@/pages/not-found";
 import AppSidebar from "@/components/AppSidebar";
 import Header from "@/components/Header";
@@ -191,6 +192,7 @@ function Router() {
                     <Route path="/documents" component={Documents} />
                     <Route path="/memories" component={Memories} />
                     <Route path="/advisor" component={Advisor} />
+                    <Route path="/health" component={Health} />
                     <Route path="/settings/family">{() => <AccountSettings initialTab="family" />}</Route>
                     <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
                     <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>

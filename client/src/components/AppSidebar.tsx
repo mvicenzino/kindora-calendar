@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2 } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity } from "lucide-react";
 import HelpDrawer from "./HelpDrawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -27,6 +27,7 @@ const familyNavItems = [
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Documents", url: "/documents", icon: FileText },
   { title: "Memories", url: "/memories", icon: Image },
+  { title: "Health", url: "/health", icon: Activity },
   { title: "Advisor", url: "/advisor", icon: Sparkles },
   { title: "Settings", url: "/settings", icon: Settings },
 ];

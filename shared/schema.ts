@@ -511,6 +511,38 @@ export const insertBetaFeedbackSchema = createInsertSchema(betaFeedback).omit({ 
 export type InsertBetaFeedback = z.infer<typeof insertBetaFeedbackSchema>;
 export type BetaFeedback = typeof betaFeedback.$inferSelect;
 
+// Symptom Tracker — daily health log entries
+export const symptomEntries = pgTable("symptom_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  memberId: varchar("member_id").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD
+  energyLevel: integer("energy_level"), // 1-10
+  overallSeverity: integer("overall_severity"), // 1-10
+  reactionFlag: varchar("reaction_flag").default("none"), // 'none','mild','moderate','severe','anaphylaxis'
+  triggers: text("triggers").array(), // ['food','stress','heat',...]
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// Per-entry body system severity ratings
+export const symptomSystemRatings = pgTable("symptom_system_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  entryId: varchar("entry_id").notNull(),
+  system: varchar("system").notNull(), // 'skin','gi','cardio','respiratory','neuro','musculo','mood'
+  severity: integer("severity").notNull(), // 1-10
+});
+
+export const insertSymptomEntrySchema = createInsertSchema(symptomEntries).omit({ id: true, createdAt: true });
+export type InsertSymptomEntry = z.infer<typeof insertSymptomEntrySchema>;
+export type SymptomEntry = typeof symptomEntries.$inferSelect;
+
+export const insertSymptomSystemRatingSchema = createInsertSchema(symptomSystemRatings).omit({ id: true });
+export type InsertSymptomSystemRating = z.infer<typeof insertSymptomSystemRatingSchema>;
+export type SymptomSystemRating = typeof symptomSystemRatings.$inferSelect;
+
+export type SymptomEntryWithSystems = SymptomEntry & { systems: SymptomSystemRating[] };
+
 // Family Member types
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 export type FamilyMember = typeof familyMembers.$inferSelect;

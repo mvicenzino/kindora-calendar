@@ -4444,6 +4444,68 @@ Always return valid JSON matching one of the two formats above.`,
     res.json({ success: true });
   });
 
+  // ── Symptom Tracker ────────────────────────────────────────────────────────
+  app.post("/api/symptoms", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) return res.status(400).json({ error: "No family found" });
+      const { systems, ...entryData } = req.body;
+      const entry = await storage.createSymptomEntry(
+        { ...entryData, familyId },
+        systems ?? []
+      );
+      res.json(entry);
+    } catch (error) {
+      console.error("Error creating symptom entry:", error);
+      res.status(500).json({ error: "Failed to create symptom entry" });
+    }
+  });
+
+  app.get("/api/symptoms", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) return res.status(400).json({ error: "No family found" });
+      const { memberId, startDate, endDate } = req.query as Record<string, string | undefined>;
+      const entries = await storage.getSymptomEntries(familyId, memberId, startDate, endDate);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching symptom entries:", error);
+      res.status(500).json({ error: "Failed to fetch symptom entries" });
+    }
+  });
+
+  app.get("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const entry = await storage.getSymptomEntry(req.params.id);
+      if (!entry) return res.status(404).json({ error: "Not found" });
+      res.json(entry);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch symptom entry" });
+    }
+  });
+
+  app.put("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { systems, ...entryData } = req.body;
+      const entry = await storage.updateSymptomEntry(req.params.id, entryData, systems);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error updating symptom entry:", error);
+      res.status(500).json({ error: "Failed to update symptom entry" });
+    }
+  });
+
+  app.delete("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteSymptomEntry(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete symptom entry" });
+    }
+  });
+
   // ── Beta Feedback ──────────────────────────────────────────────────────────
   app.post("/api/feedback", async (req: any, res) => {
     const { name, email, comments } = req.body;

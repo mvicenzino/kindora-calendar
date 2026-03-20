@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -128,6 +128,13 @@ export interface IStorage {
   // Beta Feedback
   submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback>;
   getAllBetaFeedback(): Promise<BetaFeedback[]>;
+
+  // Symptom Tracker
+  createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems>;
+  getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]>;
+  getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined>;
+  updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems>;
+  deleteSymptomEntry(id: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -145,6 +152,8 @@ export class MemStorage implements IStorage {
   private caregiverTimeEntriesMap: Map<string, CaregiverTimeEntry>;
   private careDocumentsMap: Map<string, CareDocument>;
   private emergencyBridgeTokensMap: Map<string, EmergencyBridgeToken>;
+  private symptomEntriesMap: Map<string, SymptomEntry>;
+  private symptomSystemRatingsMap: Map<string, SymptomSystemRating>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -161,6 +170,8 @@ export class MemStorage implements IStorage {
     this.caregiverTimeEntriesMap = new Map();
     this.careDocumentsMap = new Map();
     this.emergencyBridgeTokensMap = new Map();
+    this.symptomEntriesMap = new Map();
+    this.symptomSystemRatingsMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -1091,6 +1102,58 @@ export class MemStorage implements IStorage {
   async getAllBetaFeedback(): Promise<BetaFeedback[]> {
     return [];
   }
+
+  async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const id = randomUUID();
+    const now = new Date();
+    const newEntry: SymptomEntry = { ...entry, id, createdAt: now, triggers: entry.triggers ?? null, notes: entry.notes ?? null, energyLevel: entry.energyLevel ?? null, overallSeverity: entry.overallSeverity ?? null, reactionFlag: entry.reactionFlag ?? "none" };
+    this.symptomEntriesMap.set(id, newEntry);
+    const ratings: SymptomSystemRating[] = systems.map(s => {
+      const rid = randomUUID();
+      const r: SymptomSystemRating = { id: rid, entryId: id, system: s.system, severity: s.severity };
+      this.symptomSystemRatingsMap.set(rid, r);
+      return r;
+    });
+    return { ...newEntry, systems: ratings };
+  }
+
+  async getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]> {
+    let entries = Array.from(this.symptomEntriesMap.values()).filter(e => e.familyId === familyId);
+    if (memberId) entries = entries.filter(e => e.memberId === memberId);
+    if (startDate) entries = entries.filter(e => e.date >= startDate);
+    if (endDate) entries = entries.filter(e => e.date <= endDate);
+    entries.sort((a, b) => b.date.localeCompare(a.date));
+    return entries.map(e => ({
+      ...e,
+      systems: Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === e.id),
+    }));
+  }
+
+  async getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined> {
+    const entry = this.symptomEntriesMap.get(id);
+    if (!entry) return undefined;
+    return { ...entry, systems: Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id) };
+  }
+
+  async updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const existing = this.symptomEntriesMap.get(id);
+    if (!existing) throw new Error("Symptom entry not found");
+    const updated = { ...existing, ...entry };
+    this.symptomEntriesMap.set(id, updated);
+    if (systems) {
+      Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id).forEach(r => this.symptomSystemRatingsMap.delete(r.id));
+      systems.forEach(s => {
+        const rid = randomUUID();
+        this.symptomSystemRatingsMap.set(rid, { id: rid, entryId: id, system: s.system, severity: s.severity });
+      });
+    }
+    return { ...updated, systems: Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id) };
+  }
+
+  async deleteSymptomEntry(id: string): Promise<void> {
+    this.symptomEntriesMap.delete(id);
+    Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id).forEach(r => this.symptomSystemRatingsMap.delete(r.id));
+  }
 }
 
 // DrizzleStorage implementation
@@ -1950,6 +2013,53 @@ class DrizzleStorage implements IStorage {
   async getAllBetaFeedback(): Promise<BetaFeedback[]> {
     return this.db.select().from(betaFeedback).orderBy(desc(betaFeedback.createdAt));
   }
+
+  async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const [created] = await this.db.insert(symptomEntries).values(entry).returning();
+    let ratings: SymptomSystemRating[] = [];
+    if (systems.length > 0) {
+      ratings = await this.db.insert(symptomSystemRatings).values(systems.map(s => ({ entryId: created.id, system: s.system, severity: s.severity }))).returning();
+    }
+    return { ...created, systems: ratings };
+  }
+
+  async getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]> {
+    const conditions = [eq(symptomEntries.familyId, familyId)];
+    if (memberId) conditions.push(eq(symptomEntries.memberId, memberId));
+    if (startDate) conditions.push(sql`${symptomEntries.date} >= ${startDate}`);
+    if (endDate) conditions.push(sql`${symptomEntries.date} <= ${endDate}`);
+    const rows = await this.db.select().from(symptomEntries).where(and(...conditions)).orderBy(desc(symptomEntries.date));
+    if (rows.length === 0) return [];
+    const entryIds = rows.map((r: SymptomEntry) => r.id);
+    const allRatings: SymptomSystemRating[] = await this.db.select().from(symptomSystemRatings).where(inArray(symptomSystemRatings.entryId, entryIds));
+    return rows.map((row: SymptomEntry) => ({ ...row, systems: allRatings.filter(r => r.entryId === row.id) }));
+  }
+
+  async getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined> {
+    const [entry] = await this.db.select().from(symptomEntries).where(eq(symptomEntries.id, id));
+    if (!entry) return undefined;
+    const ratings = await this.db.select().from(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+    return { ...entry, systems: ratings };
+  }
+
+  async updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    const [updated] = await this.db.update(symptomEntries).set(entry).where(eq(symptomEntries.id, id)).returning();
+    let ratings: SymptomSystemRating[] = [];
+    if (systems) {
+      await this.db.delete(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+      if (systems.length > 0) {
+        ratings = await this.db.insert(symptomSystemRatings).values(systems.map(s => ({ entryId: id, system: s.system, severity: s.severity }))).returning();
+      }
+    } else {
+      ratings = await this.db.select().from(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+    }
+    return { ...updated, systems: ratings };
+  }
+
+  async deleteSymptomEntry(id: string): Promise<void> {
+    await this.db.delete(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
+    await this.db.delete(symptomEntries).where(eq(symptomEntries.id, id));
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2419,6 +2529,26 @@ class DemoAwareStorage implements IStorage {
 
   async getAllBetaFeedback(): Promise<BetaFeedback[]> {
     return this.persistentStorage.getAllBetaFeedback();
+  }
+
+  async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    return this.persistentStorage.createSymptomEntry(entry, systems);
+  }
+
+  async getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]> {
+    return this.persistentStorage.getSymptomEntries(familyId, memberId, startDate, endDate);
+  }
+
+  async getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined> {
+    return this.persistentStorage.getSymptomEntry(id);
+  }
+
+  async updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
+    return this.persistentStorage.updateSymptomEntry(id, entry, systems);
+  }
+
+  async deleteSymptomEntry(id: string): Promise<void> {
+    return this.persistentStorage.deleteSymptomEntry(id);
   }
 }
 
