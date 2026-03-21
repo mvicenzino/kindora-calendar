@@ -174,7 +174,7 @@ function Router() {
         {!isAuthenticated ? (
           <>
             <Route path="/" component={Landing} />
-            <Route component={NotFound} />
+            <Route>{() => <Redirect to="/" />}</Route>
           </>
         ) : (
           <>
