@@ -538,6 +538,21 @@ export const insertSymptomEntrySchema = createInsertSchema(symptomEntries).omit(
 export type InsertSymptomEntry = z.infer<typeof insertSymptomEntrySchema>;
 export type SymptomEntry = typeof symptomEntries.$inferSelect;
 
+// Hydration Logs table - daily glass-of-water tracking per family member
+export const hydrationLogs = pgTable("hydration_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  memberId: varchar("member_id").notNull(),
+  date: varchar("date").notNull(), // "YYYY-MM-DD"
+  glassesCount: integer("glasses_count").notNull().default(0),
+  goalGlasses: integer("goal_glasses").notNull().default(8),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertHydrationLogSchema = createInsertSchema(hydrationLogs).omit({ id: true, updatedAt: true });
+export type InsertHydrationLog = z.infer<typeof insertHydrationLogSchema>;
+export type HydrationLog = typeof hydrationLogs.$inferSelect;
+
 export const insertSymptomSystemRatingSchema = createInsertSchema(symptomSystemRatings).omit({ id: true });
 export type InsertSymptomSystemRating = z.infer<typeof insertSymptomSystemRatingSchema>;
 export type SymptomSystemRating = typeof symptomSystemRatings.$inferSelect;

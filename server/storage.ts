@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -135,6 +135,10 @@ export interface IStorage {
   getSymptomEntry(id: string): Promise<SymptomEntryWithSystems | undefined>;
   updateSymptomEntry(id: string, entry: Partial<InsertSymptomEntry>, systems?: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems>;
   deleteSymptomEntry(id: string): Promise<void>;
+
+  // Hydration Tracking
+  getHydrationLogs(familyId: string, date: string): Promise<HydrationLog[]>;
+  upsertHydrationLog(data: { familyId: string; memberId: string; date: string; glassesCount: number; goalGlasses: number }): Promise<HydrationLog>;
 }
 
 export class MemStorage implements IStorage {
@@ -154,6 +158,7 @@ export class MemStorage implements IStorage {
   private emergencyBridgeTokensMap: Map<string, EmergencyBridgeToken>;
   private symptomEntriesMap: Map<string, SymptomEntry>;
   private symptomSystemRatingsMap: Map<string, SymptomSystemRating>;
+  private hydrationLogsMap: Map<string, HydrationLog>;
 
   constructor() {
     this.familyMembers = new Map();
@@ -172,6 +177,7 @@ export class MemStorage implements IStorage {
     this.emergencyBridgeTokensMap = new Map();
     this.symptomEntriesMap = new Map();
     this.symptomSystemRatingsMap = new Map();
+    this.hydrationLogsMap = new Map();
   }
   
   private generateInviteCode(): string {
@@ -1154,6 +1160,23 @@ export class MemStorage implements IStorage {
     this.symptomEntriesMap.delete(id);
     Array.from(this.symptomSystemRatingsMap.values()).filter(r => r.entryId === id).forEach(r => this.symptomSystemRatingsMap.delete(r.id));
   }
+
+  async getHydrationLogs(familyId: string, date: string): Promise<HydrationLog[]> {
+    return Array.from(this.hydrationLogsMap.values()).filter(h => h.familyId === familyId && h.date === date);
+  }
+
+  async upsertHydrationLog(data: { familyId: string; memberId: string; date: string; glassesCount: number; goalGlasses: number }): Promise<HydrationLog> {
+    const existing = Array.from(this.hydrationLogsMap.values()).find(h => h.familyId === data.familyId && h.memberId === data.memberId && h.date === data.date);
+    if (existing) {
+      const updated: HydrationLog = { ...existing, glassesCount: data.glassesCount, goalGlasses: data.goalGlasses, updatedAt: new Date() };
+      this.hydrationLogsMap.set(existing.id, updated);
+      return updated;
+    }
+    const id = randomUUID();
+    const newLog: HydrationLog = { id, familyId: data.familyId, memberId: data.memberId, date: data.date, glassesCount: data.glassesCount, goalGlasses: data.goalGlasses, updatedAt: new Date() };
+    this.hydrationLogsMap.set(id, newLog);
+    return newLog;
+  }
 }
 
 // DrizzleStorage implementation
@@ -2060,6 +2083,20 @@ class DrizzleStorage implements IStorage {
     await this.db.delete(symptomSystemRatings).where(eq(symptomSystemRatings.entryId, id));
     await this.db.delete(symptomEntries).where(eq(symptomEntries.id, id));
   }
+
+  async getHydrationLogs(familyId: string, date: string): Promise<HydrationLog[]> {
+    return await this.db.select().from(hydrationLogs).where(and(eq(hydrationLogs.familyId, familyId), eq(hydrationLogs.date, date)));
+  }
+
+  async upsertHydrationLog(data: { familyId: string; memberId: string; date: string; glassesCount: number; goalGlasses: number }): Promise<HydrationLog> {
+    const existing = await this.db.select().from(hydrationLogs).where(and(eq(hydrationLogs.familyId, data.familyId), eq(hydrationLogs.memberId, data.memberId), eq(hydrationLogs.date, data.date)));
+    if (existing.length > 0) {
+      const [updated] = await this.db.update(hydrationLogs).set({ glassesCount: data.glassesCount, goalGlasses: data.goalGlasses, updatedAt: new Date() }).where(eq(hydrationLogs.id, existing[0].id)).returning();
+      return updated;
+    }
+    const [created] = await this.db.insert(hydrationLogs).values({ familyId: data.familyId, memberId: data.memberId, date: data.date, glassesCount: data.glassesCount, goalGlasses: data.goalGlasses }).returning();
+    return created;
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2549,6 +2586,14 @@ class DemoAwareStorage implements IStorage {
 
   async deleteSymptomEntry(id: string): Promise<void> {
     return this.persistentStorage.deleteSymptomEntry(id);
+  }
+
+  async getHydrationLogs(familyId: string, date: string): Promise<HydrationLog[]> {
+    return this.persistentStorage.getHydrationLogs(familyId, date);
+  }
+
+  async upsertHydrationLog(data: { familyId: string; memberId: string; date: string; glassesCount: number; goalGlasses: number }): Promise<HydrationLog> {
+    return this.persistentStorage.upsertHydrationLog(data);
   }
 }
 

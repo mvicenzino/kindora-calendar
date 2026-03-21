@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, subDays } from "date-fns";
-import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X, Users, Sparkles } from "lucide-react";
+import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X, Users, Sparkles, Pill, Upload } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import HydrationTracker from "@/components/HydrationTracker";
 import type { FamilyMember } from "@shared/schema";
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -1058,6 +1061,345 @@ function MemberPillStrip({ members, selectedMemberId, onSelect, todayLoggedIds }
   );
 }
 
+// ── Health Meds Tab ─────────────────────────────────────────────────────────
+
+interface HealthMedsTabProps {
+  familyId: string;
+  members: FamilyMember[];
+  selectedMemberId: string;
+}
+
+function HealthMedsTab({ familyId, members, selectedMemberId }: HealthMedsTabProps) {
+  const { toast } = useToast();
+  const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
+  const [importSource, setImportSource] = useState("text");
+  const [importStep, setImportStep] = useState<"source" | "preview" | "assign">("source");
+  const [importText, setImportText] = useState("");
+  const [parsedMeds, setParsedMeds] = useState<any[]>([]);
+  const [selectedMeds, setSelectedMeds] = useState<Record<number, boolean>>({});
+  const [assignMemberId, setAssignMemberId] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+
+  const { data: medications = [] } = useQuery<any[]>({
+    queryKey: ["/api/medications", familyId],
+    queryFn: () => fetch(`/api/medications?familyId=${familyId}`).then(r => r.json()),
+    enabled: !!familyId,
+  });
+
+  const filteredMeds = useMemo(() =>
+    selectedMemberId === "all" ? medications : medications.filter((m: any) => m.memberId === selectedMemberId),
+    [medications, selectedMemberId]
+  );
+
+  const addMutation = useMutation({
+    mutationFn: () => {
+      const times = addForm.scheduledTimes.split(",").map(t => t.trim()).filter(Boolean);
+      return apiRequest("POST", "/api/medications", {
+        familyId, memberId: addForm.memberId,
+        name: addForm.name.trim(), dosage: addForm.dosage.trim(),
+        frequency: addForm.frequency.trim(),
+        instructions: addForm.instructions.trim() || null,
+        scheduledTimes: times.length > 0 ? times : [],
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/medications", familyId] });
+      toast({ title: "Medication added" });
+      setAddOpen(false);
+      setAddForm({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
+    },
+    onError: () => toast({ title: "Error", description: "Failed to add medication", variant: "destructive" }),
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: (medId: string) => apiRequest("DELETE", `/api/medications/${medId}?familyId=${familyId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/medications", familyId] });
+      toast({ title: "Medication removed" });
+    },
+  });
+
+  const saveParsedMutation = useMutation({
+    mutationFn: async () => {
+      const toSave = parsedMeds.filter((_, i) => selectedMeds[i]);
+      for (const med of toSave) {
+        await apiRequest("POST", "/api/medications", {
+          familyId, memberId: assignMemberId,
+          name: med.name, dosage: med.dosage, frequency: med.frequency,
+          scheduledTimes: med.scheduledTimes ?? [],
+          instructions: med.instructions ?? null,
+        });
+      }
+      return toSave.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/medications", familyId] });
+      toast({ title: `${count} medication${count !== 1 ? "s" : ""} imported` });
+      setImportOpen(false);
+      resetImport();
+    },
+    onError: () => toast({ title: "Import failed", variant: "destructive" }),
+  });
+
+  function resetImport() {
+    setImportStep("source"); setImportSource("text"); setImportText("");
+    setParsedMeds([]); setSelectedMeds({}); setAssignMemberId(""); setIsImporting(false);
+  }
+
+  async function runTextImport() {
+    setIsImporting(true);
+    try {
+      const res = await apiRequest("POST", "/api/medications/import-ai", { text: importText, familyId });
+      const data = await res.json();
+      if (data.medications?.length > 0) {
+        setParsedMeds(data.medications);
+        const all: Record<number, boolean> = {};
+        data.medications.forEach((_: any, i: number) => { all[i] = true; });
+        setSelectedMeds(all);
+        setImportStep("preview");
+      } else {
+        toast({ title: "No medications found", description: "Try pasting a clearer list.", variant: "destructive" });
+      }
+    } catch { toast({ title: "Import failed", variant: "destructive" }); }
+    finally { setIsImporting(false); }
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = (ev.target?.result as string).split(",")[1];
+      try {
+        const res = await apiRequest("POST", "/api/medications/import-ai", { imageBase64: base64, mimeType: file.type, familyId });
+        const data = await res.json();
+        if (data.medications?.length > 0) {
+          setParsedMeds(data.medications);
+          const all: Record<number, boolean> = {};
+          data.medications.forEach((_: any, i: number) => { all[i] = true; });
+          setSelectedMeds(all);
+          setImportStep("preview");
+        } else {
+          toast({ title: "No medications found", variant: "destructive" });
+        }
+      } catch { toast({ title: "Import failed", variant: "destructive" }); }
+      finally { setIsImporting(false); }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const defaultAddMember = selectedMemberId !== "all" ? selectedMemberId : (members[0]?.id ?? "");
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-xs text-muted-foreground">
+          {filteredMeds.length} active medication{filteredMeds.length !== 1 ? "s" : ""}
+          {selectedMemberId !== "all" && members.find(m => m.id === selectedMemberId) ? ` for ${members.find(m => m.id === selectedMemberId)!.name.split(" ")[0]}` : ""}
+        </p>
+        <div className="flex items-center gap-1.5">
+          <Button size="sm" variant="outline" onClick={() => { resetImport(); setImportOpen(true); }} data-testid="button-import-meds-health">
+            <Upload className="w-3.5 h-3.5 mr-1.5" />Import
+          </Button>
+          <Button size="sm" onClick={() => { setAddForm(f => ({ ...f, memberId: defaultAddMember })); setAddOpen(true); }} data-testid="button-add-med-health">
+            <Plus className="w-3.5 h-3.5 mr-1.5" />Add
+          </Button>
+        </div>
+      </div>
+
+      {filteredMeds.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <Pill className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">No medications yet.</p>
+            <p className="text-xs text-muted-foreground mt-1">Add manually or import from a prescription list.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {filteredMeds.map((med: any) => {
+            const member = members.find(m => m.id === med.memberId);
+            return (
+              <Card key={med.id} data-testid={`card-health-med-${med.id}`}>
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <Pill className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{med.name}</p>
+                        <p className="text-xs text-muted-foreground">{med.dosage} · {med.frequency}</p>
+                        {member && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: member.color }} />
+                            <span className="text-[10px] text-muted-foreground">{member.name.split(" ")[0]}</span>
+                          </div>
+                        )}
+                        {med.instructions && <p className="text-[11px] text-muted-foreground mt-1 italic">{med.instructions}</p>}
+                        {med.scheduledTimes?.length > 0 && (
+                          <div className="flex gap-1 mt-1.5 flex-wrap">
+                            {med.scheduledTimes.map((t: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-[10px]">{t}</Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground flex-shrink-0"
+                      onClick={() => removeMutation.mutate(med.id)}
+                      disabled={removeMutation.isPending}
+                      data-testid={`button-remove-med-${med.id}`}
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add Medication Dialog */}
+      <Dialog open={addOpen} onOpenChange={v => { if (!v) setAddOpen(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pill className="w-4 h-4 text-primary" />Add Medication
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div>
+              <Label className="text-xs">Family Member</Label>
+              <Select value={addForm.memberId} onValueChange={v => setAddForm(f => ({ ...f, memberId: v }))}>
+                <SelectTrigger className="mt-1" data-testid="select-add-med-member">
+                  <SelectValue placeholder="Select member" />
+                </SelectTrigger>
+                <SelectContent>{members.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">Medication Name</Label>
+              <Input className="mt-1" placeholder="e.g. Metformin" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} data-testid="input-med-name" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Dosage</Label>
+                <Input className="mt-1" placeholder="e.g. 500mg" value={addForm.dosage} onChange={e => setAddForm(f => ({ ...f, dosage: e.target.value }))} data-testid="input-med-dosage" />
+              </div>
+              <div>
+                <Label className="text-xs">Frequency</Label>
+                <Input className="mt-1" placeholder="e.g. Twice daily" value={addForm.frequency} onChange={e => setAddForm(f => ({ ...f, frequency: e.target.value }))} data-testid="input-med-frequency" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Scheduled Times <span className="text-muted-foreground">(optional, comma-separated)</span></Label>
+              <Input className="mt-1" placeholder="e.g. 08:00, 20:00" value={addForm.scheduledTimes} onChange={e => setAddForm(f => ({ ...f, scheduledTimes: e.target.value }))} data-testid="input-med-times" />
+            </div>
+            <div>
+              <Label className="text-xs">Instructions <span className="text-muted-foreground">(optional)</span></Label>
+              <Input className="mt-1" placeholder="e.g. Take with food" value={addForm.instructions} onChange={e => setAddForm(f => ({ ...f, instructions: e.target.value }))} data-testid="input-med-instructions" />
+            </div>
+            <Button
+              className="w-full"
+              disabled={!addForm.memberId || !addForm.name || !addForm.dosage || !addForm.frequency || addMutation.isPending}
+              onClick={() => addMutation.mutate()}
+              data-testid="button-save-med"
+            >
+              {addMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save Medication
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Import Dialog */}
+      <Dialog open={importOpen} onOpenChange={v => { if (!v) { setImportOpen(false); resetImport(); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />Import Medication List
+            </DialogTitle>
+          </DialogHeader>
+
+          {importStep === "source" && (
+            <div className="space-y-4 py-1">
+              <div className="flex gap-2">
+                {["text", "file"].map(s => (
+                  <button key={s} onClick={() => setImportSource(s)} className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium border transition-all ${importSource === s ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground"}`}>
+                    {s === "text" ? "Paste Text" : "Upload File"}
+                  </button>
+                ))}
+              </div>
+              {importSource === "text" && (
+                <div>
+                  <Label className="text-xs">Paste medication list</Label>
+                  <Textarea className="mt-1 resize-none h-28 text-sm" placeholder={"Metformin 500mg - twice daily\nLisinopril 10mg - once daily"} value={importText} onChange={e => setImportText(e.target.value)} />
+                  <Button className="w-full mt-3" disabled={!importText.trim() || isImporting} onClick={runTextImport} data-testid="button-parse-meds">
+                    {isImporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+                    Extract Medications
+                  </Button>
+                </div>
+              )}
+              {importSource === "file" && (
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
+                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
+                  <p className="text-xs text-muted-foreground mb-3">Photo or file of prescription/med list</p>
+                  <label className="cursor-pointer">
+                    <span className="text-xs bg-primary text-primary-foreground px-3 py-1.5 rounded-md font-medium">
+                      {isImporting ? "Extracting…" : "Choose File"}
+                    </span>
+                    <input type="file" accept="image/*,.pdf" onChange={handleFileUpload} className="hidden" disabled={isImporting} />
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+
+          {importStep === "preview" && (
+            <div className="space-y-3 py-1">
+              <p className="text-xs text-muted-foreground">{parsedMeds.length} medication{parsedMeds.length !== 1 ? "s" : ""} found — uncheck any to skip.</p>
+              <div className="space-y-2 max-h-52 overflow-y-auto">
+                {parsedMeds.map((med, i) => (
+                  <div key={i} className="flex items-start gap-2 p-2 rounded-lg border border-border bg-card">
+                    <input type="checkbox" checked={!!selectedMeds[i]} onChange={e => setSelectedMeds(s => ({ ...s, [i]: e.target.checked }))} className="mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold">{med.name}</p>
+                      <p className="text-[11px] text-muted-foreground">{med.dosage} · {med.frequency}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Button className="w-full" onClick={() => setImportStep("assign")} disabled={Object.values(selectedMeds).filter(Boolean).length === 0} data-testid="button-import-next">
+                Next — Assign to Member
+              </Button>
+            </div>
+          )}
+
+          {importStep === "assign" && (
+            <div className="space-y-4 py-1">
+              <p className="text-xs text-muted-foreground">Who are these medications for?</p>
+              <Select value={assignMemberId} onValueChange={setAssignMemberId}>
+                <SelectTrigger data-testid="select-import-assign-member"><SelectValue placeholder="Select family member" /></SelectTrigger>
+                <SelectContent>{members.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button className="w-full" disabled={!assignMemberId || saveParsedMutation.isPending} onClick={() => saveParsedMutation.mutate()} data-testid="button-confirm-import">
+                {saveParsedMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                Import {Object.values(selectedMeds).filter(Boolean).length} Medication{Object.values(selectedMeds).filter(Boolean).length !== 1 ? "s" : ""}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ── Main Health Page ───────────────────────────────────────────────────────
 
 export default function Health() {
@@ -1181,6 +1523,10 @@ export default function Health() {
             <ClipboardList className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Log</span>
           </TabsTrigger>
+          <TabsTrigger value="meds" className="flex-1 text-xs" data-testid="tab-health-meds">
+            <Pill className="w-3.5 h-3.5 sm:mr-1.5" />
+            <span className="hidden sm:inline">Meds</span>
+          </TabsTrigger>
           <TabsTrigger value="timeline" className="flex-1 text-xs" data-testid="tab-health-timeline">
             <CalendarDays className="w-3.5 h-3.5 sm:mr-1.5" />
             <span className="hidden sm:inline">Timeline</span>
@@ -1196,28 +1542,48 @@ export default function Health() {
         </TabsList>
 
         <TabsContent value="log" className="mt-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : entries.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Activity className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground mb-3">No entries yet.</p>
-                <Button size="sm" onClick={openNew} data-testid="button-first-entry">
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  Log First Entry
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {entries
-                .filter(e => selectedMemberId === "all" || e.memberId === selectedMemberId)
-                .map(e => <EntryCard key={e.id} entry={e} members={members} onEdit={openEdit} />)
-              }
-            </div>
+          <div className="space-y-3">
+            {activeFamilyId && members.length > 0 && (
+              <HydrationTracker
+                familyId={activeFamilyId}
+                members={members}
+                memberId={selectedMemberId}
+                compact
+              />
+            )}
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : entries.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Activity className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground mb-3">No entries yet.</p>
+                  <Button size="sm" onClick={openNew} data-testid="button-first-entry">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    Log First Entry
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {entries
+                  .filter(e => selectedMemberId === "all" || e.memberId === selectedMemberId)
+                  .map(e => <EntryCard key={e.id} entry={e} members={members} onEdit={openEdit} />)
+                }
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="meds" className="mt-0">
+          {activeFamilyId && (
+            <HealthMedsTab
+              familyId={activeFamilyId}
+              members={members}
+              selectedMemberId={selectedMemberId}
+            />
           )}
         </TabsContent>
 

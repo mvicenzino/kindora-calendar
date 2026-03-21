@@ -4506,6 +4506,36 @@ Always return valid JSON matching one of the two formats above.`,
     }
   });
 
+  // ── Hydration Tracking ─────────────────────────────────────────────────────
+  app.get("/api/hydration", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const familyId = req.query.familyId as string || await storage.getUserFamily(userId).then(f => f?.id);
+      if (!familyId) return res.status(400).json({ message: "No family found" });
+      const date = req.query.date as string || new Date().toISOString().slice(0, 10);
+      const logs = await storage.getHydrationLogs(familyId, date);
+      res.json(logs);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch hydration logs" });
+    }
+  });
+
+  app.post("/api/hydration", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { memberId, date, glassesCount, goalGlasses = 8, familyId: bodyFamilyId } = req.body;
+      if (!memberId || !date || glassesCount === undefined) {
+        return res.status(400).json({ message: "memberId, date, and glassesCount required" });
+      }
+      const familyId = bodyFamilyId || await storage.getUserFamily(userId).then(f => f?.id);
+      if (!familyId) return res.status(400).json({ message: "No family found" });
+      const log = await storage.upsertHydrationLog({ familyId, memberId, date, glassesCount: Math.max(0, Number(glassesCount)), goalGlasses: Number(goalGlasses) });
+      res.json(log);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update hydration log" });
+    }
+  });
+
   // ── Beta Feedback ──────────────────────────────────────────────────────────
   app.post("/api/feedback", async (req: any, res) => {
     const { name, email, comments } = req.body;

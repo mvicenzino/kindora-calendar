@@ -11,6 +11,7 @@ import { format, isToday, isTomorrow, parseISO, startOfDay, isBefore, startOfWee
 import type { Event, FamilyMember, User, CaregiverPayRate, CaregiverTimeEntry } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent } from "@shared/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import HydrationTracker from "@/components/HydrationTracker";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -798,6 +799,13 @@ export default function CaregiverDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {activeFamilyId && rawMembers.length > 0 && (
+          <HydrationTracker
+            familyId={activeFamilyId}
+            members={rawMembers}
+          />
+        )}
 
         {showTimeTracking && <Card data-testid="card-time-tracking">
           <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
