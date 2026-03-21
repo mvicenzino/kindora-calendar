@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, Users, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X, Pill, Plus, Pencil, ChevronDown, ChevronUp, Upload, FileText, Sparkles, CheckCircle2 } from "lucide-react";
+import { Copy, Users, UserPlus, Mail, Send, Trash2, LogOut, Crown, UserCheck, Heart, Check, Clock, Calendar, Shield, Link, Eye, AlertTriangle, X, Pill, Plus, Pencil, ChevronDown, ChevronUp, Upload, FileText, Sparkles, CheckCircle2, Loader2, CircleCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -259,8 +259,36 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
 
   const { data: rawMembers = [] } = useQuery({ queryKey: ['/api/family-members', familyId], enabled: !!familyId });
   const { data: medications = [] } = useQuery({ queryKey: ['/api/medications?familyId=' + familyId], enabled: !!familyId });
+  const { data: todayLogs = [] } = useQuery<any[]>({
+    queryKey: ['/api/medication-logs/today', familyId],
+    queryFn: () => fetch(`/api/medication-logs/today?familyId=${familyId}`).then(r => r.json()),
+    enabled: !!familyId,
+    refetchInterval: 60_000,
+  });
 
   const resetForm = () => setMedForm({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
+
+  const logDoseMutation = useMutation({
+    mutationFn: (medId: string) =>
+      apiRequest('POST', `/api/medications/${medId}/logs`, {
+        status: 'given',
+        administeredAt: new Date().toISOString(),
+        familyId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/medication-logs/today', familyId] });
+      toast({ title: 'Dose logged', description: 'Marked as taken for today.' });
+    },
+    onError: () => toast({ title: 'Could not log dose', variant: 'destructive' }),
+  });
+
+  function expectedDoses(frequency: string): number {
+    const f = frequency.toLowerCase();
+    if (f.includes('twice') || f.includes('two') || f.includes('2')) return 2;
+    if (f.includes('three') || f.includes('3x') || f.includes('3 times')) return 3;
+    if (f.includes('four') || f.includes('4')) return 4;
+    return 1;
+  }
 
   const createMedMutation = useMutation({
     mutationFn: async (data) => {
@@ -380,35 +408,67 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
                   </button>
                   {(expandedMember === member.id || expandedMember === null) && (
                     <div className="divide-y divide-border">
-                      {meds.map((med) => (
-                        <div key={med.id} className="px-4 py-3 flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-semibold text-foreground">{med.name}</p>
-                              <Badge variant="secondary" className="text-xs">{med.dosage}</Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-0.5">{med.frequency}</p>
-                            {med.scheduledTimes && med.scheduledTimes.length > 0 && (
-                              <div className="flex gap-1 mt-1.5 flex-wrap">
-                                {med.scheduledTimes.map((t, i) => (<span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">{t}</span>))}
+                      {meds.map((med) => {
+                        const medLogsToday = todayLogs.filter((l: any) => l.medicationId === med.id && l.status === 'given');
+                        const takenCount = medLogsToday.length;
+                        const expected = expectedDoses(med.frequency);
+                        const allDone = takenCount >= expected;
+                        const isLogging = logDoseMutation.isPending && logDoseMutation.variables === med.id;
+                        return (
+                          <div key={med.id} className="px-4 py-3 flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-sm font-semibold text-foreground">{med.name}</p>
+                                <Badge variant="secondary" className="text-xs">{med.dosage}</Badge>
+                                {takenCount > 0 && (
+                                  <Badge variant="outline" className={`text-xs gap-1 ${allDone ? 'border-green-500/40 text-green-600 dark:text-green-400' : 'border-amber-500/40 text-amber-600 dark:text-amber-400'}`}>
+                                    <CircleCheck className="w-3 h-3" />
+                                    {allDone ? `All ${expected > 1 ? expected + ' doses' : 'dose'} taken` : `${takenCount}/${expected} doses`}
+                                  </Badge>
+                                )}
                               </div>
-                            )}
-                            {med.instructions && <p className="text-xs text-muted-foreground mt-1 italic">{med.instructions}</p>}
-                          </div>
-                          {isOwnerOrMember && (
-                            <div className="flex gap-1.5 flex-shrink-0">
-                              <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => openEdit(med)}><Pencil className="h-3.5 w-3.5" /></Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild><Button size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button></AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader><AlertDialogTitle>Remove {med.name}?</AlertDialogTitle><AlertDialogDescription>This removes the medication from the schedule. Existing logs are kept.</AlertDialogDescription></AlertDialogHeader>
-                                  <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteMedMutation.mutate(med.id)} className="bg-destructive text-destructive-foreground">Remove</AlertDialogAction></AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                              <p className="text-xs text-muted-foreground mt-0.5">{med.frequency}</p>
+                              {med.scheduledTimes && med.scheduledTimes.length > 0 && (
+                                <div className="flex gap-1 mt-1.5 flex-wrap">
+                                  {med.scheduledTimes.map((t, i) => (<span key={i} className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">{t}</span>))}
+                                </div>
+                              )}
+                              {med.instructions && <p className="text-xs text-muted-foreground mt-1 italic">{med.instructions}</p>}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                              <Button
+                                size="sm"
+                                variant={allDone ? "outline" : "default"}
+                                className={`gap-1.5 text-xs ${allDone ? 'text-muted-foreground' : ''}`}
+                                onClick={() => logDoseMutation.mutate(med.id)}
+                                disabled={isLogging}
+                                data-testid={`button-log-dose-${med.id}`}
+                              >
+                                {isLogging ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : allDone ? (
+                                  <Check className="w-3 h-3" />
+                                ) : (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                )}
+                                {allDone ? 'Log Again' : 'Log Dose'}
+                              </Button>
+                              {isOwnerOrMember && (
+                                <>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => openEdit(med)} data-testid={`button-edit-med-${med.id}`}><Pencil className="h-3.5 w-3.5" /></Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild><Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" data-testid={`button-delete-med-${med.id}`}><Trash2 className="h-3.5 w-3.5" /></Button></AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader><AlertDialogTitle>Remove {med.name}?</AlertDialogTitle><AlertDialogDescription>This removes the medication from the schedule. Existing logs are kept.</AlertDialogDescription></AlertDialogHeader>
+                                      <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => deleteMedMutation.mutate(med.id)} className="bg-destructive text-destructive-foreground">Remove</AlertDialogAction></AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
