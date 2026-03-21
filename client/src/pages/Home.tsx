@@ -26,6 +26,8 @@ import { CATEGORY_CONFIG } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
 import { useToast } from "@/hooks/use-toast";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useTheme } from "@/contexts/ThemeContext";
+import { ToastAction } from "@/components/ui/toast";
 
 export default function Home() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -33,6 +35,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isCaregiver, can, isLoading: isRoleLoading } = useUserRole();
+  const { theme, setTheme } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>('day');
   const [layout, setLayout] = useState<CalendarLayout>('grid');
@@ -135,6 +138,33 @@ export default function Home() {
         }, 500);
       }
     }
+  }, [isAuthenticated, isLoading]);
+
+  useEffect(() => {
+    if (!isAuthenticated || isLoading) return;
+    const isDemoUser = user?.id?.startsWith('demo-') ?? false;
+    if (isDemoUser) return;
+    const alreadyPrompted = localStorage.getItem('kindora_theme_prompted');
+    if (alreadyPrompted) return;
+    const currentTheme = localStorage.getItem('theme') || 'dark';
+    if (currentTheme !== 'dark') return;
+    const timer = setTimeout(() => {
+      localStorage.setItem('kindora_theme_prompted', 'true');
+      toast({
+        title: "You're in dark mode",
+        description: "Kindora defaults to dark — want to try light mode instead?",
+        duration: 12000,
+        action: (
+          <ToastAction
+            altText="Switch to light mode"
+            onClick={() => setTheme('light')}
+          >
+            Try Light Mode
+          </ToastAction>
+        ),
+      });
+    }, 2000);
+    return () => clearTimeout(timer);
   }, [isAuthenticated, isLoading]);
 
   const { data: rawMembers = [], isLoading: membersLoading } = useQuery<FamilyMember[]>({

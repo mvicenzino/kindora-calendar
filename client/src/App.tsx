@@ -8,6 +8,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { HelmetProvider } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { ActiveFamilyProvider, useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import Landing from "@/pages/Landing";
 import Intro from "@/pages/Intro";
 import Home from "@/pages/Home";
@@ -213,14 +214,16 @@ function App() {
   return (
     <ErrorBoundary>
       <HelmetProvider>
-        <QueryClientProvider client={queryClient}>
-          <ActiveFamilyProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </ActiveFamilyProvider>
-        </QueryClientProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <ActiveFamilyProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </ActiveFamilyProvider>
+          </QueryClientProvider>
+        </ThemeProvider>
       </HelmetProvider>
     </ErrorBoundary>
   );
