@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield } from "lucide-react";
 import HelpDrawer from "./HelpDrawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -86,6 +86,7 @@ export default function AppSidebar() {
 
   const isCaregiver = userRole?.role === "caregiver";
   const isOwnerOrMember = userRole?.role === "owner" || userRole?.role === "member";
+  const isAdmin = user?.id === "google-110610540501901085708" || user?.email === "mvicenzino@gmail.com";
 
   function handleNavClick(e, url) {
     e.preventDefault();
@@ -183,6 +184,19 @@ export default function AppSidebar() {
                   {caregiverNavItems.map((item) => (
                     <NavItem key={item.title} item={item} />
                   ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+
+          {isAdmin && (
+            <SidebarGroup className="py-1">
+              <SidebarGroupLabel className="text-[9px] uppercase tracking-widest text-sidebar-foreground/40 px-3 py-1">
+                Admin
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.5 px-1">
+                  <NavItem item={{ title: "Dashboard", url: "/admin", icon: Shield }} />
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

@@ -4203,14 +4203,28 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
-  app.get("/api/admin/feedback", isAuthenticated, async (req: any, res) => {
+  function isAdmin(req: any): boolean {
     const userId: string = req.user?.id ?? "";
     const email: string = req.user?.email ?? "";
-    if (userId !== "google-110610540501901085708" && email !== "mvicenzino@gmail.com") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
+    return userId === "google-110610540501901085708" || email === "mvicenzino@gmail.com";
+  }
+
+  app.get("/api/admin/feedback", isAuthenticated, async (req: any, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Admin access required" });
     const entries = await storage.getAllBetaFeedback();
     res.json(entries);
+  });
+
+  app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Admin access required" });
+    const users = await storage.getAllUsers();
+    res.json(users);
+  });
+
+  app.get("/api/admin/stats", isAuthenticated, async (req: any, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Admin access required" });
+    const stats = await storage.getAdminStats();
+    res.json(stats);
   });
 
   // NLP Calendar Ask — answers natural language questions about the family's events

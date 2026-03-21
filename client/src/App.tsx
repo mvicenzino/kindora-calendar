@@ -35,6 +35,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import FamilySelector from "@/components/FamilySelector";
 import FeedbackButton from "@/components/FeedbackButton";
 import AdminFeedback from "@/pages/AdminFeedback";
+import AdminDashboard from "@/pages/AdminDashboard";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import SmartReminders from "@/components/SmartReminders";
@@ -203,6 +204,7 @@ function Router() {
                     <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
                     <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>
                     <Route path="/settings">{() => <AccountSettings />}</Route>
+                    <Route path="/admin" component={AdminDashboard} />
                     <Route path="/admin/feedback" component={AdminFeedback} />
                     <Route>{() => <Redirect to="/" />}</Route>
                   </Switch>

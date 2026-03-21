@@ -129,6 +129,10 @@ export interface IStorage {
   submitBetaFeedback(data: { userId?: string; name: string; email: string; comments: string }): Promise<BetaFeedback>;
   getAllBetaFeedback(): Promise<BetaFeedback[]>;
 
+  // Admin
+  getAllUsers(): Promise<User[]>;
+  getAdminStats(): Promise<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }>;
+
   // Symptom Tracker
   createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems>;
   getSymptomEntries(familyId: string, memberId?: string, startDate?: string, endDate?: string): Promise<SymptomEntryWithSystems[]>;
@@ -1109,6 +1113,14 @@ export class MemStorage implements IStorage {
     return [];
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.usersMap.values());
+  }
+
+  async getAdminStats(): Promise<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }> {
+    return { totalUsers: this.usersMap.size, totalFamilies: this.familiesMap.size, totalEvents: this.eventsMap.size, totalFeedback: 0 };
+  }
+
   async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
     const id = randomUUID();
     const now = new Date();
@@ -2037,6 +2049,23 @@ class DrizzleStorage implements IStorage {
     return this.db.select().from(betaFeedback).orderBy(desc(betaFeedback.createdAt));
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return this.db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getAdminStats(): Promise<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }> {
+    const [usersCount] = await this.db.select({ count: sql<number>`count(*)::int` }).from(users);
+    const [familiesCount] = await this.db.select({ count: sql<number>`count(*)::int` }).from(families);
+    const [eventsCount] = await this.db.select({ count: sql<number>`count(*)::int` }).from(events);
+    const [feedbackCount] = await this.db.select({ count: sql<number>`count(*)::int` }).from(betaFeedback);
+    return {
+      totalUsers: usersCount?.count ?? 0,
+      totalFamilies: familiesCount?.count ?? 0,
+      totalEvents: eventsCount?.count ?? 0,
+      totalFeedback: feedbackCount?.count ?? 0,
+    };
+  }
+
   async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
     const [created] = await this.db.insert(symptomEntries).values(entry).returning();
     let ratings: SymptomSystemRating[] = [];
@@ -2566,6 +2595,14 @@ class DemoAwareStorage implements IStorage {
 
   async getAllBetaFeedback(): Promise<BetaFeedback[]> {
     return this.persistentStorage.getAllBetaFeedback();
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return this.persistentStorage.getAllUsers();
+  }
+
+  async getAdminStats(): Promise<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }> {
+    return this.persistentStorage.getAdminStats();
   }
 
   async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
