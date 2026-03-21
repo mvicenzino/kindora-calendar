@@ -33,7 +33,7 @@
 
 ---
 
-### Tuesday–Wednesday, Mar 25–26 — Reddit
+### Tuesday–Wednesday, Mar 24–25 — Reddit
 
 Post in one subreddit per day. **Story-first, product second. Include a screenshot. Mention the free trial.**
 
@@ -56,7 +56,7 @@ Post in one subreddit per day. **Story-first, product second. Include a screensh
 
 ---
 
-### Thursday, Mar 27 — X (Twitter)
+### Thursday, Mar 26 — X (Twitter)
 
 **Post a launch thread:**
 
@@ -77,7 +77,7 @@ Post in one subreddit per day. **Story-first, product second. Include a screensh
 
 ---
 
-### Friday–Sunday, Mar 28–30 — LinkedIn
+### Friday–Sunday, Mar 27–29 — LinkedIn
 
 **Post a founder story** (Friday):
 
@@ -128,7 +128,7 @@ Also: go back and respond to every comment from Week 1 posts. This bumps your po
 
 ---
 
-### Thursday, Apr 3 — LinkedIn Article
+### Thursday, Apr 2 — LinkedIn Article
 
 Write a 400–500 word article (not just a post — use LinkedIn's article format):
 
