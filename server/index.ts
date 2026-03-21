@@ -10,6 +10,7 @@ import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 import { db } from "./db";
+import { startCronScheduler } from "./cronScheduler";
 
 const app = express();
 
@@ -229,5 +230,6 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    startCronScheduler(port);
   });
 })();
