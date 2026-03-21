@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, User, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock, MessageSquare, Mail, Calendar as CalendarIcon } from "lucide-react";
+import { Check, Crown, User, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock, MessageSquare, Mail, Calendar as CalendarIcon, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useCalendarTextSize, TEXT_SCALE_LABELS, TEXT_SCALE_SIZES } from "@/hooks/useCalendarTextSize";
 import type { CalendarTextScale } from "@/hooks/useCalendarTextSize";
 import { Slider } from "@/components/ui/slider";
@@ -333,6 +334,7 @@ function AccountTab() {
 function DisplayPreferencesCard() {
   const { scale, updateScale } = useCalendarTextSize();
   const previewSizes = TEXT_SCALE_SIZES[scale];
+  const { theme, setTheme } = useTheme();
 
   return (
     <Card>
@@ -341,9 +343,46 @@ function DisplayPreferencesCard() {
           <Type className="h-4 w-4 text-muted-foreground" />
           <CardTitle className="text-sm">Display</CardTitle>
         </div>
-        <CardDescription>Adjust how calendar events appear on screen.</CardDescription>
+        <CardDescription>Adjust appearance and how calendar events look on screen.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
+        {/* Theme picker */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Color theme</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setTheme("light")}
+              data-testid="button-theme-light"
+              className={`
+                flex-1 flex items-center justify-center gap-2 rounded-lg border px-4 py-3
+                text-sm font-medium transition-all duration-200
+                ${theme === "light"
+                  ? "bg-primary/10 border-primary/40 text-primary"
+                  : "bg-card border-border text-muted-foreground hover-elevate"}
+              `}
+            >
+              <Sun className="w-4 h-4" />
+              Light
+            </button>
+            <button
+              onClick={() => setTheme("dark")}
+              data-testid="button-theme-dark"
+              className={`
+                flex-1 flex items-center justify-center gap-2 rounded-lg border px-4 py-3
+                text-sm font-medium transition-all duration-200
+                ${theme === "dark"
+                  ? "bg-primary/10 border-primary/40 text-primary"
+                  : "bg-card border-border text-muted-foreground hover-elevate"}
+              `}
+            >
+              <Moon className="w-4 h-4" />
+              Dark
+            </button>
+          </div>
+        </div>
+
+        <div className="border-t border-border/50" />
+
         {/* Slider control */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
