@@ -33,6 +33,8 @@ import AppSidebar from "@/components/AppSidebar";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
 import FamilySelector from "@/components/FamilySelector";
+import FeedbackButton from "@/components/FeedbackButton";
+import AdminFeedback from "@/pages/AdminFeedback";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import SmartReminders from "@/components/SmartReminders";
@@ -104,6 +106,8 @@ function DemoBanner() {
 
 function AppShell({ children }: { children: React.ReactNode }) {
   useMessageNotifications();
+  const { user } = useAuth();
+  const isDemo = user?.id?.startsWith("demo-") ?? false;
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full bg-background">
@@ -126,6 +130,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarInset>
       </div>
       <SmartReminders />
+      {!isDemo && <FeedbackButton />}
     </SidebarProvider>
   );
 }
@@ -198,6 +203,7 @@ function Router() {
                     <Route path="/settings/import">{() => <AccountSettings initialTab="import" />}</Route>
                     <Route path="/settings/kira">{() => <AccountSettings initialTab="kira" />}</Route>
                     <Route path="/settings">{() => <AccountSettings />}</Route>
+                    <Route path="/admin/feedback" component={AdminFeedback} />
                     <Route>{() => <Redirect to="/" />}</Route>
                   </Switch>
                 </AppShell>
