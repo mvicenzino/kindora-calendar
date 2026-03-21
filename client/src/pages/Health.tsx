@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { format, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, subDays } from "date-fns";
-import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X, Users, Sparkles, Pill, Upload } from "lucide-react";
+import { Activity, Plus, ChevronLeft, ChevronRight, Trash2, FileText, TrendingUp, CalendarDays, ClipboardList, Loader2, AlertTriangle, Zap, Heart, Brain, Wind, Salad, Dumbbell, Moon, X, Users, Sparkles, Pill, Upload, CheckCircle2, Check, CircleCheck } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -1081,12 +1082,55 @@ function HealthMedsTab({ familyId, members, selectedMemberId }: HealthMedsTabPro
   const [selectedMeds, setSelectedMeds] = useState<Record<number, boolean>>({});
   const [assignMemberId, setAssignMemberId] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [pendingLogMed, setPendingLogMed] = useState<{ id: string; name: string; loggedBy: string; loggedAt: string } | null>(null);
 
   const { data: medications = [] } = useQuery<any[]>({
     queryKey: ["/api/medications", familyId],
     queryFn: () => fetch(`/api/medications?familyId=${familyId}`).then(r => r.json()),
     enabled: !!familyId,
   });
+
+  const { data: todayLogs = [] } = useQuery<any[]>({
+    queryKey: ["/api/medication-logs/today", familyId],
+    queryFn: () => fetch(`/api/medication-logs/today?familyId=${familyId}`).then(r => r.json()),
+    enabled: !!familyId,
+    refetchInterval: 30_000,
+  });
+
+  const logDoseMutation = useMutation({
+    mutationFn: (medId: string) => apiRequest("POST", `/api/medications/${medId}/logs`, { status: "given", familyId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/medication-logs/today", familyId] });
+      toast({ title: "Dose logged" });
+    },
+    onError: () => toast({ title: "Could not log dose", variant: "destructive" }),
+  });
+
+  function expectedDoses(frequency: string): number {
+    const f = frequency.toLowerCase();
+    if (f.includes("twice") || f.includes("two") || f.includes("2")) return 2;
+    if (f.includes("three") || f.includes("3x") || f.includes("3 times")) return 3;
+    if (f.includes("four") || f.includes("4")) return 4;
+    return 1;
+  }
+
+  function mostRecentLogWithin4Hours(logs: any[]) {
+    const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+    return logs
+      .filter(l => l.status === "given" && new Date(l.administeredAt).getTime() > cutoff)
+      .sort((a, b) => new Date(b.administeredAt).getTime() - new Date(a.administeredAt).getTime())[0] ?? null;
+  }
+
+  function handleLogDoseClick(med: any, logsForMed: any[]) {
+    const recentLog = mostRecentLogWithin4Hours(logsForMed);
+    if (recentLog) {
+      const loggedBy = recentLog.administeredByUser?.firstName ?? "Someone";
+      const loggedAt = format(new Date(recentLog.administeredAt), "h:mm a");
+      setPendingLogMed({ id: med.id, name: med.name, loggedBy, loggedAt });
+    } else {
+      logDoseMutation.mutate(med.id);
+    }
+  }
 
   const filteredMeds = useMemo(() =>
     selectedMemberId === "all" ? medications : medications.filter((m: any) => m.memberId === selectedMemberId),
@@ -1222,14 +1266,28 @@ function HealthMedsTab({ familyId, members, selectedMemberId }: HealthMedsTabPro
         <div className="space-y-2">
           {filteredMeds.map((med: any) => {
             const member = members.find(m => m.id === med.memberId);
+            const medLogsToday = todayLogs.filter((l: any) => l.medicationId === med.id && l.status === "given");
+            const takenCount = medLogsToday.length;
+            const expected = expectedDoses(med.frequency);
+            const allDone = takenCount >= expected;
+            const isLogging = logDoseMutation.isPending && logDoseMutation.variables === med.id;
+            const sortedLogs = [...medLogsToday].sort((a, b) => new Date(b.administeredAt).getTime() - new Date(a.administeredAt).getTime());
             return (
               <Card key={med.id} data-testid={`card-health-med-${med.id}`}>
                 <CardContent className="p-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-2.5 min-w-0">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
                       <Pill className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold">{med.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold">{med.name}</p>
+                          {takenCount > 0 && (
+                            <Badge variant="outline" className={`text-[10px] gap-1 ${allDone ? "border-green-500/40 text-green-600 dark:text-green-400" : "border-amber-500/40 text-amber-600 dark:text-amber-400"}`}>
+                              <CircleCheck className="w-2.5 h-2.5" />
+                              {allDone ? `All ${expected > 1 ? expected + " doses" : "dose"} taken` : `${takenCount}/${expected} doses`}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">{med.dosage} · {med.frequency}</p>
                         {member && (
                           <div className="flex items-center gap-1 mt-1">
@@ -1245,18 +1303,41 @@ function HealthMedsTab({ familyId, members, selectedMemberId }: HealthMedsTabPro
                             ))}
                           </div>
                         )}
+                        {sortedLogs.length > 0 && (
+                          <div className="mt-2 space-y-0.5">
+                            {sortedLogs.map((log: any, i: number) => (
+                              <p key={i} className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                <CircleCheck className="w-2.5 h-2.5 text-green-500 flex-shrink-0" />
+                                Logged by <span className="font-medium text-foreground">{log.administeredByUser?.firstName ?? "Unknown"}</span> at {format(new Date(log.administeredAt), "h:mm a")}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 text-muted-foreground flex-shrink-0"
-                      onClick={() => removeMutation.mutate(med.id)}
-                      disabled={removeMutation.isPending}
-                      data-testid={`button-remove-med-${med.id}`}
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant={allDone ? "outline" : "default"}
+                        className={`gap-1.5 text-xs ${allDone ? "text-muted-foreground" : ""}`}
+                        onClick={() => handleLogDoseClick(med, medLogsToday)}
+                        disabled={isLogging}
+                        data-testid={`button-log-dose-health-${med.id}`}
+                      >
+                        {isLogging ? <Loader2 className="w-3 h-3 animate-spin" /> : allDone ? <Check className="w-3 h-3" /> : <CheckCircle2 className="w-3 h-3" />}
+                        {allDone ? "Log Again" : "Log Dose"}
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-muted-foreground flex-shrink-0"
+                        onClick={() => removeMutation.mutate(med.id)}
+                        disabled={removeMutation.isPending}
+                        data-testid={`button-remove-med-${med.id}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -1396,6 +1477,39 @@ function HealthMedsTab({ familyId, members, selectedMemberId }: HealthMedsTabPro
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Double-dose confirmation */}
+      <AlertDialog open={!!pendingLogMed} onOpenChange={v => { if (!v) setPendingLogMed(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              Dose already logged
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingLogMed && (
+                <>
+                  <span className="font-medium text-foreground">{pendingLogMed.name}</span> was already logged by{' '}
+                  <span className="font-medium text-foreground">{pendingLogMed.loggedBy}</span> at{' '}
+                  <span className="font-medium text-foreground">{pendingLogMed.loggedAt}</span>.
+                  <br /><br />
+                  Are you sure you want to log another dose?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingLogMed(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-500 text-white"
+              onClick={() => { if (pendingLogMed) { logDoseMutation.mutate(pendingLogMed.id); setPendingLogMed(null); } }}
+              data-testid="button-confirm-double-dose-health"
+            >
+              Log Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
