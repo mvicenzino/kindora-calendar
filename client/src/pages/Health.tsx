@@ -1632,7 +1632,7 @@ export default function Health() {
       )}
 
       <Tabs defaultValue="log" className="space-y-3">
-        <TabsList className="w-full h-auto p-1.5 rounded-full gap-0.5 bg-black/10 dark:bg-white/[0.04] border border-white/10 dark:border-white/10 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+        <TabsList className="w-full h-auto p-1.5 rounded-full gap-0.5 bg-black/[0.05] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(0,0,0,0.04)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
           {(
             [
               { value: "log",      Icon: ClipboardList, label: "Log"      },
@@ -1650,12 +1650,15 @@ export default function Health() {
                 flex-1 flex items-center justify-center gap-1.5
                 rounded-full py-2 text-xs font-medium
                 border border-transparent
-                text-muted-foreground/60
+                text-muted-foreground/70
                 transition-all duration-200
-                data-[state=active]:bg-violet-500/20
-                data-[state=active]:text-violet-300
-                data-[state=active]:border-violet-400/30
-                data-[state=active]:shadow-[0_0_14px_rgba(139,92,246,0.3),inset_0_1px_0_rgba(255,255,255,0.12)]
+                data-[state=active]:bg-violet-500/15
+                data-[state=active]:text-violet-700
+                dark:data-[state=active]:text-violet-300
+                data-[state=active]:border-violet-500/25
+                dark:data-[state=active]:border-violet-400/30
+                data-[state=active]:shadow-[0_0_10px_rgba(109,40,217,0.12)]
+                dark:data-[state=active]:shadow-[0_0_14px_rgba(139,92,246,0.3),inset_0_1px_0_rgba(255,255,255,0.12)]
               "
             >
               <Icon className="w-3.5 h-3.5 flex-shrink-0" />
