@@ -504,33 +504,48 @@ function kiraTimelineSummary(entry: any): string {
   const sev = entry.overallSeverity ?? 0;
   const energy = entry.energyLevel ?? 0;
   const triggers: string[] = entry.triggers ?? [];
+  const systems: { system: string; severity: number }[] = entry.systems ?? [];
   const moodLabel = entry.moodEmoji ? MOOD_OPTIONS.find((m: any) => m.emoji === entry.moodEmoji)?.label : null;
 
+  // Base tone
   let base = "";
   if (sev <= 2) base = "A genuinely good day";
   else if (sev <= 4) base = "A manageable day";
-  else if (sev <= 6) base = "A moderate day with some symptom activity";
+  else if (sev <= 6) base = "A moderate day with noticeable symptom activity";
   else if (sev <= 8) base = "A tough day with elevated symptoms";
   else base = "A very hard day — symptoms were severe";
 
+  // Energy context
   let energyNote = "";
-  if (energy >= 7) energyNote = " — energy was solid";
-  else if (energy <= 3) energyNote = " — energy was quite low";
+  if (energy >= 7) energyNote = ", energy was solid";
+  else if (energy <= 3) energyNote = ", energy was quite low";
 
-  if (entry.anaphylaxisAlert) return `${base}${energyNote}, with a reaction event flagged. Worth reviewing with your care team.`;
+  // Reaction
+  if (entry.anaphylaxisAlert) return `${base}${energyNote}. A reaction event was flagged — worth noting in your care records.`;
 
+  // Most affected systems (severity ≥ 5)
+  const flaringSystems = systems
+    .filter(s => s.severity >= 5)
+    .sort((a, b) => b.severity - a.severity)
+    .slice(0, 2)
+    .map(s => BODY_SYSTEMS.find(b => b.key === s.system)?.label ?? s.system);
+
+  let systemNote = "";
+  if (flaringSystems.length === 1) systemNote = ` ${flaringSystems[0]} was the main area of concern.`;
+  else if (flaringSystems.length >= 2) systemNote = ` ${flaringSystems[0]} and ${flaringSystems[1]} were most affected.`;
+
+  // Trigger context
   let triggerNote = "";
   if (triggers.length > 0) {
     const listed = triggers.slice(0, 2).join(" and ");
-    triggerNote = ` ${listed} may have been a contributing factor.`;
-  } else {
-    triggerNote = ".";
+    triggerNote = ` ${listed} was a possible contributing factor.`;
   }
 
+  // Mood
   let moodNote = "";
-  if (moodLabel && sev <= 5) moodNote = ` Mood tracked as ${moodLabel.toLowerCase()}.`;
+  if (moodLabel) moodNote = ` Mood: ${moodLabel}.`;
 
-  return `${base}${energyNote}${triggerNote}${moodNote}`;
+  return `${base}${energyNote}.${systemNote}${triggerNote}${moodNote}`.trim();
 }
 
 function TimelineView({ entries, memberId, members }: { entries: any[]; memberId: string; members: FamilyMember[] }) {
@@ -637,23 +652,79 @@ function TimelineView({ entries, memberId, members }: { entries: any[]; memberId
         <div className="space-y-2 pt-2">
           <div className="flex items-center gap-2 pb-1">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <p className="text-xs font-semibold text-foreground">Kira's read on this month</p>
+            <p className="text-xs font-semibold text-foreground">Daily breakdown</p>
           </div>
           {monthEntries.map(entry => {
             const moodLabel = entry.moodEmoji ? MOOD_OPTIONS.find((m: any) => m.emoji === entry.moodEmoji)?.label : null;
+            const systems: { system: string; severity: number }[] = entry.systems ?? [];
+            const activeSystems = systems.filter(s => s.severity >= 4).sort((a, b) => b.severity - a.severity);
+            const triggers: string[] = entry.triggers ?? [];
             return (
-              <div key={entry.date} className="flex items-start gap-3 px-3 py-2.5 rounded-lg bg-muted/20 border border-border/40">
-                <span className="text-2xl leading-none mt-0.5 flex-shrink-0" title={moodLabel ?? undefined}>
-                  {entry.moodEmoji ?? "·"}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground leading-none mb-1">
-                    {format(parseISO(entry.date), "EEEE, MMMM d")}
-                    {entry.anaphylaxisAlert && (
-                      <span className="ml-2 text-red-400 text-[10px] font-bold">⚠ Reaction</span>
+              <div key={entry.date} className="rounded-lg bg-muted/20 border border-border/40 overflow-hidden">
+                {/* Header row */}
+                <div className="flex items-center justify-between gap-2 px-3 pt-2.5 pb-2 border-b border-border/30">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {entry.moodEmoji && (
+                      <span className="text-xl leading-none flex-shrink-0" title={moodLabel ?? undefined}>{entry.moodEmoji}</span>
                     )}
-                  </p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground leading-tight">
+                        {format(parseISO(entry.date), "EEEE, MMMM d")}
+                      </p>
+                      {moodLabel && <p className="text-[10px] text-muted-foreground">{moodLabel}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {entry.anaphylaxisAlert && (
+                      <Badge variant="destructive" className="text-[10px] gap-1 no-default-hover-elevate no-default-active-elevate">
+                        <AlertTriangle className="w-2.5 h-2.5" />Reaction
+                      </Badge>
+                    )}
+                    {/* Energy + Severity chips */}
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted/60 text-muted-foreground">
+                      <Zap className="w-2.5 h-2.5" />{entry.energyLevel ?? "—"}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold text-white ${severityColor(entry.overallSeverity)}`}>
+                      {entry.overallSeverity ?? "—"}/10
+                    </span>
+                  </div>
+                </div>
+
+                <div className="px-3 py-2.5 space-y-2">
+                  {/* Summary sentence */}
                   <p className="text-xs text-muted-foreground leading-relaxed">{kiraTimelineSummary(entry)}</p>
+
+                  {/* Body systems */}
+                  {activeSystems.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {activeSystems.map(s => {
+                        const sys = BODY_SYSTEMS.find(b => b.key === s.system);
+                        return (
+                          <span key={s.system} className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium text-white ${severityColor(s.severity)}`}>
+                            {sys?.label} · {s.severity}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Triggers */}
+                  {triggers.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {triggers.map(t => (
+                        <Badge key={t} variant="outline" className="text-[10px] px-1.5 no-default-hover-elevate no-default-active-elevate">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* User's own notes */}
+                  {entry.notes && (
+                    <p className="text-[11px] text-muted-foreground italic border-l-2 border-border/60 pl-2 leading-relaxed">
+                      "{entry.notes}"
+                    </p>
+                  )}
                 </div>
               </div>
             );
