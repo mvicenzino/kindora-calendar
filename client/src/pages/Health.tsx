@@ -1632,27 +1632,36 @@ export default function Health() {
       )}
 
       <Tabs defaultValue="log" className="space-y-3">
-        <TabsList className="w-full">
-          <TabsTrigger value="log" className="flex-1 text-xs" data-testid="tab-health-log">
-            <ClipboardList className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Log</span>
-          </TabsTrigger>
-          <TabsTrigger value="meds" className="flex-1 text-xs" data-testid="tab-health-meds">
-            <Pill className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Meds</span>
-          </TabsTrigger>
-          <TabsTrigger value="timeline" className="flex-1 text-xs" data-testid="tab-health-timeline">
-            <CalendarDays className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Timeline</span>
-          </TabsTrigger>
-          <TabsTrigger value="trends" className="flex-1 text-xs" data-testid="tab-health-trends">
-            <TrendingUp className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Trends</span>
-          </TabsTrigger>
-          <TabsTrigger value="report" className="flex-1 text-xs" data-testid="tab-health-report">
-            <FileText className="w-3.5 h-3.5 sm:mr-1.5" />
-            <span className="hidden sm:inline">Report</span>
-          </TabsTrigger>
+        <TabsList className="w-full h-auto p-1.5 rounded-full gap-0.5 bg-black/10 dark:bg-white/[0.04] border border-white/10 dark:border-white/10 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          {(
+            [
+              { value: "log",      Icon: ClipboardList, label: "Log"      },
+              { value: "meds",     Icon: Pill,          label: "Meds"     },
+              { value: "timeline", Icon: CalendarDays,  label: "Timeline" },
+              { value: "trends",   Icon: TrendingUp,    label: "Trends"   },
+              { value: "report",   Icon: FileText,      label: "Report"   },
+            ] as const
+          ).map(({ value, Icon, label }) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              data-testid={`tab-health-${value}`}
+              className="
+                flex-1 flex items-center justify-center gap-1.5
+                rounded-full py-2 text-xs font-medium
+                border border-transparent
+                text-muted-foreground/60
+                transition-all duration-200
+                data-[state=active]:bg-violet-500/20
+                data-[state=active]:text-violet-300
+                data-[state=active]:border-violet-400/30
+                data-[state=active]:shadow-[0_0_14px_rgba(139,92,246,0.3),inset_0_1px_0_rgba(255,255,255,0.12)]
+              "
+            >
+              <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">{label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         <TabsContent value="log" className="mt-0">
