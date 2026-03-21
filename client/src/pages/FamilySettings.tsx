@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { format } from "date-fns";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
@@ -256,6 +257,7 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
   const [editingMed, setEditingMed] = useState(null);
   const [expandedMember, setExpandedMember] = useState(null);
   const [medForm, setMedForm] = useState({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
+  const [pendingLogMed, setPendingLogMed] = useState<{ id: string; name: string; loggedBy: string; loggedAt: string } | null>(null);
 
   const { data: rawMembers = [] } = useQuery({ queryKey: ['/api/family-members', familyId], enabled: !!familyId });
   const { data: medications = [] } = useQuery({ queryKey: ['/api/medications?familyId=' + familyId], enabled: !!familyId });
@@ -263,7 +265,7 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
     queryKey: ['/api/medication-logs/today', familyId],
     queryFn: () => fetch(`/api/medication-logs/today?familyId=${familyId}`).then(r => r.json()),
     enabled: !!familyId,
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   });
 
   const resetForm = () => setMedForm({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
@@ -288,6 +290,24 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
     if (f.includes('three') || f.includes('3x') || f.includes('3 times')) return 3;
     if (f.includes('four') || f.includes('4')) return 4;
     return 1;
+  }
+
+  function mostRecentLogWithinHours(logs: any[], hours: number) {
+    const cutoff = Date.now() - hours * 60 * 60 * 1000;
+    return logs
+      .filter(l => l.status === 'given' && new Date(l.administeredAt).getTime() > cutoff)
+      .sort((a, b) => new Date(b.administeredAt).getTime() - new Date(a.administeredAt).getTime())[0] ?? null;
+  }
+
+  function handleLogDoseClick(med: any, logsForMed: any[]) {
+    const recentLog = mostRecentLogWithinHours(logsForMed, 4);
+    if (recentLog) {
+      const loggedBy = recentLog.administeredByUser?.firstName ?? 'Someone';
+      const loggedAt = format(new Date(recentLog.administeredAt), 'h:mm a');
+      setPendingLogMed({ id: med.id, name: med.name, loggedBy, loggedAt });
+    } else {
+      logDoseMutation.mutate(med.id);
+    }
   }
 
   const createMedMutation = useMutation({
@@ -414,6 +434,7 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
                         const expected = expectedDoses(med.frequency);
                         const allDone = takenCount >= expected;
                         const isLogging = logDoseMutation.isPending && logDoseMutation.variables === med.id;
+                        const sortedLogs = [...medLogsToday].sort((a, b) => new Date(b.administeredAt).getTime() - new Date(a.administeredAt).getTime());
                         return (
                           <div key={med.id} className="px-4 py-3 flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -434,13 +455,25 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
                                 </div>
                               )}
                               {med.instructions && <p className="text-xs text-muted-foreground mt-1 italic">{med.instructions}</p>}
+                              {sortedLogs.length > 0 && (
+                                <div className="mt-2 space-y-0.5">
+                                  {sortedLogs.map((log: any, i: number) => (
+                                    <p key={i} className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                      <CircleCheck className="w-2.5 h-2.5 text-green-500 flex-shrink-0" />
+                                      <span>
+                                        Logged by <span className="font-medium text-foreground">{log.administeredByUser?.firstName ?? 'Unknown'}</span> at {format(new Date(log.administeredAt), 'h:mm a')}
+                                      </span>
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">
                               <Button
                                 size="sm"
                                 variant={allDone ? "outline" : "default"}
                                 className={`gap-1.5 text-xs ${allDone ? 'text-muted-foreground' : ''}`}
-                                onClick={() => logDoseMutation.mutate(med.id)}
+                                onClick={() => handleLogDoseClick(med, medLogsToday)}
                                 disabled={isLogging}
                                 data-testid={`button-log-dose-${med.id}`}
                               >
@@ -491,6 +524,44 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
           <DialogFooter><Button variant="outline" onClick={() => { setEditingMed(null); resetForm(); }}>Cancel</Button><Button onClick={() => editingMed && updateMedMutation.mutate({ ...medForm, id: editingMed.id })} disabled={updateMedMutation.isPending || !isFormValid}>{updateMedMutation.isPending ? "Saving..." : "Save Changes"}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Double-dose confirmation dialog */}
+      <AlertDialog open={!!pendingLogMed} onOpenChange={(v) => { if (!v) setPendingLogMed(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              Dose already logged
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingLogMed && (
+                <>
+                  <span className="font-medium text-foreground">{pendingLogMed.name}</span> was already logged by{' '}
+                  <span className="font-medium text-foreground">{pendingLogMed.loggedBy}</span> at{' '}
+                  <span className="font-medium text-foreground">{pendingLogMed.loggedAt}</span>.
+                  <br /><br />
+                  Are you sure you want to log another dose? Only do this if the previous log was a mistake or an additional dose is genuinely needed.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingLogMed(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingLogMed) {
+                  logDoseMutation.mutate(pendingLogMed.id);
+                  setPendingLogMed(null);
+                }
+              }}
+              className="bg-amber-500 text-white"
+              data-testid="button-confirm-double-dose"
+            >
+              Log Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
