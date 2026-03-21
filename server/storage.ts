@@ -1771,7 +1771,34 @@ class DrizzleStorage implements IStorage {
   }
 
   async getActiveWeeklySummarySchedules(): Promise<WeeklySummarySchedule[]> {
-    return await this.db.select().from(weeklySummarySchedules).where(eq(weeklySummarySchedules.isEnabled, true));
+    // Families with an explicit enabled schedule
+    const enabledSchedules = await this.db.select()
+      .from(weeklySummarySchedules)
+      .where(eq(weeklySummarySchedules.isEnabled, true));
+
+    // Families that have NO schedule row at all — treat as enabled by default
+    const allScheduleRows = await this.db
+      .select({ familyId: weeklySummarySchedules.familyId })
+      .from(weeklySummarySchedules);
+    const scheduledFamilyIds = new Set(allScheduleRows.map(s => s.familyId));
+
+    const allFamilies = await this.db.select({ id: families.id }).from(families);
+    const now = new Date();
+    const defaultSchedules: WeeklySummarySchedule[] = allFamilies
+      .filter(f => !scheduledFamilyIds.has(f.id))
+      .map(f => ({
+        id: "",
+        familyId: f.id,
+        isEnabled: true,
+        dayOfWeek: "0",
+        timeOfDay: "08:00",
+        timezone: "America/New_York",
+        lastSentAt: null,
+        createdAt: now,
+        updatedAt: now,
+      }));
+
+    return [...enabledSchedules, ...defaultSchedules];
   }
 
   async updateWeeklySummaryLastSent(familyId: string): Promise<void> {

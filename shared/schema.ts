@@ -204,7 +204,7 @@ export const caregiverTimeEntries = pgTable("caregiver_time_entries", {
 export const weeklySummarySchedules = pgTable("weekly_summary_schedules", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   familyId: varchar("family_id").notNull().unique(), // One schedule per family
-  isEnabled: boolean("is_enabled").notNull().default(false),
+  isEnabled: boolean("is_enabled").notNull().default(true),
   dayOfWeek: varchar("day_of_week").notNull().default("0"), // 0=Sunday, 1=Monday, etc.
   timeOfDay: varchar("time_of_day").notNull().default("08:00"), // 24h format HH:MM
   timezone: varchar("timezone").notNull().default("America/New_York"),
