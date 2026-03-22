@@ -25,7 +25,7 @@ const logo = "/kindora-logo.jpeg";
 const familyNavItems = [
   { title: "Calendar", url: "/", icon: Calendar },
   { title: "Messages", url: "/messages", icon: MessageCircle },
-  { title: "Documents", url: "/documents", icon: FileText },
+  { title: "Family Vault", url: "/documents", icon: FileText },
   { title: "Memories", url: "/memories", icon: Image },
   { title: "Health", url: "/health", icon: Activity },
   { title: "Advisor", url: "/advisor", icon: Sparkles },

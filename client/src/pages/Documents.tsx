@@ -401,10 +401,10 @@ export default function Documents() {
                 <div className="w-8 h-8 rounded-md bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
                   <FolderOpen className="w-4 h-4 text-white" />
                 </div>
-                Care Documents
+                Family Vault
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Secure storage for medical records, insurance, and legal documents
+                Secure storage for medical records, insurance, legal documents, and resources
               </p>
             </div>
             
@@ -445,7 +445,7 @@ export default function Documents() {
               data-testid="tab-vault"
             >
               <FolderOpen className="w-3.5 h-3.5" />
-              Document Vault
+              Documents
             </button>
             <button
               className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
