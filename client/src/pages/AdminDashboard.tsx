@@ -1,10 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import {
   Users, LayoutDashboard, MessageSquarePlus, Mail,
-  Download, Clock, Shield, Calendar, Home, Activity,
-  CreditCard, User, ChevronRight,
+  Download, Clock, Shield, Calendar, Home,
+  CreditCard, User, ChevronRight, TrendingUp,
+  BarChart3, DollarSign, UserCheck,
 } from "lucide-react";
+import {
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar, Cell,
+} from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +24,34 @@ function isAdminUser(user: any) {
   return user?.id === ADMIN_ID || user?.email === "mvicenzino@gmail.com";
 }
 
-function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string; value: number | string; sub?: string }) {
+interface AdminAnalytics {
+  totalUsers: number;
+  newUsersThisWeek: number;
+  newUsersThisMonth: number;
+  googleUsers: number;
+  emailUsers: number;
+  replitUsers: number;
+  activeSubscribers: number;
+  trialSubscribers: number;
+  freeUsers: number;
+  estimatedMrr: number;
+  totalFamilies: number;
+  newFamiliesThisWeek: number;
+  totalEvents: number;
+  totalMessages: number;
+  totalSymptomEntries: number;
+  totalMedications: number;
+  totalDocuments: number;
+  totalMedicationLogs: number;
+  totalFeedback: number;
+  weeklySignups: { week: string; count: number }[];
+}
+
+function StatCard({
+  icon: Icon, label, value, sub, accent,
+}: {
+  icon: any; label: string; value: number | string; sub?: string; accent?: string;
+}) {
   return (
     <Card>
       <CardContent className="pt-5 pb-4">
@@ -29,12 +61,25 @@ function StatCard({ icon: Icon, label, value, sub }: { icon: any; label: string;
             <p className="text-2xl font-bold text-foreground">{value}</p>
             {sub && <p className="text-[11px] text-muted-foreground mt-0.5">{sub}</p>}
           </div>
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <Icon className="w-4 h-4 text-primary" />
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${accent ?? "bg-primary/10"}`}>
+            <Icon className={`w-4 h-4 ${accent ? "text-white" : "text-primary"}`} />
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function MiniBarRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+      <div className="flex-1 h-2 rounded-full bg-muted/40 overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs font-medium text-foreground w-6 text-right">{value}</span>
+    </div>
   );
 }
 
@@ -57,6 +102,11 @@ export default function AdminDashboard() {
 
   const { data: stats, isLoading: statsLoading } = useQuery<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }>({
     queryKey: ["/api/admin/stats"],
+    enabled,
+  });
+
+  const { data: analytics, isLoading: analyticsLoading } = useQuery<AdminAnalytics>({
+    queryKey: ["/api/admin/analytics"],
     enabled,
   });
 
@@ -111,9 +161,24 @@ export default function AdminDashboard() {
     URL.revokeObjectURL(url);
   }
 
+  const featureMax = Math.max(
+    analytics?.totalEvents ?? 0,
+    analytics?.totalMessages ?? 0,
+    analytics?.totalSymptomEntries ?? 0,
+    analytics?.totalMedications ?? 0,
+    analytics?.totalDocuments ?? 0,
+    1,
+  );
+
+  const authMax = Math.max(
+    analytics?.googleUsers ?? 0,
+    analytics?.emailUsers ?? 0,
+    analytics?.replitUsers ?? 0,
+    1,
+  );
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
           <Shield className="w-5 h-5 text-primary" />
@@ -124,8 +189,11 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue="analytics">
         <TabsList className="w-full justify-start">
+          <TabsTrigger value="analytics" data-testid="tab-admin-analytics">
+            <BarChart3 className="w-3.5 h-3.5 mr-1.5" />Analytics
+          </TabsTrigger>
           <TabsTrigger value="overview" data-testid="tab-admin-overview">
             <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />Overview
           </TabsTrigger>
@@ -136,6 +204,133 @@ export default function AdminDashboard() {
             <MessageSquarePlus className="w-3.5 h-3.5 mr-1.5" />Feedback
           </TabsTrigger>
         </TabsList>
+
+        {/* ── Analytics ─────────────────────────────────────────── */}
+        <TabsContent value="analytics" className="mt-5 space-y-5">
+          {analyticsLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <div key={i} className="h-24 rounded-lg bg-muted/20 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <>
+              {/* Revenue & Subscriptions */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Revenue</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <StatCard
+                    icon={DollarSign}
+                    label="Est. MRR"
+                    value={`$${analytics?.estimatedMrr ?? 0}`}
+                    sub="active × $7/mo"
+                    accent="bg-green-500"
+                  />
+                  <StatCard
+                    icon={UserCheck}
+                    label="Active subscribers"
+                    value={analytics?.activeSubscribers ?? 0}
+                    sub="paying now"
+                  />
+                  <StatCard
+                    icon={CreditCard}
+                    label="Trialing"
+                    value={analytics?.trialSubscribers ?? 0}
+                    sub="14-day trial"
+                  />
+                  <StatCard
+                    icon={Users}
+                    label="Free users"
+                    value={analytics?.freeUsers ?? 0}
+                    sub="no subscription"
+                  />
+                </div>
+              </div>
+
+              {/* Growth */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Growth</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <StatCard icon={Users} label="Total users" value={analytics?.totalUsers ?? 0} />
+                  <StatCard icon={TrendingUp} label="New this week" value={analytics?.newUsersThisWeek ?? 0} />
+                  <StatCard icon={TrendingUp} label="New this month" value={analytics?.newUsersThisMonth ?? 0} />
+                  <StatCard icon={Home} label="Families" value={analytics?.totalFamilies ?? 0} sub={`+${analytics?.newFamiliesThisWeek ?? 0} this week`} />
+                </div>
+
+                {(analytics?.weeklySignups?.length ?? 0) > 0 ? (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Weekly signups (last 8 weeks)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <BarChart data={analytics!.weeklySignups} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis
+                            dataKey="week"
+                            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                            tickFormatter={w => {
+                              try { return format(parseISO(w), "MMM d"); } catch { return w; }
+                            }}
+                          />
+                          <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{ fontSize: 12, background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 6 }}
+                            labelFormatter={w => {
+                              try { return `Week of ${format(parseISO(w), "MMM d, yyyy")}`; } catch { return w; }
+                            }}
+                          />
+                          <Bar dataKey="count" name="New users" radius={[3, 3, 0, 0]}>
+                            {analytics!.weeklySignups.map((_, i) => (
+                              <Cell key={i} fill="hsl(var(--primary))" opacity={0.8} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                      Not enough signup history yet to show a chart.
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Feature Usage */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Feature usage</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Content created</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <MiniBarRow label="Events" value={analytics?.totalEvents ?? 0} max={featureMax} color="bg-primary" />
+                      <MiniBarRow label="Messages" value={analytics?.totalMessages ?? 0} max={featureMax} color="bg-blue-500" />
+                      <MiniBarRow label="Health logs" value={analytics?.totalSymptomEntries ?? 0} max={featureMax} color="bg-rose-500" />
+                      <MiniBarRow label="Medications" value={analytics?.totalMedications ?? 0} max={featureMax} color="bg-violet-500" />
+                      <MiniBarRow label="Documents" value={analytics?.totalDocuments ?? 0} max={featureMax} color="bg-emerald-500" />
+                      <MiniBarRow label="Med administrations" value={analytics?.totalMedicationLogs ?? 0} max={featureMax} color="bg-amber-500" />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm">Sign-in methods</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <MiniBarRow label="Google" value={analytics?.googleUsers ?? 0} max={authMax} color="bg-blue-500" />
+                      <MiniBarRow label="Email/Password" value={analytics?.emailUsers ?? 0} max={authMax} color="bg-amber-500" />
+                      <MiniBarRow label="Replit OIDC" value={analytics?.replitUsers ?? 0} max={authMax} color="bg-violet-500" />
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </>
+          )}
+        </TabsContent>
 
         {/* ── Overview ─────────────────────────────────────────────── */}
         <TabsContent value="overview" className="mt-5 space-y-4">
@@ -152,7 +347,6 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Quick links */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">Quick access</CardTitle>

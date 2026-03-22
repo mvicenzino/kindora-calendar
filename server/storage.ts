@@ -5,6 +5,29 @@ const { Pool } = pg;
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, and, inArray, isNull, desc, sql } from "drizzle-orm";
 
+export interface AdminAnalytics {
+  totalUsers: number;
+  newUsersThisWeek: number;
+  newUsersThisMonth: number;
+  googleUsers: number;
+  emailUsers: number;
+  replitUsers: number;
+  activeSubscribers: number;
+  trialSubscribers: number;
+  freeUsers: number;
+  estimatedMrr: number;
+  totalFamilies: number;
+  newFamiliesThisWeek: number;
+  totalEvents: number;
+  totalMessages: number;
+  totalSymptomEntries: number;
+  totalMedications: number;
+  totalDocuments: number;
+  totalMedicationLogs: number;
+  totalFeedback: number;
+  weeklySignups: { week: string; count: number }[];
+}
+
 export class NotFoundError extends Error {
   constructor(message: string) {
     super(message);
@@ -132,6 +155,7 @@ export interface IStorage {
   // Admin
   getAllUsers(): Promise<User[]>;
   getAdminStats(): Promise<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }>;
+  getAdminAnalytics(): Promise<AdminAnalytics>;
 
   // Symptom Tracker
   createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems>;
@@ -1121,6 +1145,18 @@ export class MemStorage implements IStorage {
     return { totalUsers: this.usersMap.size, totalFamilies: this.familiesMap.size, totalEvents: this.eventsMap.size, totalFeedback: 0 };
   }
 
+  async getAdminAnalytics(): Promise<AdminAnalytics> {
+    return {
+      totalUsers: this.usersMap.size, newUsersThisWeek: 0, newUsersThisMonth: 0,
+      googleUsers: 0, emailUsers: 0, replitUsers: 0,
+      activeSubscribers: 0, trialSubscribers: 0, freeUsers: this.usersMap.size, estimatedMrr: 0,
+      totalFamilies: this.familiesMap.size, newFamiliesThisWeek: 0,
+      totalEvents: this.eventsMap.size, totalMessages: 0, totalSymptomEntries: 0,
+      totalMedications: 0, totalDocuments: 0, totalMedicationLogs: 0, totalFeedback: 0,
+      weeklySignups: [],
+    };
+  }
+
   async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
     const id = randomUUID();
     const now = new Date();
@@ -2093,6 +2129,73 @@ class DrizzleStorage implements IStorage {
     };
   }
 
+  async getAdminAnalytics(): Promise<AdminAnalytics> {
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const [
+      [usersCount], [newWeek], [newMonth],
+      [familiesCount], [newFamiliesWeek],
+      [eventsCount], [messagesCount], [symptomsCount],
+      [medsCount], [docsCount], [medLogsCount], [feedbackCount],
+    ] = await Promise.all([
+      this.db.select({ count: sql<number>`count(*)::int` }).from(users),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(users).where(sql`${users.createdAt} >= ${weekAgo}`),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(users).where(sql`${users.createdAt} >= ${monthAgo}`),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(families),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(families).where(sql`${families.createdAt} >= ${weekAgo}`),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(events),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(familyMessages),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(symptomEntries),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(medications),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(careDocuments),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(medicationLogs),
+      this.db.select({ count: sql<number>`count(*)::int` }).from(betaFeedback),
+    ]);
+
+    const allUsers = await this.db.select({ id: users.id, authProvider: users.authProvider, subscriptionStatus: users.subscriptionStatus, subscriptionTier: users.subscriptionTier }).from(users);
+
+    let googleUsers = 0, emailUsers = 0, replitUsers = 0;
+    let activeSubscribers = 0, trialSubscribers = 0, freeUsers = 0;
+    for (const u of allUsers) {
+      if (u.authProvider === "google") googleUsers++;
+      else if (u.authProvider === "local") emailUsers++;
+      else replitUsers++;
+      if (u.subscriptionStatus === "active") activeSubscribers++;
+      else if (u.subscriptionStatus === "trialing") trialSubscribers++;
+      else freeUsers++;
+    }
+
+    const weeklyRows = await this.db.execute(sql`
+      SELECT to_char(date_trunc('week', created_at), 'YYYY-MM-DD') AS week, count(*)::int AS count
+      FROM users
+      WHERE created_at >= now() - interval '8 weeks'
+      GROUP BY week
+      ORDER BY week ASC
+    `);
+    const weeklySignups = (weeklyRows.rows as { week: string; count: number }[]).map(r => ({ week: r.week, count: Number(r.count) }));
+
+    return {
+      totalUsers: usersCount?.count ?? 0,
+      newUsersThisWeek: newWeek?.count ?? 0,
+      newUsersThisMonth: newMonth?.count ?? 0,
+      googleUsers, emailUsers, replitUsers,
+      activeSubscribers, trialSubscribers, freeUsers,
+      estimatedMrr: activeSubscribers * 7,
+      totalFamilies: familiesCount?.count ?? 0,
+      newFamiliesThisWeek: newFamiliesWeek?.count ?? 0,
+      totalEvents: eventsCount?.count ?? 0,
+      totalMessages: messagesCount?.count ?? 0,
+      totalSymptomEntries: symptomsCount?.count ?? 0,
+      totalMedications: medsCount?.count ?? 0,
+      totalDocuments: docsCount?.count ?? 0,
+      totalMedicationLogs: medLogsCount?.count ?? 0,
+      totalFeedback: feedbackCount?.count ?? 0,
+      weeklySignups,
+    };
+  }
+
   async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {
     const [created] = await this.db.insert(symptomEntries).values(entry).returning();
     let ratings: SymptomSystemRating[] = [];
@@ -2630,6 +2733,10 @@ class DemoAwareStorage implements IStorage {
 
   async getAdminStats(): Promise<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }> {
     return this.persistentStorage.getAdminStats();
+  }
+
+  async getAdminAnalytics(): Promise<AdminAnalytics> {
+    return this.persistentStorage.getAdminAnalytics();
   }
 
   async createSymptomEntry(entry: InsertSymptomEntry, systems: { system: string; severity: number }[]): Promise<SymptomEntryWithSystems> {

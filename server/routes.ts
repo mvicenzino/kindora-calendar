@@ -4227,6 +4227,12 @@ Visit Kindora Calendar: ${joinUrl}
     res.json(stats);
   });
 
+  app.get("/api/admin/analytics", isAuthenticated, async (req: any, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Admin access required" });
+    const analytics = await storage.getAdminAnalytics();
+    res.json(analytics);
+  });
+
   // NLP Calendar Ask — answers natural language questions about the family's events
   app.post("/api/calendar/ask", isAuthenticated, requireCare, async (req: any, res) => {
     try {
