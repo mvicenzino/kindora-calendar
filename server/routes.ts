@@ -4492,8 +4492,11 @@ Always return valid JSON matching one of the two formats above.`,
 
   app.get("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const entry = await storage.getSymptomEntry(req.params.id);
       if (!entry) return res.status(404).json({ error: "Not found" });
+      const role = await getUserFamilyRole(storage, userId, entry.familyId);
+      if (!role) return res.status(403).json({ error: "Forbidden" });
       res.json(entry);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch symptom entry" });
@@ -4502,6 +4505,11 @@ Always return valid JSON matching one of the two formats above.`,
 
   app.put("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const existing = await storage.getSymptomEntry(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Not found" });
+      const role = await getUserFamilyRole(storage, userId, existing.familyId);
+      if (!role) return res.status(403).json({ error: "Forbidden" });
       const { systems, ...entryData } = req.body;
       const entry = await storage.updateSymptomEntry(req.params.id, entryData, systems);
       res.json(entry);
@@ -4513,6 +4521,11 @@ Always return valid JSON matching one of the two formats above.`,
 
   app.delete("/api/symptoms/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const existing = await storage.getSymptomEntry(req.params.id);
+      if (!existing) return res.status(404).json({ error: "Not found" });
+      const role = await getUserFamilyRole(storage, userId, existing.familyId);
+      if (!role) return res.status(403).json({ error: "Forbidden" });
       await storage.deleteSymptomEntry(req.params.id);
       res.json({ success: true });
     } catch (error) {
