@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import { ResourcesSection } from "@/components/ResourcesSection";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -41,7 +42,8 @@ import {
   CloudDownload,
   Folder,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  BookOpen
 } from "lucide-react";
 import { SiGoogledrive } from "react-icons/si";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -84,6 +86,7 @@ export default function Documents() {
   const { can, isLoading: isLoadingRole } = useUserRole();
   const { toast } = useToast();
   
+  const [activeTab, setActiveTab] = useState<"vault" | "resources">("vault");
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showDriveDialog, setShowDriveDialog] = useState(false);
   const [deleteDocumentId, setDeleteDocumentId] = useState<string | null>(null);
@@ -405,7 +408,7 @@ export default function Documents() {
               </p>
             </div>
             
-            {canUpload && (
+            {canUpload && activeTab === "vault" && (
               <div className="flex items-center gap-2">
                 {driveStatus?.connected && (
                   <Button 
@@ -429,7 +432,40 @@ export default function Documents() {
               </div>
             )}
           </div>
-          
+
+          {/* Tab switcher */}
+          <div className="flex gap-1 border-b border-border pb-0" data-testid="documents-tabs">
+            <button
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === "vault"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => setActiveTab("vault")}
+              data-testid="tab-vault"
+            >
+              <FolderOpen className="w-3.5 h-3.5" />
+              Document Vault
+            </button>
+            <button
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors border-b-2 -mb-px ${
+                activeTab === "resources"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => setActiveTab("resources")}
+              data-testid="tab-resources"
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              Resources
+            </button>
+          </div>
+
+          {activeTab === "resources" && (
+            <ResourcesSection familyId={activeFamilyId ?? ""} />
+          )}
+
+          {activeTab === "vault" && (<>
           <Card>
             <CardContent className="pt-3">
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
@@ -628,6 +664,7 @@ export default function Documents() {
               })}
             </div>
           )}
+          </>)}
         </div>
       
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
