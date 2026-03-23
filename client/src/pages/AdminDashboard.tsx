@@ -1,11 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, parseISO } from "date-fns";
 import {
   Users, LayoutDashboard, MessageSquarePlus, Mail,
   Download, Clock, Shield, Calendar, Home,
   CreditCard, User, ChevronRight, TrendingUp,
-  BarChart3, DollarSign, UserCheck,
+  BarChart3, DollarSign, UserCheck, Loader2, ExternalLink,
 } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell,
@@ -99,6 +100,16 @@ export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
 
   const enabled = !authLoading && isAdminUser(user);
+
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/checkout/create-session");
+      return res.json() as Promise<{ url: string }>;
+    },
+    onSuccess: (data) => {
+      window.location.href = data.url;
+    },
+  });
 
   const { data: stats, isLoading: statsLoading } = useQuery<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }>({
     queryKey: ["/api/admin/stats"],
@@ -202,6 +213,9 @@ export default function AdminDashboard() {
           </TabsTrigger>
           <TabsTrigger value="feedback" data-testid="tab-admin-feedback">
             <MessageSquarePlus className="w-3.5 h-3.5 mr-1.5" />Feedback
+          </TabsTrigger>
+          <TabsTrigger value="stripe" data-testid="tab-admin-stripe">
+            <CreditCard className="w-3.5 h-3.5 mr-1.5" />Stripe
           </TabsTrigger>
         </TabsList>
 
@@ -489,6 +503,54 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           ))}
+        </TabsContent>
+
+        {/* ── Stripe ───────────────────────────────────────────────── */}
+        <TabsContent value="stripe" className="mt-5 space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-primary" />
+                Test checkout flow
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Launches the real Stripe checkout using your account. In development, this uses <strong>test mode</strong> — no real charge. Use test card <code className="bg-muted px-1 rounded text-xs">4242 4242 4242 4242</code> with any future expiry and any CVV.
+              </p>
+              <div className="rounded-md border border-border bg-muted/20 p-3 space-y-1">
+                <p className="text-xs font-medium text-foreground">What this tests end-to-end:</p>
+                <ul className="text-xs text-muted-foreground space-y-0.5 list-disc list-inside">
+                  <li>Stripe customer creation (or reuse)</li>
+                  <li>Checkout session + 14-day trial setup</li>
+                  <li>Webhook receipt &amp; subscription status update in your DB</li>
+                  <li>Redirect back to <code className="bg-muted px-1 rounded">/settings?subscription=success</code></li>
+                </ul>
+              </div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button
+                  onClick={() => checkoutMutation.mutate()}
+                  disabled={checkoutMutation.isPending}
+                  data-testid="button-test-stripe-checkout"
+                >
+                  {checkoutMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                  )}
+                  Launch test checkout
+                </Button>
+                {checkoutMutation.isError && (
+                  <p className="text-xs text-destructive">
+                    Failed to create session — check server logs.
+                  </p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                After a successful test, check your <a href="https://dashboard.stripe.com/test/payments" target="_blank" rel="noopener noreferrer" className="text-primary underline">Stripe test dashboard</a> to confirm the payment and subscription appear there too.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
