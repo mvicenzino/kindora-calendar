@@ -390,14 +390,14 @@ export default function Landing() {
           </button>
           <div
             className="w-[90vw] max-w-4xl rounded-xl overflow-hidden shadow-2xl"
-            style={{ height: "min(85vh, 56.25vw)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <iframe
-              src="https://kindora-animation.replit.app"
-              className="w-full h-full border-0"
-              allow="autoplay; fullscreen"
-              title="Why Kindora"
+            <video
+              src={heroVideo}
+              autoPlay
+              controls
+              playsInline
+              className="w-full h-auto"
             />
           </div>
         </div>
