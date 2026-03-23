@@ -1,11 +1,12 @@
 import { Switch, Route, Redirect, useLocation } from "wouter";
-import { Component, useEffect } from "react";
+import { Component, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HelmetProvider } from "react-helmet-async";
+import { X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ActiveFamilyProvider, useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -81,26 +82,41 @@ const sidebarStyle = {
   "--sidebar-width-icon": "3rem",
 };
 
+const DEMO_BANNER_HIDDEN_KEY = "kindora-demo-banner-hidden";
+
 function DemoBanner() {
   const { user } = useAuth();
+  const [hidden, setHidden] = useState(() => localStorage.getItem(DEMO_BANNER_HIDDEN_KEY) === "1");
+
   if (!user?.id?.startsWith('demo-')) return null;
+  if (hidden) return null;
+
   return (
     <div
-      className="flex items-center justify-center gap-3 px-4 py-2 text-sm font-medium flex-wrap"
+      className="flex items-center justify-between gap-3 px-4 py-2 text-sm font-medium"
       style={{ background: "rgba(249,115,22,0.12)", borderBottom: "1px solid rgba(249,115,22,0.25)", color: "rgba(249,115,22,0.95)" }}
       data-testid="banner-demo-mode"
     >
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 flex-wrap flex-1 justify-center">
         <span className="inline-block w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
         <span>You&apos;re in demo mode — events and changes are temporary and won&apos;t be saved</span>
+        <a
+          href="/api/logout"
+          className="underline underline-offset-2 font-semibold hover:opacity-80 transition-opacity whitespace-nowrap"
+          data-testid="link-demo-signup"
+        >
+          Sign up free to save your data
+        </a>
       </span>
-      <a
-        href="/api/logout"
-        className="underline underline-offset-2 font-semibold hover:opacity-80 transition-opacity whitespace-nowrap"
-        data-testid="link-demo-signup"
+      <button
+        onClick={() => { localStorage.setItem(DEMO_BANNER_HIDDEN_KEY, "1"); setHidden(true); }}
+        className="shrink-0 p-1 rounded opacity-60 hover:opacity-100 transition-opacity"
+        title="Hide banner"
+        data-testid="button-dismiss-demo-banner"
+        aria-label="Dismiss demo banner"
       >
-        Sign up free to save your data
-      </a>
+        <X className="w-3.5 h-3.5" />
+      </button>
     </div>
   );
 }
