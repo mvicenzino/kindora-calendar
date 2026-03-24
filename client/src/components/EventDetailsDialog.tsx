@@ -13,6 +13,7 @@ import EventNotesSection from "./EventNotesSection";
 import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 import type { UiEvent } from "@shared/types";
 import type { User } from "@shared/schema";
+import { AddressText } from "./AddressText";
 
 interface EventDetailsDialogProps {
   isOpen: boolean;
@@ -153,7 +154,9 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
           <div className="px-4 pt-4 pb-3">
             <h3 className="text-base font-bold text-foreground leading-snug">{event.title}</h3>
             {event.description && (
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">{event.description}</p>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+                <AddressText text={event.description} />
+              </p>
             )}
           </div>
 

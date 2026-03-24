@@ -12,6 +12,7 @@ import EventNotesSection from "./EventNotesSection";
 import NotesModal from "./NotesModal";
 import type { UiEvent } from "@shared/types";
 import type { User } from "@shared/schema";
+import { AddressText } from "./AddressText";
 
 interface FlipCardEventDetailsProps {
   isOpen: boolean;
@@ -366,7 +367,9 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
               {event.description && (
                 <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
                   <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Description</h4>
-                  <p className="text-foreground leading-relaxed text-sm md:text-base">{event.description}</p>
+                  <p className="text-foreground leading-relaxed text-sm md:text-base">
+                    <AddressText text={event.description} />
+                  </p>
                 </div>
               )}
 
