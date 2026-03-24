@@ -438,11 +438,11 @@ export default function Landing() {
               </div>
               
               <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight mb-6 bg-gradient-to-r from-white via-purple-100 to-teal-100 bg-clip-text text-transparent">
-                Kids. Parents. Caregivers. One Calendar.
+                The App That Holds Your Family Together.
               </h1>
               
               <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-                You're managing soccer practice and mom's doctor appointments. Kindora brings your whole care circle into one shared calendar—so nothing falls through the cracks.
+                From soccer practice to mom's specialist appointments — Kindora is where your whole family stays organized, connected, and cared for. More than a calendar. Built for real life.
               </p>
 
               {!isAuthenticated && (
