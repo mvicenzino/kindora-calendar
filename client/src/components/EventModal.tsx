@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile, Tag, Flag } from "lucide-react";
 import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
@@ -91,6 +93,7 @@ export default function EventModal({
   const [isSometimeToday, setIsSometimeToday] = useState(false);
   const [showMemberDropdown, setShowMemberDropdown] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
@@ -501,14 +504,34 @@ export default function EventModal({
                 <Calendar className="w-4 h-4" />
                 Date
               </Label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-muted/50 border border-border rounded-2xl px-4 py-3 h-12 focus:border-purple-400 focus:ring-purple-400/50 [&::-webkit-calendar-picker-indicator]:invert [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                data-testid="input-event-date"
-                disabled={isReadOnly}
-              />
+              <Popover open={datePickerOpen && !isReadOnly} onOpenChange={(open) => !isReadOnly && setDatePickerOpen(open)}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={isReadOnly}
+                    data-testid="input-event-date"
+                    className="w-full flex items-center gap-3 bg-muted/50 border border-border rounded-2xl px-4 py-3 h-12 text-left text-sm text-foreground hover:border-border/80 focus:outline-none focus:border-purple-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className={startDate ? "text-foreground" : "text-muted-foreground"}>
+                      {startDate ? format(new Date(startDate + 'T12:00:00'), 'EEEE, MMMM d, yyyy') : "Pick a date"}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker
+                    mode="single"
+                    selected={startDate ? new Date(startDate + 'T12:00:00') : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setStartDate(format(date, 'yyyy-MM-dd'));
+                        setDatePickerOpen(false);
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Family Members - Multi-select Typeahead — always full width */}

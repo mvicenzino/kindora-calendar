@@ -4302,7 +4302,7 @@ Visit Kindora Calendar: ${joinUrl}
 The user's current local date and time is: ${format(clientLocalNow, 'EEEE, MMMM d, yyyy h:mm a')} (year ${currentYear}).
 Today = ${todayStr}. Tomorrow = ${tomorrowStr}.
 
-You handle two types of requests:
+You handle three types of requests:
 
 1. ADD EVENT: User wants to create/add/schedule/put an event on the calendar.
    Return JSON: { "intent": "add", "answer": "<confirmation sentence>", "event": { "title": "<string>", "startTime": "<ISO 8601 datetime>", "endTime": "<ISO 8601 datetime>", "category": "<one of: medical|school|activities|errands|financial|social|caregiving|work|other>", "description": "<optional string or null>", "location": "<optional string or null>" } }
@@ -4317,11 +4317,18 @@ You handle two types of requests:
    - If no year specified, use the next upcoming occurrence (${currentYear} if not yet passed, otherwise ${currentYear + 1}).
    - Infer category from context: birthday/dinner/party → social, doctor/hospital/medical → medical, school/homework/class → school, errands/chores/mail/store → errands, etc.
 
-2. QUERY: User is asking a question about existing events.
+2. RESCHEDULE/MOVE EVENT: User wants to move, reschedule, postpone, or change the date/time of an existing event.
+   Match the event from the list below. Keep the same duration unless the user specifies new times.
+   Return JSON: { "intent": "reschedule", "answer": "<confirmation sentence>", "eventId": "<existing event id from list>", "newStartTime": "<ISO 8601 datetime in LOCAL time, YYYY-MM-DDTHH:MM:SS>", "newEndTime": "<ISO 8601 datetime in LOCAL time, YYYY-MM-DDTHH:MM:SS>" }
+   - "today" = ${todayStr}, "tomorrow" = ${tomorrowStr}.
+   - Keep the same time-of-day unless the user explicitly says a different time.
+   - If no matching event is found, fall back to intent "query" and explain you couldn't find the event.
+
+3. QUERY: User is asking a question about existing events.
    Return JSON: { "intent": "query", "answer": "<natural language response, 1–3 sentences>", "eventIds": ["<id>", ...] }
    Only include IDs from the event list below. Max 5 IDs.
 
-Always return valid JSON matching one of the two formats above.`,
+Always return valid JSON matching one of the three formats above.`,
           },
           {
             role: "user",
@@ -4384,6 +4391,36 @@ Always return valid JSON matching one of the two formats above.`,
           type: 'event_created',
           answer: parsed.answer || `I added "${title}" to your calendar.`,
           event: newEvent,
+        });
+      }
+
+      // Handle RESCHEDULE intent
+      if (parsed.intent === 'reschedule' && parsed.eventId && parsed.newStartTime && parsed.newEndTime) {
+        const { eventId, newStartTime, newEndTime } = parsed;
+
+        // Verify the event belongs to this family
+        const targetEvent = relevantEvents.find(e => e.id === eventId);
+        if (!targetEvent) {
+          return res.json({
+            answer: "I couldn't find that event on your calendar. Please try again.",
+            events: [],
+          });
+        }
+
+        const localToUtc = (isoLocal: string) => {
+          const localMs = new Date(isoLocal).getTime();
+          return new Date(localMs + clientOffset * 60000);
+        };
+
+        const updatedEvent = await storage.updateEvent(familyId, eventId, {
+          startTime: localToUtc(newStartTime),
+          endTime: localToUtc(newEndTime),
+        });
+
+        return res.json({
+          type: 'event_rescheduled',
+          answer: parsed.answer || `I moved "${targetEvent.title}" to its new time.`,
+          event: updatedEvent,
         });
       }
 

@@ -20,7 +20,13 @@ interface CreateResult {
   event: Event;
 }
 
-type AskResult = QueryResult | CreateResult;
+interface RescheduleResult {
+  type: 'event_rescheduled';
+  answer: string;
+  event: Event;
+}
+
+type AskResult = QueryResult | CreateResult | RescheduleResult;
 
 interface CalendarAskBarProps {
   onSelectEvent: (event: UiEvent) => void;
@@ -122,7 +128,7 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
         setError(data.error);
       } else {
         setResult(data);
-        if (data.type === 'event_created') {
+        if (data.type === 'event_created' || data.type === 'event_rescheduled') {
           queryClient.invalidateQueries({ queryKey: ['/api/events?familyId=' + activeFamilyId] });
           setQuestion("");
         }
@@ -246,7 +252,7 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
   };
 
   const hasAnswer = !!(result || error);
-  const isCreated = result?.type === 'event_created';
+  const isCreated = result?.type === 'event_created' || result?.type === 'event_rescheduled';
   const isListening = voiceState === 'listening';
   const isProcessingVoice = voiceState === 'processing';
   const displayText = isListening ? interimTranscript : question;
@@ -468,8 +474,36 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
             </div>
           )}
 
+          {/* Rescheduled event card */}
+          {result?.type === 'event_rescheduled' && (
+            <div className="px-3 pb-3">
+              <button
+                onClick={() => handleEventClick((result as RescheduleResult).event)}
+                data-testid="ask-rescheduled-event"
+                className="w-full text-left rounded-lg px-3 py-2.5 transition-all hover-elevate border border-primary/20"
+                style={{ background: 'hsl(var(--primary) / 0.06)' }}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: getCategoryColor((result as RescheduleResult).event.category) }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{(result as RescheduleResult).event.title}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <CalendarDays className="w-3 h-3" />
+                      {format(new Date((result as RescheduleResult).event.startTime), "EEE, MMM d")} at{" "}
+                      {format(new Date((result as RescheduleResult).event.startTime), "h:mm a")}
+                    </p>
+                  </div>
+                </div>
+              </button>
+              <p className="text-[10px] text-muted-foreground mt-1.5 px-0.5">Tap event to open details</p>
+            </div>
+          )}
+
           {/* Relevant events from a query */}
-          {!isCreated && result && (result as QueryResult).events?.length > 0 && (
+          {!isCreated && result?.type !== 'event_rescheduled' && result && (result as QueryResult).events?.length > 0 && (
             <div className="px-3 pb-3 space-y-1.5">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-0.5">
                 Matching events
