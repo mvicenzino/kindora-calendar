@@ -26,6 +26,7 @@ import Privacy from "@/pages/Privacy";
 import Help from "@/pages/Help";
 import About from "@/pages/About";
 import Support from "@/pages/Support";
+import PublicResources from "@/pages/PublicResources";
 import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
 import Health from "@/pages/Health";
@@ -188,6 +189,7 @@ function Router() {
       {isAuthenticated && <NewUserGuard />}
       <Switch>
         <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
+        <Route path="/resources" component={PublicResources} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/help" component={Help} />
