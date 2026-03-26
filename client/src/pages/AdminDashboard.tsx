@@ -1,10 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isAfter, subDays, subMonths } from "date-fns";
 import {
   Users, LayoutDashboard, MessageSquarePlus, Mail,
   Download, Clock, Shield, Calendar, Home,
   CreditCard, User, ChevronRight, TrendingUp,
-  BarChart3, DollarSign, UserCheck, Loader2, ExternalLink,
+  BarChart3, DollarSign, UserCheck, Loader2, ExternalLink, Sparkles,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -136,7 +136,7 @@ export default function AdminDashboard() {
 
   function downloadUsersCsv() {
     const header = "Joined,Name,Email,ID,Auth,Subscription,Status";
-    const rows = allUsers.map(u => [
+    const rows = realUsers.map(u => [
       u.createdAt ? format(new Date(u.createdAt), "yyyy-MM-dd") : "",
       `"${[u.firstName, u.lastName].filter(Boolean).join(" ").replace(/"/g, '""')}"`,
       u.email ?? "",
@@ -188,6 +188,23 @@ export default function AdminDashboard() {
     1,
   );
 
+  const TEST_IDS = new Set(["test-user-456", "google-110610540501901085708"]);
+  const TEST_EMAILS = new Set(["testuser@example.com", "mvicenzino@gmail.com"]);
+
+  const realUsers = allUsers.filter(u =>
+    !u.id.startsWith("demo-") &&
+    !u.id.startsWith("test-") &&
+    !TEST_IDS.has(u.id) &&
+    !TEST_EMAILS.has(u.email ?? "")
+  );
+
+  const isNewThisWeek = (u: UserType) =>
+    !!u.createdAt && isAfter(new Date(u.createdAt), subDays(new Date(), 7));
+  const isNewThisMonth = (u: UserType) =>
+    !!u.createdAt && isAfter(new Date(u.createdAt), subMonths(new Date(), 1));
+
+  const recentSignups = realUsers.slice(0, 10);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center gap-3">
@@ -221,6 +238,65 @@ export default function AdminDashboard() {
 
         {/* ── Analytics ─────────────────────────────────────────── */}
         <TabsContent value="analytics" className="mt-5 space-y-5">
+
+          {/* Recent Signups */}
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Recent signups</p>
+            {usersLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map(i => <div key={i} className="h-14 rounded-lg bg-muted/20 animate-pulse" />)}
+              </div>
+            ) : recentSignups.length === 0 ? (
+              <Card>
+                <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                  No signups yet.
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="pt-3 pb-1 divide-y divide-border/40">
+                  {recentSignups.map(u => {
+                    const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ") || "—";
+                    const joinedDate = u.createdAt ? new Date(u.createdAt) : null;
+                    const newThisWeek = isNewThisWeek(u);
+                    const newThisMonth = isNewThisMonth(u);
+                    return (
+                      <div key={u.id} className="flex items-center gap-3 py-2.5" data-testid={`row-recent-signup-${u.id}`}>
+                        <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
+                          {(u.firstName?.[0] ?? u.email?.[0] ?? "?").toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-sm font-semibold text-foreground">{fullName}</span>
+                            {newThisWeek && (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30">
+                                <Sparkles className="w-2.5 h-2.5 mr-0.5" />New this week
+                              </Badge>
+                            )}
+                            {!newThisWeek && newThisMonth && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                This month
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[11px] text-muted-foreground">
+                            {joinedDate ? format(joinedDate, "MMM d, yyyy") : "—"}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground/60">
+                            {joinedDate ? format(joinedDate, "h:mm a") : ""}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
           {analyticsLoading ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
@@ -390,9 +466,14 @@ export default function AdminDashboard() {
         <TabsContent value="users" className="mt-5 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <p className="text-sm text-muted-foreground">
-              {usersLoading ? "Loading…" : `${allUsers.length} registered user${allUsers.length !== 1 ? "s" : ""}`}
+              {usersLoading ? "Loading…" : `${realUsers.length} registered user${realUsers.length !== 1 ? "s" : ""}`}
+              {!usersLoading && realUsers.filter(isNewThisWeek).length > 0 && (
+                <span className="ml-2 text-green-600 dark:text-green-400 font-medium">
+                  · {realUsers.filter(isNewThisWeek).length} new this week
+                </span>
+              )}
             </p>
-            {allUsers.length > 0 && (
+            {realUsers.length > 0 && (
               <Button variant="outline" size="sm" onClick={downloadUsersCsv} data-testid="button-download-users-csv">
                 <Download className="w-4 h-4 mr-2" />Export CSV
               </Button>
@@ -405,31 +486,44 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {!usersLoading && allUsers.length === 0 && (
+          {!usersLoading && realUsers.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm">No users yet.</p>
             </div>
           )}
 
-          {!usersLoading && allUsers.map(u => {
+          {!usersLoading && realUsers.map(u => {
             const fullName = [u.firstName, u.lastName].filter(Boolean).join(" ") || "—";
             const joined = u.createdAt ? format(new Date(u.createdAt), "MMM d, yyyy") : "—";
+            const joinedTime = u.createdAt ? format(new Date(u.createdAt), "h:mm a") : "";
+            const newUser = isNewThisWeek(u);
             return (
               <div key={u.id} className="flex items-start gap-3 px-3 py-3 rounded-lg bg-muted/20 border border-border/40" data-testid={`row-user-${u.id}`}>
-                <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${newUser ? "bg-green-500/20 text-green-600 dark:text-green-400" : "bg-primary/15 text-primary"}`}>
                   {(u.firstName?.[0] ?? u.email?.[0] ?? "?").toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-foreground">{fullName}</span>
+                    {newUser && (
+                      <Badge className="text-[10px] px-1.5 py-0 bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30">
+                        <Sparkles className="w-2.5 h-2.5 mr-0.5" />New
+                      </Badge>
+                    )}
                     {authProviderBadge(u.authProvider)}
                     {subStatusBadge(u.subscriptionStatus)}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{u.email ?? "no email"}</p>
+                  <a
+                    href={`mailto:${u.email}`}
+                    className="text-xs text-primary hover:underline truncate block"
+                    data-testid={`link-user-email-${u.id}`}
+                  >
+                    {u.email ?? "no email"}
+                  </a>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <Clock className="w-2.5 h-2.5" />Joined {joined}
+                      <Clock className="w-2.5 h-2.5" />Joined {joined} {joinedTime && `at ${joinedTime}`}
                     </span>
                     {u.stripeCustomerId && (
                       <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
