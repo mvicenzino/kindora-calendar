@@ -1,10 +1,10 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, parseISO, isAfter, subDays, subMonths } from "date-fns";
 import {
   Users, LayoutDashboard, MessageSquarePlus, Mail,
   Download, Clock, Shield, Calendar, Home,
   CreditCard, User, ChevronRight, TrendingUp,
-  BarChart3, DollarSign, UserCheck, Loader2, ExternalLink, Sparkles,
+  BarChart3, DollarSign, UserCheck, Loader2, ExternalLink, Sparkles, RefreshCcw,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -100,6 +100,14 @@ export default function AdminDashboard() {
   const { user, isLoading: authLoading } = useAuth();
 
   const enabled = !authLoading && isAdminUser(user);
+  const queryClient = useQueryClient();
+
+  function refreshAll() {
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/stats"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/feedback"] });
+  }
 
   const checkoutMutation = useMutation({
     mutationFn: async () => {
@@ -543,11 +551,16 @@ export default function AdminDashboard() {
             <p className="text-sm text-muted-foreground">
               {feedbackLoading ? "Loading…" : `${feedback.length} submission${feedback.length !== 1 ? "s" : ""}`}
             </p>
-            {feedback.length > 0 && (
-              <Button variant="outline" size="sm" onClick={downloadFeedbackCsv} data-testid="button-download-feedback-csv">
-                <Download className="w-4 h-4 mr-2" />Export CSV
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={refreshAll} data-testid="button-refresh-feedback">
+                <RefreshCcw className="w-4 h-4 mr-2" />Refresh
               </Button>
-            )}
+              {feedback.length > 0 && (
+                <Button variant="outline" size="sm" onClick={downloadFeedbackCsv} data-testid="button-download-feedback-csv">
+                  <Download className="w-4 h-4 mr-2" />Export CSV
+                </Button>
+              )}
+            </div>
           </div>
 
           {feedbackLoading && (

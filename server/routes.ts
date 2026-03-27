@@ -4412,7 +4412,7 @@ Always return valid JSON matching one of the three formats above.`,
           return new Date(localMs + clientOffset * 60000);
         };
 
-        const updatedEvent = await storage.updateEvent(familyId, eventId, {
+        const updatedEvent = await storage.updateEvent(eventId, familyId, {
           startTime: localToUtc(newStartTime),
           endTime: localToUtc(newEndTime),
         });
@@ -4617,9 +4617,11 @@ Always return valid JSON matching one of the three formats above.`,
 
     // Save to database
     try {
-      await storage.submitBetaFeedback({ userId, name: name.trim(), email: email.trim(), comments: comments.trim() });
+      const saved = await storage.submitBetaFeedback({ userId, name: name.trim(), email: email.trim(), comments: comments.trim() });
+      console.log("[Feedback] Saved to DB:", saved?.id, name, email);
     } catch (err) {
       console.error("[Feedback] DB save error:", err);
+      return res.status(500).json({ error: "Failed to save feedback. Please try again." });
     }
 
     // Send notification email
