@@ -93,7 +93,10 @@ function authProviderBadge(provider: string | null | undefined) {
 function subStatusBadge(status: string | null | undefined) {
   if (status === "active") return <Badge className="text-[10px] bg-green-500/20 text-green-700 dark:text-green-400 no-default-hover-elevate no-default-active-elevate">Active</Badge>;
   if (status === "trialing") return <Badge className="text-[10px] bg-blue-500/20 text-blue-700 dark:text-blue-400 no-default-hover-elevate no-default-active-elevate">Trial</Badge>;
-  return <Badge variant="outline" className="text-[10px] no-default-hover-elevate no-default-active-elevate">{status ?? "Free"}</Badge>;
+  if (status === "past_due") return <Badge className="text-[10px] bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 no-default-hover-elevate no-default-active-elevate">Past Due</Badge>;
+  if (status === "canceled") return <Badge className="text-[10px] bg-red-500/20 text-red-700 dark:text-red-400 no-default-hover-elevate no-default-active-elevate">Canceled</Badge>;
+  if (status === "paused") return <Badge variant="outline" className="text-[10px] no-default-hover-elevate no-default-active-elevate">Paused</Badge>;
+  return <Badge variant="outline" className="text-[10px] no-default-hover-elevate no-default-active-elevate">Free</Badge>;
 }
 
 export default function AdminDashboard() {
