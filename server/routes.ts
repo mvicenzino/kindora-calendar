@@ -4204,8 +4204,8 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   function isAdmin(req: any): boolean {
-    const userId: string = req.user?.id ?? "";
-    const email: string = req.user?.email ?? "";
+    const userId: string = req.user?.claims?.sub ?? "";
+    const email: string = req.user?.claims?.email ?? "";
     return userId === "google-110610540501901085708" || email === "mvicenzino@gmail.com";
   }
 
