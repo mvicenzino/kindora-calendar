@@ -421,6 +421,7 @@ export default function EventModal({
                 data-testid="input-event-description"
                 className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 resize-none"
                 rows={3}
+                maxLength={2000}
                 disabled={isReadOnly}
               />
             </div>
@@ -648,7 +649,7 @@ export default function EventModal({
                     value={startTime}
                     onChange={(e) => handleStartTimeChange(e.target.value)}
                     data-testid="input-start-time"
-                    className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
+                    className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12 tabular-nums"
                     disabled={isReadOnly}
                   />
                 </div>
@@ -663,7 +664,7 @@ export default function EventModal({
                     value={endTime}
                     onChange={(e) => setEndTime(e.target.value)}
                     data-testid="input-end-time"
-                    className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12 text-center"
+                    className="bg-muted/50 border border-border rounded-2xl focus:border-purple-400 focus:ring-purple-400/50 h-12 tabular-nums"
                     disabled={isReadOnly}
                   />
                 </div>

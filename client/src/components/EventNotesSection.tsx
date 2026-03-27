@@ -254,6 +254,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write a reply..."
                 className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground text-sm min-h-[60px] resize-none flex-1"
+                maxLength={1000}
                 data-testid={`input-reply-${note.id}`}
               />
               <div className="flex flex-col gap-1">
@@ -336,6 +337,7 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
             onChange={(e) => setNewNote(e.target.value)}
             placeholder="Add a note for your family or caregivers..."
             className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground text-sm min-h-[60px] resize-none flex-1"
+            maxLength={1000}
             data-testid="input-new-note"
           />
           <div className="flex flex-col gap-1">

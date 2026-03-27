@@ -410,6 +410,7 @@ export default function Messages() {
                   onKeyDown={handleKeyDown}
                   placeholder="Type a message..."
                   className="flex-1 min-h-[36px] max-h-24 resize-none text-xs"
+                  maxLength={2000}
                   data-testid="input-message"
                 />
                 <Button

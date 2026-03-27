@@ -4,6 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2, RefreshCw, Menu } from "lucide-react";
@@ -130,6 +135,8 @@ function ConversationList({
   generateGreeting: () => void;
   handleNewChat: () => void;
 }) {
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-border/40">
@@ -174,8 +181,9 @@ function ConversationList({
               <MessageSquare className="w-3 h-3 flex-shrink-0 opacity-60" />
               <span className="truncate flex-1">{conv.title}</span>
               <button
-                onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
-                className="opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity flex-shrink-0 p-1 rounded"
+                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(conv.id); }}
+                className="opacity-30 hover:opacity-100 hover:text-destructive transition-opacity flex-shrink-0 p-1 rounded"
+                aria-label="Delete conversation"
                 data-testid={`delete-conv-${conv.id}`}
               >
                 <Trash2 className="w-3 h-3" />
@@ -189,6 +197,27 @@ function ConversationList({
           Kira is a supportive resource, not a licensed therapist or medical provider.
         </p>
       </div>
+
+      <AlertDialog open={confirmDeleteId !== null} onOpenChange={(open) => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the conversation and all its messages. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-conv">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => { if (confirmDeleteId !== null) { onDelete(confirmDeleteId); setConfirmDeleteId(null); } }}
+              data-testid="button-confirm-delete-conv"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

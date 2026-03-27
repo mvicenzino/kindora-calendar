@@ -262,6 +262,7 @@ export default function NotesModal({
                 onChange={(e) => setReplyContent(e.target.value)}
                 placeholder="Write a reply..."
                 className="text-sm min-h-[60px] resize-none flex-1"
+                maxLength={1000}
                 data-testid={`input-reply-${note.id}`}
               />
               <Button
@@ -314,6 +315,7 @@ export default function NotesModal({
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Add a note for your family or caregivers..."
                   className="text-sm min-h-[70px] resize-none flex-1"
+                  maxLength={1000}
                   data-testid="input-new-note-modal"
                 />
                 <Button

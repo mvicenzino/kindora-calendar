@@ -89,6 +89,7 @@ export default function FeedbackButton() {
                 placeholder="Tell us what you found, what you'd like, or what confused you..."
                 className="text-xs resize-none"
                 rows={4}
+                maxLength={3000}
                 required
                 data-testid="textarea-feedback-comments"
               />
