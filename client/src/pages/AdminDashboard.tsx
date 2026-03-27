@@ -122,21 +122,25 @@ export default function AdminDashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }>({
     queryKey: ["/api/admin/stats"],
     enabled,
+    staleTime: 0,
   });
 
   const { data: analytics, isLoading: analyticsLoading } = useQuery<AdminAnalytics>({
     queryKey: ["/api/admin/analytics"],
     enabled,
+    staleTime: 0,
   });
 
   const { data: allUsers = [], isLoading: usersLoading } = useQuery<UserType[]>({
     queryKey: ["/api/admin/users"],
     enabled,
+    staleTime: 0,
   });
 
   const { data: feedback = [], isLoading: feedbackLoading } = useQuery<BetaFeedback[]>({
     queryKey: ["/api/admin/feedback"],
     enabled,
+    staleTime: 0,
   });
 
   if (authLoading) return null;
