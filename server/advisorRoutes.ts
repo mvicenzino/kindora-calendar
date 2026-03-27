@@ -290,6 +290,20 @@ export function registerAdvisorRoutes(app: Express): void {
     }
   });
 
+  // Archive / unarchive a conversation
+  app.patch("/api/advisor/conversations/:id/archive", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { archived } = req.body;
+      const conversation = await chatStorage.archiveConversation(id, !!archived);
+      if (!conversation) return res.status(404).json({ error: "Conversation not found" });
+      res.json(conversation);
+    } catch (error) {
+      console.error("Error archiving conversation:", error);
+      res.status(500).json({ error: "Failed to archive conversation" });
+    }
+  });
+
   // Send a message and stream back AI response
   app.post("/api/advisor/conversations/:id/messages", isAuthenticated, async (req: Request, res: Response) => {
     try {

@@ -1,6 +1,6 @@
 import { db } from "../../db";
 import { advisorConversations, advisorMessages } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import type { AdvisorConversation, AdvisorMessage } from "@shared/schema";
 
 export interface IChatStorage {
@@ -8,6 +8,7 @@ export interface IChatStorage {
   getAllConversations(userId?: string): Promise<AdvisorConversation[]>;
   createConversation(title: string, userId?: string): Promise<AdvisorConversation>;
   deleteConversation(id: number): Promise<void>;
+  archiveConversation(id: number, archived: boolean): Promise<AdvisorConversation | undefined>;
   getMessagesByConversation(conversationId: number): Promise<AdvisorMessage[]>;
   createMessage(conversationId: number, role: string, content: string): Promise<AdvisorMessage>;
 }
@@ -35,6 +36,14 @@ export const chatStorage: IChatStorage = {
   async deleteConversation(id: number) {
     await db.delete(advisorMessages).where(eq(advisorMessages.conversationId, id));
     await db.delete(advisorConversations).where(eq(advisorConversations.id, id));
+  },
+
+  async archiveConversation(id: number, archived: boolean) {
+    const [conversation] = await db.update(advisorConversations)
+      .set({ archived })
+      .where(eq(advisorConversations.id, id))
+      .returning();
+    return conversation;
   },
 
   async getMessagesByConversation(conversationId: number) {

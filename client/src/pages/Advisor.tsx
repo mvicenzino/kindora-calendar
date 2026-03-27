@@ -9,9 +9,12 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2, RefreshCw, Menu } from "lucide-react";
+import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2, RefreshCw, Menu, MoreHorizontal, Archive, ArchiveX, ChevronDown, ChevronRight } from "lucide-react";
 import type { AdvisorConversation, AdvisorMessage } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
@@ -116,11 +119,78 @@ function EmptyStateGeneric({ onSuggest }: { onSuggest: (prompt: string) => void 
   );
 }
 
+function ConvRow({
+  conv,
+  activeId,
+  onSelect,
+  onArchive,
+  onDelete,
+  isArchived = false,
+}: {
+  conv: AdvisorConversation;
+  activeId: number | null;
+  onSelect: (id: number) => void;
+  onArchive: (id: number, archived: boolean) => void;
+  onDelete: (id: number) => void;
+  isArchived?: boolean;
+}) {
+  return (
+    <div
+      key={conv.id}
+      role="button"
+      tabIndex={0}
+      onClick={() => onSelect(conv.id)}
+      onKeyDown={(e) => e.key === "Enter" && onSelect(conv.id)}
+      className={cn(
+        "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors group flex items-center gap-1.5 cursor-pointer",
+        activeId === conv.id
+          ? "bg-primary/10 text-primary font-medium"
+          : "text-foreground/70 hover:bg-muted hover:text-foreground"
+      )}
+      data-testid={`conv-${conv.id}`}
+    >
+      <MessageSquare className="w-3 h-3 flex-shrink-0 opacity-50" />
+      <span className="truncate flex-1 min-w-0">{conv.title}</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-foreground transition-opacity"
+            aria-label="Conversation options"
+            data-testid={`menu-conv-${conv.id}`}
+          >
+            <MoreHorizontal className="w-3 h-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" side="right" className="w-40">
+          <DropdownMenuItem
+            onClick={(e) => { e.stopPropagation(); onArchive(conv.id, !isArchived); }}
+            data-testid={`${isArchived ? "unarchive" : "archive"}-conv-${conv.id}`}
+          >
+            {isArchived ? <ArchiveX className="w-3.5 h-3.5 mr-2" /> : <Archive className="w-3.5 h-3.5 mr-2" />}
+            {isArchived ? "Unarchive" : "Archive"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
+            data-testid={`delete-conv-${conv.id}`}
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-2" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 function ConversationList({
   conversations,
   activeId,
   onSelect,
   onDelete,
+  onArchive,
   onNew,
   profileHasContent,
   generateGreeting,
@@ -130,12 +200,19 @@ function ConversationList({
   activeId: number | null;
   onSelect: (id: number) => void;
   onDelete: (id: number) => void;
+  onArchive: (id: number, archived: boolean) => void;
   onNew: () => void;
   profileHasContent: boolean;
   generateGreeting: () => void;
   handleNewChat: () => void;
 }) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [archivedOpen, setArchivedOpen] = useState(false);
+
+  const active = conversations.filter((c) => !c.archived);
+  const archived = conversations.filter((c) => c.archived);
+
+  const handleDeleteRequest = (id: number) => setConfirmDeleteId(id);
 
   return (
     <div className="flex flex-col h-full">
@@ -158,38 +235,49 @@ function ConversationList({
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-0.5">
-          {conversations.length === 0 && (
+          {active.length === 0 && archived.length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-6 px-3">
               Start a conversation to get support
             </p>
           )}
-          {conversations.map((conv) => (
-            <div
+          {active.map((conv) => (
+            <ConvRow
               key={conv.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelect(conv.id)}
-              onKeyDown={(e) => e.key === "Enter" && onSelect(conv.id)}
-              className={cn(
-                "w-full text-left px-3 py-2.5 sm:py-2 rounded-lg text-xs transition-colors group flex items-center gap-2 cursor-pointer",
-                activeId === conv.id
-                  ? "bg-primary/10 text-primary font-medium"
-                  : "text-foreground/70 hover:bg-muted hover:text-foreground"
-              )}
-              data-testid={`conv-${conv.id}`}
-            >
-              <MessageSquare className="w-3 h-3 flex-shrink-0 opacity-60" />
-              <span className="truncate flex-1">{conv.title}</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(conv.id); }}
-                className="opacity-30 hover:opacity-100 hover:text-destructive transition-opacity flex-shrink-0 p-1 rounded"
-                aria-label="Delete conversation"
-                data-testid={`delete-conv-${conv.id}`}
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
+              conv={conv}
+              activeId={activeId}
+              onSelect={onSelect}
+              onArchive={onArchive}
+              onDelete={handleDeleteRequest}
+            />
           ))}
+
+          {archived.length > 0 && (
+            <div className="pt-2">
+              <button
+                onClick={() => setArchivedOpen((v) => !v)}
+                className="flex items-center gap-1.5 w-full px-2 py-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors rounded"
+                data-testid="button-toggle-archived"
+              >
+                {archivedOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                Archived ({archived.length})
+              </button>
+              {archivedOpen && (
+                <div className="mt-0.5 space-y-0.5">
+                  {archived.map((conv) => (
+                    <ConvRow
+                      key={conv.id}
+                      conv={conv}
+                      activeId={activeId}
+                      onSelect={onSelect}
+                      onArchive={onArchive}
+                      onDelete={handleDeleteRequest}
+                      isArchived
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </ScrollArea>
       <div className="p-3 border-t border-border/40">
@@ -230,9 +318,47 @@ export default function Advisor() {
   const [streamingContent, setStreamingContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(220);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const startResize = useCallback((clientX: number) => {
+    isDragging.current = true;
+    dragStartX.current = clientX;
+    dragStartWidth.current = sidebarWidth;
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging.current) return;
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const delta = clientX - dragStartX.current;
+      const newWidth = Math.min(400, Math.max(160, dragStartWidth.current + delta));
+      setSidebarWidth(newWidth);
+    };
+    const onUp = () => {
+      if (!isDragging.current) return;
+      isDragging.current = false;
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove);
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, []);
 
   const [greeting, setGreeting] = useState<string>("");
   const [isGreeting, setIsGreeting] = useState(false);
@@ -274,6 +400,15 @@ export default function Advisor() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/advisor/conversations"] });
       setActiveId(null);
+    },
+  });
+
+  const archiveConversation = useMutation({
+    mutationFn: ({ id, archived }: { id: number; archived: boolean }) =>
+      apiRequest("PATCH", `/api/advisor/conversations/${id}/archive`, { archived }),
+    onSuccess: (_, { archived, id }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/advisor/conversations"] });
+      if (activeId === id) setActiveId(null);
     },
   });
 
@@ -468,6 +603,7 @@ export default function Advisor() {
     activeId,
     onSelect: handleSelectConversation,
     onDelete: (id: number) => deleteConversation.mutate(id),
+    onArchive: (id: number, archived: boolean) => archiveConversation.mutate({ id, archived }),
     onNew: () => {},
     profileHasContent,
     generateGreeting,
@@ -476,10 +612,21 @@ export default function Advisor() {
 
   return (
     <div className="flex h-full">
-      {/* Desktop sidebar */}
-      <div className="hidden sm:flex w-56 border-r border-border/40 flex-col bg-muted/30 flex-shrink-0">
+      {/* Desktop sidebar — resizable */}
+      <div
+        className="hidden sm:flex flex-col bg-muted/30 flex-shrink-0"
+        style={{ width: sidebarWidth }}
+      >
         <ConversationList {...conversationListProps} />
       </div>
+
+      {/* Drag handle */}
+      <div
+        className="hidden sm:block w-1 bg-border/40 hover:bg-primary/40 cursor-col-resize flex-shrink-0 transition-colors active:bg-primary/60"
+        onMouseDown={(e) => { e.preventDefault(); startResize(e.clientX); }}
+        onTouchStart={(e) => { startResize(e.touches[0].clientX); }}
+        title="Drag to resize"
+      />
 
       {/* Mobile conversations drawer */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
