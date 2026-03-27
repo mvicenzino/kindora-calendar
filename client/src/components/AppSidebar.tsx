@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield, History } from "lucide-react";
 import HelpDrawer from "./HelpDrawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -39,6 +39,37 @@ const caregiverNavItems = [
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 
+const RELEASE_NOTES = [
+  {
+    date: "Mar 27, 2026",
+    changes: [
+      "Stripe checkout now works on the live site (falls back to test mode until live keys are added)",
+      "Admin dashboard now always loads fresh data — no more stale cache",
+      "Admin API access fixed — was returning 403 for all admin routes",
+      "Kira chat: delete button now always visible; added confirmation before deleting",
+      "Character limits added to all notes, messages, and feedback text fields",
+      "Time field colon alignment fixed in the event editor",
+    ],
+  },
+  {
+    date: "Mar 23, 2026",
+    changes: [
+      "Public Resources page launched at /resources — accessible without login",
+      "Landing page now features a Caregiver Resources preview section",
+      "Beta feedback now correctly returns server errors and logs every saved entry",
+      "Admin dashboard added a Refresh button to reload all data on demand",
+    ],
+  },
+  {
+    date: "Mar 18, 2026",
+    changes: [
+      "AI calendar bar now understands reschedule and move requests",
+      "Date picker in event editor replaced with a reliable cross-browser calendar",
+      "Event rescheduling via AI confirms the change with a summary card",
+    ],
+  },
+];
+
 export default function AppSidebar() {
   const [location, setLocation] = useLocation();
   const { activeFamily, activeFamilyId } = useActiveFamily();
@@ -47,6 +78,7 @@ export default function AppSidebar() {
   const { setOpenMobile } = useSidebar();
   const [helpOpen, setHelpOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
   const [feedbackName, setFeedbackName] = useState("");
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackComments, setFeedbackComments] = useState("");
@@ -235,6 +267,10 @@ export default function AppSidebar() {
             <BookOpen className="w-4 h-4 flex-shrink-0" />
           </button>
 
+          <button onClick={() => setReleaseNotesOpen(true)} data-testid="button-release-notes" className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-0.5 group-data-[collapsible=icon]:justify-center" title="What's New">
+            <History className="w-4 h-4 flex-shrink-0" />
+            <span className="text-[11px] font-medium group-data-[collapsible=icon]:hidden">What's New</span>
+          </button>
           <button onClick={openFeedback} data-testid="button-beta-feedback" className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-0.5 group-data-[collapsible=icon]:justify-center" title="Share Beta Feedback">
             <MessageSquarePlus className="w-4 h-4 flex-shrink-0" />
             <span className="text-[11px] font-medium group-data-[collapsible=icon]:hidden">Beta Feedback</span>
@@ -261,6 +297,40 @@ export default function AppSidebar() {
         </SidebarFooter>
       </Sidebar>
       <HelpDrawer open={helpOpen} onClose={function() { setHelpOpen(false); }} />
+
+      <Dialog open={releaseNotesOpen} onOpenChange={setReleaseNotesOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-4 h-4 text-primary" />
+              What's New
+            </DialogTitle>
+            <DialogDescription>
+              Recent updates and improvements to Kindora.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-5 pr-1 pt-1">
+            {RELEASE_NOTES.map((release) => (
+              <div key={release.date}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                    {release.date}
+                  </span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <ul className="space-y-1.5">
+                  {release.changes.map((change, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-muted-foreground">
+                      <span className="text-primary mt-1 flex-shrink-0">•</span>
+                      <span>{change}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
         <DialogContent className="max-w-md">
