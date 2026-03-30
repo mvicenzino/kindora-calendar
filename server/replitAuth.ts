@@ -371,50 +371,61 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = (req as any).user;
-  if (user && user.claims?.sub) {
-    const now = Math.floor(Date.now() / 1000);
-    if (!user.expires_at || now <= user.expires_at) {
-      return next();
-    }
+export const isAuthenticated: RequestHandler = async (req, res, next) => {                                                                                     
+  // API key bypass for external integrations (Langly/Hermes)                                                                                                  
+  const apiKey = req.headers['x-api-key'] as string;                                                                                                           
+  if (apiKey && apiKey === process.env.LANGLY_API_KEY) {                                                                                                       
+    (req as any).user = {                                                                                                                                      
+      claims: { sub: 'langly-api' },                                                                                                                           
+      access_token: 'api-key',                                                                                                                                 
+      expires_at: Infinity,                                                                                                                                    
+    };                                                                                                                                                         
+    return next();                                                                                                                                             
+  }                                                                                                                                                            
 
-    if (user.access_token === "local-auth" || user.access_token === "google-auth") {
+  const user = (req as any).user;                                                                                                                              
+  if (user && user.claims?.sub) {                               
+    const now = Math.floor(Date.now() / 1000);                                                                                                                 
+    if (!user.expires_at || now <= user.expires_at) {                                                                                                          
+      return next();                                                                                                                                           
+    }                                                                                                                                                          
+
+    if (user.access_token === "local-auth" || user.access_token === "google-auth") {                                                                           
       const newExpiry = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
-      user.expires_at = newExpiry;
-      if (user.claims) user.claims.exp = newExpiry;
-      return next();
-    }
+      user.expires_at = newExpiry;                                                                                                                             
+      if (user.claims) user.claims.exp = newExpiry;                                                                                                            
+      return next();                                                                                                                                           
+    }                                                                                                                                                          
 
-    if (user.refresh_token) {
-      try {
-        const config = await getOidcConfig();
-        const tokenResponse = await client.refreshTokenGrant(config, user.refresh_token);
-        updateUserSession(user, tokenResponse);
-        return next();
-      } catch (error) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-    }
+    if (user.refresh_token) {                                                                                                                                  
+      try {                                                                                                                                                    
+        const config = await getOidcConfig();                                                                                                                  
+        const tokenResponse = await client.refreshTokenGrant(config, user.refresh_token);                                                                      
+        updateUserSession(user, tokenResponse);                                                                                                                
+        return next();                                                                                                                                         
+      } catch (error) {                                                                                                                                        
+        return res.status(401).json({ message: "Unauthorized" });                                                                                              
+      }                                                                                                                                                        
+    }                                                                                                                                                          
 
-    return res.status(401).json({ message: "Unauthorized" });
-  }
+    return res.status(401).json({ message: "Unauthorized" });                                                                                                  
+  }                                                             
 
-  const sessionData = (req as any).session?.passport?.user;
-  if (sessionData && sessionData.claims?.sub) {
-    const now = Math.floor(Date.now() / 1000);
-    if (sessionData.access_token === "local-auth" || sessionData.access_token === "google-auth") {
-      const newExpiry = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;
-      sessionData.expires_at = newExpiry;
-      if (sessionData.claims) sessionData.claims.exp = newExpiry;
-      (req as any).user = sessionData;
-      return next();
-    }
-    if (!sessionData.expires_at || now <= sessionData.expires_at) {
-      (req as any).user = sessionData;
-      return next();
-    }
-  }
+  const sessionData = (req as any).session?.passport?.user;                                                                                                    
+  if (sessionData && sessionData.claims?.sub) {                                                                                                                
+    const now = Math.floor(Date.now() / 1000);                                                                                                                 
+    if (sessionData.access_token === "local-auth" || sessionData.access_token === "google-auth") {                                                             
+      const newExpiry = Math.floor(Date.now() / 1000) + 7 * 24 * 3600;                                                                                         
+      sessionData.expires_at = newExpiry;                                                                                                                      
+      if (sessionData.claims) sessionData.claims.exp = newExpiry;                                                                                              
+      (req as any).user = sessionData;                                                                                                                         
+      return next();                                                                                                                                           
+    }                                                                                                                                                          
+    if (!sessionData.expires_at || now <= sessionData.expires_at) {                                                                                            
+      (req as any).user = sessionData;                                                                                                                         
+      return next();                                                                                                                                           
+    }                                                                                                                                                          
+  }                                                                                                                                                            
 
-  return res.status(401).json({ message: "Unauthorized" });
-};
+  return res.status(401).json({ message: "Unauthorized" });                                                                                                    
+};                                                                                   
