@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import path from "path";
 import { storage, NotFoundError } from "./storage";
 import { registerAdvisorRoutes } from "./advisorRoutes";
+import { registerApiKeyRoutes } from "./apiKeyRoutes";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -4724,6 +4725,7 @@ Always return valid JSON matching one of the three formats above.`,
   });
 
   registerAdvisorRoutes(app);
+  registerApiKeyRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;

@@ -283,6 +283,17 @@ export const advisorUsage = pgTable("advisor_usage", {
   lastMessageAt: timestamp("last_message_at"),
 });
 
+// API Keys — admin-generated tokens for external bot access to calendar data
+export const apiKeys = pgTable("api_keys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: varchar("key", { length: 64 }).notNull().unique(),
+  name: text("name").notNull(),
+  userId: text("user_id").notNull(),
+  familyId: varchar("family_id"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  lastUsedAt: timestamp("last_used_at"),
+});
+
 // Schemas and Types
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
@@ -617,6 +628,9 @@ export type ParsedInvoice = typeof parsedInvoices.$inferSelect;
 
 // Advisor Usage types
 export type AdvisorUsage = typeof advisorUsage.$inferSelect;
+
+// API Key types
+export type ApiKey = typeof apiKeys.$inferSelect;
 
 // Role constants and utilities
 export const FAMILY_ROLES = {

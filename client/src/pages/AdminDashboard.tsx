@@ -5,6 +5,7 @@ import {
   Download, Clock, Shield, Calendar, Home,
   CreditCard, User, ChevronRight, TrendingUp,
   BarChart3, DollarSign, UserCheck, Loader2, ExternalLink, Sparkles, RefreshCcw,
+  Key, Copy, Trash2, Plus, Check,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -14,10 +15,12 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { Redirect } from "wouter";
-import type { BetaFeedback, User as UserType } from "@shared/schema";
+import { useState } from "react";
+import type { BetaFeedback, User as UserType, ApiKey } from "@shared/schema";
 
 const ADMIN_ID = "google-110610540501901085708";
 
@@ -248,6 +251,9 @@ export default function AdminDashboard() {
           </TabsTrigger>
           <TabsTrigger value="stripe" data-testid="tab-admin-stripe">
             <CreditCard className="w-3.5 h-3.5 mr-1.5" />Stripe
+          </TabsTrigger>
+          <TabsTrigger value="api-keys" data-testid="tab-admin-api-keys">
+            <Key className="w-3.5 h-3.5 mr-1.5" />Calendar API
           </TabsTrigger>
         </TabsList>
 
@@ -666,7 +672,229 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ── Calendar API ──────────────────────────────────────────── */}
+        <TabsContent value="api-keys" className="mt-5 space-y-5">
+          <ApiKeysPanel />
+        </TabsContent>
+
       </Tabs>
+    </div>
+  );
+}
+
+function ApiKeysPanel() {
+  const queryClient = useQueryClient();
+  const [newKeyName, setNewKeyName] = useState("");
+  const [newKeyFamilyId, setNewKeyFamilyId] = useState("");
+  const [justCreated, setJustCreated] = useState<ApiKey & { key: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const { data: keys = [], isLoading } = useQuery<ApiKey[]>({
+    queryKey: ["/api/admin/api-keys"],
+    staleTime: 0,
+  });
+
+  const createKey = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/api-keys", {
+      name: newKeyName.trim(),
+      familyId: newKeyFamilyId.trim() || undefined,
+    }).then((r) => r.json()),
+    onSuccess: (created) => {
+      setJustCreated(created);
+      setNewKeyName("");
+      setNewKeyFamilyId("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/api-keys"] });
+    },
+  });
+
+  const deleteKey = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/api-keys/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/api-keys"] }),
+  });
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  const baseUrl = window.location.origin;
+
+  return (
+    <div className="space-y-5">
+
+      {/* Newly created key — show once */}
+      {justCreated && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-xs font-semibold text-primary mb-2 flex items-center gap-1.5">
+              <Key className="w-3.5 h-3.5" />
+              New key created — copy it now. You won't see it again.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-background rounded px-3 py-2 font-mono break-all border border-border">
+                {justCreated.key}
+              </code>
+              <Button size="icon" variant="outline" onClick={() => copyToClipboard(justCreated.key)} data-testid="button-copy-new-key">
+                {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+            <Button size="sm" variant="ghost" className="mt-2 text-xs text-muted-foreground" onClick={() => setJustCreated(null)}>
+              Dismiss
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Create new key */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Plus className="w-4 h-4 text-primary" />
+            Generate new API key
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2 flex-wrap">
+            <Input
+              placeholder="Key name (e.g. Hermes bot)"
+              value={newKeyName}
+              onChange={(e) => setNewKeyName(e.target.value)}
+              className="text-sm flex-1 min-w-48"
+              data-testid="input-api-key-name"
+            />
+            <Input
+              placeholder="Family ID (optional)"
+              value={newKeyFamilyId}
+              onChange={(e) => setNewKeyFamilyId(e.target.value)}
+              className="text-sm w-64"
+              data-testid="input-api-key-family-id"
+            />
+            <Button
+              size="default"
+              onClick={() => createKey.mutate()}
+              disabled={!newKeyName.trim() || createKey.isPending}
+              data-testid="button-create-api-key"
+            >
+              {createKey.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
+              Generate
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            If you leave Family ID blank, attach a family later or pass <code className="bg-muted px-1 rounded">?familyId=</code> in each API request.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Existing keys */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Key className="w-4 h-4 text-primary" />
+            Active keys ({keys.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading && <p className="text-xs text-muted-foreground py-4 text-center">Loading...</p>}
+          {!isLoading && keys.length === 0 && (
+            <p className="text-xs text-muted-foreground py-4 text-center">No API keys yet.</p>
+          )}
+          <div className="space-y-2">
+            {keys.map((k) => (
+              <div key={k.id} className="flex items-center gap-3 rounded-lg border border-border/50 px-3 py-2.5">
+                <Key className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{k.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Created {k.createdAt ? format(new Date(k.createdAt), "MMM d, yyyy") : "—"}
+                    {k.lastUsedAt && <> · Last used {format(new Date(k.lastUsedAt), "MMM d, yyyy 'at' h:mm a")}</>}
+                    {k.familyId && <> · Family: <code className="bg-muted px-1 rounded">{k.familyId}</code></>}
+                  </p>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-destructive flex-shrink-0"
+                  onClick={() => deleteKey.mutate(k.id)}
+                  disabled={deleteKey.isPending}
+                  data-testid={`button-delete-api-key-${k.id}`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* API Documentation */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-primary" />
+            API reference
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Endpoint</p>
+            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono break-all">
+              GET {baseUrl}/api/v1/events
+            </code>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Authentication</p>
+            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono">
+              Authorization: Bearer YOUR_KEY
+            </code>
+            <p className="text-[11px] text-muted-foreground mt-1">Or append <code className="bg-muted px-1 rounded">?key=YOUR_KEY</code> to the URL.</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Query params</p>
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p><code className="bg-muted px-1 rounded">start</code> — ISO date (e.g. <code className="bg-muted px-1 rounded">2026-04-01</code>). Defaults to today.</p>
+              <p><code className="bg-muted px-1 rounded">end</code> — ISO date (e.g. <code className="bg-muted px-1 rounded">2026-04-30</code>). Defaults to 90 days out.</p>
+              <p><code className="bg-muted px-1 rounded">familyId</code> — Override the family on the key.</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Example curl</p>
+            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono whitespace-pre-wrap break-all">{`curl "${baseUrl}/api/v1/events?start=2026-04-01&end=2026-04-30" \\
+  -H "Authorization: Bearer YOUR_KEY"`}</code>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Response shape</p>
+            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono whitespace-pre-wrap">{`{
+  "family": { "id": "...", "name": "Mike's Family" },
+  "query": { "start": "...", "end": "..." },
+  "total": 12,
+  "events": [
+    {
+      "id": "...",
+      "title": "Carolyn doctor appt",
+      "description": null,
+      "start": "2026-04-03T14:00:00.000Z",
+      "end": "2026-04-03T15:00:00.000Z",
+      "allDay": false,
+      "category": "medical",
+      "color": "#E53E3E",
+      "important": false,
+      "completed": false,
+      "completedAt": null,
+      "members": [{ "id": "...", "name": "Carolyn" }],
+      "recurring": {
+        "isParent": false,
+        "rrule": null,
+        "legacyRule": null
+      }
+    }
+  ],
+  "generated": "2026-04-01T12:00:00.000Z"
+}`}</code>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
