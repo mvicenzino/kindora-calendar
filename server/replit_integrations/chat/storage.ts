@@ -10,7 +10,7 @@ export interface IChatStorage {
   deleteConversation(id: number): Promise<void>;
   archiveConversation(id: number, archived: boolean): Promise<AdvisorConversation | undefined>;
   getMessagesByConversation(conversationId: number): Promise<AdvisorMessage[]>;
-  createMessage(conversationId: number, role: string, content: string): Promise<AdvisorMessage>;
+  createMessage(conversationId: number, role: string, content: string, metadata?: string): Promise<AdvisorMessage>;
 }
 
 export const chatStorage: IChatStorage = {
@@ -52,8 +52,8 @@ export const chatStorage: IChatStorage = {
       .orderBy(advisorMessages.createdAt);
   },
 
-  async createMessage(conversationId: number, role: string, content: string) {
-    const [message] = await db.insert(advisorMessages).values({ conversationId, role, content }).returning();
+  async createMessage(conversationId: number, role: string, content: string, metadata?: string) {
+    const [message] = await db.insert(advisorMessages).values({ conversationId, role, content, ...(metadata ? { metadata } : {}) }).returning();
     return message;
   },
 };

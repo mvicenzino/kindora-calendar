@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2, RefreshCw, Menu, MoreHorizontal, Archive, ArchiveX, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Send, Trash2, MessageSquare, Bot, User, Sparkles, Settings2, RefreshCw, Menu, MoreHorizontal, Archive, ArchiveX, ChevronDown, ChevronRight, CheckCircle2, XCircle, Calendar, Activity } from "lucide-react";
 import type { AdvisorConversation, AdvisorMessage } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
@@ -25,15 +25,59 @@ interface AdvisorProfile {
 }
 
 const SUGGESTED_TOPICS = [
+  { label: "Schedule a doctor visit", prompt: "Can you add a doctor appointment for Dad next Tuesday at 2pm to the calendar?" },
+  { label: "Log today's symptoms", prompt: "Log a health note for me today — energy level 4, feeling fatigued and headache." },
   { label: "Toddler won't eat", prompt: "My toddler refuses to eat most foods and mealtimes have become a battle. What can I do?" },
-  { label: "Potty training struggles", prompt: "We've been potty training for weeks and my child still has accidents constantly. I'm feeling frustrated — any advice?" },
-  { label: "Child biting or hitting", prompt: "My toddler has started biting other kids at daycare. How do I handle this?" },
   { label: "Parent with dementia", prompt: "My mother has dementia and keeps forgetting things. I find myself getting frustrated and then feeling guilty about it. How do I cope?" },
   { label: "Caregiver burnout", prompt: "I'm exhausted from caring for both my kids and my aging parents. I feel like I'm failing everyone. Where do I start?" },
   { label: "Difficult conversations", prompt: "I need to talk to my dad about giving up his car keys, but he gets defensive every time I bring it up. How should I approach this?" },
 ];
 
 type ConversationWithMessages = AdvisorConversation & { messages: AdvisorMessage[] };
+
+interface KiraToolResult {
+  name: string;
+  success: boolean;
+  summary: string;
+  data?: Record<string, unknown>;
+  error?: string;
+}
+
+function ActionCard({ tool }: { tool: KiraToolResult }) {
+  const [, navigate] = useLocation();
+  const isEvent = tool.name === "create_calendar_event";
+  const isHealth = tool.name === "log_health_note";
+
+  return (
+    <div className={cn(
+      "flex items-start gap-2.5 px-3 py-2.5 rounded-xl border text-xs",
+      tool.success
+        ? "bg-green-500/8 border-green-500/20 text-foreground"
+        : "bg-destructive/8 border-destructive/20 text-foreground"
+    )}>
+      <div className="flex-shrink-0 mt-0.5">
+        {tool.success
+          ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+          : <XCircle className="w-3.5 h-3.5 text-destructive" />}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {isEvent && <Calendar className="w-3 h-3 text-muted-foreground" />}
+          {isHealth && <Activity className="w-3 h-3 text-muted-foreground" />}
+          <span className="font-medium text-foreground/90 truncate">{tool.summary}</span>
+        </div>
+        {tool.success && (
+          <button
+            onClick={() => navigate(isEvent ? "/" : "/health")}
+            className="text-primary underline-offset-2 hover:underline mt-0.5 block"
+          >
+            {isEvent ? "View on calendar" : "View in Health"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function TypingIndicator() {
   return (
@@ -55,6 +99,16 @@ function TypingIndicator() {
 
 function MessageBubble({ message }: { message: AdvisorMessage }) {
   const isUser = message.role === "user";
+
+  // Parse tool results from metadata
+  let tools: KiraToolResult[] = [];
+  if (message.metadata) {
+    try {
+      const parsed = JSON.parse(message.metadata);
+      if (Array.isArray(parsed.tools)) tools = parsed.tools;
+    } catch {}
+  }
+
   return (
     <div className={cn("flex gap-2.5 sm:gap-3 items-start", isUser && "flex-row-reverse")}>
       <div className={cn(
@@ -63,31 +117,49 @@ function MessageBubble({ message }: { message: AdvisorMessage }) {
       )}>
         {isUser ? <User className="w-3.5 h-3.5 text-primary" /> : <Bot className="w-3.5 h-3.5 text-primary" />}
       </div>
-      <div className={cn(
-        "max-w-[85%] sm:max-w-[80%] rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm leading-relaxed",
-        isUser
-          ? "bg-primary text-primary-foreground rounded-tr-sm"
-          : "bg-muted text-foreground rounded-tl-sm"
-      )}>
-        {message.content.split("\n").map((line, i, arr) => (
-          <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
-        ))}
+      <div className={cn("max-w-[85%] sm:max-w-[80%] space-y-2", isUser ? "items-end" : "items-start")}>
+        {tools.length > 0 && (
+          <div className="space-y-1.5">
+            {tools.map((t, i) => <ActionCard key={i} tool={t} />)}
+          </div>
+        )}
+        {message.content && (
+          <div className={cn(
+            "rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm leading-relaxed",
+            isUser
+              ? "bg-primary text-primary-foreground rounded-tr-sm"
+              : "bg-muted text-foreground rounded-tl-sm"
+          )}>
+            {message.content.split("\n").map((line, i, arr) => (
+              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function StreamingBubble({ content }: { content: string }) {
+function StreamingBubble({ content, tools }: { content: string; tools?: KiraToolResult[] }) {
   return (
     <div className="flex gap-2.5 sm:gap-3 items-start">
       <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center flex-shrink-0 mt-0.5">
         <Bot className="w-3.5 h-3.5 text-primary" />
       </div>
-      <div className="max-w-[85%] sm:max-w-[80%] bg-muted rounded-2xl rounded-tl-sm px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm leading-relaxed text-foreground">
-        {content.split("\n").map((line, i, arr) => (
-          <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
-        ))}
-        <span className="inline-block w-1.5 h-4 bg-primary/60 ml-0.5 align-middle animate-pulse" />
+      <div className="max-w-[85%] sm:max-w-[80%] space-y-2">
+        {tools && tools.length > 0 && (
+          <div className="space-y-1.5">
+            {tools.map((t, i) => <ActionCard key={i} tool={t} />)}
+          </div>
+        )}
+        {(content || !tools?.length) && (
+          <div className="bg-muted rounded-2xl rounded-tl-sm px-3.5 py-2.5 sm:px-4 sm:py-3 text-sm leading-relaxed text-foreground">
+            {content ? content.split("\n").map((line, i, arr) => (
+              <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+            )) : null}
+            <span className="inline-block w-1.5 h-4 bg-primary/60 ml-0.5 align-middle animate-pulse" />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -101,7 +173,7 @@ function EmptyStateGeneric({ onSuggest }: { onSuggest: (prompt: string) => void 
       </div>
       <h3 className="text-base font-semibold text-foreground mb-1.5">Meet Kira, your family advisor</h3>
       <p className="text-sm text-muted-foreground max-w-xs mb-5 sm:mb-6 leading-relaxed">
-        Ask anything about parenting challenges, caring for aging parents, or managing caregiver stress. You're not alone in this.
+        Ask for advice, or let Kira take action — add events to your calendar, log health notes, and more. You're not alone in this.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-sm sm:max-w-md">
         {SUGGESTED_TOPICS.map((topic) => (
@@ -316,6 +388,7 @@ export default function Advisor() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [input, setInput] = useState("");
   const [streamingContent, setStreamingContent] = useState("");
+  const [streamingTools, setStreamingTools] = useState<KiraToolResult[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(220);
@@ -416,7 +489,7 @@ export default function Advisor() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent, greeting]);
+  }, [messages, streamingContent, streamingTools, greeting]);
 
   // Pre-fill message input from Health page "Discuss with Kira" button
   useEffect(() => {
@@ -515,6 +588,7 @@ export default function Advisor() {
     setInput("");
     setIsStreaming(true);
     setStreamingContent("");
+    setStreamingTools([]);
 
     queryClient.setQueryData(["/api/advisor/conversations", convId], (old: any) => {
       const existingMessages = old?.messages ?? [];
@@ -571,8 +645,10 @@ export default function Advisor() {
             try {
               const evt = JSON.parse(line.slice(6));
               if (evt.content) { full += evt.content; setStreamingContent(full); }
+              if (evt.tool) { setStreamingTools(prev => [...prev, evt.tool as KiraToolResult]); }
               if (evt.done) {
                 setStreamingContent("");
+                setStreamingTools([]);
                 setIsStreaming(false);
                 await queryClient.invalidateQueries({ queryKey: ["/api/advisor/conversations", convId] });
               }
@@ -583,6 +659,7 @@ export default function Advisor() {
     } catch (err: any) {
       if (err?.name !== "AbortError") {
         setStreamingContent("");
+        setStreamingTools([]);
         setIsStreaming(false);
       }
     }
@@ -701,8 +778,9 @@ export default function Advisor() {
               {messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
-              {isStreaming && streamingContent && <StreamingBubble content={streamingContent} />}
-              {isStreaming && !streamingContent && <TypingIndicator />}
+              {isStreaming && (streamingContent || streamingTools.length > 0)
+                ? <StreamingBubble content={streamingContent} tools={streamingTools} />
+                : isStreaming ? <TypingIndicator /> : null}
               <div ref={messagesEndRef} />
             </div>
           )}

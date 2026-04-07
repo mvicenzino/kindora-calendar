@@ -16,6 +16,7 @@ export const advisorMessages = pgTable("advisor_messages", {
   conversationId: integer("conversation_id").notNull().references(() => advisorConversations.id, { onDelete: "cascade" }),
   role: text("role").notNull(),
   content: text("content").notNull(),
+  metadata: text("metadata"), // JSON string: { tools: [{ name, args, result }] }
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
