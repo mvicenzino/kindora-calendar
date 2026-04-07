@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, startOfMonth } from "date-fns";
-import { Image, X, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Image, X, Calendar, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import { useLocation } from "wouter";
 import type { Event, FamilyMember } from "@shared/schema";
 import { mapEventFromDb, mapFamilyMemberFromDb } from "@shared/types";
 import { useMemo, useState } from "react";
@@ -14,6 +15,7 @@ type MemoryEvent = ReturnType<typeof mapEventFromDb> & { members: ReturnType<typ
 export default function Memories() {
   const { activeFamilyId } = useActiveFamily();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [, navigate] = useLocation();
 
   const { data: rawEvents = [] } = useQuery<Event[]>({
     queryKey: ['/api/events?familyId=' + activeFamilyId],
@@ -65,22 +67,48 @@ export default function Memories() {
     <div className="p-3 md:p-4">
       <div className="max-w-4xl mx-auto space-y-4">
         <div className="bg-card border border-border rounded-md p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md bg-purple-500 flex items-center justify-center">
-              <Image className="w-4 h-4 text-white" />
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-md bg-purple-500 flex items-center justify-center">
+                <Image className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold text-foreground">Memories</h1>
+                <p className="text-xs text-muted-foreground">Photos from your calendar events</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm font-semibold text-foreground">Memories</h1>
-              <p className="text-xs text-muted-foreground">Your photo scrapbook from special moments</p>
-            </div>
+            <Button
+              size="sm"
+              onClick={() => navigate("/")}
+              className="gap-1.5 text-xs"
+              data-testid="button-add-memory"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add memory
+            </Button>
           </div>
         </div>
 
         {groupedByMonth.length === 0 ? (
-          <div className="bg-card border border-border rounded-md p-6 text-center">
-            <Image className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-muted-foreground text-xs font-medium">No memories yet</p>
-            <p className="text-muted-foreground text-xs mt-1">Add photos to your events to create your scrapbook</p>
+          <div className="bg-card border border-border rounded-md p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto">
+              <Image className="w-6 h-6 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">No memories yet</p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto leading-relaxed">
+                Memories are photos you add to calendar events. Create an event, attach a photo, and it shows up here as a keepsake.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => navigate("/")}
+              className="gap-1.5"
+              data-testid="button-add-first-memory"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Go to calendar to add one
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
