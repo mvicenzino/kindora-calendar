@@ -41,6 +41,7 @@ import AdminDashboard from "@/pages/AdminDashboard";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import SmartReminders from "@/components/SmartReminders";
+import WelcomeModal from "@/components/WelcomeModal";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
   constructor(props: { children: ReactNode }) {
@@ -149,6 +150,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       </div>
       <SmartReminders />
       {!isDemo && <FeedbackButton />}
+      <WelcomeModal />
     </SidebarProvider>
   );
 }
