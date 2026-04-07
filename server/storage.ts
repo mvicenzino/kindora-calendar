@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -167,6 +167,11 @@ export interface IStorage {
   // Hydration Tracking
   getHydrationLogs(familyId: string, date: string): Promise<HydrationLog[]>;
   upsertHydrationLog(data: { familyId: string; memberId: string; date: string; glassesCount: number; goalGlasses: number }): Promise<HydrationLog>;
+
+  // Kira AI Memory
+  getKiraMemories(familyId: string): Promise<KiraMemory[]>;
+  addKiraMemories(familyId: string, memories: string[]): Promise<void>;
+  clearKiraMemories(familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -187,6 +192,7 @@ export class MemStorage implements IStorage {
   private symptomEntriesMap: Map<string, SymptomEntry>;
   private symptomSystemRatingsMap: Map<string, SymptomSystemRating>;
   private hydrationLogsMap: Map<string, HydrationLog>;
+  private kiraMemoriesStore: KiraMemory[];
 
   constructor() {
     this.familyMembers = new Map();
@@ -206,6 +212,7 @@ export class MemStorage implements IStorage {
     this.symptomEntriesMap = new Map();
     this.symptomSystemRatingsMap = new Map();
     this.hydrationLogsMap = new Map();
+    this.kiraMemoriesStore = [];
   }
   
   private generateInviteCode(): string {
@@ -1224,6 +1231,27 @@ export class MemStorage implements IStorage {
     const newLog: HydrationLog = { id, familyId: data.familyId, memberId: data.memberId, date: data.date, glassesCount: data.glassesCount, goalGlasses: data.goalGlasses, updatedAt: new Date() };
     this.hydrationLogsMap.set(id, newLog);
     return newLog;
+  }
+
+  async getKiraMemories(familyId: string): Promise<KiraMemory[]> {
+    return this.kiraMemoriesStore.filter(m => m.familyId === familyId);
+  }
+
+  async addKiraMemories(familyId: string, memories: string[]): Promise<void> {
+    const now = new Date();
+    let nextId = this.kiraMemoriesStore.length + 1;
+    for (const content of memories) {
+      this.kiraMemoriesStore.push({ id: nextId++, familyId, content, createdAt: now });
+    }
+    const familyMemories = this.kiraMemoriesStore.filter(m => m.familyId === familyId);
+    if (familyMemories.length > 25) {
+      const toRemove = familyMemories.slice(0, familyMemories.length - 25).map(m => m.id);
+      this.kiraMemoriesStore = this.kiraMemoriesStore.filter(m => !toRemove.includes(m.id));
+    }
+  }
+
+  async clearKiraMemories(familyId: string): Promise<void> {
+    this.kiraMemoriesStore = this.kiraMemoriesStore.filter(m => m.familyId !== familyId);
   }
 }
 
@@ -2256,6 +2284,25 @@ class DrizzleStorage implements IStorage {
     const [created] = await this.db.insert(hydrationLogs).values({ familyId: data.familyId, memberId: data.memberId, date: data.date, glassesCount: data.glassesCount, goalGlasses: data.goalGlasses }).returning();
     return created;
   }
+
+  async getKiraMemories(familyId: string): Promise<KiraMemory[]> {
+    return await this.db.select().from(kiraMemories).where(eq(kiraMemories.familyId, familyId)).orderBy(kiraMemories.createdAt);
+  }
+
+  async addKiraMemories(familyId: string, memories: string[]): Promise<void> {
+    if (memories.length === 0) return;
+    await this.db.insert(kiraMemories).values(memories.map(content => ({ familyId, content })));
+    // Prune to latest 25 per family
+    const all = await this.db.select().from(kiraMemories).where(eq(kiraMemories.familyId, familyId)).orderBy(kiraMemories.createdAt);
+    if (all.length > 25) {
+      const toDelete = all.slice(0, all.length - 25).map((m: KiraMemory) => m.id);
+      await this.db.delete(kiraMemories).where(inArray(kiraMemories.id, toDelete));
+    }
+  }
+
+  async clearKiraMemories(familyId: string): Promise<void> {
+    await this.db.delete(kiraMemories).where(eq(kiraMemories.familyId, familyId));
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2765,6 +2812,18 @@ class DemoAwareStorage implements IStorage {
 
   async upsertHydrationLog(data: { familyId: string; memberId: string; date: string; glassesCount: number; goalGlasses: number }): Promise<HydrationLog> {
     return this.persistentStorage.upsertHydrationLog(data);
+  }
+
+  async getKiraMemories(familyId: string): Promise<KiraMemory[]> {
+    return this.persistentStorage.getKiraMemories(familyId);
+  }
+
+  async addKiraMemories(familyId: string, memories: string[]): Promise<void> {
+    return this.persistentStorage.addKiraMemories(familyId, memories);
+  }
+
+  async clearKiraMemories(familyId: string): Promise<void> {
+    return this.persistentStorage.clearKiraMemories(familyId);
   }
 }
 

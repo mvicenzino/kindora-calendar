@@ -5,13 +5,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Baby, Heart, User, Save, CheckCircle } from "lucide-react";
+import { Sparkles, Baby, Heart, User, Save, CheckCircle, Brain, Trash2 } from "lucide-react";
 
 interface AdvisorProfile {
   familyId?: string;
   advisorChildrenContext: string;
   advisorElderContext: string;
   advisorSelfContext: string;
+}
+
+interface KiraMemory {
+  id: number;
+  familyId: string;
+  content: string;
+  createdAt: string;
 }
 
 const PLACEHOLDERS = {
@@ -31,6 +38,21 @@ export default function KiraProfile() {
 
   const { data: profile, isLoading } = useQuery<AdvisorProfile>({
     queryKey: ["/api/advisor/profile"],
+  });
+
+  const { data: memories = [], isLoading: memoriesLoading } = useQuery<KiraMemory[]>({
+    queryKey: ["/api/advisor/memories"],
+  });
+
+  const clearMemoriesMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/advisor/memories"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/advisor/memories"] });
+      toast({ title: "Memories cleared", description: "Kira will start fresh in future conversations." });
+    },
+    onError: () => {
+      toast({ title: "Couldn't clear memories", description: "Please try again.", variant: "destructive" });
+    },
   });
 
   useEffect(() => {
@@ -168,6 +190,58 @@ export default function KiraProfile() {
                 </Button>
               </div>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Brain className="w-4 h-4 text-violet-500" />
+              </div>
+              <div>
+                <CardTitle className="text-sm">Kira's Memory</CardTitle>
+                <CardDescription className="text-xs mt-1 leading-relaxed">
+                  Facts Kira has learned from your conversations. She references these automatically — you never have to repeat yourself.
+                </CardDescription>
+              </div>
+            </div>
+            {memories.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => clearMemoriesMutation.mutate()}
+                disabled={clearMemoriesMutation.isPending}
+                className="text-xs text-muted-foreground gap-1.5 flex-shrink-0"
+                data-testid="button-clear-kira-memories"
+              >
+                <Trash2 className="w-3 h-3" />
+                Clear all
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {memoriesLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+              <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              Loading memories…
+            </div>
+          ) : memories.length === 0 ? (
+            <p className="text-xs text-muted-foreground/60 italic py-2">
+              No memories yet. Kira will start learning from your conversations automatically.
+            </p>
+          ) : (
+            <ul className="space-y-1.5" data-testid="list-kira-memories">
+              {memories.map((memory) => (
+                <li key={memory.id} className="flex items-start gap-2 text-xs text-foreground/80">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0 mt-1.5" />
+                  {memory.content}
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>

@@ -46,34 +46,81 @@ Important boundaries:
 - For mental health crises, provide crisis resources (988 Suicide & Crisis Lifeline, etc.)
 - Remind users you're an AI when it feels appropriate, not defensively`;
 
-function buildSystemPrompt(family?: {
-  advisorChildrenContext?: string | null;
-  advisorElderContext?: string | null;
-  advisorSelfContext?: string | null;
-}): string {
-  if (!family) return BASE_SYSTEM_PROMPT;
-
+function buildSystemPrompt(
+  family?: {
+    advisorChildrenContext?: string | null;
+    advisorElderContext?: string | null;
+    advisorSelfContext?: string | null;
+  },
+  memories?: string[]
+): string {
   const parts: string[] = [];
 
-  if (family.advisorChildrenContext?.trim()) {
+  if (family?.advisorChildrenContext?.trim()) {
     parts.push(`About their children:\n${family.advisorChildrenContext.trim()}`);
   }
-  if (family.advisorElderContext?.trim()) {
+  if (family?.advisorElderContext?.trim()) {
     parts.push(`About their aging parents or loved ones:\n${family.advisorElderContext.trim()}`);
   }
-  if (family.advisorSelfContext?.trim()) {
+  if (family?.advisorSelfContext?.trim()) {
     parts.push(`About the user themselves:\n${family.advisorSelfContext.trim()}`);
   }
 
-  if (parts.length === 0) return BASE_SYSTEM_PROMPT;
+  const memoryLines = memories?.filter(Boolean) ?? [];
 
-  return `${BASE_SYSTEM_PROMPT}
+  if (parts.length === 0 && memoryLines.length === 0) return BASE_SYSTEM_PROMPT;
 
----
-FAMILY CONTEXT — You know this family well. Use names, reference specific situations, and never make them repeat themselves. Weave this naturally into every response:
+  let prompt = BASE_SYSTEM_PROMPT + "\n\n---";
 
-${parts.join("\n\n")}
----`;
+  if (parts.length > 0) {
+    prompt += `\nFAMILY CONTEXT — You know this family well. Use names, reference specific situations, and never make them repeat themselves. Weave this naturally into every response:\n\n${parts.join("\n\n")}`;
+  }
+
+  if (memoryLines.length > 0) {
+    prompt += `\n\nKIRA'S MEMORY — Things you've learned about this family from past conversations. Reference these naturally when relevant:\n${memoryLines.map(m => `- ${m}`).join("\n")}`;
+  }
+
+  prompt += "\n---";
+  return prompt;
+}
+
+async function extractAndSaveMemories(
+  familyId: string,
+  userMessage: string,
+  assistantResponse: string
+): Promise<void> {
+  try {
+    const extraction = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You extract memorable personal facts from conversations for a family AI advisor.
+Extract only concrete, specific facts worth remembering long-term: names, ages, diagnoses, relationships, living situations, recurring challenges, or important preferences.
+Output ONLY a valid JSON array of short strings (max 15 words each). Each string should be a self-contained fact.
+If nothing memorable was shared, output an empty array: []
+Do not include opinions, advice given, or generic statements.`,
+        },
+        {
+          role: "user",
+          content: `User said: "${userMessage.slice(0, 500)}"\n\nKira said: "${assistantResponse.slice(0, 500)}"`,
+        },
+      ],
+      max_completion_tokens: 200,
+    });
+
+    const raw = extraction.choices[0]?.message?.content?.trim() ?? "[]";
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (!match) return;
+    const facts: string[] = JSON.parse(match[0]);
+    if (!Array.isArray(facts) || facts.length === 0) return;
+    const valid = facts.filter((f): f is string => typeof f === "string" && f.trim().length > 0).slice(0, 5);
+    if (valid.length > 0) {
+      await storage.addKiraMemories(familyId, valid);
+    }
+  } catch {
+    // Memory extraction is best-effort — never block the main flow
+  }
 }
 
 function buildGreetingPrompt(): string {
@@ -205,7 +252,7 @@ export function registerAdvisorRoutes(app: Express): void {
       res.setHeader("Connection", "keep-alive");
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-5.1",
+        model: "gpt-4.1-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: greetingPrompt },
@@ -234,6 +281,34 @@ export function registerAdvisorRoutes(app: Express): void {
       } else {
         res.status(500).json({ error: "Failed to generate greeting" });
       }
+    }
+  });
+
+  // Get Kira's memories for the user's family
+  app.get("/api/advisor/memories", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      const family = await getFamilyForUser(userId);
+      if (!family) return res.json([]);
+      const memories = await storage.getKiraMemories(family.id);
+      res.json(memories);
+    } catch (error) {
+      console.error("Error fetching Kira memories:", error);
+      res.status(500).json({ error: "Failed to fetch memories" });
+    }
+  });
+
+  // Clear all Kira memories for the user's family
+  app.delete("/api/advisor/memories", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      const family = await getFamilyForUser(userId);
+      if (!family) return res.status(404).json({ error: "No family found" });
+      await storage.clearKiraMemories(family.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error clearing Kira memories:", error);
+      res.status(500).json({ error: "Failed to clear memories" });
     }
   });
 
@@ -334,9 +409,12 @@ export function registerAdvisorRoutes(app: Express): void {
         content: m.content,
       }));
 
-      // Build personalized system prompt using family context
+      // Build personalized system prompt using family context + Kira's memories
       const family = await getFamilyForUser(userId);
-      const systemPrompt = buildSystemPrompt(family ?? undefined);
+      const familyId = family?.id;
+      const memories = familyId ? await storage.getKiraMemories(familyId) : [];
+      const memoryContents = memories.map(m => m.content);
+      const systemPrompt = buildSystemPrompt(family ?? undefined, memoryContents);
 
       // Set up SSE streaming
       res.setHeader("Content-Type", "text/event-stream");
@@ -344,7 +422,7 @@ export function registerAdvisorRoutes(app: Express): void {
       res.setHeader("Connection", "keep-alive");
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-5.1",
+        model: "gpt-4.1-mini",
         messages: [
           { role: "system", content: systemPrompt },
           ...chatMessages,
@@ -368,6 +446,11 @@ export function registerAdvisorRoutes(app: Express): void {
 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
+
+      // Fire-and-forget memory extraction from this exchange
+      if (familyId && content && fullResponse) {
+        extractAndSaveMemories(familyId, content, fullResponse).catch(() => {});
+      }
     } catch (error) {
       console.error("Error processing advisor message:", error);
       if (res.headersSent) {

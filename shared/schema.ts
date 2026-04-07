@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, index, numeric, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, index, numeric, integer, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -563,6 +563,14 @@ export const hydrationLogs = pgTable("hydration_logs", {
 export const insertHydrationLogSchema = createInsertSchema(hydrationLogs).omit({ id: true, updatedAt: true });
 export type InsertHydrationLog = z.infer<typeof insertHydrationLogSchema>;
 export type HydrationLog = typeof hydrationLogs.$inferSelect;
+
+export const kiraMemories = pgTable("kira_memories", {
+  id: serial("id").primaryKey(),
+  familyId: varchar("family_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type KiraMemory = typeof kiraMemories.$inferSelect;
 
 export const insertSymptomSystemRatingSchema = createInsertSchema(symptomSystemRatings).omit({ id: true });
 export type InsertSymptomSystemRating = z.infer<typeof insertSymptomSystemRatingSchema>;
