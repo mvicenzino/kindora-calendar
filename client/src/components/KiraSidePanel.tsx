@@ -91,7 +91,7 @@ function MessageBubble({ message }: { message: AdvisorMessage }) {
             "px-3 py-2 rounded-2xl text-sm leading-relaxed",
             isUser
               ? "bg-primary text-primary-foreground rounded-br-sm"
-              : "bg-muted/80 text-foreground rounded-bl-sm"
+              : "bg-muted/80 dark:bg-background/80 text-foreground rounded-bl-sm"
           )}>
             {message.content.split("\n").map((line, i, arr) => (
               <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
@@ -116,7 +116,7 @@ function StreamingBubble({ content, tools }: { content: string; tools: KiraToolR
       </div>
       <div className="max-w-[84%] space-y-1">
         {tools.length > 0 && <div>{tools.map((t, i) => <PanelActionCard key={i} tool={t} />)}</div>}
-        <div className="bg-muted/80 text-foreground rounded-2xl rounded-bl-sm px-3 py-2 text-sm leading-relaxed">
+        <div className="bg-muted/80 dark:bg-background/80 text-foreground rounded-2xl rounded-bl-sm px-3 py-2 text-sm leading-relaxed">
           {content ? content.split("\n").map((line, i, arr) => (
             <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
           )) : (
@@ -401,15 +401,15 @@ export function KiraSidePanel() {
         className={cn(
           "fixed top-0 right-0 bottom-0 z-50 flex flex-col",
           "w-full sm:w-[400px]",
-          "bg-background border-l border-border/50",
-          "shadow-2xl",
+          "bg-background dark:bg-secondary border-l border-border/50 dark:border-border",
+          "shadow-2xl dark:shadow-[rgba(0,0,0,0.5)_-4px_0_24px]",
           "transition-transform duration-300 ease-out",
         )}
         data-testid="kira-side-panel"
         style={{ animation: "slideInRight 0.25s cubic-bezier(0.16,1,0.3,1)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-background/95 backdrop-blur-sm flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 dark:border-border/60 bg-background/95 dark:bg-secondary/95 backdrop-blur-sm flex-shrink-0">
           <div className="flex items-center gap-2.5">
             {view === "history" ? (
               <button
@@ -477,7 +477,7 @@ export function KiraSidePanel() {
                       <button
                         key={p.label}
                         onClick={() => sendMessage(p.prompt)}
-                        className="text-left text-xs px-3.5 py-2.5 rounded-xl bg-muted/60 hover-elevate border border-border/40 text-foreground/75 leading-snug"
+                        className="text-left text-xs px-3.5 py-2.5 rounded-xl bg-muted/60 dark:bg-background/60 hover-elevate border border-border/40 text-foreground/75 leading-snug"
                       >
                         {p.label}
                       </button>
@@ -498,7 +498,7 @@ export function KiraSidePanel() {
             </div>
 
             {/* Input */}
-            <div className="border-t border-border/40 bg-background/95 backdrop-blur-sm px-3 py-3 flex-shrink-0">
+            <div className="border-t border-border/40 dark:border-border/60 bg-background/95 dark:bg-secondary/95 backdrop-blur-sm px-3 py-3 flex-shrink-0">
               <div className="flex items-end gap-2">
                 <Textarea
                   ref={textareaRef}
@@ -507,7 +507,7 @@ export function KiraSidePanel() {
                   onKeyDown={handleKeyDown}
                   placeholder="Ask Kira anything…"
                   rows={1}
-                  className="flex-1 resize-none text-sm leading-5 min-h-[38px] max-h-[120px] bg-muted/50 border-border/50"
+                  className="flex-1 resize-none text-sm leading-5 min-h-[38px] max-h-[120px] bg-muted/50 dark:bg-background/70 border-border/50"
                   style={{ height: "38px" }}
                   data-testid="input-kira-panel-message"
                 />
