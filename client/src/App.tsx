@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HelmetProvider } from "react-helmet-async";
 import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ActiveFamilyProvider, useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -126,19 +127,32 @@ function DemoBanner() {
   );
 }
 
-function KiraFAB() {
-  const { openPanel } = useKiraPanel();
+function KiraHeaderPill() {
+  const { openPanel, isOpen, closePanel } = useKiraPanel();
   const [location] = useLocation();
-  if (location === "/advisor") return null;
+  const onAdvisor = location === "/advisor";
+
+  if (onAdvisor) return null;
+
   return (
     <button
-      onClick={() => openPanel()}
+      onClick={() => isOpen ? closePanel() : openPanel()}
       data-testid="button-kira-fab"
-      className="fixed bottom-[64px] right-5 z-40 flex items-center gap-2 bg-primary text-primary-foreground rounded-full shadow-lg px-4 py-2.5 text-sm font-semibold hover-elevate active-elevate-2 transition-all"
-      aria-label="Open Kira advisor"
+      aria-label={isOpen ? "Close Kira" : "Open Kira advisor"}
+      className={cn(
+        "relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all duration-200",
+        "border shadow-sm hover-elevate active-elevate-2",
+        isOpen
+          ? "bg-primary text-primary-foreground border-primary/30"
+          : "bg-primary/10 text-primary border-primary/25 hover:bg-primary/15"
+      )}
     >
-      <Sparkles className="w-4 h-4" />
-      Ask Kira
+      {/* Subtle pulse ring when closed */}
+      {!isOpen && (
+        <span className="absolute inset-0 rounded-full animate-ping opacity-20 bg-primary" style={{ animationDuration: "3s" }} />
+      )}
+      <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+      <span className="leading-none">Kira</span>
     </button>
   );
 }
@@ -157,7 +171,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <FamilySelector />
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
+              <KiraHeaderPill />
               <ThemeToggle />
               <Header />
             </div>
@@ -171,7 +186,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <SmartReminders />
       {!isDemo && <FeedbackButton />}
       <WelcomeModal />
-      <KiraFAB />
       <KiraSidePanel />
     </SidebarProvider>
   );
