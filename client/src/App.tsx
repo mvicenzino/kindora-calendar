@@ -36,7 +36,6 @@ import AppSidebar from "@/components/AppSidebar";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
 import FamilySelector from "@/components/FamilySelector";
-import FeedbackButton from "@/components/FeedbackButton";
 import AdminFeedback from "@/pages/AdminFeedback";
 import AdminDashboard from "@/pages/AdminDashboard";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
@@ -184,7 +183,6 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarInset>
       </div>
       <SmartReminders />
-      {!isDemo && <FeedbackButton />}
       <WelcomeModal />
       <KiraSidePanel />
     </SidebarProvider>
