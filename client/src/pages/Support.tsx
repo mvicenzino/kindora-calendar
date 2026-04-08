@@ -43,7 +43,7 @@ export default function Support() {
     } catch {
       toast({
         title: "Something went wrong",
-        description: "Please try again or email us directly at mvicenzino@gmail.com",
+        description: "Please try again or email us directly at mike@kindora.ai",
         variant: "destructive",
       });
     } finally {
@@ -95,11 +95,11 @@ export default function Support() {
                 <div>
                   <p className="font-semibold text-foreground text-sm">Email us directly</p>
                   <a
-                    href="mailto:mvicenzino@gmail.com"
+                    href="mailto:mike@kindora.ai"
                     className="text-sm text-primary hover:underline"
                     data-testid="link-email-direct"
                   >
-                    mvicenzino@gmail.com
+                    mike@kindora.ai
                   </a>
                 </div>
               </div>
