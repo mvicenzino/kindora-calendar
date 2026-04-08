@@ -344,7 +344,22 @@ export function KiraSidePanel() {
             try {
               const evt = JSON.parse(line.slice(6));
               if (evt.content) { full += evt.content; setStreamingContent(full); }
-              if (evt.tool) { setStreamingTools(prev => [...prev, evt.tool]); }
+              if (evt.tool) {
+                setStreamingTools(prev => [...prev, evt.tool]);
+                // Immediately refresh relevant data so the user sees results now
+                if (evt.tool.success) {
+                  if (evt.tool.name === "create_calendar_event") {
+                    queryClient.invalidateQueries({
+                      predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/events"),
+                    });
+                  }
+                  if (evt.tool.name === "log_health_note") {
+                    queryClient.invalidateQueries({
+                      predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/symptoms"),
+                    });
+                  }
+                }
+              }
               if (evt.done) {
                 setStreamingContent("");
                 setStreamingTools([]);
