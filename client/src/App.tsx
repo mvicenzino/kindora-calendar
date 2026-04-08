@@ -42,6 +42,9 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { useMessageNotifications } from "@/hooks/useMessageNotifications";
 import SmartReminders from "@/components/SmartReminders";
 import WelcomeModal from "@/components/WelcomeModal";
+import { KiraPanelProvider, useKiraPanel } from "@/contexts/KiraPanelContext";
+import { KiraSidePanel } from "@/components/KiraSidePanel";
+import { Sparkles } from "lucide-react";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
   constructor(props: { children: ReactNode }) {
@@ -123,6 +126,23 @@ function DemoBanner() {
   );
 }
 
+function KiraFAB() {
+  const { openPanel } = useKiraPanel();
+  const [location] = useLocation();
+  if (location === "/advisor") return null;
+  return (
+    <button
+      onClick={() => openPanel()}
+      data-testid="button-kira-fab"
+      className="fixed bottom-[64px] right-5 z-40 flex items-center gap-2 bg-primary text-primary-foreground rounded-full shadow-lg px-4 py-2.5 text-sm font-semibold hover-elevate active-elevate-2 transition-all"
+      aria-label="Open Kira advisor"
+    >
+      <Sparkles className="w-4 h-4" />
+      Ask Kira
+    </button>
+  );
+}
+
 function AppShell({ children }: { children: React.ReactNode }) {
   useMessageNotifications();
   const { user } = useAuth();
@@ -151,6 +171,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
       <SmartReminders />
       {!isDemo && <FeedbackButton />}
       <WelcomeModal />
+      <KiraFAB />
+      <KiraSidePanel />
     </SidebarProvider>
   );
 }
@@ -211,6 +233,7 @@ function Router() {
             {/* Catch-all Route renders AppShell for all other authenticated paths */}
             <Route>
               {() => (
+                <KiraPanelProvider>
                 <AppShell>
                   <Switch>
                     <Route path="/" component={Home} />
@@ -229,6 +252,7 @@ function Router() {
                     <Route>{() => <Redirect to="/" />}</Route>
                   </Switch>
                 </AppShell>
+                </KiraPanelProvider>
               )}
             </Route>
           </>
