@@ -624,7 +624,12 @@ export default function Advisor() {
       const res = await fetch(`/api/advisor/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, priorGreeting }),
+        body: JSON.stringify({
+          content,
+          priorGreeting,
+          localNow: new Date().toISOString(),
+          tzOffsetMinutes: new Date().getTimezoneOffset(),
+        }),
         signal: abort.signal,
       });
 

@@ -39,29 +39,35 @@ function PanelActionCard({ tool }: { tool: KiraToolResult }) {
 
   return (
     <div className={cn(
-      "flex items-start gap-2 px-3 py-2 rounded-lg border text-xs my-1",
+      "flex items-start gap-2 px-3 py-2.5 rounded-lg border text-xs my-1",
       tool.success
         ? "bg-green-500/10 border-green-500/20"
-        : "bg-red-500/10 border-red-500/20"
+        : "bg-destructive/10 border-destructive/25"
     )}>
       <div className="flex-shrink-0 mt-0.5">
         {tool.success
           ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-          : <XCircle className="w-3.5 h-3.5 text-red-400" />}
+          : <XCircle className="w-3.5 h-3.5 text-destructive" />}
       </div>
-      <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="flex items-center gap-1">
-          {isEvent && <Calendar className="w-3 h-3 text-muted-foreground" />}
-          {isHealth && <Activity className="w-3 h-3 text-muted-foreground" />}
-          <span className="font-medium text-foreground/90">{tool.summary}</span>
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-center gap-1.5">
+          {isEvent && <Calendar className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+          {isHealth && <Activity className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+          <span className={cn("font-medium leading-snug", tool.success ? "text-foreground/90" : "text-destructive")}>
+            {tool.success ? tool.summary : (isEvent ? "Event wasn't created" : isHealth ? "Health note wasn't logged" : tool.summary)}
+          </span>
         </div>
-        {tool.success && (
+        {tool.success ? (
           <button
             onClick={() => { closePanel(); navigate(isEvent ? "/" : "/health"); }}
             className="text-primary hover:underline underline-offset-2 block"
           >
             {isEvent ? "View on calendar →" : "View in Health →"}
           </button>
+        ) : (
+          <p className="text-muted-foreground leading-snug">
+            {tool.error ?? "Something went wrong."} Try rephrasing — e.g. "Add a dentist appointment for tomorrow at 2pm."
+          </p>
         )}
       </div>
     </div>
@@ -323,7 +329,11 @@ export function KiraSidePanel() {
       const res = await fetch(`/api/advisor/conversations/${cid}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content,
+          localNow: new Date().toISOString(),
+          tzOffsetMinutes: new Date().getTimezoneOffset(),
+        }),
         signal: abort.signal,
       });
 

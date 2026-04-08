@@ -45,7 +45,12 @@ Important boundaries:
 - You are a supportive resource, NOT a licensed therapist, doctor, or medical provider
 - For medical symptoms or safety concerns, always recommend consulting a healthcare professional
 - For mental health crises, provide crisis resources (988 Suicide & Crisis Lifeline, etc.)
-- Remind users you're an AI when it feels appropriate, not defensively`;
+- Remind users you're an AI when it feels appropriate, not defensively
+
+ACTION TOOLS — Use these proactively and immediately:
+- When the user asks to schedule, add, book, or create any meeting/appointment/event → call create_calendar_event RIGHT AWAY. Do not ask for confirmation; just do it and confirm in your narrative.
+- When the user wants to log symptoms, health notes, or how they're feeling → call log_health_note RIGHT AWAY.
+- Never say "I'll do that" without actually calling the tool. Take the action first, then describe what you did.`;
 
 function buildSystemPrompt(
   family?: {
@@ -53,7 +58,8 @@ function buildSystemPrompt(
     advisorElderContext?: string | null;
     advisorSelfContext?: string | null;
   },
-  memories?: string[]
+  memories?: string[],
+  timeContext?: { localNow: string; tzOffsetMinutes: number }
 ): string {
   const parts: string[] = [];
 
@@ -69,9 +75,34 @@ function buildSystemPrompt(
 
   const memoryLines = memories?.filter(Boolean) ?? [];
 
-  if (parts.length === 0 && memoryLines.length === 0) return BASE_SYSTEM_PROMPT;
+  let prompt = BASE_SYSTEM_PROMPT;
 
-  let prompt = BASE_SYSTEM_PROMPT + "\n\n---";
+  // Inject time context so Kira knows the current date/time for scheduling
+  if (timeContext) {
+    const localDate = new Date(timeContext.localNow);
+    const offsetHours = -timeContext.tzOffsetMinutes / 60;
+    const sign = offsetHours >= 0 ? "+" : "-";
+    const absH = String(Math.floor(Math.abs(offsetHours))).padStart(2, "0");
+    const absM = String(Math.abs(timeContext.tzOffsetMinutes) % 60).padStart(2, "0");
+    const tzLabel = `UTC${sign}${absH}:${absM}`;
+
+    // Format the user's local time nicely
+    const localStr = localDate.toLocaleString("en-US", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+      hour: "numeric", minute: "2-digit", hour12: true,
+    });
+
+    prompt += `\n\n--- CURRENT TIME ---
+The user's current local date and time is: ${localStr} (${tzLabel}).
+When scheduling events, always convert the user's intended local time to UTC for start_datetime.
+Format datetimes as ISO 8601 with Z suffix (UTC), e.g. "2026-04-08T14:30:00Z".
+If the user says "today", "tomorrow", "next Monday", etc., resolve it relative to the date above.
+--- END TIME ---`;
+  }
+
+  if (parts.length === 0 && memoryLines.length === 0) return prompt;
+
+  prompt += "\n\n---";
 
   if (parts.length > 0) {
     prompt += `\nFAMILY CONTEXT — You know this family well. Use names, reference specific situations, and never make them repeat themselves. Weave this naturally into every response:\n\n${parts.join("\n\n")}`;
@@ -527,7 +558,7 @@ export function registerAdvisorRoutes(app: Express): void {
     try {
       const userId = (req as any).user?.claims?.sub;
       const conversationId = parseInt(req.params.id);
-      const { content, priorGreeting } = req.body;
+      const { content, priorGreeting, localNow, tzOffsetMinutes } = req.body;
 
       if (!content?.trim()) return res.status(400).json({ error: "Message content required" });
 
@@ -554,7 +585,10 @@ export function registerAdvisorRoutes(app: Express): void {
       const familyId = family?.id;
       const memories = familyId ? await storage.getKiraMemories(familyId) : [];
       const memoryContents = memories.map(m => m.content);
-      const systemPrompt = buildSystemPrompt(family ?? undefined, memoryContents);
+      const timeContext = localNow
+        ? { localNow: String(localNow), tzOffsetMinutes: Number(tzOffsetMinutes ?? 0) }
+        : undefined;
+      const systemPrompt = buildSystemPrompt(family ?? undefined, memoryContents, timeContext);
 
       // Set up SSE
       res.setHeader("Content-Type", "text/event-stream");
@@ -610,7 +644,9 @@ export function registerAdvisorRoutes(app: Express): void {
         for (const tc of toolCalls) {
           let args: Record<string, unknown> = {};
           try { args = JSON.parse(tc.arguments || "{}"); } catch {}
+          console.log(`[Kira tool] executing ${tc.name} args=${JSON.stringify(args)}`);
           const result = await executeKiraTool(tc.name, args, familyId);
+          console.log(`[Kira tool] result: success=${result.success} summary="${result.summary}" error=${result.error ?? "none"}`);
           toolResults.push(result);
           // Stream the action card event to the client
           res.write(`data: ${JSON.stringify({ tool: result })}\n\n`);
