@@ -50,7 +50,18 @@ Important boundaries:
 ACTION TOOLS — Use these proactively and immediately:
 - When the user asks to schedule, add, book, or create any meeting/appointment/event → call create_calendar_event RIGHT AWAY. Do not ask for confirmation; just do it and confirm in your narrative.
 - When the user wants to log symptoms, health notes, or how they're feeling → call log_health_note RIGHT AWAY.
-- Never say "I'll do that" without actually calling the tool. Take the action first, then describe what you did.`;
+- Never say "I'll do that" without actually calling the tool. Take the action first, then describe what you did.
+
+RECURRING EVENTS — Always use the rrule parameter when the user says "every", "each", "daily", "weekly", "weekdays", "recurring", or describes a repeating schedule:
+- Every weekday (Mon–Fri): FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
+- Every day: FREQ=DAILY
+- Every week on a specific day (e.g. Monday): FREQ=WEEKLY;BYDAY=MO
+- Every other week: FREQ=WEEKLY;INTERVAL=2
+- Every month: FREQ=MONTHLY
+- Every year: FREQ=YEARLY
+- To limit occurrences add COUNT=N (e.g. FREQ=WEEKLY;BYDAY=MO;COUNT=10)
+- To end by a date add UNTIL=YYYYMMDDTHHMMSSZ (e.g. FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231T235959Z)
+- NEVER include "RRULE:" prefix — only the rule content after the colon.`;
 
 function buildSystemPrompt(
   family?: {
@@ -188,16 +199,20 @@ const KIRA_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "create_calendar_event",
-      description: "Create a calendar event for the family. Use when the user asks to schedule, book, add, or create any appointment, reminder, or event on the calendar.",
+      description: "Create a calendar event for the family. Use when the user asks to schedule, book, add, or create any appointment, reminder, or event on the calendar. Supports one-time and recurring events.",
       parameters: {
         type: "object",
         properties: {
           title: { type: "string", description: "Title of the event (required)" },
-          start_datetime: { type: "string", description: "ISO 8601 datetime for event start, e.g. 2025-06-15T14:00:00" },
-          end_datetime: { type: "string", description: "ISO 8601 datetime for event end (optional, defaults to 1 hour after start)" },
+          start_datetime: { type: "string", description: "ISO 8601 UTC datetime for event start, e.g. 2025-06-15T18:00:00Z" },
+          end_datetime: { type: "string", description: "ISO 8601 UTC datetime for event end (optional, defaults to 1 hour after start)" },
           description: { type: "string", description: "Optional notes or details about the event" },
           category: { type: "string", enum: ["medical", "school", "activity", "work", "family", "eldercare", "other"], description: "Category of the event" },
           member_names: { type: "array", items: { type: "string" }, description: "Names of family members this event is for (optional, leave empty for whole family)" },
+          rrule: {
+            type: "string",
+            description: "RFC 5545 RRULE string for recurring events (omit for one-time events). Use ONLY the rule portion, never include 'RRULE:' prefix. Examples: daily='FREQ=DAILY', every weekday='FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', every Monday='FREQ=WEEKLY;BYDAY=MO', weekly='FREQ=WEEKLY', biweekly='FREQ=WEEKLY;INTERVAL=2', monthly='FREQ=MONTHLY'. Add COUNT=N or UNTIL=YYYYMMDDTHHMMSSZ to end the series.",
+          },
         },
         required: ["title", "start_datetime"],
       },
@@ -244,6 +259,7 @@ async function executeKiraTool(
       const description = args.description ? String(args.description) : undefined;
       const category = String(args.category ?? "other");
       const memberNames: string[] = Array.isArray(args.member_names) ? args.member_names.map(String) : [];
+      const rruleRaw = args.rrule ? String(args.rrule).replace(/^RRULE:/i, "").trim() : null;
 
       const startTime = new Date(startRaw);
       if (isNaN(startTime.getTime())) throw new Error("Invalid start datetime");
@@ -258,7 +274,7 @@ async function executeKiraTool(
           .map(m => m.id);
       }
 
-      const event = await storage.createEvent(familyId, {
+      const basePayload = {
         familyId,
         title,
         description: description ?? null,
@@ -269,14 +285,32 @@ async function executeKiraTool(
         category,
         completed: false,
         isImportant: false,
-      });
+      };
+
+      let event: Awaited<ReturnType<typeof storage.createEvent>>;
+
+      if (rruleRaw) {
+        // Create a recurring parent event
+        const parent = await storage.createEvent(familyId, {
+          ...basePayload,
+          rrule: rruleRaw,
+          isRecurringParent: true,
+        });
+        // Self-link recurringEventId so the expander picks it up
+        await storage.updateEvent(parent.id, familyId, { recurringEventId: parent.id });
+        parent.recurringEventId = parent.id;
+        event = parent;
+      } else {
+        event = await storage.createEvent(familyId, basePayload);
+      }
 
       const dateStr = format(startTime, "EEE, MMM d 'at' h:mm a");
+      const recurringSuffix = rruleRaw ? " (recurring)" : "";
       return {
         name: toolName,
         success: true,
-        summary: `Created "${title}" on ${dateStr}`,
-        data: { id: event.id, title, startTime: startTime.toISOString(), category },
+        summary: `Created "${title}" on ${dateStr}${recurringSuffix}`,
+        data: { id: event.id, title, startTime: startTime.toISOString(), category, rrule: rruleRaw ?? undefined },
       };
     }
 
