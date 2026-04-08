@@ -7,7 +7,7 @@ import { useLocation } from "wouter";
 import {
   Bot, User, Send, Sparkles, X, ExternalLink,
   CheckCircle2, XCircle, Calendar, Activity, Plus,
-  ChevronLeft, MessageSquare, Clock, Trash2,
+  ChevronLeft, MessageSquare, Clock, Trash2, Mic, MicOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useKiraPanel } from "@/contexts/KiraPanelContext";
@@ -245,6 +245,13 @@ export function KiraSidePanel() {
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Voice input state
+  const [voiceState, setVoiceState] = useState<"idle" | "listening" | "processing" | "denied">("idle");
+  const [interimTranscript, setInterimTranscript] = useState("");
+  const recognitionRef = useRef<any>(null);
+  const speechSupported = typeof window !== "undefined" &&
+    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
   const { data: convData } = useQuery<AdvisorConversation & { messages: AdvisorMessage[] }>({
     queryKey: ["/api/advisor/conversations", convId],
     enabled: !!convId,
@@ -272,6 +279,16 @@ export function KiraSidePanel() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent, streamingTools]);
+
+  // Stop voice recognition when panel closes or on unmount
+  useEffect(() => {
+    if (!isOpen) {
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+      setVoiceState("idle");
+      setInterimTranscript("");
+    }
+  }, [isOpen]);
 
   const startNewConversation = useCallback(() => {
     abortRef.current?.abort();
@@ -390,8 +407,77 @@ export function KiraSidePanel() {
     }
   }, [input, convId, isStreaming, queryClient]);
 
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    setVoiceState("idle");
+    setInterimTranscript("");
+  }, []);
+
+  const handleMicClick = useCallback(() => {
+    if (voiceState === "listening") { stopListening(); return; }
+    if (!speechSupported) return;
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      setVoiceState("listening");
+      setInput("");
+      setInterimTranscript("");
+    };
+
+    recognition.onresult = (event: any) => {
+      let interim = "";
+      let final = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += t;
+        else interim += t;
+      }
+      if (interim) setInterimTranscript(interim);
+      if (final) {
+        setInterimTranscript("");
+        setVoiceState("processing");
+        setTimeout(() => {
+          setVoiceState("idle");
+          sendMessage(final);
+        }, 350);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === "not-allowed" || event.error === "permission-denied") {
+        setVoiceState("denied");
+      } else {
+        setVoiceState("idle");
+        setInterimTranscript("");
+      }
+    };
+
+    recognition.onend = () => {
+      setVoiceState(prev => prev === "listening" ? "idle" : prev);
+      setInterimTranscript("");
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      textareaRef.current?.focus();
+    } catch {
+      setVoiceState("idle");
+    }
+  }, [voiceState, speechSupported, stopListening, sendMessage]);
+
   const handleKeyDown = (e: { key: string; shiftKey: boolean; preventDefault: () => void }) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === "Escape" && voiceState === "listening") { stopListening(); }
   };
 
   const isEmpty = messages.length === 0 && !isStreaming;
@@ -509,22 +595,65 @@ export function KiraSidePanel() {
 
             {/* Input */}
             <div className="border-t border-border/40 dark:border-border/60 bg-background/95 dark:bg-secondary/95 backdrop-blur-sm px-3 py-3 flex-shrink-0">
+              {voiceState === "denied" && (
+                <p className="text-[10px] text-destructive mb-2 text-center leading-snug">
+                  Microphone access was denied. Allow it in your browser settings and try again.
+                </p>
+              )}
               <div className="flex items-end gap-2">
-                <Textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => { setInput(e.target.value); resizeTextarea(e.target); }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Ask Kira anything…"
-                  rows={1}
-                  className="flex-1 resize-none text-sm leading-5 min-h-[38px] max-h-[120px] bg-muted/50 dark:bg-background/70 border-border/50"
-                  style={{ height: "38px" }}
-                  data-testid="input-kira-panel-message"
-                />
+                <div className="relative flex-1">
+                  <Textarea
+                    ref={textareaRef}
+                    value={voiceState === "listening" ? interimTranscript : input}
+                    onChange={(e) => { if (voiceState !== "listening") { setInput(e.target.value); resizeTextarea(e.target); } }}
+                    onKeyDown={handleKeyDown}
+                    placeholder={voiceState === "listening" ? "Listening… speak now" : "Ask Kira anything…"}
+                    rows={1}
+                    readOnly={voiceState === "listening" || voiceState === "processing"}
+                    className={cn(
+                      "flex-1 resize-none text-sm leading-5 min-h-[38px] max-h-[120px] border-border/50 transition-colors w-full",
+                      voiceState === "listening"
+                        ? "bg-primary/5 dark:bg-primary/10 border-primary/30 text-foreground/80 italic"
+                        : "bg-muted/50 dark:bg-background/70"
+                    )}
+                    style={{ height: "38px" }}
+                    data-testid="input-kira-panel-message"
+                  />
+                  {voiceState === "listening" && (
+                    <span className="absolute right-2.5 top-1/2 -translate-y-1/2 flex gap-0.5">
+                      {[0, 1, 2].map(i => (
+                        <span
+                          key={i}
+                          className="w-0.5 rounded-full bg-primary animate-bounce"
+                          style={{ height: "12px", animationDelay: `${i * 0.15}s` }}
+                        />
+                      ))}
+                    </span>
+                  )}
+                </div>
+                {speechSupported && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleMicClick}
+                    disabled={isStreaming || voiceState === "processing"}
+                    title={voiceState === "listening" ? "Stop listening" : "Speak to Kira"}
+                    data-testid="button-kira-panel-mic"
+                    className={cn(
+                      "flex-shrink-0 h-9 w-9 transition-colors",
+                      voiceState === "listening" && "text-red-500 bg-red-500/10 hover:bg-red-500/20"
+                    )}
+                  >
+                    {voiceState === "listening"
+                      ? <MicOff className="w-3.5 h-3.5" />
+                      : <Mic className={cn("w-3.5 h-3.5", voiceState === "denied" && "text-muted-foreground/50")} />
+                    }
+                  </Button>
+                )}
                 <Button
                   size="icon"
                   onClick={() => sendMessage()}
-                  disabled={!input.trim() || isStreaming}
+                  disabled={!input.trim() || isStreaming || voiceState === "listening"}
                   data-testid="button-kira-panel-send"
                   className="flex-shrink-0 h-9 w-9"
                 >
