@@ -176,7 +176,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
               {event.googleEventId && (
                 <span
                   className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-white font-semibold"
-                  style={{ background: '#4285f4', fontSize: '9px', letterSpacing: '0.02em' }}
+                  style={{ background: '#4285f4', fontSize: '11px', letterSpacing: '0.02em' }}
                   title="Synced from Google Calendar"
                 >
                   <span>G</span>

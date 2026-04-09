@@ -306,7 +306,7 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                           <p className="font-semibold text-foreground truncate leading-tight pr-3 flex items-center gap-1" style={{ fontSize: evTitle }}>
                             <span className="truncate">{event.title}</span>
                             {event.googleEventId && (
-                              <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '6px', width: '10px', height: '10px' }}>G</span>
+                              <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '8px', width: '12px', height: '12px' }}>G</span>
                             )}
                           </p>
                           {displayHeight > 25 && (

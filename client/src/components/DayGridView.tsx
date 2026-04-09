@@ -259,7 +259,7 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                     <p className="font-semibold text-foreground truncate leading-tight pr-4 flex items-center gap-1" style={{ fontSize: evTitle }}>
                       <span className="truncate">{event.title}</span>
                       {event.googleEventId && (
-                        <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '6px', width: '11px', height: '11px' }}>G</span>
+                        <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '8px', width: '13px', height: '13px' }}>G</span>
                       )}
                     </p>
                     {displayHeight > 30 && (

@@ -167,7 +167,7 @@ export default function EventCard({
               {event.googleEventId && (
                 <span
                   className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none"
-                  style={{ background: '#4285f4', color: '#fff', fontSize: '7px', width: '13px', height: '13px' }}
+                  style={{ background: '#4285f4', color: '#fff', fontSize: '9px', width: '15px', height: '15px' }}
                   title="Synced from Google Calendar"
                   data-testid={`icon-gcal-${event.id}`}
                 >G</span>
