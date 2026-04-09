@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, addDays, startOfDay, endOfDay, isWithinInterval, formatDistanceToNow } from "date-fns";
 import {
-  CalendarDays, MessageCircle, Sparkles, Activity, Plus, Check,
+  CalendarDays, MessageCircle, Sparkles, Plus, Check,
   ChevronRight, Pill, AlertTriangle, Clock, Heart, ArrowRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,6 +41,7 @@ export default function FamilyDashboard() {
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<UiEvent | null>(null);
   const [loggedMedIds, setLoggedMedIds] = useState<Set<string>>(new Set());
+  const [kiraInput, setKiraInput] = useState("");
 
   // ── Data queries ──────────────────────────────────────────────────────────
   const { data: rawEvents = [] } = useQuery<any[]>({
@@ -185,27 +186,52 @@ export default function FamilyDashboard() {
           </div>
         </div>
 
-        {/* ── Quick Actions ────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: "Add Event", icon: Plus, color: "text-orange-500", action: () => setCreateEventOpen(true) },
-            { label: "Message Family", icon: MessageCircle, color: "text-blue-500", action: () => navigate("/messages") },
-            { label: "Ask Kira", icon: Sparkles, color: "text-violet-500", action: () => openPanel() },
-            { label: "Log Symptom", icon: Activity, color: "text-rose-500", action: () => navigate("/health") },
-          ].map(({ label, icon: Icon, color, action }) => (
+        {/* ── Kira search bar ──────────────────────────────────────────── */}
+        <div className="space-y-2.5">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const q = kiraInput.trim();
+              openPanel(q || undefined);
+              setKiraInput("");
+            }}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl border border-border bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-transparent transition-all"
+          >
+            <Sparkles className="w-4 h-4 text-violet-500 flex-shrink-0" />
+            <input
+              value={kiraInput}
+              onChange={(e) => setKiraInput(e.target.value)}
+              placeholder="Ask Kira anything — schedule help, medication questions, caregiving advice…"
+              data-testid="input-kira-search"
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            />
             <button
-              key={label}
-              onClick={action}
-              data-testid={`button-quick-${label.toLowerCase().replace(/ /g, "-")}`}
-              className="flex items-center gap-2.5 px-4 py-3 rounded-xl border border-border bg-card hover-elevate active-elevate-2 text-left transition-all"
+              type="submit"
+              data-testid="button-kira-search-submit"
+              className="flex-shrink-0 w-7 h-7 rounded-lg bg-violet-500 flex items-center justify-center hover:bg-violet-600 transition-colors"
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color} bg-current/10`}
-                style={{ background: "transparent" }}>
-                <Icon className={`w-4 h-4 ${color}`} />
-              </div>
-              <span className="text-sm font-medium text-foreground">{label}</span>
+              <ArrowRight className="w-3.5 h-3.5 text-white" />
             </button>
-          ))}
+          </form>
+
+          {/* Secondary quick links */}
+          <div className="flex items-center gap-1 flex-wrap">
+            <span className="text-xs text-muted-foreground mr-1">Quick:</span>
+            {[
+              { label: "Add event", action: () => setCreateEventOpen(true) },
+              { label: "Messages", action: () => navigate("/messages") },
+              { label: "Log symptom", action: () => navigate("/health") },
+            ].map(({ label, action }) => (
+              <button
+                key={label}
+                onClick={action}
+                data-testid={`button-quick-${label.toLowerCase().replace(/ /g, "-")}`}
+                className="text-xs px-2.5 py-1 rounded-full border border-border bg-card hover-elevate active-elevate-2 text-muted-foreground transition-all"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* ── Main grid ────────────────────────────────────────────────── */}
