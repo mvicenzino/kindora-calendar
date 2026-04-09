@@ -114,6 +114,47 @@ async function fetchCalendarEvents(accessToken: string, calendarId: string): Pro
   return (data.items ?? []).filter((e: any) => e.status !== "cancelled");
 }
 
+// Strip HTML from Google Calendar descriptions and extract Zoom/Meet links cleanly
+function cleanGCalDescription(html: string | null | undefined): string | null {
+  if (!html) return null;
+
+  // Extract all URLs before stripping tags (Zoom links live in <a href=...>)
+  const urls: string[] = [];
+  html.replace(/href="([^"]+)"/gi, (_, url) => { urls.push(url); return _; });
+
+  // Decode common HTML entities
+  let text = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "\n• ")
+    .replace(/<[^>]+>/g, "")          // strip remaining tags
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\u200B/g, "")           // zero-width spaces
+    .replace(/─{3,}/g, "")           // Google's separator lines
+    .replace(/\n{3,}/g, "\n\n")      // collapse excess blank lines
+    .trim();
+
+  // Re-append any important URLs (Zoom, Meet, Teams) that weren't preserved as text
+  const importantUrls = urls.filter(u =>
+    (u.startsWith("https://") || u.startsWith("http://")) &&
+    (u.includes("zoom.us") || u.includes("meet.google.com") || u.includes("teams.microsoft.com"))
+  );
+
+  for (const url of importantUrls) {
+    if (!text.includes(url)) {
+      text += `\n${url}`;
+    }
+  }
+
+  return text.trim() || null;
+}
+
 // Map a Google Calendar event to a Kindora event payload
 function mapGCalEvent(gEvent: GCalEvent, familyId: string, color: string) {
   const startRaw = gEvent.start.dateTime ?? gEvent.start.date;
@@ -141,7 +182,7 @@ function mapGCalEvent(gEvent: GCalEvent, familyId: string, color: string) {
   return {
     familyId,
     title: gEvent.summary || "(No title)",
-    description: gEvent.description ?? null,
+    description: cleanGCalDescription(gEvent.description),
     startTime,
     endTime,
     memberIds: [] as string[],
