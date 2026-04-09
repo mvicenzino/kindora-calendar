@@ -4846,7 +4846,7 @@ Always return valid JSON matching one of the three formats above.`,
     app.post("/api/google-calendar/sync", isAuthenticated, async (req: any, res) => {
       try {
         const userId = req.user.claims.sub;
-        const familyId = await getFamilyId(req);
+        const familyId = await getFamilyId(req, userId);
         if (!familyId) return res.status(400).json({ error: "No family found" });
         const result = await syncGoogleCalendars(userId, familyId);
         res.json(result);
