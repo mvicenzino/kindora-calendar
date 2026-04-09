@@ -31,6 +31,7 @@ import PublicResources from "@/pages/PublicResources";
 import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
 import Health from "@/pages/Health";
+import FamilyDashboard from "@/pages/FamilyDashboard";
 import NotFound from "@/pages/not-found";
 import AppSidebar from "@/components/AppSidebar";
 import Header from "@/components/Header";
@@ -248,7 +249,8 @@ function Router() {
                 <KiraPanelProvider>
                 <AppShell>
                   <Switch>
-                    <Route path="/" component={Home} />
+                    <Route path="/" component={FamilyDashboard} />
+                    <Route path="/calendar" component={Home} />
                     <Route path="/care" component={CaregiverDashboard} />
                     <Route path="/messages" component={Messages} />
                     <Route path="/documents" component={Documents} />

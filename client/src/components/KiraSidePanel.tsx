@@ -59,7 +59,7 @@ function PanelActionCard({ tool }: { tool: KiraToolResult }) {
         </div>
         {tool.success ? (
           <button
-            onClick={() => { closePanel(); navigate(isEvent ? "/" : "/health"); }}
+            onClick={() => { closePanel(); navigate(isEvent ? "/calendar" : "/health"); }}
             className="text-primary hover:underline underline-offset-2 block"
           >
             {isEvent ? "View on calendar →" : "View in Health →"}

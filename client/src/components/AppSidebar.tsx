@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield, History } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield, History, LayoutDashboard } from "lucide-react";
 import HelpDrawer from "./HelpDrawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -23,7 +23,8 @@ import { apiRequest } from "@/lib/queryClient";
 const logo = "/kindora-logo.jpeg";
 
 const familyNavItems = [
-  { title: "Calendar", url: "/", icon: Calendar },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Calendar", url: "/calendar", icon: Calendar },
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Family Vault", url: "/documents", icon: FileText },
   { title: "Memories", url: "/memories", icon: Image },
@@ -35,7 +36,7 @@ const familyNavItems = [
 const caregiverNavItems = [
   { title: "Care Dashboard", url: "/care", icon: Heart },
   { title: "Messages", url: "/messages", icon: MessageCircle },
-  { title: "Calendar", url: "/", icon: Calendar },
+  { title: "Calendar", url: "/calendar", icon: Calendar },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

@@ -106,7 +106,7 @@ export default function SmartReminders() {
             ),
             duration: window === 0 ? 10000 : 7000,
             action: (
-              <ToastAction altText="View calendar" onClick={() => navigate("/")}>
+              <ToastAction altText="View calendar" onClick={() => navigate("/calendar")}>
                 View
               </ToastAction>
             ),
