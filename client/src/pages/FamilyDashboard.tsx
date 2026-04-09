@@ -44,27 +44,28 @@ export default function FamilyDashboard() {
 
   // ── Data queries ──────────────────────────────────────────────────────────
   const { data: rawEvents = [] } = useQuery<any[]>({
-    queryKey: ["/api/events", activeFamilyId],
+    queryKey: [`/api/events?familyId=${activeFamilyId}`],
     enabled: !!activeFamilyId,
   });
 
+  // family-members uses path param: fetches /api/family-members/:familyId
   const { data: members = [] } = useQuery<FamilyMember[]>({
     queryKey: ["/api/family-members", activeFamilyId],
     enabled: !!activeFamilyId,
   });
 
   const { data: medications = [] } = useQuery<Medication[]>({
-    queryKey: ["/api/medications", activeFamilyId],
+    queryKey: [`/api/medications?familyId=${activeFamilyId}`],
     enabled: !!activeFamilyId,
   });
 
   const { data: messages = [] } = useQuery<FamilyMessage[]>({
-    queryKey: ["/api/family-messages", activeFamilyId],
+    queryKey: [`/api/family-messages?familyId=${activeFamilyId}`],
     enabled: !!activeFamilyId,
   });
 
   const { data: symptomEntries = [] } = useQuery<any[]>({
-    queryKey: ["/api/symptoms", activeFamilyId],
+    queryKey: [`/api/symptoms?familyId=${activeFamilyId}`],
     enabled: !!activeFamilyId,
   });
 
@@ -142,7 +143,7 @@ export default function FamilyDashboard() {
   const completeMutation = useMutation({
     mutationFn: ({ eventId, completed }: { eventId: string; completed: boolean }) =>
       apiRequest("PATCH", `/api/events/${eventId}`, { completed }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/events"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/events?familyId=${activeFamilyId}`] }),
   });
 
   const logMedMutation = useMutation({
