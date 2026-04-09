@@ -1,0 +1,172 @@
+The radio list for “Default” is still hardcoding “Yes” and “No” instead of showing what I actually sent which was a two option list containing true = “Yes Sir” and false = “No Way”.  So, the radio list is still not using the configs correctly.
+ 
+
+{
+
+        "Id": "29d16db9-342f-43fc-8727-10ed1ca2236d",
+
+        "Name": "Default",
+
+        "DataType": {
+
+          "Id": "ca903869-6354-4070-84bd-9560d6af0af1",
+
+          "Name": "Boolean"
+
+        },
+
+        "Control": "RadioList",
+
+        "Required": true,
+
+        "Columns": true,
+
+        "Options": {
+
+          "true": {
+
+            "Id": "true",
+
+            "Name": "Yes Sir"
+
+          },
+
+          "false": {
+
+            "Id": "false",
+
+            "Name": "No Way"
+
+          }
+
+        }
+
+      }
+
+ 
+
+Please convert the value to the field’s data type before writing back to the json record. So, the “Default” and “Scope” fields should have written back to the object as true/false and numeric, respectively.  The value(s) should do a type conversion of the value to the data type.
+ 
+
+Configuration:
+
+ 
+
+{
+
+        "Id": "29d16db9-342f-43fc-8727-10ed1ca2236d",
+
+        "Name": "Default",
+
+        "DataType": {
+
+          "Id": "ca903869-6354-4070-84bd-9560d6af0af1",
+
+          "Name": "Boolean"
+
+        },
+
+        "Control": "RadioList",
+
+        "Required": true,
+
+        "Columns": true,
+
+        "Options": {
+
+          "true": {
+
+            "Id": "true",
+
+            "Name": "Yes Sir"
+
+          },
+
+          "false": {
+
+            "Id": "false",
+
+            "Name": "No Way"
+
+          }
+
+        }
+
+      }
+
+ 
+
+Updated object:
+
+ 
+
+{
+
+  "Id": "1ca8828c-f7a9-4ed6-8d1e-33367701f467",
+
+  "Name": "Xentor Ulnex",
+
+  "Icon": "lock",
+
+  "Category": {
+
+    "Id": "6ac8b44d-6a16-41d0-826a-6339807c4549",
+
+    "Name": "Presentations"
+
+  },
+
+  "Type": {
+
+    "Id": "6003295d-21a5-4f24-8ee6-62d6e0fe6856",
+
+    "Name": "About Us"
+
+  },
+
+  "Subtypes": [],
+
+  "Default": "true",  ,<--should be converted to true without the “”.
+
+  "Scope": "2",  ßshould be converted to 2 without the “”
+
+  "Formats": [
+
+    {
+
+      "Id": "bcb82a8d-260b-4a4e-8a75-cd461ba6c468",
+
+      "Name": "Font Type"
+
+    }
+
+  ],
+
+  "Approval": {
+
+    "Id": "0693a9e8-7950-41d7-98bd-6814786aa8e0",
+
+    "Name": "Approved"
+
+  },
+
+  "CreatedBy": {
+
+    "Id": "fc7d5d8a-808f-4839-b9eb-3fee685555c0",
+
+    "Name": "Corthor Rexlor"
+
+  },
+
+  "CreatedOn": "2022-03-30T14:52:40.7691858Z",
+
+  "ModifiedBy": {
+
+    "Id": "fec88bd5-7cd1-4418-9418-c728780756e2",
+
+    "Name": "Myrlan"
+
+  },
+
+  "ModifiedOn": "2026-02-05T03:55:15.9344772Z"
+
