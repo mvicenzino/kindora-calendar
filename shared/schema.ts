@@ -113,6 +113,7 @@ export const events = pgTable("events", {
   rrule: text("rrule"), // RFC 5545 RRULE string (e.g. "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10")
   isRecurringParent: boolean("is_recurring_parent").default(false), // True if this is the template event for a series
   isImportant: boolean("is_important").notNull().default(false),
+  googleEventId: text("google_event_id"), // Set when event was synced from Google Calendar
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -571,6 +572,21 @@ export const kiraMemories = pgTable("kira_memories", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 export type KiraMemory = typeof kiraMemories.$inferSelect;
+
+// Google Calendar sync connections
+export const googleCalendarConnections = pgTable("google_calendar_connections", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  refreshToken: text("refresh_token").notNull(),
+  accessToken: text("access_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  selectedCalendarIds: text("selected_calendar_ids").array().notNull().default(sql`'{}'::text[]`),
+  lastSyncedAt: timestamp("last_synced_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSelect;
+export const insertGoogleCalendarConnectionSchema = createInsertSchema(googleCalendarConnections).omit({ id: true, createdAt: true });
+export type InsertGoogleCalendarConnection = z.infer<typeof insertGoogleCalendarConnectionSchema>;
 
 export const insertSymptomSystemRatingSchema = createInsertSchema(symptomSystemRatings).omit({ id: true });
 export type InsertSymptomSystemRating = z.infer<typeof insertSymptomSystemRatingSchema>;

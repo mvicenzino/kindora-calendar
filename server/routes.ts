@@ -4724,6 +4724,154 @@ Always return valid JSON matching one of the three formats above.`,
     }
   });
 
+  // ── Google Calendar Sync ────────────────────────────────────────────────────
+  {
+    const { resolveCalendarCallbackURL, listCalendars, getValidAccessToken, syncGoogleCalendars } = await import("./googleCalendarSync");
+    const GC_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+    const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "";
+    const callbackURL = resolveCalendarCallbackURL();
+
+    // GET /api/google-calendar/status — connection info + calendar list
+    app.get("/api/google-calendar/status", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const conn = await storage.getGoogleCalendarConnection(userId);
+        if (!conn) return res.json({ connected: false });
+
+        let calendars: any[] = [];
+        try {
+          const token = await getValidAccessToken(userId);
+          calendars = await listCalendars(token);
+        } catch (err) {
+          console.error("[GCal status] Could not refresh token:", err);
+          return res.json({ connected: false, error: "token_expired" });
+        }
+
+        res.json({
+          connected: true,
+          selectedCalendarIds: conn.selectedCalendarIds,
+          lastSyncedAt: conn.lastSyncedAt,
+          calendars,
+        });
+      } catch (err) {
+        res.status(500).json({ error: String(err) });
+      }
+    });
+
+    // GET /api/google-calendar/connect — kick off OAuth
+    app.get("/api/google-calendar/connect", isAuthenticated, (req: any, res) => {
+      const state = Math.random().toString(36).substring(2);
+      (req.session as any).gcalOAuthState = state;
+
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: callbackURL,
+        response_type: "code",
+        scope: GC_SCOPE,
+        access_type: "offline",
+        prompt: "consent", // Force consent to always get refresh token
+        state,
+      });
+
+      res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    });
+
+    // GET /api/google-calendar/callback — handle OAuth redirect
+    app.get("/api/google-calendar/callback", isAuthenticated, async (req: any, res) => {
+      const { code, state, error } = req.query as Record<string, string>;
+
+      if (error) return res.redirect("/settings/import?gcal=error&reason=" + encodeURIComponent(error));
+
+      const savedState = (req.session as any).gcalOAuthState;
+      if (!state || state !== savedState) return res.redirect("/settings/import?gcal=error&reason=state_mismatch");
+      delete (req.session as any).gcalOAuthState;
+
+      if (!code) return res.redirect("/settings/import?gcal=error&reason=no_code");
+
+      try {
+        const tokenBody = new URLSearchParams({
+          code,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: callbackURL,
+          grant_type: "authorization_code",
+        });
+
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: tokenBody.toString(),
+        });
+        const tokenData = await tokenRes.json() as any;
+        if (!tokenRes.ok || !tokenData.refresh_token) {
+          console.error("[GCal callback] Token error:", tokenData);
+          return res.redirect("/settings/import?gcal=error&reason=token_failed");
+        }
+
+        const userId = req.user.claims.sub;
+        const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000);
+
+        await storage.upsertGoogleCalendarConnection({
+          userId,
+          refreshToken: tokenData.refresh_token,
+          accessToken: tokenData.access_token,
+          accessTokenExpiresAt: expiresAt,
+          selectedCalendarIds: [],
+          lastSyncedAt: null,
+        });
+
+        console.log("[GCal callback] Connected for user:", userId);
+        res.redirect("/settings/import?gcal=connected");
+      } catch (err) {
+        console.error("[GCal callback] Error:", err);
+        res.redirect("/settings/import?gcal=error&reason=server_error");
+      }
+    });
+
+    // PATCH /api/google-calendar/calendars — update selected calendar IDs
+    app.patch("/api/google-calendar/calendars", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const { selectedCalendarIds } = req.body as { selectedCalendarIds: string[] };
+        if (!Array.isArray(selectedCalendarIds)) return res.status(400).json({ error: "selectedCalendarIds must be an array" });
+        await storage.updateGoogleCalendarConnection(userId, { selectedCalendarIds });
+        res.json({ success: true });
+      } catch (err) {
+        res.status(500).json({ error: String(err) });
+      }
+    });
+
+    // POST /api/google-calendar/sync — trigger a manual sync
+    app.post("/api/google-calendar/sync", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const familyId = await getFamilyId(req);
+        if (!familyId) return res.status(400).json({ error: "No family found" });
+        const result = await syncGoogleCalendars(userId, familyId);
+        res.json(result);
+      } catch (err) {
+        console.error("[GCal sync] Error:", err);
+        res.status(500).json({ error: String(err) });
+      }
+    });
+
+    // DELETE /api/google-calendar/disconnect — revoke and remove connection
+    app.delete("/api/google-calendar/disconnect", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const conn = await storage.getGoogleCalendarConnection(userId);
+        if (conn?.accessToken) {
+          await fetch(`https://oauth2.googleapis.com/revoke?token=${conn.accessToken}`, { method: "POST" }).catch(() => {});
+        }
+        await storage.deleteGoogleCalendarConnection(userId);
+        res.json({ success: true });
+      } catch (err) {
+        res.status(500).json({ error: String(err) });
+      }
+    });
+  }
+
   registerAdvisorRoutes(app);
   registerApiKeyRoutes(app);
 

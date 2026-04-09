@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { 
@@ -23,9 +24,13 @@ import {
   Check,
   X,
   Clock,
-  AlertCircle
+  AlertCircle,
+  RefreshCw,
+  Link,
+  Unlink,
+  CheckCircle2,
 } from "lucide-react";
-import { format, parseISO, eachDayOfInterval } from "date-fns";
+import { format, parseISO, eachDayOfInterval, formatDistanceToNow } from "date-fns";
 import type { FamilyMember, EventCategory } from "@shared/schema";
 import { EVENT_CATEGORIES, CATEGORY_CONFIG } from "@shared/schema";
 
@@ -50,6 +55,203 @@ interface ParseResult {
 
 interface ImportScheduleProps {
   onClose?: () => void;
+}
+
+// ── Google Calendar Sync Component ───────────────────────────────────────────
+interface GCalCalendar {
+  id: string;
+  summary: string;
+  description?: string;
+  backgroundColor?: string;
+  primary?: boolean;
+}
+
+interface GCalStatus {
+  connected: boolean;
+  selectedCalendarIds?: string[];
+  lastSyncedAt?: string | null;
+  calendars?: GCalCalendar[];
+  error?: string;
+}
+
+function GoogleCalendarSync() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // Show toast after OAuth redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gcal = params.get("gcal");
+    if (gcal === "connected") {
+      toast({ title: "Google Calendar connected!", description: "Select which calendars to sync below." });
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname + "?tab=import");
+    } else if (gcal === "error") {
+      const reason = params.get("reason") ?? "unknown";
+      toast({ title: "Couldn't connect Google Calendar", description: `Error: ${reason}. Please try again.`, variant: "destructive" });
+      window.history.replaceState({}, "", window.location.pathname + "?tab=import");
+    }
+  }, []);
+
+  const { data: status, isLoading } = useQuery<GCalStatus>({
+    queryKey: ["/api/google-calendar/status"],
+    staleTime: 30_000,
+  });
+
+  const updateCalendarsMutation = useMutation({
+    mutationFn: (selectedCalendarIds: string[]) =>
+      apiRequest("PATCH", "/api/google-calendar/calendars", { selectedCalendarIds }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/google-calendar/status"] }),
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/google-calendar/sync"),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/google-calendar/status"] });
+      toast({
+        title: "Sync complete",
+        description: `${data.created} new events added, ${data.updated} updated.`,
+      });
+    },
+    onError: (err: any) => {
+      toast({ title: "Sync failed", description: String(err), variant: "destructive" });
+    },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", "/api/google-calendar/disconnect"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/google-calendar/status"] });
+      toast({ title: "Google Calendar disconnected" });
+    },
+  });
+
+  const toggleCalendar = (calId: string, checked: boolean) => {
+    const current = status?.selectedCalendarIds ?? [];
+    const updated = checked ? [...current, calId] : current.filter(id => id !== calId);
+    updateCalendarsMutation.mutate(updated);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#4285f4" }}>
+              <Calendar className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-base">Google Calendar Sync</CardTitle>
+              <CardDescription className="text-xs mt-0.5">
+                {status?.connected
+                  ? status.lastSyncedAt
+                    ? `Last synced ${formatDistanceToNow(new Date(status.lastSyncedAt), { addSuffix: true })}`
+                    : "Connected — never synced"
+                  : "Import and keep your Google Calendar in sync automatically"}
+              </CardDescription>
+            </div>
+          </div>
+          {status?.connected && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                onClick={() => syncMutation.mutate()}
+                disabled={syncMutation.isPending || !status.selectedCalendarIds?.length}
+                data-testid="button-gcal-sync-now"
+              >
+                {syncMutation.isPending
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+                Sync Now
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => disconnectMutation.mutate()}
+                disabled={disconnectMutation.isPending}
+                data-testid="button-gcal-disconnect"
+                className="text-muted-foreground"
+              >
+                <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                Disconnect
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Checking connection…
+          </div>
+        ) : !status?.connected ? (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Connect your Google account to automatically pull events from any of your Google Calendars into Kindora. Events sync in one direction — Google → Kindora.
+            </p>
+            <Button
+              onClick={() => { window.location.href = "/api/google-calendar/connect"; }}
+              data-testid="button-gcal-connect"
+            >
+              <Link className="w-4 h-4 mr-2" />
+              Connect Google Calendar
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 mb-3">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Connected to Google Calendar
+            </div>
+            {!status.calendars?.length ? (
+              <p className="text-sm text-muted-foreground">No calendars found in your Google account.</p>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Choose which calendars to sync. Events from selected calendars will be imported into Kindora.
+                </p>
+                <div className="space-y-2">
+                  {status.calendars.map(cal => {
+                    const isSelected = status.selectedCalendarIds?.includes(cal.id) ?? false;
+                    return (
+                      <label
+                        key={cal.id}
+                        className="flex items-center gap-3 py-2 px-3 rounded-lg bg-muted/40 hover-elevate cursor-pointer"
+                        data-testid={`label-gcal-calendar-${cal.id}`}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => toggleCalendar(cal.id, !!checked)}
+                          data-testid={`checkbox-gcal-${cal.id}`}
+                        />
+                        <span
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ background: cal.backgroundColor ?? "#4285f4" }}
+                        />
+                        <span className="text-sm flex-1 min-w-0">
+                          <span className="font-medium">{cal.summary}</span>
+                          {cal.primary && (
+                            <Badge variant="outline" className="ml-2 text-[10px] py-0 h-4">Primary</Badge>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {!!status.selectedCalendarIds?.length && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {status.selectedCalendarIds.length} calendar{status.selectedCalendarIds.length !== 1 ? "s" : ""} selected. Click "Sync Now" to pull events.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function ImportSchedule({ onClose }: ImportScheduleProps = {}) {
@@ -278,6 +480,8 @@ export default function ImportSchedule({ onClose }: ImportScheduleProps = {}) {
 
   return (
     <div className="space-y-6">
+          <GoogleCalendarSync />
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

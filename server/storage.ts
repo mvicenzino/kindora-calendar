@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -172,6 +172,12 @@ export interface IStorage {
   getKiraMemories(familyId: string): Promise<KiraMemory[]>;
   addKiraMemories(familyId: string, memories: string[]): Promise<void>;
   clearKiraMemories(familyId: string): Promise<void>;
+  // Google Calendar sync
+  getGoogleCalendarConnection(userId: string): Promise<GoogleCalendarConnection | null>;
+  upsertGoogleCalendarConnection(data: Omit<InsertGoogleCalendarConnection, "id">): Promise<GoogleCalendarConnection>;
+  updateGoogleCalendarConnection(userId: string, updates: Partial<GoogleCalendarConnection>): Promise<void>;
+  deleteGoogleCalendarConnection(userId: string): Promise<void>;
+  getEventByGoogleId(familyId: string, googleEventId: string): Promise<Event | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -1253,6 +1259,12 @@ export class MemStorage implements IStorage {
   async clearKiraMemories(familyId: string): Promise<void> {
     this.kiraMemoriesStore = this.kiraMemoriesStore.filter(m => m.familyId !== familyId);
   }
+  // Google Calendar sync — not supported in demo/mem storage
+  async getGoogleCalendarConnection(_userId: string): Promise<GoogleCalendarConnection | null> { return null; }
+  async upsertGoogleCalendarConnection(_data: any): Promise<GoogleCalendarConnection> { throw new Error("Not supported in demo mode"); }
+  async updateGoogleCalendarConnection(_userId: string, _updates: any): Promise<void> {}
+  async deleteGoogleCalendarConnection(_userId: string): Promise<void> {}
+  async getEventByGoogleId(_familyId: string, _googleEventId: string): Promise<Event | null> { return null; }
 }
 
 // DrizzleStorage implementation
@@ -2303,6 +2315,36 @@ class DrizzleStorage implements IStorage {
   async clearKiraMemories(familyId: string): Promise<void> {
     await this.db.delete(kiraMemories).where(eq(kiraMemories.familyId, familyId));
   }
+
+  // ── Google Calendar Sync ──────────────────────────────────────────────────
+  async getGoogleCalendarConnection(userId: string): Promise<GoogleCalendarConnection | null> {
+    const rows = await this.db.select().from(googleCalendarConnections).where(eq(googleCalendarConnections.userId, userId)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async upsertGoogleCalendarConnection(data: Omit<InsertGoogleCalendarConnection, "id">): Promise<GoogleCalendarConnection> {
+    const rows = await this.db
+      .insert(googleCalendarConnections)
+      .values(data)
+      .onConflictDoUpdate({ target: googleCalendarConnections.userId, set: data })
+      .returning();
+    return rows[0];
+  }
+
+  async updateGoogleCalendarConnection(userId: string, updates: Partial<GoogleCalendarConnection>): Promise<void> {
+    await this.db.update(googleCalendarConnections).set(updates).where(eq(googleCalendarConnections.userId, userId));
+  }
+
+  async deleteGoogleCalendarConnection(userId: string): Promise<void> {
+    await this.db.delete(googleCalendarConnections).where(eq(googleCalendarConnections.userId, userId));
+  }
+
+  async getEventByGoogleId(familyId: string, googleEventId: string): Promise<Event | null> {
+    const rows = await this.db.select().from(events)
+      .where(and(eq(events.familyId, familyId), eq(events.googleEventId, googleEventId)))
+      .limit(1);
+    return rows[0] ?? null;
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2825,6 +2867,13 @@ class DemoAwareStorage implements IStorage {
   async clearKiraMemories(familyId: string): Promise<void> {
     return this.persistentStorage.clearKiraMemories(familyId);
   }
+
+  // Google Calendar sync — always delegate to persistent storage (per-user, not per-family)
+  async getGoogleCalendarConnection(userId: string) { return this.persistentStorage.getGoogleCalendarConnection(userId); }
+  async upsertGoogleCalendarConnection(data: any) { return this.persistentStorage.upsertGoogleCalendarConnection(data); }
+  async updateGoogleCalendarConnection(userId: string, updates: any) { return this.persistentStorage.updateGoogleCalendarConnection(userId, updates); }
+  async deleteGoogleCalendarConnection(userId: string) { return this.persistentStorage.deleteGoogleCalendarConnection(userId); }
+  async getEventByGoogleId(familyId: string, googleEventId: string) { return this.persistentStorage.getEventByGoogleId(familyId, googleEventId); }
 }
 
 // Initialize storage
