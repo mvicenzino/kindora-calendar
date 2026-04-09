@@ -43,6 +43,12 @@ export default function FamilyDashboard() {
   const [loggedMedIds, setLoggedMedIds] = useState<Set<string>>(new Set());
   const [kiraInput, setKiraInput] = useState("");
 
+  // 'now' must be declared before todayKey/insightCacheKey (TDZ guard)
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
+  const weekEnd = endOfDay(addDays(now, 7));
+
   // ── Data queries ──────────────────────────────────────────────────────────
   const { data: rawEvents = [] } = useQuery<any[]>({
     queryKey: [`/api/events?familyId=${activeFamilyId}`],
@@ -103,11 +109,6 @@ export default function FamilyDashboard() {
     () => rawEvents.map(mapEventFromDb),
     [rawEvents]
   );
-
-  const now = new Date();
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
-  const weekEnd = endOfDay(addDays(now, 7));
 
   const todayEvents = useMemo(() =>
     events
