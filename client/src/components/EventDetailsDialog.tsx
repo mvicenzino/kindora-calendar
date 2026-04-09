@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Clock, Edit3, X, Upload, Trash2, CalendarDays, MapPin, Users, Tag, ChevronRight } from "lucide-react";
+import { Clock, Edit3, X, Upload, Trash2, CalendarDays, MapPin, Users, Tag, ChevronRight, Video, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -14,6 +14,25 @@ import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 import type { UiEvent } from "@shared/types";
 import type { User } from "@shared/schema";
 import { AddressText } from "./AddressText";
+
+// Extract a Zoom / Meet / Teams join URL from an event description
+function extractMeetingLink(description?: string | null): { url: string; label: string; color: string } | null {
+  if (!description) return null;
+  const urlRegex = /https?:\/\/[^\s,)>]+/g;
+  const matches = description.match(urlRegex) ?? [];
+  for (const url of matches) {
+    if (url.includes("zoom.us/j/") || url.includes("zoom.us/w/") || url.includes("zoom.us/s/")) {
+      return { url, label: "Join Zoom Meeting", color: "#2D8CFF" };
+    }
+    if (url.includes("meet.google.com/")) {
+      return { url, label: "Join Google Meet", color: "#00832D" };
+    }
+    if (url.includes("teams.microsoft.com/") || url.includes("teams.live.com/")) {
+      return { url, label: "Join Teams Meeting", color: "#6264A7" };
+    }
+  }
+  return null;
+}
 
 interface EventDetailsDialogProps {
   isOpen: boolean;
@@ -154,7 +173,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
           <div className="px-4 pt-4 pb-3">
             <h3 className="text-base font-bold text-foreground leading-snug">{event.title}</h3>
             {event.description && (
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed whitespace-pre-line">
                 <AddressText text={event.description} />
               </p>
             )}
@@ -169,6 +188,30 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
                 border: '1px solid hsl(var(--border) / 0.5)',
               }}
             >
+              {/* Meeting link row (Zoom / Meet / Teams) */}
+              {(() => {
+                const meeting = extractMeetingLink(event.description);
+                if (!meeting) return null;
+                return (
+                  <a
+                    href={meeting.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-3 py-2.5 hover-elevate"
+                    style={{ borderBottom: '1px solid hsl(var(--border) / 0.3)', textDecoration: 'none' }}
+                    data-testid="link-meeting-join"
+                  >
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${meeting.color}20` }}>
+                      <Video className="w-3.5 h-3.5" style={{ color: meeting.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: meeting.color }}>Video Meeting</p>
+                      <p className="text-sm font-semibold" style={{ color: meeting.color }}>{meeting.label}</p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" style={{ color: meeting.color }} />
+                  </a>
+                );
+              })()}
               {/* Date row */}
               <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid hsl(var(--border) / 0.3)' }}>
                 <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${eventColor}15` }}>

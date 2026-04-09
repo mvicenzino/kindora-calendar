@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Edit2, X, Upload, Trash2, RotateCcw, MessageSquare } from "lucide-react";
+import { Calendar, Clock, Edit2, X, Upload, Trash2, RotateCcw, MessageSquare, Video, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -13,6 +13,20 @@ import NotesModal from "./NotesModal";
 import type { UiEvent } from "@shared/types";
 import type { User } from "@shared/schema";
 import { AddressText } from "./AddressText";
+
+function extractMeetingLink(description?: string | null): { url: string; label: string; color: string } | null {
+  if (!description) return null;
+  const matches = description.match(/https?:\/\/[^\s,)>]+/g) ?? [];
+  for (const url of matches) {
+    if (url.includes("zoom.us/j/") || url.includes("zoom.us/w/") || url.includes("zoom.us/s/"))
+      return { url, label: "Join Zoom Meeting", color: "#2D8CFF" };
+    if (url.includes("meet.google.com/"))
+      return { url, label: "Join Google Meet", color: "#00832D" };
+    if (url.includes("teams.microsoft.com/") || url.includes("teams.live.com/"))
+      return { url, label: "Join Teams Meeting", color: "#6264A7" };
+  }
+  return null;
+}
 
 interface FlipCardEventDetailsProps {
   isOpen: boolean;
@@ -363,11 +377,40 @@ export default function FlipCardEventDetails({ isOpen, onClose, onEdit, event }:
                 </div>
               </div>
 
+              {/* Meeting link (Zoom / Meet / Teams) */}
+              {(() => {
+                const meeting = extractMeetingLink(event.description);
+                if (!meeting) return null;
+                return (
+                  <a
+                    href={meeting.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-4 rounded-2xl border hover-elevate"
+                    style={{
+                      background: `${meeting.color}12`,
+                      borderColor: `${meeting.color}40`,
+                      textDecoration: 'none',
+                    }}
+                    data-testid="link-meeting-join"
+                  >
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${meeting.color}25` }}>
+                      <Video className="w-4 h-4" style={{ color: meeting.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-medium uppercase tracking-wider" style={{ color: meeting.color }}>Video Meeting</p>
+                      <p className="text-sm font-bold" style={{ color: meeting.color }}>{meeting.label}</p>
+                    </div>
+                    <ExternalLink className="w-4 h-4 flex-shrink-0" style={{ color: meeting.color }} />
+                  </a>
+                );
+              })()}
+
               {/* Description */}
               {event.description && (
                 <div className="bg-muted/50 backdrop-blur-md border border-border rounded-2xl p-4">
                   <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">Description</h4>
-                  <p className="text-foreground leading-relaxed text-sm md:text-base">
+                  <p className="text-foreground leading-relaxed text-sm md:text-base whitespace-pre-line">
                     <AddressText text={event.description} />
                   </p>
                 </div>
