@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react";
-import { Sparkles, X, ArrowRight, Loader2, CalendarDays, CheckCircle2, Plus, Mic, MicOff, Upload } from "lucide-react";
+import { Sparkles, X, ArrowRight, Loader2, CalendarDays, CheckCircle2, Plus, Mic, MicOff, Upload, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import type { Event } from "@shared/schema";
 import { mapEventFromDb, type UiEvent } from "@shared/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import ImportSchedule from "@/pages/ImportSchedule";
 
 interface QueryResult {
@@ -61,6 +64,17 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
   const [voiceState, setVoiceState] = useState<VoiceState>('idle');
 
   const [importOpen, setImportOpen] = useState(false);
+  const [, navigate] = useLocation();
+
+  // Google Calendar sync
+  const { data: gcalStatus } = useQuery<{ connected: boolean }>({
+    queryKey: ["/api/google-calendar/status"],
+    staleTime: 60_000,
+  });
+  const gcalSyncMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/google-calendar/sync"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/events"] }),
+  });
 
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -377,15 +391,47 @@ export default function CalendarAskBar({ onSelectEvent }: CalendarAskBarProps) {
         </div>
 
         {/* Import schedule button */}
-        <button
-          onClick={() => setImportOpen(true)}
-          data-testid="button-import-schedule"
-          aria-label="Import schedule"
-          title="Import schedule"
-          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover-elevate border border-border bg-muted/60"
-        >
-          <Upload className="w-4 h-4" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setImportOpen(true)}
+              data-testid="button-import-schedule"
+              aria-label="Import schedule"
+              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground hover-elevate border border-border bg-muted/60"
+            >
+              <Upload className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Import schedule</TooltipContent>
+        </Tooltip>
+
+        {/* Google Calendar sync button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => {
+                if (gcalStatus?.connected) {
+                  gcalSyncMutation.mutate();
+                } else {
+                  navigate("/settings/import");
+                }
+              }}
+              data-testid="button-gcal-sync"
+              aria-label="Sync Google Calendar"
+              disabled={gcalSyncMutation.isPending}
+              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center hover-elevate border border-border bg-muted/60 disabled:opacity-60"
+              style={{ color: "#4285f4" }}
+            >
+              {gcalSyncMutation.isPending
+                ? <RefreshCw className="w-4 h-4 animate-spin" />
+                : <RefreshCw className="w-4 h-4" />
+              }
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {gcalStatus?.connected ? "Sync Google Calendar" : "Connect Google Calendar"}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Permission denied banner */}
