@@ -754,4 +754,92 @@ export function registerAdvisorRoutes(app: Express): void {
       }
     }
   });
+
+  // ── Daily family insight ───────────────────────────────────────────────────
+  app.get("/api/dashboard/insight", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+
+      // Resolve familyId
+      let familyId = req.query.familyId as string | undefined;
+      if (!familyId) {
+        const family = await storage.getUserFamily(userId);
+        familyId = family?.id;
+      }
+      if (!familyId) return res.status(400).json({ error: "No family found" });
+
+      // Gather family context
+      const today = new Date();
+      const todayStr = format(today, "EEEE, MMMM d, yyyy");
+      const todayStart = new Date(today); todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(today); todayEnd.setHours(23, 59, 59, 999);
+      const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
+
+      const [allEvents, medications, symptomEntries, allMessages] = await Promise.all([
+        storage.getEvents(familyId),
+        storage.getMedications(familyId),
+        storage.getSymptomEntries(familyId).catch(() => []),
+        storage.getFamilyMessages(familyId).catch(() => []),
+      ]);
+
+      const todayEvents = allEvents.filter((e: any) => {
+        const t = new Date(e.startTime);
+        return t >= todayStart && t <= todayEnd && !e.isRecurringParent;
+      });
+      const upcomingEvents = allEvents.filter((e: any) => {
+        const t = new Date(e.startTime);
+        return t > todayEnd && t <= weekEnd && !e.isRecurringParent;
+      });
+
+      const activeMeds = (medications as any[]).filter((m: any) => !m.isArchived);
+
+      const recentHealthFlags = (symptomEntries as any[]).filter((e: any) => {
+        const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+        return new Date(e.date) >= cutoff && (e.overallSeverity >= 7 || e.reactionFlag);
+      });
+
+      const recentMessages = (allMessages as any[]).filter((m: any) => {
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        return new Date(m.createdAt) >= cutoff;
+      });
+
+      // Build context summary
+      const contextLines: string[] = [
+        `Today is ${todayStr}.`,
+        todayEvents.length > 0
+          ? `Today has ${todayEvents.length} event(s): ${todayEvents.map((e: any) => e.title).slice(0, 4).join(", ")}.`
+          : "No events scheduled today.",
+        upcomingEvents.length > 0
+          ? `Coming up this week: ${upcomingEvents.length} more event(s), including ${upcomingEvents.slice(0, 3).map((e: any) => e.title).join(", ")}.`
+          : "Nothing else scheduled this week.",
+        activeMeds.length > 0
+          ? `Active medications to track: ${activeMeds.map((m: any) => m.name).slice(0, 5).join(", ")}.`
+          : "No active medications tracked.",
+        recentHealthFlags.length > 0
+          ? `Health alert: ${recentHealthFlags.length} family member(s) logged high severity or a reaction in the last 48 hours.`
+          : "No health flags in the last 48 hours.",
+        recentMessages.length > 0
+          ? `${recentMessages.length} family message(s) in the last 24 hours.`
+          : "No recent family messages.",
+      ];
+
+      const prompt = `You are Kira, a warm and trusted family advisor in the Kindora app. Based on the data below, write a brief 2–3 sentence insight for this family. Be specific to their actual data, warm but concise, and end with one practical tip or gentle encouragement. Do not use bullet points, headers, or labels — just a flowing paragraph.
+
+${contextLines.join("\n")}
+
+Respond with only the paragraph.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 180,
+      });
+
+      const insight = completion.choices[0]?.message?.content?.trim() ?? "Have a great day — your family is in good hands.";
+      res.json({ insight, generatedAt: new Date().toISOString() });
+    } catch (err) {
+      console.error("Error generating dashboard insight:", err);
+      res.status(500).json({ error: "Failed to generate insight" });
+    }
+  });
 }

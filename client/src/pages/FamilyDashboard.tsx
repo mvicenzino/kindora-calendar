@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, type QueryFunction } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, addDays, startOfDay, endOfDay, isWithinInterval, formatDistanceToNow } from "date-fns";
 import {
   CalendarDays, MessageCircle, Sparkles, Plus, Check,
@@ -73,6 +73,29 @@ export default function FamilyDashboard() {
   const { data: conversations = [] } = useQuery<any[]>({
     queryKey: ["/api/advisor/conversations"],
     enabled: !!user,
+  });
+
+  // Daily family insight — cached in localStorage per family+day
+  const todayKey = format(now, "yyyy-MM-dd");
+  const insightCacheKey = `kira_insight_${activeFamilyId}_${todayKey}`;
+
+  const insightQueryFn: QueryFunction<string> = async () => {
+    const cached = localStorage.getItem(insightCacheKey);
+    if (cached) return cached;
+    const res = await fetch(`/api/dashboard/insight?familyId=${activeFamilyId}`, { credentials: "include" });
+    if (!res.ok) throw new Error("Failed to fetch insight");
+    const data = await res.json();
+    const text: string = data.insight ?? "";
+    if (text) localStorage.setItem(insightCacheKey, text);
+    return text;
+  };
+
+  const { data: familyInsight, isLoading: insightLoading } = useQuery<string>({
+    queryKey: ["kira-insight", activeFamilyId, todayKey],
+    queryFn: insightQueryFn,
+    enabled: !!activeFamilyId,
+    staleTime: Infinity,
+    retry: false,
   });
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -213,6 +236,34 @@ export default function FamilyDashboard() {
               <ArrowRight className="w-3.5 h-3.5 text-white" />
             </button>
           </form>
+
+          {/* Family insight from Kira */}
+          {insightLoading && (
+            <div className="px-4 py-3 rounded-xl border border-border bg-card/60">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-violet-500 flex-shrink-0" />
+                <div className="h-2.5 w-16 rounded-full bg-muted animate-pulse" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-2.5 w-full rounded-full bg-muted animate-pulse" />
+                <div className="h-2.5 w-5/6 rounded-full bg-muted animate-pulse" />
+                <div className="h-2.5 w-4/6 rounded-full bg-muted animate-pulse" />
+              </div>
+            </div>
+          )}
+          {!insightLoading && familyInsight && (
+            <div className="px-4 py-3 rounded-xl border border-violet-200/60 dark:border-violet-900/40 bg-violet-50/50 dark:bg-violet-950/20">
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="w-3.5 h-3.5 text-violet-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wider mr-2">Kira</span>
+                  <p className="text-sm text-foreground/90 leading-relaxed inline">
+                    {familyInsight}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Secondary quick links */}
           <div className="flex items-center gap-1 flex-wrap">
