@@ -265,6 +265,9 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
                         >
                           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: event.color }} />
                           <span className="truncate">{event.title}</span>
+                          {event.googleEventId && (
+                            <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '5px', width: '9px', height: '9px' }}>G</span>
+                          )}
                         </div>
                       );
                     })}

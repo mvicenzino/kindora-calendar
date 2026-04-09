@@ -171,7 +171,19 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
         >
           {/* Title section */}
           <div className="px-4 pt-4 pb-3">
-            <h3 className="text-base font-bold text-foreground leading-snug">{event.title}</h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-base font-bold text-foreground leading-snug">{event.title}</h3>
+              {event.googleEventId && (
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-white font-semibold"
+                  style={{ background: '#4285f4', fontSize: '9px', letterSpacing: '0.02em' }}
+                  title="Synced from Google Calendar"
+                >
+                  <span>G</span>
+                  <span>Google</span>
+                </span>
+              )}
+            </div>
             {event.description && (
               <p className="text-xs text-muted-foreground mt-1 leading-relaxed whitespace-pre-line">
                 <AddressText text={event.description} />

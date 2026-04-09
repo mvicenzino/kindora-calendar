@@ -164,6 +164,14 @@ export default function EventCard({
                   data-testid={`text-category-${event.id}`}
                 />
               )}
+              {event.googleEventId && (
+                <span
+                  className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none"
+                  style={{ background: '#4285f4', color: '#fff', fontSize: '7px', width: '13px', height: '13px' }}
+                  title="Synced from Google Calendar"
+                  data-testid={`icon-gcal-${event.id}`}
+                >G</span>
+              )}
             </div>
 
             <div className="flex items-center gap-2 mt-0.5">

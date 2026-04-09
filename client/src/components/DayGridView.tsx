@@ -256,7 +256,12 @@ export default function DayGridView({ date, events, members = [], onEventClick, 
                     }}
                     onClick={(e) => { e.stopPropagation(); if (!isDragging && !justDraggedRef.current) onEventClick(event); }}
                   >
-                    <p className="font-semibold text-foreground truncate leading-tight pr-4" style={{ fontSize: evTitle }}>{event.title}</p>
+                    <p className="font-semibold text-foreground truncate leading-tight pr-4 flex items-center gap-1" style={{ fontSize: evTitle }}>
+                      <span className="truncate">{event.title}</span>
+                      {event.googleEventId && (
+                        <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '6px', width: '11px', height: '11px' }}>G</span>
+                      )}
+                    </p>
                     {displayHeight > 30 && (
                       <p className="text-muted-foreground truncate" style={{ fontSize: evMeta }}>
                         {isBeingDragged ? formatDragTime(displayTop, displayHeight) : format(event.startTime, 'h:mm a')}
