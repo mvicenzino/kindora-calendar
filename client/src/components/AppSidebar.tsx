@@ -42,6 +42,16 @@ const caregiverNavItems = [
 
 const RELEASE_NOTES = [
   {
+    date: "Apr 10, 2026",
+    changes: [
+      "New Tasks feature — family members can create, assign, and prioritize tasks right from the Care dashboard; caregivers can check them off as done",
+      "Tasks widget added to the Family Dashboard so your to-do list is always visible alongside today's schedule",
+      "Tasks support priority levels (high/normal/low), family member assignment, and optional due dates",
+      "Onboarding fix: family members typed but not added with the + button are now automatically saved when you continue — no one gets left out",
+      "Caregiver invite description updated to accurately reflect permissions: view events, complete tasks, log medications",
+    ],
+  },
+  {
     date: "Apr 9, 2026",
     changes: [
       "New Family Dashboard is now your home — see today's schedule, upcoming events, medications, and family messages all in one place",
