@@ -42,6 +42,17 @@ const caregiverNavItems = [
 
 const RELEASE_NOTES = [
   {
+    date: "Apr 9, 2026",
+    changes: [
+      "New Family Dashboard is now your home — see today's schedule, upcoming events, medications, and family messages all in one place",
+      "Kira now writes a personalized daily insight on your dashboard based on what's actually happening with your family",
+      "Ask Kira anything right from the dashboard — just type and go, no need to open a separate page",
+      "Events synced from Google Calendar are marked with a blue G badge so you always know where they came from",
+      "Video meeting links (Zoom, Google Meet, Teams) are now detected automatically in events and shown as a tap-to-join button",
+      "Google Calendar sync: choose which of your calendars to import and sync on demand from Settings → Import",
+    ],
+  },
+  {
     date: "Mar 27, 2026",
     changes: [
       "Stripe checkout now works on the live site (falls back to test mode until live keys are added)",
