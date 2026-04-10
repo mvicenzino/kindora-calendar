@@ -151,10 +151,18 @@ export default function Onboarding() {
       toast({ title: "Family not created yet", description: "Please go back and create a family first.", variant: "destructive" });
       return;
     }
+    // Flush any name the user typed but forgot to add
+    const pendingName = newMemberName.trim();
+    const finalEntries = [...memberEntries];
+    if (pendingName && !finalEntries.some(m => m.name.toLowerCase() === pendingName.toLowerCase())) {
+      finalEntries.push({ name: pendingName });
+      setMemberEntries(finalEntries);
+      setNewMemberName("");
+    }
     try {
-      for (let i = 0; i < memberEntries.length; i++) {
+      for (let i = 0; i < finalEntries.length; i++) {
         await createMemberMutation.mutateAsync({
-          name: memberEntries[i].name,
+          name: finalEntries[i].name,
           color: MEMBER_COLORS[i % MEMBER_COLORS.length],
           familyId,
         });
@@ -362,7 +370,12 @@ export default function Onboarding() {
                   {createMemberMutation.isPending ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : null}
-                  {memberEntries.length <= 1 ? "Continue" : `Add ${memberEntries.length} members & continue`}
+                  {(() => {
+                    const pending = newMemberName.trim();
+                    const extra = pending && !memberEntries.some(m => m.name.toLowerCase() === pending.toLowerCase()) ? 1 : 0;
+                    const total = memberEntries.length + extra;
+                    return total <= 1 ? "Continue" : `Add ${total} members & continue`;
+                  })()}
                 </Button>
                 <button
                   type="button"
