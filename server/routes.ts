@@ -7,7 +7,7 @@ import fs from "fs";
 import { storage, NotFoundError } from "./storage";
 import { registerAdvisorRoutes } from "./advisorRoutes";
 import { registerApiKeyRoutes } from "./apiKeyRoutes";
-import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema } from "@shared/schema";
+import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema, insertTaskSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireFamily, requireCare } from "./tierMiddleware";
@@ -4606,6 +4606,64 @@ Always return valid JSON matching one of the three formats above.`,
       res.json(log);
     } catch (err) {
       res.status(500).json({ message: "Failed to update hydration log" });
+    }
+  });
+
+  // ── Tasks ──────────────────────────────────────────────────────────────────
+  app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const familyId = req.query.familyId as string;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const taskList = await storage.getTasks(familyId);
+      res.json(taskList);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch tasks" });
+    }
+  });
+
+  app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const parsed = insertTaskSchema.safeParse({ ...req.body, createdByUserId: userId });
+      if (!parsed.success) return res.status(400).json({ message: "Invalid task data", errors: parsed.error.errors });
+      const task = await storage.createTask(parsed.data);
+      res.status(201).json(task);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create task" });
+    }
+  });
+
+  app.put("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { familyId, ...updates } = req.body;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const task = await storage.updateTask(req.params.id, familyId, updates);
+      res.json(task);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const familyId = req.query.familyId as string;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      await storage.deleteTask(req.params.id, familyId);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete task" });
+    }
+  });
+
+  app.post("/api/tasks/:id/toggle", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { familyId } = req.body;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const task = await storage.toggleTaskCompletion(req.params.id, familyId, userId);
+      res.json(task);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to toggle task" });
     }
   });
 

@@ -1007,7 +1007,7 @@ export default function FamilySettings() {
               Invite a Caregiver
             </CardTitle>
             <CardDescription>
-              Invite your nanny, babysitter, or care provider to view the family calendar, check off events, and coordinate care
+              Invite your nanny, babysitter, or care provider to view the family calendar, check off tasks and events, and coordinate care
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1033,7 +1033,7 @@ export default function FamilySettings() {
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Caregivers can view events, log medications, and check events off as done — but can't delete or edit events.
+              Caregivers can view events, complete tasks, log medications, and check events done — but can't create or delete tasks and events.
             </p>
 
             <div className="pt-3 border-t border-border">

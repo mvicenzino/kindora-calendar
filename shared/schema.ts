@@ -594,6 +594,24 @@ export type SymptomSystemRating = typeof symptomSystemRatings.$inferSelect;
 
 export type SymptomEntryWithSystems = SymptomEntry & { systems: SymptomSystemRating[] };
 
+// Tasks
+export const tasks = pgTable("tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  assignedMemberId: varchar("assigned_member_id"),
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  dueDate: timestamp("due_date"),
+  completedAt: timestamp("completed_at"),
+  completedByUserId: varchar("completed_by_user_id"),
+  priority: varchar("priority", { length: 20 }).default("normal"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, completedAt: true, completedByUserId: true, createdAt: true });
+export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type Task = typeof tasks.$inferSelect;
+
 // Family Member types
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
 export type FamilyMember = typeof familyMembers.$inferSelect;

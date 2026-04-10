@@ -4,7 +4,7 @@ import { useQuery, useMutation, type QueryFunction } from "@tanstack/react-query
 import { format, isToday, isTomorrow, addDays, startOfDay, endOfDay, isWithinInterval, formatDistanceToNow } from "date-fns";
 import {
   CalendarDays, MessageCircle, Sparkles, Plus, Check,
-  ChevronRight, Pill, AlertTriangle, Clock, Heart, ArrowRight
+  ChevronRight, Pill, AlertTriangle, Clock, Heart, ArrowRight, ListTodo
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMembe
 import type { Medication, FamilyMessage, FamilyMember } from "@shared/schema";
 import EventModal from "@/components/EventModal";
 import EventDetailsDialog from "@/components/EventDetailsDialog";
+import TaskManager from "@/components/TaskManager";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -608,6 +609,22 @@ export default function FamilyDashboard() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Tasks widget */}
+            <Card data-testid="card-tasks-widget">
+              <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3 flex-wrap">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ListTodo className="h-4 w-4" />
+                  Tasks
+                </CardTitle>
+                <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1" onClick={() => window.location.href = '/care'}>
+                  View all <ChevronRight className="h-3 w-3" />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <TaskManager compact />
+              </CardContent>
+            </Card>
 
             {/* Empty right column nudge */}
             {activeMeds.length === 0 && healthFlags.length === 0 && !latestMessage && !latestConversation && (

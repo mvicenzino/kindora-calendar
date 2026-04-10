@@ -40,10 +40,12 @@ import {
   DollarSign,
   Timer,
   Trash2,
-  Settings
+  Settings,
+  ClipboardList
 } from "lucide-react";
 import { useLocation, Link } from "wouter";
 import { useUserRole } from "@/hooks/useUserRole";
+import TaskManager from "@/components/TaskManager";
 
 type MedicationWithMember = {
   id: string;
@@ -797,6 +799,21 @@ export default function CaregiverDashboard() {
                 ))}
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card data-testid="card-tasks">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Tasks
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TaskManager
+              canCreate={!isCaregiverRole}
+              canDelete={!isCaregiverRole}
+            />
           </CardContent>
         </Card>
 

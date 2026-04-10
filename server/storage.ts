@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, type Task, type InsertTask, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections, tasks } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -178,6 +178,12 @@ export interface IStorage {
   updateGoogleCalendarConnection(userId: string, updates: Partial<GoogleCalendarConnection>): Promise<void>;
   deleteGoogleCalendarConnection(userId: string): Promise<void>;
   getEventByGoogleId(familyId: string, googleEventId: string): Promise<Event | null>;
+  // Tasks
+  getTasks(familyId: string): Promise<Task[]>;
+  createTask(task: InsertTask): Promise<Task>;
+  updateTask(taskId: string, familyId: string, updates: Partial<InsertTask>): Promise<Task>;
+  deleteTask(taskId: string, familyId: string): Promise<void>;
+  toggleTaskCompletion(taskId: string, familyId: string, userId: string): Promise<Task>;
 }
 
 export class MemStorage implements IStorage {
@@ -1265,6 +1271,50 @@ export class MemStorage implements IStorage {
   async updateGoogleCalendarConnection(_userId: string, _updates: any): Promise<void> {}
   async deleteGoogleCalendarConnection(_userId: string): Promise<void> {}
   async getEventByGoogleId(_familyId: string, _googleEventId: string): Promise<Event | null> { return null; }
+
+  // Tasks
+  private tasksStore: Task[] = [];
+  async getTasks(familyId: string): Promise<Task[]> {
+    return this.tasksStore
+      .filter(t => t.familyId === familyId)
+      .sort((a, b) => {
+        if (!!a.completedAt !== !!b.completedAt) return a.completedAt ? 1 : -1;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }
+  async createTask(task: InsertTask): Promise<Task> {
+    const newTask: Task = {
+      ...task,
+      id: randomUUID(),
+      description: task.description ?? null,
+      assignedMemberId: task.assignedMemberId ?? null,
+      dueDate: task.dueDate ?? null,
+      completedAt: null,
+      completedByUserId: null,
+      priority: task.priority ?? 'normal',
+      createdAt: new Date(),
+    };
+    this.tasksStore.push(newTask);
+    return newTask;
+  }
+  async updateTask(taskId: string, familyId: string, updates: Partial<InsertTask>): Promise<Task> {
+    const idx = this.tasksStore.findIndex(t => t.id === taskId && t.familyId === familyId);
+    if (idx === -1) throw new Error('Task not found');
+    this.tasksStore[idx] = { ...this.tasksStore[idx], ...updates };
+    return this.tasksStore[idx];
+  }
+  async deleteTask(taskId: string, familyId: string): Promise<void> {
+    this.tasksStore = this.tasksStore.filter(t => !(t.id === taskId && t.familyId === familyId));
+  }
+  async toggleTaskCompletion(taskId: string, familyId: string, userId: string): Promise<Task> {
+    const idx = this.tasksStore.findIndex(t => t.id === taskId && t.familyId === familyId);
+    if (idx === -1) throw new Error('Task not found');
+    const task = this.tasksStore[idx];
+    this.tasksStore[idx] = task.completedAt
+      ? { ...task, completedAt: null, completedByUserId: null }
+      : { ...task, completedAt: new Date(), completedByUserId: userId };
+    return this.tasksStore[idx];
+  }
 }
 
 // DrizzleStorage implementation
@@ -2345,6 +2395,38 @@ class DrizzleStorage implements IStorage {
       .limit(1);
     return rows[0] ?? null;
   }
+
+  // Tasks
+  async getTasks(familyId: string): Promise<Task[]> {
+    return await this.db.select().from(tasks)
+      .where(eq(tasks.familyId, familyId))
+      .orderBy(tasks.createdAt);
+  }
+  async createTask(task: InsertTask): Promise<Task> {
+    const [result] = await this.db.insert(tasks).values(task).returning();
+    return result;
+  }
+  async updateTask(taskId: string, familyId: string, updates: Partial<InsertTask>): Promise<Task> {
+    const [result] = await this.db.update(tasks).set(updates)
+      .where(and(eq(tasks.id, taskId), eq(tasks.familyId, familyId)))
+      .returning();
+    if (!result) throw new Error('Task not found');
+    return result;
+  }
+  async deleteTask(taskId: string, familyId: string): Promise<void> {
+    await this.db.delete(tasks).where(and(eq(tasks.id, taskId), eq(tasks.familyId, familyId)));
+  }
+  async toggleTaskCompletion(taskId: string, familyId: string, userId: string): Promise<Task> {
+    const [existing] = await this.db.select().from(tasks)
+      .where(and(eq(tasks.id, taskId), eq(tasks.familyId, familyId)))
+      .limit(1);
+    if (!existing) throw new Error('Task not found');
+    const update = existing.completedAt
+      ? { completedAt: null, completedByUserId: null }
+      : { completedAt: new Date(), completedByUserId: userId };
+    const [result] = await this.db.update(tasks).set(update).where(eq(tasks.id, taskId)).returning();
+    return result;
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -2874,6 +2956,28 @@ class DemoAwareStorage implements IStorage {
   async updateGoogleCalendarConnection(userId: string, updates: any) { return this.persistentStorage.updateGoogleCalendarConnection(userId, updates); }
   async deleteGoogleCalendarConnection(userId: string) { return this.persistentStorage.deleteGoogleCalendarConnection(userId); }
   async getEventByGoogleId(familyId: string, googleEventId: string) { return this.persistentStorage.getEventByGoogleId(familyId, googleEventId); }
+
+  // Tasks — route to family-appropriate storage
+  async getTasks(familyId: string): Promise<Task[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getTasks(familyId);
+  }
+  async createTask(task: InsertTask): Promise<Task> {
+    const storage = await this.getStorageForFamily(task.familyId);
+    return storage.createTask(task);
+  }
+  async updateTask(taskId: string, familyId: string, updates: Partial<InsertTask>): Promise<Task> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateTask(taskId, familyId, updates);
+  }
+  async deleteTask(taskId: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteTask(taskId, familyId);
+  }
+  async toggleTaskCompletion(taskId: string, familyId: string, userId: string): Promise<Task> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.toggleTaskCompletion(taskId, familyId, userId);
+  }
 }
 
 // Initialize storage
