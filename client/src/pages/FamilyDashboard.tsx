@@ -166,8 +166,8 @@ export default function FamilyDashboard() {
 
   // ── Mutations ─────────────────────────────────────────────────────────────
   const completeMutation = useMutation({
-    mutationFn: ({ eventId, completed }: { eventId: string; completed: boolean }) =>
-      apiRequest("PATCH", `/api/events/${eventId}`, { completed }),
+    mutationFn: ({ eventId }: { eventId: string; completed: boolean }) =>
+      apiRequest("POST", `/api/events/${eventId}/toggle-completion`, {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [`/api/events?familyId=${activeFamilyId}`] }),
   });
 
