@@ -180,6 +180,7 @@ async function load(familyId, families) {
   try {
     const res = await fetch(`${API}/api/events?familyId=${familyId}`, {
       credentials: "include",
+      cache: "no-store",
     });
     if (!res.ok) { showError("Couldn't load events."); return; }
     const events = await res.json();
@@ -194,7 +195,7 @@ async function boot() {
   // 1. Check authentication
   let user;
   try {
-    const res = await fetch(`${API}/api/user`, { credentials: "include" });
+    const res = await fetch(`${API}/api/user`, { credentials: "include", cache: "no-store" });
     if (res.status === 401 || res.status === 403) { showSignIn(); return; }
     if (!res.ok) { showError("Couldn't connect to Kindora."); return; }
     user = await res.json();
@@ -206,7 +207,7 @@ async function boot() {
   // 2. Fetch families
   let families;
   try {
-    const res = await fetch(`${API}/api/families`, { credentials: "include" });
+    const res = await fetch(`${API}/api/families`, { credentials: "include", cache: "no-store" });
     if (!res.ok) { showError("Couldn't load your families."); return; }
     families = await res.json();
   } catch {

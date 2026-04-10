@@ -51,7 +51,7 @@ async function updateBadge() {
     );
 
     // Need to know which family to fetch
-    const famRes = await fetch(`${API}/api/families`, { credentials: "include" });
+    const famRes = await fetch(`${API}/api/families`, { credentials: "include", cache: "no-store" });
     if (!famRes.ok) { clearBadge(); return; }
     const families = await famRes.json();
     if (!families || families.length === 0) { clearBadge(); return; }
@@ -60,7 +60,7 @@ async function updateBadge() {
       ? stored
       : families[0].id;
 
-    const evtRes = await fetch(`${API}/api/events?familyId=${familyId}`, { credentials: "include" });
+    const evtRes = await fetch(`${API}/api/events?familyId=${familyId}`, { credentials: "include", cache: "no-store" });
     if (!evtRes.ok) { clearBadge(); return; }
     const events = await evtRes.json();
 
