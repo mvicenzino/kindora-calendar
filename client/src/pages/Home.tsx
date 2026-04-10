@@ -3,8 +3,6 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import ViewSwitcherBar, { type CalendarLayout, type CalendarView } from "@/components/ViewSwitcherBar";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import ImportSchedule from "@/pages/ImportSchedule";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
@@ -50,7 +48,6 @@ export default function Home() {
   const [dayEventsOpen, setDayEventsOpen] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<Date>(new Date());
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [importSheetOpen, setImportSheetOpen] = useState(false);
   const [importedEvent, setImportedEvent] = useState<{
     title: string;
     description?: string;
@@ -403,7 +400,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-full">
       <div className="sticky top-0 z-40">
-        <ViewSwitcherBar currentView={view} onViewChange={setView} layout={layout} onLayoutChange={setLayout} onImport={() => setImportSheetOpen(true)} />
+        <ViewSwitcherBar currentView={view} onViewChange={setView} layout={layout} onLayoutChange={setLayout} />
         {members.length > 0 && (
           <MemberFilterStrip
             members={members}
@@ -591,16 +588,6 @@ export default function Home() {
         onAddEvent={can('canCreateEvents') ? () => handleAddEventForDate(selectedDayDate) : undefined}
       />
 
-      <Sheet open={importSheetOpen} onOpenChange={setImportSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col overflow-hidden">
-          <SheetHeader className="px-6 pt-5 pb-3 border-b border-border shrink-0">
-            <SheetTitle className="text-base font-semibold">Import Calendar</SheetTitle>
-          </SheetHeader>
-          <div className="flex-1 overflow-y-auto">
-            <ImportSchedule onClose={() => setImportSheetOpen(false)} />
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

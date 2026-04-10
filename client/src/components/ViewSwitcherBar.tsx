@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from "react";
-import { LayoutGrid, Upload } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type CalendarLayout = 'grid' | 'tile';
@@ -11,10 +11,9 @@ interface ViewSwitcherBarProps {
   onViewChange: (view: CalendarView) => void;
   layout: CalendarLayout;
   onLayoutChange: (layout: CalendarLayout) => void;
-  onImport?: () => void;
 }
 
-export default function ViewSwitcherBar({ currentView, onViewChange, layout, onLayoutChange, onImport }: ViewSwitcherBarProps) {
+export default function ViewSwitcherBar({ currentView, onViewChange, layout, onLayoutChange }: ViewSwitcherBarProps) {
   const containerRef = useRef<HTMLElement>(null);
   const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
@@ -57,22 +56,6 @@ export default function ViewSwitcherBar({ currentView, onViewChange, layout, onL
       }}
     >
       <div className="relative flex items-center justify-center px-3 py-2">
-        {onImport && (
-          <div className="absolute left-2 sm:left-3 flex items-center">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onImport}
-              data-testid="button-import-calendar"
-              aria-label="Import calendar"
-              className="gap-1.5 text-muted-foreground hover:text-foreground text-xs"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Import</span>
-            </Button>
-          </div>
-        )}
-
         <nav
           ref={containerRef}
           className="relative flex items-center gap-0 rounded-full p-[3px] overflow-x-auto scrollbar-hide"
