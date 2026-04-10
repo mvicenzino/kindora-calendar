@@ -29,6 +29,9 @@ import {
   Link,
   Unlink,
   CheckCircle2,
+  Puzzle,
+  Download,
+  ExternalLink,
 } from "lucide-react";
 import { format, parseISO, eachDayOfInterval, formatDistanceToNow } from "date-fns";
 import type { FamilyMember, EventCategory } from "@shared/schema";
@@ -481,6 +484,61 @@ export default function ImportSchedule({ onClose }: ImportScheduleProps = {}) {
   return (
     <div className="space-y-6">
           <GoogleCalendarSync />
+
+          {/* ── Chrome Extension ── */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Puzzle className="w-5 h-5 text-orange-400" />
+                Chrome Extension
+                <span className="ml-1 text-xs font-normal px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">Beta</span>
+              </CardTitle>
+              <CardDescription>
+                See your next event and a live countdown right in your browser toolbar — like Granola, but for your whole family.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3 rounded-md border border-border/50 bg-muted/30 p-3">
+                <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center text-white font-bold text-sm">K</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">Kindora extension</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Click the icon to see today's events, who's up next, and a countdown to the next appointment.</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How to install</p>
+                <ol className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex gap-2"><span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">1</span><span>Download the extension using the button below.</span></li>
+                  <li className="flex gap-2"><span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">2</span><span>Double-click the downloaded file to extract it (on Mac this happens automatically).</span></li>
+                  <li className="flex gap-2"><span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">3</span><span>Open Chrome and go to <code className="bg-muted px-1 rounded text-xs">chrome://extensions</code>.</span></li>
+                  <li className="flex gap-2"><span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">4</span><span>Turn on <strong>Developer mode</strong> (toggle in the top-right).</span></li>
+                  <li className="flex gap-2"><span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">5</span><span>Click <strong>Load unpacked</strong> and select the extracted folder.</span></li>
+                  <li className="flex gap-2"><span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-foreground">6</span><span>Pin the Kindora icon to your toolbar and you're done.</span></li>
+                </ol>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  data-testid="button-download-extension"
+                  onClick={() => { window.location.href = "/api/extension/download"; }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download extension
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  data-testid="button-open-extensions"
+                  onClick={() => window.open("chrome://extensions", "_blank")}
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open Chrome extensions
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Make sure you're signed in to Kindora in your browser — the extension uses your existing session automatically.</p>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

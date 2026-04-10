@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Kindora",
+  "version": "1.0.0",
+  "description": "Your family schedule, always one click away",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Kindora — Family Schedule"
+  },
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "https://kindora.ai/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

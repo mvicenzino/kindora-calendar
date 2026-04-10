@@ -2,6 +2,8 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import path from "path";
+import { execSync } from "child_process";
+import fs from "fs";
 import { storage, NotFoundError } from "./storage";
 import { registerAdvisorRoutes } from "./advisorRoutes";
 import { registerApiKeyRoutes } from "./apiKeyRoutes";
@@ -4871,6 +4873,23 @@ Always return valid JSON matching one of the three formats above.`,
       }
     });
   }
+
+  // ── Chrome Extension download ─────────────────────────────────────────────
+  app.get("/api/extension/download", isAuthenticated, (_req, res) => {
+    try {
+      const extDir = path.resolve(process.cwd(), "extension");
+      const tmpTar = `/tmp/kindora-extension-${Date.now()}.tar.gz`;
+      // Create a tar.gz containing all extension files (flat, no subdirectory)
+      execSync(`tar -czf "${tmpTar}" -C "${extDir}" manifest.json popup.html popup.js background.js`, { stdio: "pipe" });
+      res.setHeader("Content-Disposition", 'attachment; filename="kindora-extension.tar.gz"');
+      res.setHeader("Content-Type", "application/gzip");
+      const stream = fs.createReadStream(tmpTar);
+      stream.pipe(res);
+      stream.on("end", () => { try { fs.unlinkSync(tmpTar); } catch {} });
+    } catch (err) {
+      res.status(500).json({ error: "Failed to package extension." });
+    }
+  });
 
   registerAdvisorRoutes(app);
   registerApiKeyRoutes(app);

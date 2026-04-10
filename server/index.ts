@@ -48,6 +48,10 @@ app.use(cors({
     ? (origin, cb) => {
         // Allow requests with no origin (server-to-server, curl) and listed domains
         if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        // Allow the Kindora Chrome / Firefox browser extension (any extension ID)
+        if (origin.startsWith("chrome-extension://") || origin.startsWith("moz-extension://")) {
+          return cb(null, true);
+        }
         return cb(new Error(`CORS: origin ${origin} not allowed`));
       }
     : true,
