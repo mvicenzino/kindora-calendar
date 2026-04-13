@@ -265,7 +265,13 @@ export async function sendWeeklySummaryEmail(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('SendGrid error:', response.status, errorText);
-      return { success: false, error: `SendGrid error: ${response.status}` };
+      let detail = errorText;
+      try {
+        const parsed = JSON.parse(errorText);
+        const msgs = parsed?.errors?.map((e: any) => e.message).join('; ');
+        if (msgs) detail = msgs;
+      } catch { /* keep raw text */ }
+      return { success: false, error: `SendGrid ${response.status}: ${detail}` };
     }
     
     return { success: true };
@@ -471,7 +477,13 @@ export async function sendEmergencyBridgeEmail(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('SendGrid error:', response.status, errorText);
-      return { success: false, error: `SendGrid error: ${response.status}` };
+      let detail = errorText;
+      try {
+        const parsed = JSON.parse(errorText);
+        const msgs = parsed?.errors?.map((e: any) => e.message).join('; ');
+        if (msgs) detail = msgs;
+      } catch { /* keep raw text */ }
+      return { success: false, error: `SendGrid ${response.status}: ${detail}` };
     }
     
     return { success: true };

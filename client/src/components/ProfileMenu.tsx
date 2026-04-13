@@ -82,9 +82,15 @@ export default function ProfileMenu({ members, onMemberColorChange, onAddMember,
       });
     },
     onError: (error: any) => {
+      let description = "Could not send weekly summary. Check your email settings.";
+      if (error?.message) {
+        const colonIdx = (error.message as string).indexOf(': ');
+        const body = colonIdx !== -1 ? error.message.slice(colonIdx + 2) : error.message;
+        try { description = JSON.parse(body).error || body; } catch { description = body; }
+      }
       toast({
         title: "Failed to Send",
-        description: error.message || "Could not send weekly summary. Check your email settings.",
+        description,
         variant: "destructive",
       });
     },

@@ -1280,9 +1280,15 @@ export default function FamilySettings() {
                                 });
                               }
                             } catch (error: any) {
+                              let description = "Could not send test email";
+                              if (error?.message) {
+                                const colonIdx = (error.message as string).indexOf(': ');
+                                const body = colonIdx !== -1 ? error.message.slice(colonIdx + 2) : error.message;
+                                try { description = JSON.parse(body).error || body; } catch { description = body; }
+                              }
                               toast({
                                 title: "Email not sent",
-                                description: error.message || "Could not send test email",
+                                description,
                                 variant: "destructive",
                               });
                             }

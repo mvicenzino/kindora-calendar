@@ -2716,6 +2716,7 @@ Visit Kindora Calendar: ${joinUrl}
       // Collect events from all families
       const allFamilySummaries: string[] = [];
       let totalEventCount = 0;
+      let lastError: string | undefined;
       
       for (const family of families) {
         const events = await storage.getEvents(family.id);
@@ -2779,12 +2780,14 @@ Visit Kindora Calendar: ${joinUrl}
         if (result.success) {
           allFamilySummaries.push(family.name);
         } else {
-          console.error(`Failed to send summary for family ${family.name}:`, result.error);
+          const errMsg = result.error || 'Unknown error';
+          console.error(`Failed to send summary for family ${family.name}:`, errMsg);
+          lastError = errMsg;
         }
       }
       
       if (allFamilySummaries.length === 0) {
-        return res.status(500).json({ error: "Failed to send any summary emails" });
+        return res.status(500).json({ error: lastError || "Failed to send any summary emails" });
       }
       
       res.json({
