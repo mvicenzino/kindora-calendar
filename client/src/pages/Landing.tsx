@@ -2,9 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink, Expand } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink } from "lucide-react";
 import heroVideo from "@assets/generated_videos/kindora_family_hero_smooth.mp4";
-import kindoraAnimation from "@assets/Kindora-Animation-Mar-14-21-01-53_1773838968646.mp4";
 
 const logo = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,7 +23,6 @@ export default function Landing() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [videoExpanded, setVideoExpanded] = useState(false);
 
   // Force dark mode on html element while on the landing page so all
   // CSS variables (inputs, buttons, etc.) resolve correctly regardless of user theme preference.
@@ -375,34 +373,6 @@ export default function Landing() {
         </div>
       )}
 
-      {/* Why Kindora Lightbox */}
-      {videoExpanded && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/92 backdrop-blur-sm"
-          onClick={() => setVideoExpanded(false)}
-        >
-          <button
-            onClick={() => setVideoExpanded(false)}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
-            data-testid="button-video-lightbox-close"
-            aria-label="Close"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <div
-            className="w-[90vw] max-w-4xl rounded-xl overflow-hidden shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <video
-              src={kindoraAnimation}
-              autoPlay
-              controls
-              playsInline
-              className="w-full h-auto"
-            />
-          </div>
-        </div>
-      )}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden min-h-[90vh] flex items-center">
@@ -419,16 +389,6 @@ export default function Landing() {
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-primary/10" />
         </div>
 
-        {/* Expand video button */}
-        <button
-          onClick={() => setVideoExpanded(true)}
-          className="absolute bottom-5 right-5 z-20 flex items-center gap-2 px-3 py-2 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/20 text-white/80 hover:text-white text-sm font-medium transition-all"
-          data-testid="button-video-expand"
-          aria-label="Watch video in full screen"
-        >
-          <Expand className="w-4 h-4" />
-          <span>Why Kindora</span>
-        </button>
 
         <div className="relative z-10 w-full px-4 md:px-6 py-12 md:py-20">
           <div className="max-w-6xl mx-auto">
