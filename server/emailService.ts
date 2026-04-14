@@ -1,5 +1,91 @@
 import { format, startOfWeek, endOfWeek, addDays, isSameDay } from 'date-fns';
 
+// ── Unified email sender (Resend-first, SendGrid fallback) ─────────────────
+export async function sendEmail(options: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+  fromName?: string;
+}): Promise<{ success: boolean; error?: string; provider?: string }> {
+  const resendApiKey   = process.env.RESEND_API_KEY;
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  const fromEmail      = process.env.EMAIL_FROM_ADDRESS || 'noreply@kindora.ai';
+  const fromName       = options.fromName || 'Kindora';
+
+  if (resendApiKey) {
+    try {
+      const body: Record<string, unknown> = {
+        from: `${fromName} <${fromEmail}>`,
+        to: [options.to],
+        subject: options.subject,
+        html: options.html,
+      };
+      if (options.text)    body.text     = options.text;
+      if (options.replyTo) body.reply_to = options.replyTo;
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${resendApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Resend error:', response.status, errorText);
+        let detail = errorText;
+        try { const p = JSON.parse(errorText); detail = p.message || p.name || errorText; } catch { /* raw */ }
+        return { success: false, error: `Resend ${response.status}: ${detail}` };
+      }
+      return { success: true, provider: 'resend' };
+    } catch (error) {
+      console.error('Resend send error:', error);
+      return { success: false, error: String(error) };
+    }
+  }
+
+  if (sendgridApiKey) {
+    try {
+      const content: { type: string; value: string }[] = [];
+      if (options.text) content.push({ type: 'text/plain', value: options.text });
+      content.push({ type: 'text/html', value: options.html });
+
+      const body: Record<string, unknown> = {
+        personalizations: [{ to: [{ email: options.to }] }],
+        from: { email: fromEmail, name: fromName },
+        subject: options.subject,
+        content,
+      };
+      if (options.replyTo) body.reply_to = { email: options.replyTo };
+
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${sendgridApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('SendGrid error:', response.status, errorText);
+        let detail = errorText;
+        try {
+          const p = JSON.parse(errorText);
+          const msgs = p?.errors?.map((e: any) => e.message).join('; ');
+          if (msgs) detail = msgs;
+        } catch { /* raw */ }
+        return { success: false, error: `SendGrid ${response.status}: ${detail}` };
+      }
+      return { success: true, provider: 'sendgrid' };
+    } catch (error) {
+      console.error('SendGrid send error:', error);
+      return { success: false, error: String(error) };
+    }
+  }
+
+  return { success: false, error: 'No email service configured. Set RESEND_API_KEY or SENDGRID_API_KEY.' };
+}
+
 interface EventSummary {
   id: string;
   title: string;
@@ -235,50 +321,13 @@ export async function sendWeeklySummaryEmail(
   textContent: string,
   weekRange: string
 ): Promise<{ success: boolean; error?: string }> {
-  const sendgridApiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM_ADDRESS || 'noreply@kindora.app';
-  
-  if (!sendgridApiKey) {
-    return { success: false, error: 'SendGrid API key not configured' };
-  }
-  
-  const subject = `Your agenda for ${weekRange}`;
-  
-  try {
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${sendgridApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: toEmail }] }],
-        from: { email: fromEmail, name: 'Kindora Calendar' },
-        subject: subject,
-        content: [
-          { type: 'text/plain', value: textContent },
-          { type: 'text/html', value: htmlContent }
-        ]
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('SendGrid error:', response.status, errorText);
-      let detail = errorText;
-      try {
-        const parsed = JSON.parse(errorText);
-        const msgs = parsed?.errors?.map((e: any) => e.message).join('; ');
-        if (msgs) detail = msgs;
-      } catch { /* keep raw text */ }
-      return { success: false, error: `SendGrid ${response.status}: ${detail}` };
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Email send error:', error);
-    return { success: false, error: String(error) };
-  }
+  return sendEmail({
+    to: toEmail,
+    subject: `Your agenda for ${weekRange}`,
+    html: htmlContent,
+    text: textContent,
+    fromName: 'Kindora Calendar',
+  });
 }
 
 interface EmergencyBridgeEmailData {
@@ -445,50 +494,11 @@ Kindora - Keeping families connected & organized
 export async function sendEmergencyBridgeEmail(
   data: EmergencyBridgeEmailData
 ): Promise<{ success: boolean; error?: string }> {
-  const sendgridApiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.EMAIL_FROM_ADDRESS || 'noreply@kindora.app';
-  
-  if (!sendgridApiKey) {
-    return { success: false, error: 'SendGrid API key not configured' };
-  }
-  
-  const htmlContent = generateEmergencyBridgeHtml(data);
-  const textContent = generateEmergencyBridgeText(data);
-  const subject = `Emergency access to ${data.familyName} shared with you`;
-  
-  try {
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${sendgridApiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: data.recipientEmail }] }],
-        from: { email: fromEmail, name: 'Kindora Calendar' },
-        subject: subject,
-        content: [
-          { type: 'text/plain', value: textContent },
-          { type: 'text/html', value: htmlContent }
-        ]
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('SendGrid error:', response.status, errorText);
-      let detail = errorText;
-      try {
-        const parsed = JSON.parse(errorText);
-        const msgs = parsed?.errors?.map((e: any) => e.message).join('; ');
-        if (msgs) detail = msgs;
-      } catch { /* keep raw text */ }
-      return { success: false, error: `SendGrid ${response.status}: ${detail}` };
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Email send error:', error);
-    return { success: false, error: String(error) };
-  }
+  return sendEmail({
+    to: data.recipientEmail,
+    subject: `Emergency access to ${data.familyName} shared with you`,
+    html: generateEmergencyBridgeHtml(data),
+    text: generateEmergencyBridgeText(data),
+    fromName: 'Kindora Calendar',
+  });
 }

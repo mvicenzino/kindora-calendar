@@ -14,7 +14,7 @@ import { requireFamily, requireCare } from "./tierMiddleware";
 import { setupGoogleAuth } from "./googleAuth";
 import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
-import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail } from "./emailService";
+import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail, sendEmail } from "./emailService";
 import { startOfWeek, endOfWeek, format, addDays, subDays } from "date-fns";
 import OpenAI from "openai";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
@@ -564,21 +564,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const joinUrl = `${appUrl}/?invite=${family.inviteCode}`;
       const subject = `Join ${family.name} on Kindora Calendar`;
       
-      // Check email service configuration
-      const resendApiKey = process.env.RESEND_API_KEY;
-      const sendgridApiKey = process.env.SENDGRID_API_KEY;
-      
-      // Validate configuration based on selected provider
-      if (resendApiKey && !process.env.EMAIL_FROM_ADDRESS) {
-        return res.status(400).json({ 
-          error: "EMAIL_FROM_ADDRESS is required when using Resend. Set it to an email from your verified domain (e.g., 'invites@yourdomain.com'). Resend does not support Gmail or unverified domains.",
-          provider: "resend",
-          setup: "Go to Replit Secrets and add EMAIL_FROM_ADDRESS with a verified domain email"
-        });
-      }
-      
-      const fromEmail = (process.env.EMAIL_FROM_ADDRESS || "mvicenzino@gmail.com").toLowerCase();
-      
       // HTML email template
       const htmlBody = `
         <!DOCTYPE html>
@@ -790,78 +775,32 @@ How to Join:
 Visit Kindora Calendar: ${joinUrl}
       `.trim();
 
-      // Prioritize SendGrid over Resend (SendGrid has fewer restrictions)
-      if (sendgridApiKey) {
-        // Send with SendGrid
-        const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${sendgridApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            personalizations: [{ to: [{ email }] }],
-            from: { email: fromEmail },
-            subject: subject,
-            content: [
-              { type: 'text/plain', value: textBody },
-              { type: 'text/html', value: htmlBody }
-            ]
-          })
-        });
+      const emailResult = await sendEmail({
+        to: email,
+        subject,
+        html: htmlBody,
+        text: textBody,
+        fromName: 'Kindora',
+      });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorDetails;
-          try {
-            errorDetails = JSON.parse(errorText);
-          } catch {
-            errorDetails = { message: errorText };
-          }
-          
-          console.error('SendGrid API error:', response.status, errorDetails);
-          
-          // Provide specific error guidance based on SendGrid's response
-          const errorMessage = errorDetails.errors?.[0]?.message || errorDetails.message || errorText;
-          
-          if (response.status === 400 || response.status === 403) {
-            console.warn('SendGrid email failed (permission/verification), returning invite code anyway');
-          } else {
-            console.warn('SendGrid email failed (credits/other), returning invite code anyway');
-          }
-          
-          return res.json({ 
-            success: true,
-            message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
-            inviteCode: family.inviteCode,
-            emailFailed: true,
-            provider: "sendgrid"
-          });
-        }
-
-        console.log('Email sent via SendGrid');
-        
-        return res.json({ 
+      if (!emailResult.success) {
+        console.warn('Invite email failed:', emailResult.error);
+        return res.json({
           success: true,
-          message: "Invitation email sent successfully",
+          message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
           inviteCode: family.inviteCode,
-          provider: "sendgrid"
-        });
-      } else {
-        // No email service configured
-        console.log('Email would be sent:', { to: email, from: fromEmail, subject, joinUrl, inviteCode: family.inviteCode });
-        
-        return res.status(501).json({ 
-          error: "Email service not configured. Set RESEND_API_KEY or SENDGRID_API_KEY, and optionally EMAIL_FROM_ADDRESS (required for Resend - must be a verified domain like 'invites@yourdomain.com').",
-          details: {
-            to: email,
-            from: fromEmail,
-            inviteCode: family.inviteCode,
-            joinUrl: joinUrl,
-            note: "For Resend: EMAIL_FROM_ADDRESS must be from a verified domain. For SendGrid: any email works if verified in SendGrid."
-          }
+          emailFailed: true,
+          emailError: emailResult.error,
         });
       }
+
+      console.log('Invite email sent via', emailResult.provider);
+      return res.json({
+        success: true,
+        message: "Invitation email sent successfully",
+        inviteCode: family.inviteCode,
+        provider: emailResult.provider,
+      });
     } catch (error: any) {
       console.error("Error sending invite:", error);
       res.status(500).json({ error: error.message || "Failed to send invitation" });
@@ -895,21 +834,6 @@ Visit Kindora Calendar: ${joinUrl}
       const joinUrl = `${appUrl}/?invite=${inviteCode}&role=${selectedRole}`;
       const roleLabel = selectedRole === 'caregiver' ? 'as a Caregiver' : 'as a Family Member';
       const subject = `Invitation to ${displayFamilyName}'s Calendar on Kindora ${roleLabel}`;
-      
-      // Check email service configuration
-      const resendApiKey = process.env.RESEND_API_KEY;
-      const sendgridApiKey = process.env.SENDGRID_API_KEY;
-      
-      // Validate configuration based on selected provider
-      if (resendApiKey && !process.env.EMAIL_FROM_ADDRESS) {
-        return res.status(400).json({ 
-          error: "EMAIL_FROM_ADDRESS is required when using Resend. Set it to an email from your verified domain (e.g., 'invites@yourdomain.com'). Resend does not support Gmail or unverified domains.",
-          provider: "resend",
-          setup: "Go to Replit Secrets and add EMAIL_FROM_ADDRESS with a verified domain email"
-        });
-      }
-      
-      const fromEmail = (process.env.EMAIL_FROM_ADDRESS || "mvicenzino@gmail.com").toLowerCase();
       
       // HTML email template
       const htmlBody = `
@@ -1122,77 +1046,32 @@ How to Join:
 Visit Kindora Calendar: ${joinUrl}
       `.trim();
 
-      // Prioritize SendGrid over Resend (SendGrid has fewer restrictions)
-      if (sendgridApiKey) {
-        // Send with SendGrid
-        const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${sendgridApiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            personalizations: [{ to: [{ email }] }],
-            from: { email: fromEmail },
-            subject: subject,
-            content: [
-              { type: 'text/plain', value: textBody },
-              { type: 'text/html', value: htmlBody }
-            ]
-          })
-        });
+      const emailResult = await sendEmail({
+        to: email,
+        subject,
+        html: htmlBody,
+        text: textBody,
+        fromName: 'Kindora',
+      });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          let errorDetails;
-          try {
-            errorDetails = JSON.parse(errorText);
-          } catch {
-            errorDetails = { message: errorText };
-          }
-          
-          console.error('SendGrid API error:', response.status, errorDetails);
-          
-          const errorMessage = errorDetails.errors?.[0]?.message || errorDetails.message || errorText;
-          
-          if (response.status === 400 || response.status === 403) {
-            console.warn('SendGrid forward-invite failed (permission/verification), returning invite code anyway');
-          } else {
-            console.warn('SendGrid forward-invite failed (credits/other), returning invite code anyway');
-          }
-          
-          return res.json({ 
-            success: true,
-            message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
-            inviteCode,
-            emailFailed: true,
-            provider: "sendgrid"
-          });
-        }
-
-        console.log('Invite forwarded via SendGrid');
-        
-        return res.json({ 
+      if (!emailResult.success) {
+        console.warn('Caregiver invite email failed:', emailResult.error);
+        return res.json({
           success: true,
-          message: "Invitation email sent successfully",
+          message: "Invitation created, but the email couldn't be sent right now. Share the invite code manually.",
           inviteCode,
-          provider: "sendgrid"
-        });
-      } else {
-        // No email service configured
-        console.log('Invite would be forwarded:', { to: email, from: fromEmail, subject, joinUrl, inviteCode });
-        
-        return res.status(501).json({ 
-          error: "Email service not configured. Set RESEND_API_KEY or SENDGRID_API_KEY, and optionally EMAIL_FROM_ADDRESS (required for Resend - must be a verified domain like 'invites@yourdomain.com').",
-          details: {
-            to: email,
-            from: fromEmail,
-            inviteCode: inviteCode,
-            joinUrl: joinUrl,
-            note: "For Resend: EMAIL_FROM_ADDRESS must be from a verified domain. For SendGrid: any email works if verified in SendGrid."
-          }
+          emailFailed: true,
+          emailError: emailResult.error,
         });
       }
+
+      console.log('Caregiver invite email sent via', emailResult.provider);
+      return res.json({
+        success: true,
+        message: "Invitation email sent successfully",
+        inviteCode,
+        provider: emailResult.provider,
+      });
     } catch (error: any) {
       console.error("Error forwarding invite:", error);
       res.status(500).json({ error: error.message || "Failed to forward invitation" });
@@ -4451,31 +4330,10 @@ Always return valid JSON matching one of the three formats above.`,
       return res.status(400).json({ error: "name, email, and message are required" });
     }
 
-    const sendgridApiKey = process.env.SENDGRID_API_KEY;
-    const fromEmail = process.env.EMAIL_FROM_ADDRESS || "noreply@kindora.ai";
-    const toEmail = "mvicenzino@gmail.com";
-
-    if (sendgridApiKey) {
-      try {
-        await fetch("https://api.sendgrid.com/v3/mail/send", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sendgridApiKey}`,
-          },
-          body: JSON.stringify({
-            personalizations: [{ to: [{ email: toEmail }] }],
-            from: { email: fromEmail, name: "Kindora Support" },
-            reply_to: { email, name },
-            subject: `[Kindora Support] ${subject || "General inquiry"} — from ${name}`,
-            content: [
-              {
-                type: "text/plain",
-                value: `New support message from Kindora\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject || "General inquiry"}\n\n---\n\n${message}\n\n---\nReply directly to this email to respond to ${name}.`,
-              },
-              {
-                type: "text/html",
-                value: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+    sendEmail({
+      to: "mvicenzino@gmail.com",
+      subject: `[Kindora Support] ${subject || "General inquiry"} — from ${name}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#f97316;padding:16px 24px;border-radius:8px 8px 0 0">
     <h2 style="color:white;margin:0;font-size:18px">New Support Message · Kindora</h2>
   </div>
@@ -4491,18 +4349,10 @@ Always return valid JSON matching one of the three formats above.`,
     <p style="margin-top:16px;font-size:12px;color:#9ca3af">Reply directly to this email to respond to ${name}.</p>
   </div>
 </div>`,
-              },
-            ],
-          }),
-        });
-      } catch (err) {
-        console.error("Support email send error:", err);
-        // Still return success to the user — don't expose email config errors
-      }
-    } else {
-      // Log to console in dev / if email not configured
-      console.log(`[Support] From: ${name} <${email}> | Subject: ${subject} | Message: ${message}`);
-    }
+      text: `New support message from Kindora\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject || "General inquiry"}\n\n---\n\n${message}`,
+      replyTo: email,
+      fromName: "Kindora Support",
+    }).catch(err => console.error("Support email send error:", err));
 
     res.json({ success: true });
   });
@@ -4688,29 +4538,11 @@ Always return valid JSON matching one of the three formats above.`,
       return res.status(500).json({ error: "Failed to save feedback. Please try again." });
     }
 
-    // Send notification email
-    const sendgridApiKey = process.env.SENDGRID_API_KEY;
-    const fromEmail = process.env.EMAIL_FROM_ADDRESS || "noreply@kindora.ai";
-    const toEmail = "mvicenzino@gmail.com";
-
-    if (sendgridApiKey) {
-      try {
-        await fetch("https://api.sendgrid.com/v3/mail/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sendgridApiKey}` },
-          body: JSON.stringify({
-            personalizations: [{ to: [{ email: toEmail }] }],
-            from: { email: fromEmail, name: "Kindora Beta" },
-            reply_to: { email, name },
-            subject: `[Kindora Beta Feedback] from ${name}`,
-            content: [
-              {
-                type: "text/plain",
-                value: `New beta feedback from Kindora\n\nName: ${name}\nEmail: ${email}\nUser ID: ${userId || "anonymous"}\n\n---\n\n${comments}`,
-              },
-              {
-                type: "text/html",
-                value: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+    // Send notification email (fire-and-forget — don't block response)
+    sendEmail({
+      to: "mvicenzino@gmail.com",
+      subject: `[Kindora Beta Feedback] from ${name}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#f97316;padding:16px 24px;border-radius:8px 8px 0 0">
     <h2 style="color:white;margin:0;font-size:18px">Beta Feedback · Kindora</h2>
   </div>
@@ -4726,16 +4558,10 @@ Always return valid JSON matching one of the three formats above.`,
     <p style="margin-top:16px;font-size:12px;color:#9ca3af">Reply directly to this email to respond to ${name}.</p>
   </div>
 </div>`,
-              },
-            ],
-          }),
-        });
-      } catch (err) {
-        console.error("[Feedback] Email send error:", err);
-      }
-    } else {
-      console.log(`[Feedback] ${name} <${email}> (${userId || "anon"}): ${comments}`);
-    }
+      text: `New beta feedback from Kindora\n\nName: ${name}\nEmail: ${email}\nUser ID: ${userId || "anonymous"}\n\n---\n\n${comments}`,
+      replyTo: email,
+      fromName: "Kindora Beta",
+    }).catch(err => console.error("[Feedback] Email send error:", err));
 
     res.json({ success: true });
   });

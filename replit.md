@@ -63,5 +63,5 @@ Sidebar navigation (`AppSidebar`) with links to: Calendar (`/`), Messages (`/mes
 - **TSX**: Development server with TypeScript execution.
 
 ### Integrations
-- **Email Services**: Resend (recommended) or SendGrid for sending family invite codes and weekly summary emails. Configured via `RESEND_API_KEY`/`SENDGRID_API_KEY` and `EMAIL_FROM_ADDRESS` environment variables.
+- **Email Services**: Unified `sendEmail()` helper in `server/emailService.ts` — tries Resend first (`RESEND_API_KEY`), falls back to SendGrid (`SENDGRID_API_KEY`). `EMAIL_FROM_ADDRESS` sets the from address (required for Resend — must be a verified domain). Used for: weekly summaries, emergency bridge, family invites, support contact form, and beta feedback notifications.
 - **Stripe Payments**: Single-tier subscription billing via `stripe-replit-sync`. Product: Kindora Family Plan at $7/month with 14-day free trial. Dynamic price lookup via `getOrCreateFamilyPlanPrice()` (finds or creates $7/month price). Webhook route at `/api/stripe/webhook` (registered BEFORE express.json for raw body). Key files: `server/stripeClient.ts`, `server/webhookHandlers.ts`, `server/routes.ts` (checkout/subscription routes). Subscription fields on users table: `stripeCustomerId`, `stripeSubscriptionId`, `subscriptionTier`, `subscriptionStatus`. Account settings page at `/settings`.
