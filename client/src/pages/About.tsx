@@ -151,9 +151,6 @@ export default function About() {
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </Link>
-            <Link href="/">
-              <Button variant="outline" data-testid="link-try-kindora">Try Kindora free</Button>
-            </Link>
           </div>
         </div>
       </section>
