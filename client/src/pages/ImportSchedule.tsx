@@ -113,7 +113,7 @@ function GoogleCalendarSync() {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/google-calendar/status"] });
       toast({
-        title: "Sync complete",
+        title: "Google Calendar Synced",
         description: `${data.created} new events added, ${data.updated} updated.`,
       });
     },
