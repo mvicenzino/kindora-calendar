@@ -15,6 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { mapEventFromDb, mapFamilyMemberFromDb, type UiEvent, type UiFamilyMember } from "@shared/types";
 import type { Medication, FamilyMessage, FamilyMember } from "@shared/schema";
+import { CATEGORY_CONFIG, type EventCategory } from "@shared/schema";
 import EventModal from "@/components/EventModal";
 import EventDetailsDialog from "@/components/EventDetailsDialog";
 import TaskManager from "@/components/TaskManager";
@@ -185,6 +186,46 @@ export default function FamilyDashboard() {
       toast({ title: "Dose logged", description: "Medication recorded for today." });
     },
   });
+
+  const createEventMutation = useMutation({
+    mutationFn: async (eventData: object) => {
+      const res = await apiRequest("POST", "/api/events", eventData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/events?familyId=${activeFamilyId}`] });
+      toast({ title: "Event created", description: "Your event has been added to the calendar." });
+    },
+    onError: () => {
+      toast({ title: "Failed to create event", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const handleSaveEvent = (eventData: {
+    id?: string;
+    title: string;
+    description?: string;
+    startTime: Date;
+    endTime: Date;
+    memberIds: string[];
+    category?: EventCategory;
+    rrule?: string | null;
+    isImportant?: boolean;
+  }) => {
+    if (eventData.memberIds.length === 0) return;
+    const cat = (eventData.category || "other") as EventCategory;
+    createEventMutation.mutate({
+      title: eventData.title,
+      description: eventData.description || undefined,
+      startTime: eventData.startTime,
+      endTime: eventData.endTime,
+      memberIds: eventData.memberIds,
+      category: cat,
+      color: CATEGORY_CONFIG[cat].color,
+      isImportant: eventData.isImportant ?? false,
+      ...(eventData.rrule && { rrule: eventData.rrule, isRecurringParent: true }),
+    });
+  };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const firstName = (user as any)?.firstName || (user as any)?.name?.split(" ")[0] || "there";
@@ -647,7 +688,7 @@ export default function FamilyDashboard() {
         <EventModal
           isOpen={createEventOpen}
           onClose={() => setCreateEventOpen(false)}
-          familyId={activeFamilyId ?? ""}
+          onSave={handleSaveEvent}
           members={uiMembers}
         />
       )}

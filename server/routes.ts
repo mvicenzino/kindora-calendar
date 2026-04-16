@@ -4477,7 +4477,9 @@ Always return valid JSON matching one of the three formats above.`,
   app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const parsed = insertTaskSchema.safeParse({ ...req.body, createdByUserId: userId });
+      const body = { ...req.body, createdByUserId: userId };
+      if (body.dueDate && typeof body.dueDate === "string") body.dueDate = new Date(body.dueDate);
+      const parsed = insertTaskSchema.safeParse(body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid task data", errors: parsed.error.errors });
       const task = await storage.createTask(parsed.data);
       res.status(201).json(task);
@@ -4490,6 +4492,7 @@ Always return valid JSON matching one of the three formats above.`,
     try {
       const { familyId, ...updates } = req.body;
       if (!familyId) return res.status(400).json({ message: "familyId required" });
+      if (updates.dueDate && typeof updates.dueDate === "string") updates.dueDate = new Date(updates.dueDate);
       const task = await storage.updateTask(req.params.id, familyId, updates);
       res.json(task);
     } catch (err) {
