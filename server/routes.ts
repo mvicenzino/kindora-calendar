@@ -556,10 +556,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Family not found" });
       }
 
-      // Get the app URL
-      const appUrl = process.env.REPL_SLUG 
-        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-        : req.headers.origin || 'http://localhost:5000';
+      // Get the app URL — prefer APP_URL env var, then the request origin (gives us kindora.ai in prod)
+      const appUrl = process.env.APP_URL
+        || req.headers.origin
+        || `http://${req.headers.host}`
+        || 'http://localhost:5000';
 
       const joinUrl = `${appUrl}/?invite=${family.inviteCode}`;
       const subject = `Join ${family.name} on Kindora Calendar`;
@@ -826,10 +827,11 @@ Visit Kindora Calendar: ${joinUrl}
       // Support role selection (member or caregiver)
       const selectedRole = role === 'caregiver' ? 'caregiver' : 'member';
 
-      // Get the app URL
-      const appUrl = process.env.REPL_SLUG 
-        ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-        : req.headers.origin || 'http://localhost:5000';
+      // Get the app URL — prefer APP_URL env var, then the request origin (gives us kindora.ai in prod)
+      const appUrl = process.env.APP_URL
+        || req.headers.origin
+        || `http://${req.headers.host}`
+        || 'http://localhost:5000';
 
       const joinUrl = `${appUrl}/?invite=${inviteCode}&role=${selectedRole}`;
       const roleLabel = selectedRole === 'caregiver' ? 'as a Caregiver' : 'as a Family Member';
