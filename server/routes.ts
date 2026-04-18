@@ -4437,7 +4437,7 @@ Always return valid JSON matching one of the three formats above.`,
   // ── Hydration Tracking ─────────────────────────────────────────────────────
   app.get("/api/hydration", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user.claims.sub;
       const familyId = req.query.familyId as string || await storage.getUserFamily(userId).then(f => f?.id);
       if (!familyId) return res.status(400).json({ message: "No family found" });
       const date = req.query.date as string || new Date().toISOString().slice(0, 10);
@@ -4450,7 +4450,7 @@ Always return valid JSON matching one of the three formats above.`,
 
   app.post("/api/hydration", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user.claims.sub;
       const { memberId, date, glassesCount, goalGlasses = 8, familyId: bodyFamilyId } = req.body;
       if (!memberId || !date || glassesCount === undefined) {
         return res.status(400).json({ message: "memberId, date, and glassesCount required" });
@@ -4478,7 +4478,7 @@ Always return valid JSON matching one of the three formats above.`,
 
   app.post("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user.claims.sub;
       const body = { ...req.body, createdByUserId: userId };
       if (body.dueDate && typeof body.dueDate === "string") body.dueDate = new Date(body.dueDate);
       const parsed = insertTaskSchema.safeParse(body);
@@ -4515,7 +4515,7 @@ Always return valid JSON matching one of the three formats above.`,
 
   app.post("/api/tasks/:id/toggle", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      const userId = req.user.claims.sub;
       const { familyId } = req.body;
       if (!familyId) return res.status(400).json({ message: "familyId required" });
       const task = await storage.toggleTaskCompletion(req.params.id, familyId, userId);
