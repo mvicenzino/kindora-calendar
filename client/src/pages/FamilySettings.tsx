@@ -936,25 +936,27 @@ export default function FamilySettings() {
     return `${diffDays}d left`;
   };
 
-  const copyInviteCode = () => {
+  const copyInviteLink = () => {
     const code = family?.inviteCode || "FAMILY01";
-    navigator.clipboard.writeText(code);
+    const link = `${window.location.origin}/?invite=${code}`;
+    navigator.clipboard.writeText(link);
     setCodeCopied(true);
     toast({
-      title: "Code copied!",
-      description: "Share this code with anyone you want to invite.",
+      title: "Link copied!",
+      description: "Paste it in a text or email to invite them.",
     });
     setTimeout(() => setCodeCopied(false), 3000);
   };
 
   const [caregiverCodeCopied, setCaregiverCodeCopied] = useState(false);
-  const copyCaregiverCode = () => {
+  const copyCaregiverLink = () => {
     const code = family?.inviteCode ? `${family.inviteCode}-CG` : "CARGVR01";
-    navigator.clipboard.writeText(code);
+    const link = `${window.location.origin}/?invite=${code}&role=caregiver`;
+    navigator.clipboard.writeText(link);
     setCaregiverCodeCopied(true);
     toast({
-      title: "Caregiver code copied!",
-      description: "Share this code with your caregiver.",
+      title: "Caregiver link copied!",
+      description: "Paste it in a text or email to invite them.",
     });
     setTimeout(() => setCaregiverCodeCopied(false), 3000);
   };
@@ -1011,57 +1013,49 @@ export default function FamilySettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                value={caregiverEmail}
-                onChange={(e) => setCaregiverEmail(e.target.value)}
-                placeholder="nanny@email.com"
-                data-testid="input-caregiver-email"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleInviteCaregiver();
-                }}
-              />
-              <Button
-                onClick={handleInviteCaregiver}
-                disabled={!caregiverEmail.trim() || inviteCaregiverMutation.isPending}
-                className="flex-shrink-0"
-                data-testid="button-invite-caregiver"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {inviteCaregiverMutation.isPending ? "Sending..." : "Invite"}
-              </Button>
-            </div>
             <p className="text-sm text-muted-foreground">
               Caregivers can view events, complete tasks, log medications, and check events done — but can't create or delete tasks and events.
             </p>
+            <Button
+              onClick={copyCaregiverLink}
+              className="w-full"
+              data-testid="button-copy-caregiver-link"
+            >
+              {caregiverCodeCopied ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Link Copied — Paste it anywhere to share
+                </>
+              ) : (
+                <>
+                  <Link className="w-4 h-4 mr-2" />
+                  Copy Caregiver Invite Link
+                </>
+              )}
+            </Button>
 
             <div className="pt-3 border-t border-border">
-              <Label className="text-muted-foreground text-sm">Or share caregiver invite code manually</Label>
+              <Label className="text-muted-foreground text-sm">Or send via email</Label>
               <div className="flex gap-2 mt-2">
                 <Input
-                  value={family?.inviteCode ? `${family.inviteCode}-CG` : "CARGVR01"}
-                  readOnly
-                  className="font-mono tracking-wider"
-                  data-testid="input-caregiver-invite-code"
+                  type="email"
+                  value={caregiverEmail}
+                  onChange={(e) => setCaregiverEmail(e.target.value)}
+                  placeholder="nanny@email.com"
+                  data-testid="input-caregiver-email"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleInviteCaregiver();
+                  }}
                 />
                 <Button
-                  onClick={copyCaregiverCode}
+                  onClick={handleInviteCaregiver}
                   variant="outline"
-                  className="flex-shrink-0 min-w-[80px]"
-                  data-testid="button-copy-caregiver-code"
+                  disabled={!caregiverEmail.trim() || inviteCaregiverMutation.isPending}
+                  className="flex-shrink-0"
+                  data-testid="button-invite-caregiver"
                 >
-                  {caregiverCodeCopied ? (
-                    <>
-                      <Check className="w-4 h-4 mr-2 text-green-400" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy
-                    </>
-                  )}
+                  <Send className="w-4 h-4 mr-2" />
+                  {inviteCaregiverMutation.isPending ? "Sending..." : "Send"}
                 </Button>
               </div>
             </div>
@@ -1079,54 +1073,46 @@ export default function FamilySettings() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                type="email"
-                value={familyMemberEmail}
-                onChange={(e) => setFamilyMemberEmail(e.target.value)}
-                placeholder="spouse@email.com"
-                data-testid="input-family-member-email"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleInviteFamilyMember();
-                }}
-              />
-              <Button
-                onClick={handleInviteFamilyMember}
-                disabled={!familyMemberEmail.trim() || inviteFamilyMemberMutation.isPending}
-                className="flex-shrink-0"
-                data-testid="button-invite-family-member"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                {inviteFamilyMemberMutation.isPending ? "Sending..." : "Invite"}
-              </Button>
-            </div>
+            <Button
+              onClick={copyInviteLink}
+              className="w-full"
+              data-testid="button-copy-invite-link"
+            >
+              {codeCopied ? (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  Link Copied — Paste it anywhere to share
+                </>
+              ) : (
+                <>
+                  <Link className="w-4 h-4 mr-2" />
+                  Copy Family Invite Link
+                </>
+              )}
+            </Button>
 
             <div className="pt-3 border-t border-border">
-              <Label className="text-muted-foreground text-sm">Or share your invite code manually</Label>
+              <Label className="text-muted-foreground text-sm">Or send via email</Label>
               <div className="flex gap-2 mt-2">
                 <Input
-                  value={family?.inviteCode || "FAMILY01"}
-                  readOnly
-                  className="font-mono tracking-wider"
-                  data-testid="input-invite-code"
+                  type="email"
+                  value={familyMemberEmail}
+                  onChange={(e) => setFamilyMemberEmail(e.target.value)}
+                  placeholder="spouse@email.com"
+                  data-testid="input-family-member-email"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleInviteFamilyMember();
+                  }}
                 />
                 <Button
-                  onClick={copyInviteCode}
+                  onClick={handleInviteFamilyMember}
                   variant="outline"
-                  className="flex-shrink-0 min-w-[80px]"
-                  data-testid="button-copy-code"
+                  disabled={!familyMemberEmail.trim() || inviteFamilyMemberMutation.isPending}
+                  className="flex-shrink-0"
+                  data-testid="button-invite-family-member"
                 >
-                  {codeCopied ? (
-                    <>
-                      <Check className="w-4 h-4 mr-2 text-green-400" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy
-                    </>
-                  )}
+                  <Send className="w-4 h-4 mr-2" />
+                  {inviteFamilyMemberMutation.isPending ? "Sending..." : "Send"}
                 </Button>
               </div>
             </div>
