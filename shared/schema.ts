@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, index, numeric, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, index, uniqueIndex, numeric, integer, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -85,12 +85,18 @@ export const familyMemberships = pgTable("family_memberships", {
 export const familyMembers = pgTable("family_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   familyId: varchar("family_id").notNull(),
+  userId: varchar("user_id"), // optional link to a user account; null for kids/elders without logins
   name: text("name").notNull(),
   color: text("color").notNull(),
   avatar: text("avatar"),
   role: text("role").default("family"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Each user can only be linked to a given family once as a calendar member
+  uniqFamilyUser: uniqueIndex("family_members_family_user_unique")
+    .on(table.familyId, table.userId)
+    .where(sql`user_id IS NOT NULL`),
+}));
 
 // Events table (now belongs to family instead of user)
 export const events = pgTable("events", {

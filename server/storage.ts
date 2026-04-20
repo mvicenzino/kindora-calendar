@@ -327,8 +327,51 @@ export class MemStorage implements IStorage {
       joinedAt: new Date(),
     };
     this.familyMemberships.set(membershipId, membership);
+
+    this.ensureMemCalendarMemberForUser(userId, id, 'owner');
     
     return family;
+  }
+
+  // Mirror of DrizzleStorage.ensureCalendarMemberForUser for in-memory storage
+  // (used by demo accounts). Auto-creates a family_members row for any user
+  // who joins/creates a family so they show up on the calendar.
+  private ensureMemCalendarMemberForUser(userId: string, familyId: string, role: string): void {
+    try {
+      const existing = Array.from(this.familyMembers.values()).find(
+        m => m.familyId === familyId && m.userId === userId,
+      );
+      if (existing) return;
+
+      const user = this.users.get(userId);
+      if (!user) return;
+
+      const displayName =
+        [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+        (user.email ? user.email.split('@')[0] : '') ||
+        'Family Member';
+
+      const palette = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6', '#ef4444'];
+      const existingCount = Array.from(this.familyMembers.values()).filter(m => m.familyId === familyId).length;
+      const color = palette[existingCount % palette.length];
+
+      const calendarRole = role === 'caregiver' ? 'caregiver' : 'family';
+
+      const id = randomUUID();
+      const member: FamilyMember = {
+        id,
+        familyId,
+        userId,
+        name: displayName,
+        color,
+        avatar: null,
+        role: calendarRole,
+        createdAt: new Date(),
+      } as FamilyMember;
+      this.familyMembers.set(id, member);
+    } catch (err) {
+      console.error('[ensureMemCalendarMemberForUser] failed for', userId, familyId, err);
+    }
   }
 
   async updateFamily(familyId: string, updates: Partial<InsertFamily>): Promise<Family> {
@@ -377,6 +420,8 @@ export class MemStorage implements IStorage {
       joinedAt: new Date(),
     };
     this.familyMemberships.set(id, membership);
+
+    this.ensureMemCalendarMemberForUser(userId, family.id, role);
     
     return membership;
   }
@@ -398,6 +443,9 @@ export class MemStorage implements IStorage {
       joinedAt: new Date(),
     };
     this.familyMemberships.set(membership.id, membership);
+
+    this.ensureMemCalendarMemberForUser(userId, familyId, role);
+
     return membership;
   }
 
@@ -1441,8 +1489,62 @@ class DrizzleStorage implements IStorage {
       familyId: familyResult[0].id,
       role: 'owner',
     });
+
+    await this.ensureCalendarMemberForUser(userId, familyResult[0].id, 'owner');
     
     return familyResult[0];
+  }
+
+  // Ensure a user account also has a corresponding calendar member entry.
+  // Calendar members are the people you assign events to. When a user joins
+  // a family (as owner, member, or caregiver) we want them to show up on the
+  // calendar automatically — no extra step required.
+  private async ensureCalendarMemberForUser(
+    userId: string,
+    familyId: string,
+    role: string,
+  ): Promise<void> {
+    try {
+      const existing = await this.db
+        .select()
+        .from(familyMembers)
+        .where(and(eq(familyMembers.familyId, familyId), eq(familyMembers.userId, userId)))
+        .limit(1);
+      if (existing[0]) return;
+
+      const user = await this.getUser(userId);
+      if (!user) return;
+
+      const displayName =
+        [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+        (user.email ? user.email.split('@')[0] : '') ||
+        'Family Member';
+
+      // Pick a color from the palette based on how many members already exist
+      const palette = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6', '#ef4444'];
+      const existingCount = await this.db
+        .select()
+        .from(familyMembers)
+        .where(eq(familyMembers.familyId, familyId));
+      const color = palette[existingCount.length % palette.length];
+
+      const calendarRole = role === 'caregiver' ? 'caregiver' : 'family';
+
+      // ON CONFLICT DO NOTHING makes this race-safe under the partial unique
+      // index on (family_id, user_id) WHERE user_id IS NOT NULL.
+      await this.db
+        .insert(familyMembers)
+        .values({
+          familyId,
+          userId,
+          name: displayName,
+          color,
+          role: calendarRole,
+        })
+        .onConflictDoNothing();
+    } catch (err) {
+      console.error('[ensureCalendarMemberForUser] failed for', userId, familyId, err);
+    }
   }
 
   async updateFamily(familyId: string, updates: Partial<InsertFamily>): Promise<Family> {
@@ -1488,6 +1590,8 @@ class DrizzleStorage implements IStorage {
       familyId: family.id,
       role,
     }).returning();
+
+    await this.ensureCalendarMemberForUser(userId, family.id, role);
     
     return result[0];
   }
@@ -1509,6 +1613,9 @@ class DrizzleStorage implements IStorage {
       familyId,
       role,
     }).returning();
+
+    await this.ensureCalendarMemberForUser(userId, familyId, role);
+
     return result[0];
   }
 
