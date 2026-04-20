@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { storage } from "./storage";
+import { sendWelcomeEmail } from "./emailService";
 
 function createGoogleUserSession(
   userId: string,
@@ -135,10 +136,12 @@ export function setupGoogleAuth(app: Express) {
       // Account linking: if a user with this email already exists, use their ID
       // This prevents creating a duplicate account when the user previously signed up with email/password
       let userId = `google-${profile.id}`;
+      let isNewUser = true;
       if (email) {
         const existingUser = await storage.getUserByEmail(email);
         if (existingUser) {
           userId = existingUser.id;
+          isNewUser = false;
           console.log("[Google OAuth] Linked to existing account:", userId);
         }
       }
@@ -151,6 +154,12 @@ export function setupGoogleAuth(app: Express) {
         profileImageUrl,
         authProvider: "google",
       });
+
+      if (isNewUser && email) {
+        sendWelcomeEmail(email, firstName || '').catch((err: any) =>
+          console.error('[Welcome Email] Google OAuth send failed:', err)
+        );
+      }
 
       const sessionUser = createGoogleUserSession(userId, email || "", firstName || "", lastName || "", profileImageUrl);
       // Store in session.passport.user to match what isAuthenticated expects

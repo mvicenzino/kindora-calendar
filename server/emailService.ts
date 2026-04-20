@@ -502,3 +502,133 @@ export async function sendEmergencyBridgeEmail(
     fromName: 'Kindora Calendar',
   });
 }
+
+// ── Welcome Email ────────────────────────────────────────────────────────────
+
+function generateWelcomeHtml(firstName: string): string {
+  const name = firstName || 'there';
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Kindora</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1d2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1d2e; padding: 24px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width: 560px; background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background: rgba(0,0,0,0.2); padding: 20px 28px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); border-radius: 10px; display: inline-block; text-align: center; line-height: 40px; font-size: 20px;">K</div>
+                  </td>
+                  <td style="vertical-align: middle; padding-left: 12px;">
+                    <div style="font-size: 22px; font-weight: 800; color: #fdba74; letter-spacing: -0.3px;">Kindora</div>
+                    <div style="color: rgba(255,255,255,0.4); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 500; margin-top: -2px;">Family OS</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding: 32px 28px 28px;">
+              <div style="color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 500; margin-bottom: 20px;">
+                Hey ${name},
+              </div>
+              <div style="color: rgba(255,255,255,0.75); font-size: 15px; line-height: 1.7;">
+                Just wanted to reach out personally — welcome to Kindora. Really glad you found your way here.
+              </div>
+              <div style="color: rgba(255,255,255,0.75); font-size: 15px; line-height: 1.7; margin-top: 16px;">
+                I built this because managing a family's life across a dozen different apps was driving me crazy, and I figured I couldn't be the only one. The fact that you signed up tells me you probably get it.
+              </div>
+              <div style="color: rgba(255,255,255,0.75); font-size: 15px; line-height: 1.7; margin-top: 16px;">
+                As you poke around, I'd genuinely love to hear what you think — what's clicking, what's confusing, what you wish it did that it doesn't yet. You're early, which means your feedback actually shapes what gets built next.
+              </div>
+              <div style="color: rgba(255,255,255,0.75); font-size: 15px; line-height: 1.7; margin-top: 16px;">
+                Feel free to reply directly to this email. I read every one.
+              </div>
+              <div style="color: rgba(255,255,255,0.75); font-size: 15px; line-height: 1.7; margin-top: 24px;">
+                Thanks for being here at the beginning.
+              </div>
+              <div style="margin-top: 24px;">
+                <div style="color: rgba(255,255,255,0.9); font-size: 15px; font-weight: 600;">— Mike</div>
+                <div style="color: rgba(255,255,255,0.45); font-size: 13px; margin-top: 4px;">Founder, Kindora</div>
+                <div style="margin-top: 4px;">
+                  <a href="https://kindora.ai" style="color: #fdba74; font-size: 13px; text-decoration: none;">kindora.ai</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- CTA -->
+          <tr>
+            <td style="padding: 0 28px 32px; text-align: center;">
+              <a href="https://kindora.ai"
+                 style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); color: white; text-decoration: none; padding: 14px 36px; border-radius: 25px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(249,115,22,0.35);">
+                Get started with Kindora
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: rgba(0,0,0,0.15); padding: 18px 28px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08);">
+              <div style="color: rgba(255,255,255,0.3); font-size: 11px;">
+                You're receiving this because you created a Kindora account.<br>
+                <a href="https://kindora.ai" style="color: rgba(255,255,255,0.3); text-decoration: none;">kindora.ai</a>
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+function generateWelcomeText(firstName: string): string {
+  const name = firstName || 'there';
+  return `
+Hey ${name},
+
+Just wanted to reach out personally — welcome to Kindora. Really glad you found your way here.
+
+I built this because managing a family's life across a dozen different apps was driving me crazy, and I figured I couldn't be the only one. The fact that you signed up tells me you probably get it.
+
+As you poke around, I'd genuinely love to hear what you think — what's clicking, what's confusing, what you wish it did that it doesn't yet. You're early, which means your feedback actually shapes what gets built next.
+
+Feel free to reply directly to this email. I read every one.
+
+Thanks for being here at the beginning.
+
+— Mike
+Founder, Kindora
+kindora.ai
+  `.trim();
+}
+
+export async function sendWelcomeEmail(
+  toEmail: string,
+  firstName: string
+): Promise<{ success: boolean; error?: string }> {
+  return sendEmail({
+    to: toEmail,
+    subject: 'Welcome to Kindora',
+    html: generateWelcomeHtml(firstName),
+    text: generateWelcomeText(firstName),
+    fromName: 'Mike at Kindora',
+    replyTo: 'mike@kindora.ai',
+  });
+}

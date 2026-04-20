@@ -10,6 +10,7 @@ import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { seedDemoAccount } from "./demoSeed";
 import { randomUUID } from "crypto";
+import { sendWelcomeEmail } from "./emailService";
 
 function sanitizeInput(input: string): string {
   return input.replace(/[<>]/g, '').trim();
@@ -126,6 +127,9 @@ export async function setupAuth(app: Express) {
         const user: any = {};
         updateUserSession(user, tokens);
 
+        const existingReplitUser = await storage.getUser(claims["sub"]);
+        const isNewReplitUser = !existingReplitUser;
+
         await storage.upsertUser({
           id: claims["sub"],
           email: claims["email"],
@@ -134,6 +138,12 @@ export async function setupAuth(app: Express) {
           profileImageUrl: claims["profile_image_url"],
           authProvider: "replit",
         });
+
+        if (isNewReplitUser && claims["email"]) {
+          sendWelcomeEmail(claims["email"], claims["first_name"] || '').catch((err: any) =>
+            console.error('[Welcome Email] Replit OAuth send failed:', err)
+          );
+        }
 
         verified(null, user);
       };
@@ -209,6 +219,10 @@ export async function setupAuth(app: Express) {
         passwordHash,
         authProvider: "local",
       });
+
+      sendWelcomeEmail(cleanEmail, cleanFirstName).catch((err: any) =>
+        console.error('[Welcome Email] Local register send failed:', err)
+      );
 
       const sessionUser = createLocalUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
 
