@@ -2,5 +2,13 @@ User-agent: *
 Allow: /
 Disallow: /api/
 Disallow: /emergency-bridge/
+Disallow: /settings
+Disallow: /care
+Disallow: /messages
+Disallow: /documents
+Disallow: /memories
+Disallow: /health
+Disallow: /tasks
+Disallow: /advisor
 
-Sitemap: https://calendora.replit.app/sitemap.xml
+Sitemap: https://kindora.ai/sitemap.xml
