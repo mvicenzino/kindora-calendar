@@ -1669,7 +1669,34 @@ class DrizzleStorage implements IStorage {
 
   // Family Members
   async getFamilyMembers(familyId: string): Promise<FamilyMember[]> {
+    // Self-heal: any user-account in this family that doesn't yet have a
+    // calendar member row gets one auto-created. Idempotent thanks to the
+    // partial unique index on (family_id, user_id).
+    await this.backfillCalendarMembersForFamily(familyId);
     return await this.db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId));
+  }
+
+  private async backfillCalendarMembersForFamily(familyId: string): Promise<void> {
+    try {
+      const memberships = await this.db
+        .select({ userId: familyMemberships.userId, role: familyMemberships.role })
+        .from(familyMemberships)
+        .where(eq(familyMemberships.familyId, familyId));
+
+      const existing = await this.db
+        .select({ userId: familyMembers.userId })
+        .from(familyMembers)
+        .where(eq(familyMembers.familyId, familyId));
+      const existingUserIds = new Set(existing.map(e => e.userId).filter(Boolean));
+
+      for (const m of memberships) {
+        if (m.userId && !existingUserIds.has(m.userId)) {
+          await this.ensureCalendarMemberForUser(m.userId, familyId, m.role);
+        }
+      }
+    } catch (err) {
+      console.error('[backfillCalendarMembersForFamily] failed for', familyId, err);
+    }
   }
 
   async getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined> {
