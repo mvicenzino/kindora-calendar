@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield, History, LayoutDashboard } from "lucide-react";
+import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield, History, LayoutDashboard, CheckSquare } from "lucide-react";
 import HelpDrawer from "./HelpDrawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -25,6 +25,7 @@ const logo = "/kindora-logo.jpeg";
 const familyNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Calendar", url: "/calendar", icon: Calendar },
+  { title: "Tasks", url: "/tasks", icon: CheckSquare },
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Family Vault", url: "/documents", icon: FileText },
   { title: "Memories", url: "/memories", icon: Image },

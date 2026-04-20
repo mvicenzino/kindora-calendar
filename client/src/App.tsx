@@ -31,6 +31,7 @@ import PublicResources from "@/pages/PublicResources";
 import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
 import Health from "@/pages/Health";
+import Tasks from "@/pages/Tasks";
 import FamilyDashboard from "@/pages/FamilyDashboard";
 import NotFound from "@/pages/not-found";
 import AppSidebar from "@/components/AppSidebar";
@@ -251,6 +252,7 @@ function Router() {
                   <Switch>
                     <Route path="/" component={FamilyDashboard} />
                     <Route path="/calendar" component={Home} />
+                    <Route path="/tasks" component={Tasks} />
                     <Route path="/care" component={CaregiverDashboard} />
                     <Route path="/messages" component={Messages} />
                     <Route path="/documents" component={Documents} />
