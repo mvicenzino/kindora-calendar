@@ -985,6 +985,53 @@ export default function FamilySettings() {
     inviteFamilyMemberMutation.mutate(familyMemberEmail.trim());
   };
 
+  const openGmailCompose = (
+    recipient: string,
+    kind: 'family' | 'caregiver',
+  ) => {
+    const inviterFirstName =
+      (user as any)?.firstName || (user as any)?.email?.split('@')[0] || 'A family member';
+    const inviterName =
+      [(user as any)?.firstName, (user as any)?.lastName].filter(Boolean).join(' ').trim() ||
+      inviterFirstName;
+    const familyName = family?.name || 'our family';
+    const baseCode = family?.inviteCode || '';
+    const code = kind === 'caregiver' ? `${baseCode}-CG` : baseCode;
+    const link =
+      kind === 'caregiver'
+        ? `${window.location.origin}/?invite=${code}&role=caregiver`
+        : `${window.location.origin}/?invite=${code}`;
+
+    const subject =
+      kind === 'caregiver'
+        ? `${inviterFirstName} invited you to help with ${familyName} on Kindora`
+        : `${inviterFirstName} invited you to join ${familyName} on Kindora`;
+
+    const intro =
+      kind === 'caregiver'
+        ? `I'd love to add you to our family calendar on Kindora so you can see what's going on, check off tasks, and help us coordinate care. It only takes a minute to join.`
+        : `I'd love to share our family calendar with you on Kindora — it's a calm, private space where we can keep everything in one place: schedules, appointments, medications, and the everyday stuff in between.`;
+
+    const body =
+      `Hi,\n\n` +
+      `${intro}\n\n` +
+      `Tap this link and it will walk you through the rest:\n${link}\n\n` +
+      `If the link doesn't work, you can sign up at ${window.location.origin} ` +
+      `and enter this invite code under Settings → Family:\n${code}\n\n` +
+      `Looking forward to having you in there.\n\n` +
+      `${inviterName}`;
+
+    const params = new URLSearchParams({
+      view: 'cm',
+      fs: '1',
+      to: recipient,
+      su: subject,
+      body,
+    });
+    const gmailUrl = `https://mail.google.com/mail/?${params.toString()}`;
+    window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const handleJoinFamily = () => {
     if (joinCode.trim()) {
       joinFamilyMutation.mutate(joinCode.trim());
@@ -1058,6 +1105,17 @@ export default function FamilySettings() {
                   {inviteCaregiverMutation.isPending ? "Sending..." : "Send"}
                 </Button>
               </div>
+              <Button
+                onClick={() => openGmailCompose(caregiverEmail.trim(), 'caregiver')}
+                variant="ghost"
+                size="sm"
+                disabled={!caregiverEmail.trim() || !caregiverEmail.includes('@')}
+                className="mt-2 w-full text-muted-foreground"
+                data-testid="button-gmail-caregiver"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Or open in Gmail with the message prefilled
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -1115,6 +1173,17 @@ export default function FamilySettings() {
                   {inviteFamilyMemberMutation.isPending ? "Sending..." : "Send"}
                 </Button>
               </div>
+              <Button
+                onClick={() => openGmailCompose(familyMemberEmail.trim(), 'family')}
+                variant="ghost"
+                size="sm"
+                disabled={!familyMemberEmail.trim() || !familyMemberEmail.includes('@')}
+                className="mt-2 w-full text-muted-foreground"
+                data-testid="button-gmail-family-member"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Or open in Gmail with the message prefilled
+              </Button>
             </div>
           </CardContent>
         </Card>
