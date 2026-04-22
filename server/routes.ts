@@ -556,6 +556,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Family not found" });
       }
 
+      // Look up the inviter so we can warmly personalize the email
+      const inviter = await storage.getUser(userId);
+      const inviterName =
+        [inviter?.firstName, inviter?.lastName].filter(Boolean).join(' ').trim() ||
+        (inviter?.email ? inviter.email.split('@')[0] : '') ||
+        'A family member';
+      const inviterFirstName = inviter?.firstName || inviterName.split(' ')[0] || 'A family member';
+
       // Get the app URL — prefer APP_URL env var, then the request origin (gives us kindora.ai in prod)
       const appUrl = process.env.APP_URL
         || req.headers.origin
@@ -563,198 +571,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
         || 'http://localhost:5000';
 
       const joinUrl = `${appUrl}/?invite=${family.inviteCode}`;
-      const subject = `Join ${family.name} on Kindora Calendar`;
+      const subject = `${inviterFirstName} invited you to join ${family.name} on Kindora`;
       
-      // HTML email template
+      // Warm, personal, one-click invite email. Single tap on the button drops
+      // the invitee straight into the sign-up flow with the code pre-applied —
+      // no need to copy/paste a code or hunt through settings.
       const htmlBody = `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <style>
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
-              line-height: 1.6; 
-              color: #1a1a1a; 
-              background-color: #f5f5f5;
-              margin: 0;
-              padding: 0;
-            }
-            .container { 
-              max-width: 600px; 
-              margin: 20px auto; 
-              background: white;
-              border-radius: 12px;
-              overflow: hidden;
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            .header { 
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-              color: white; 
-              padding: 30px 30px; 
-              text-align: center;
-            }
-            .header h1 { 
-              margin: 0 0 8px 0; 
-              font-size: 26px; 
-              font-weight: 600;
-            }
-            .header p { 
-              margin: 0; 
-              font-size: 15px; 
-              opacity: 0.95;
-            }
-            .content { 
-              padding: 30px 30px;
-              background: white;
-            }
-            .greeting { 
-              font-size: 17px; 
-              color: #1a1a1a; 
-              margin: 0 0 15px 0;
-            }
-            .message { 
-              color: #4a4a4a; 
-              margin: 0 0 20px 0; 
-              font-size: 15px;
-            }
-            .invite-code { 
-              background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%); 
-              border: 2px solid #667eea; 
-              padding: 24px; 
-              text-align: center; 
-              margin: 20px 0; 
-              border-radius: 12px;
-            }
-            .code-label { 
-              margin: 0 0 12px 0; 
-              font-size: 13px; 
-              color: #667eea; 
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-            }
-            .code { 
-              font-size: 32px; 
-              font-weight: 700; 
-              letter-spacing: 6px; 
-              color: #667eea; 
-              font-family: 'Courier New', monospace;
-              margin: 0;
-            }
-            .button { 
-              display: inline-block; 
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-              color: white !important; 
-              padding: 14px 36px; 
-              text-decoration: none; 
-              border-radius: 8px; 
-              margin: 20px 0 0 0; 
-              font-weight: 600;
-              font-size: 15px;
-              box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            }
-            .button:hover { 
-              box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-            }
-            .steps { 
-              background: #fafbff; 
-              padding: 24px; 
-              border-radius: 12px; 
-              margin: 20px 0;
-              border: 1px solid #e8ecf4;
-            }
-            .steps h3 { 
-              margin: 0 0 16px 0; 
-              color: #1a1a1a; 
-              font-size: 17px;
-              font-weight: 600;
-            }
-            .step { 
-              margin: 14px 0; 
-              padding-left: 35px; 
-              position: relative;
-              color: #4a4a4a;
-              font-size: 14px;
-              line-height: 1.5;
-            }
-            .step-number { 
-              position: absolute; 
-              left: 0;
-              top: 0;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-              color: white; 
-              width: 24px; 
-              height: 24px; 
-              border-radius: 50%; 
-              display: inline-block;
-              text-align: center;
-              line-height: 24px;
-              font-size: 13px; 
-              font-weight: 600;
-            }
-            .footer { 
-              background: #fafbff; 
-              padding: 20px 30px; 
-              text-align: center;
-              border-top: 1px solid #e8ecf4;
-            }
-            .footer-link { 
-              color: #667eea !important; 
-              text-decoration: none; 
-              font-size: 14px;
-              word-break: break-all;
-            }
-            .footer-text { 
-              color: #888; 
-              font-size: 13px; 
-              margin: 10px 0 0 0;
-            }
-          </style>
+          <title>${inviterFirstName} invited you to ${family.name}</title>
         </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🗓️ Kindora Calendar</h1>
-              <p>You've been invited to join a shared family calendar!</p>
+        <body style="margin:0;padding:0;background:#f6f5f1;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;color:#1a1a2e;line-height:1.6;">
+          <div style="max-width:560px;margin:24px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #ececec;">
+            <div style="background:#f97316;padding:28px 32px;text-align:left;">
+              <p style="margin:0;color:#ffffff;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:600;opacity:0.92;">Kindora</p>
+              <h1 style="margin:6px 0 0 0;color:#ffffff;font-size:24px;font-weight:700;line-height:1.25;">You're invited to ${family.name}</h1>
             </div>
-            <div class="content">
-              <p class="greeting">Hi there!</p>
-              <p class="message"><strong>${family.name}</strong> has invited you to join their family calendar on Kindora. Share events, memories, and stay connected with your loved ones.</p>
-              
-              <div class="invite-code">
-                <p class="code-label">Your Invite Code</p>
-                <p class="code">${family.inviteCode}</p>
+            <div style="padding:32px;">
+              <p style="margin:0 0 16px 0;font-size:16px;color:#1a1a2e;">Hi there,</p>
+              <p style="margin:0 0 16px 0;font-size:16px;color:#1a1a2e;">
+                <strong>${inviterName}</strong> just invited you to share their family calendar on Kindora.
+              </p>
+              <p style="margin:0 0 24px 0;font-size:16px;color:#4a4a55;">
+                Kindora is a calm, private space for families and caregivers to coordinate schedules,
+                appointments, medications, and the everyday moments in between. Think of it as a
+                shared brain for your family — without the group-text chaos.
+              </p>
+
+              <div style="text-align:center;margin:28px 0 20px 0;">
+                <a href="${joinUrl}"
+                   style="display:inline-block;background:#f97316;color:#ffffff !important;
+                          padding:14px 32px;text-decoration:none;border-radius:8px;
+                          font-weight:600;font-size:16px;">
+                  Join ${family.name}
+                </a>
+                <p style="margin:12px 0 0 0;font-size:13px;color:#888;">
+                  One tap — we'll walk you through the rest.
+                </p>
               </div>
 
-              <div class="steps">
-                <h3>How to Join:</h3>
-                <div class="step">
-                  <span class="step-number">1</span>
-                  Click the button below to visit Kindora Calendar
-                </div>
-                <div class="step">
-                  <span class="step-number">2</span>
-                  Sign in or create an account
-                </div>
-                <div class="step">
-                  <span class="step-number">3</span>
-                  Go to Family Settings and enter code: <strong>${family.inviteCode}</strong>
-                </div>
-                <div class="step">
-                  <span class="step-number">4</span>
-                  Start sharing events and memories!
-                </div>
+              <p style="margin:24px 0 8px 0;font-size:14px;color:#888;text-align:center;">
+                Button not working? Copy this link into your browser:
+              </p>
+              <p style="margin:0 0 20px 0;text-align:center;word-break:break-all;">
+                <a href="${joinUrl}" style="color:#f97316;text-decoration:none;font-size:13px;">${joinUrl}</a>
+              </p>
+
+              <div style="margin:24px 0 0 0;padding:16px 18px;background:#faf9f5;border:1px solid #ececec;border-radius:8px;">
+                <p style="margin:0 0 6px 0;font-size:12px;color:#888;letter-spacing:1px;text-transform:uppercase;font-weight:600;">
+                  Backup invite code
+                </p>
+                <p style="margin:0;font-size:18px;font-weight:700;letter-spacing:3px;color:#1a1a2e;font-family:'Courier New',monospace;">
+                  ${family.inviteCode}
+                </p>
+                <p style="margin:8px 0 0 0;font-size:12px;color:#888;">
+                  You'll only need this if you sign up first — then add it under Settings → Family.
+                </p>
               </div>
 
-              <div style="text-align: center;">
-                <a href="${joinUrl}" class="button">Join ${family.name} Calendar</a>
-              </div>
+              <p style="margin:28px 0 0 0;font-size:14px;color:#888;">
+                Welcome to the family,<br/>
+                The Kindora Team
+              </p>
             </div>
-            <div class="footer">
-              <a href="${joinUrl}" class="footer-link">${joinUrl}</a>
-              <p class="footer-text">This invitation was sent from Kindora Calendar</p>
+            <div style="background:#faf9f5;padding:18px 32px;text-align:center;border-top:1px solid #ececec;">
+              <p style="margin:0;font-size:12px;color:#999;">
+                You're receiving this because ${inviterFirstName} invited you to a private Kindora family.
+                If this wasn't expected, you can ignore this email.
+              </p>
             </div>
           </div>
         </body>
@@ -762,18 +649,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `;
 
       const textBody = `
-You've been invited to join ${family.name} on Kindora Calendar!
+Hi there,
 
-Your Invite Code: ${family.inviteCode}
+${inviterName} just invited you to share their family calendar — ${family.name} — on Kindora.
 
-How to Join:
-1. Visit: ${joinUrl}
-2. Sign in or create an account
-3. Go to Family Settings
-4. Enter your invite code: ${family.inviteCode}
-5. Start sharing events and memories!
+Kindora is a calm, private space for families and caregivers to coordinate
+schedules, appointments, medications, and the everyday moments in between.
 
-Visit Kindora Calendar: ${joinUrl}
+Tap the link below and we'll walk you through the rest:
+
+${joinUrl}
+
+Backup invite code (only needed if you sign up first): ${family.inviteCode}
+Then go to Settings → Family and enter the code.
+
+Welcome to the family,
+The Kindora Team
+
+—
+You're receiving this because ${inviterFirstName} invited you to a private
+Kindora family. If this wasn't expected, you can ignore this email.
       `.trim();
 
       const emailResult = await sendEmail({
