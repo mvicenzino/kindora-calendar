@@ -985,7 +985,7 @@ export default function FamilySettings() {
     inviteFamilyMemberMutation.mutate(familyMemberEmail.trim());
   };
 
-  const openGmailCompose = (
+  const buildInviteMessage = (
     recipient: string,
     kind: 'family' | 'caregiver',
   ) => {
@@ -1021,6 +1021,14 @@ export default function FamilySettings() {
       `Looking forward to having you in there.\n\n` +
       `${inviterName}`;
 
+    return { recipient, subject, body, code, link };
+  };
+
+  const openGmailCompose = (
+    recipient: string,
+    kind: 'family' | 'caregiver',
+  ) => {
+    const { subject, body } = buildInviteMessage(recipient, kind);
     const params = new URLSearchParams({
       view: 'cm',
       fs: '1',
@@ -1030,6 +1038,21 @@ export default function FamilySettings() {
     });
     const gmailUrl = `https://mail.google.com/mail/?${params.toString()}`;
     window.open(gmailUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const openDefaultMailApp = (
+    recipient: string,
+    kind: 'family' | 'caregiver',
+  ) => {
+    const { subject, body } = buildInviteMessage(recipient, kind);
+    // mailto: handles encoding via the browser; encodeURIComponent handles
+    // the parameters. Newlines as %0A render as line breaks in every major
+    // mail client (Apple Mail, Outlook, Yahoo, Thunderbird, etc.).
+    const mailtoUrl =
+      `mailto:${encodeURIComponent(recipient)}` +
+      `?subject=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
   };
 
   const handleJoinFamily = () => {
@@ -1105,17 +1128,33 @@ export default function FamilySettings() {
                   {inviteCaregiverMutation.isPending ? "Sending..." : "Send"}
                 </Button>
               </div>
-              <Button
-                onClick={() => openGmailCompose(caregiverEmail.trim(), 'caregiver')}
-                variant="ghost"
-                size="sm"
-                disabled={!caregiverEmail.trim() || !caregiverEmail.includes('@')}
-                className="mt-2 w-full text-muted-foreground"
-                data-testid="button-gmail-caregiver"
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                Or open in Gmail with the message prefilled
-              </Button>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  onClick={() => openGmailCompose(caregiverEmail.trim(), 'caregiver')}
+                  variant="ghost"
+                  size="sm"
+                  disabled={!caregiverEmail.trim() || !caregiverEmail.includes('@')}
+                  className="text-muted-foreground"
+                  data-testid="button-gmail-caregiver"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Open in Gmail
+                </Button>
+                <Button
+                  onClick={() => openDefaultMailApp(caregiverEmail.trim(), 'caregiver')}
+                  variant="ghost"
+                  size="sm"
+                  disabled={!caregiverEmail.trim() || !caregiverEmail.includes('@')}
+                  className="text-muted-foreground"
+                  data-testid="button-mailto-caregiver"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Open in my email app
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground text-center">
+                Both options prefill the invite — pick whichever email you use.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -1173,17 +1212,33 @@ export default function FamilySettings() {
                   {inviteFamilyMemberMutation.isPending ? "Sending..." : "Send"}
                 </Button>
               </div>
-              <Button
-                onClick={() => openGmailCompose(familyMemberEmail.trim(), 'family')}
-                variant="ghost"
-                size="sm"
-                disabled={!familyMemberEmail.trim() || !familyMemberEmail.includes('@')}
-                className="mt-2 w-full text-muted-foreground"
-                data-testid="button-gmail-family-member"
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                Or open in Gmail with the message prefilled
-              </Button>
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button
+                  onClick={() => openGmailCompose(familyMemberEmail.trim(), 'family')}
+                  variant="ghost"
+                  size="sm"
+                  disabled={!familyMemberEmail.trim() || !familyMemberEmail.includes('@')}
+                  className="text-muted-foreground"
+                  data-testid="button-gmail-family-member"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Open in Gmail
+                </Button>
+                <Button
+                  onClick={() => openDefaultMailApp(familyMemberEmail.trim(), 'family')}
+                  variant="ghost"
+                  size="sm"
+                  disabled={!familyMemberEmail.trim() || !familyMemberEmail.includes('@')}
+                  className="text-muted-foreground"
+                  data-testid="button-mailto-family-member"
+                >
+                  <Mail className="w-4 h-4 mr-2" />
+                  Open in my email app
+                </Button>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground text-center">
+                Both options prefill the invite — pick whichever email you use.
+              </p>
             </div>
           </CardContent>
         </Card>
