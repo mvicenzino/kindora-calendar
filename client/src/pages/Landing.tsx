@@ -37,11 +37,20 @@ export default function Landing() {
     };
   }, []);
 
+  const [invitedToFamily, setInvitedToFamily] = useState(false);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const inviteCode = urlParams.get('invite');
     if (inviteCode) {
       localStorage.setItem('pendingInviteCode', inviteCode);
+      setInvitedToFamily(true);
+      // Auto-open the sign-up modal so the invited person knows what to do next.
+      // Existing users can click "Already have an account? Sign in" inside the modal.
+      setAuthMode('register');
+      // Strip ?invite=... from the URL so refreshes don't re-open the modal,
+      // but the code stays in localStorage and is consumed after sign-in.
+      window.history.replaceState({}, '', window.location.pathname);
     }
     const authError = urlParams.get('auth_error');
     if (authError) {
@@ -231,17 +240,38 @@ export default function Landing() {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <img src={logo} alt="Kindora" className="w-10 h-10 rounded-lg" />
               <div>
                 <h2 className="text-xl font-bold text-foreground">
-                  {authMode === "login" ? "Welcome Back" : "Create Account"}
+                  {invitedToFamily
+                    ? "You're Invited!"
+                    : authMode === "login" ? "Welcome Back" : "Create Account"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {authMode === "login" ? "Sign in to your account" : "Join Kindora for free"}
+                  {invitedToFamily
+                    ? (authMode === "login"
+                        ? "Sign in to join your family on Kindora"
+                        : "Create your account to join your family on Kindora")
+                    : (authMode === "login" ? "Sign in to your account" : "Join Kindora for free")}
                 </p>
               </div>
             </div>
+
+            {invitedToFamily && (
+              <div
+                className="mb-5 rounded-md border border-primary/30 bg-primary/10 px-3 py-2.5 flex items-start gap-2"
+                data-testid="banner-invited"
+              >
+                <HeartHandshake className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                <p className="text-xs text-foreground leading-relaxed">
+                  A family member invited you to share their Kindora calendar.
+                  {authMode === "register"
+                    ? " Create your account and you'll be added automatically."
+                    : " Sign in and you'll be added automatically."}
+                </p>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {authMode === "register" && (

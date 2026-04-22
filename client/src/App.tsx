@@ -278,6 +278,21 @@ function Router() {
   );
 }
 
+function InviteCapture() {
+  // Capture ?invite=CODE on first load regardless of auth state, so both
+  // signed-out users (Landing.tsx) and already-signed-in users (Home.tsx
+  // pendingInviteCode flow) reliably consume the invite. Strips the param
+  // from the URL afterwards so refreshes don't re-trigger anything.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('invite');
+    if (code) {
+      localStorage.setItem('pendingInviteCode', code);
+    }
+  }, []);
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -287,6 +302,7 @@ function App() {
             <ActiveFamilyProvider>
               <TooltipProvider>
                 <Toaster />
+                <InviteCapture />
                 <Router />
               </TooltipProvider>
             </ActiveFamilyProvider>
