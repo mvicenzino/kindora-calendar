@@ -40,6 +40,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  claimWelcomeEmailSend(userId: string): Promise<boolean>;
+  markWelcomeEmailSent(userId: string): Promise<void>;
+  releaseWelcomeEmailClaim(userId: string): Promise<void>;
   updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
@@ -268,12 +271,34 @@ export class MemStorage implements IStorage {
       stripeSubscriptionId: existingUser?.stripeSubscriptionId ?? null,
       subscriptionTier: existingUser?.subscriptionTier ?? "free",
       subscriptionStatus: existingUser?.subscriptionStatus ?? "inactive",
+      welcomeEmailClaimedAt: existingUser?.welcomeEmailClaimedAt ?? null,
+      welcomeEmailSentAt: existingUser?.welcomeEmailSentAt ?? null,
       createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
     this.users.set(id, userData);
     
     return userData;
+  }
+
+  async claimWelcomeEmailSend(userId: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    if (user.welcomeEmailSentAt || user.welcomeEmailClaimedAt) return false;
+    this.users.set(userId, { ...user, welcomeEmailClaimedAt: new Date(), updatedAt: new Date() });
+    return true;
+  }
+
+  async markWelcomeEmailSent(userId: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (!user) return;
+    this.users.set(userId, { ...user, welcomeEmailSentAt: new Date(), welcomeEmailClaimedAt: null, updatedAt: new Date() });
+  }
+
+  async releaseWelcomeEmailClaim(userId: string): Promise<void> {
+    const user = this.users.get(userId);
+    if (!user || user.welcomeEmailSentAt) return;
+    this.users.set(userId, { ...user, welcomeEmailClaimedAt: null, updatedAt: new Date() });
   }
 
   async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
@@ -1448,6 +1473,33 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
+  async claimWelcomeEmailSend(userId: string): Promise<boolean> {
+    const result = await this.db
+      .update(users)
+      .set({ welcomeEmailClaimedAt: new Date(), updatedAt: new Date() })
+      .where(and(
+        eq(users.id, userId),
+        isNull(users.welcomeEmailClaimedAt),
+        isNull(users.welcomeEmailSentAt),
+      ))
+      .returning({ id: users.id });
+    return result.length > 0;
+  }
+
+  async markWelcomeEmailSent(userId: string): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ welcomeEmailSentAt: new Date(), welcomeEmailClaimedAt: null, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async releaseWelcomeEmailClaim(userId: string): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ welcomeEmailClaimedAt: null, updatedAt: new Date() })
+      .where(and(eq(users.id, userId), isNull(users.welcomeEmailSentAt)));
+  }
+
   async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {
     const result = await this.db
       .update(users)
@@ -2604,6 +2656,18 @@ class DemoAwareStorage implements IStorage {
 
   async upsertUser(user: UpsertUser): Promise<User> {
     return this.getStorage(user.id).upsertUser(user);
+  }
+
+  async claimWelcomeEmailSend(userId: string): Promise<boolean> {
+    return this.getStorage(userId).claimWelcomeEmailSend(userId);
+  }
+
+  async markWelcomeEmailSent(userId: string): Promise<void> {
+    return this.getStorage(userId).markWelcomeEmailSent(userId);
+  }
+
+  async releaseWelcomeEmailClaim(userId: string): Promise<void> {
+    return this.getStorage(userId).releaseWelcomeEmailClaim(userId);
   }
 
   async updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined> {

@@ -1,4 +1,5 @@
 import { format, startOfWeek, endOfWeek, addDays, isSameDay } from 'date-fns';
+import { storage } from './storage';
 
 // ── Unified email sender (Resend-first, SendGrid fallback) ─────────────────
 export async function sendEmail(options: {
@@ -620,10 +621,30 @@ kindora.ai
 }
 
 export async function sendWelcomeEmail(
+  userId: string,
   toEmail: string,
   firstName: string
-): Promise<{ success: boolean; error?: string }> {
-  return sendEmail({
+): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+  // Two-phase idempotent send:
+  //   1. Atomically CLAIM (set welcomeEmailClaimedAt only if both claimedAt
+  //      and sentAt are NULL). Only one concurrent caller can win.
+  //   2. Send the email.
+  //   3. On success → mark welcomeEmailSentAt.
+  //      On failure → release the claim so a future attempt can retry.
+  // Fail closed on storage errors: never send if we can't safely claim.
+  let claimed = false;
+  try {
+    claimed = await storage.claimWelcomeEmailSend(userId);
+  } catch (err) {
+    console.error('[Welcome Email] Failed to claim welcome send (fail-closed):', err);
+    return { success: false, error: 'claim_failed', skipped: true };
+  }
+
+  if (!claimed) {
+    return { success: true, skipped: true };
+  }
+
+  const result = await sendEmail({
     to: toEmail,
     subject: 'Welcome to Kindora',
     html: generateWelcomeHtml(firstName),
@@ -631,4 +652,20 @@ export async function sendWelcomeEmail(
     fromName: 'Mike at Kindora',
     replyTo: 'mike@kindora.ai',
   });
+
+  if (result.success) {
+    try {
+      await storage.markWelcomeEmailSent(userId);
+    } catch (err) {
+      console.error('[Welcome Email] Failed to mark welcomeEmailSentAt:', err);
+    }
+  } else {
+    try {
+      await storage.releaseWelcomeEmailClaim(userId);
+    } catch (err) {
+      console.error('[Welcome Email] Failed to release welcome claim:', err);
+    }
+  }
+
+  return result;
 }

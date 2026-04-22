@@ -56,6 +56,8 @@ export const users = pgTable("users", {
   stripeSubscriptionId: varchar("stripe_subscription_id"),
   subscriptionTier: varchar("subscription_tier").default("free"),
   subscriptionStatus: varchar("subscription_status").default("inactive"),
+  welcomeEmailClaimedAt: timestamp("welcome_email_claimed_at"),
+  welcomeEmailSentAt: timestamp("welcome_email_sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

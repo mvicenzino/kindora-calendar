@@ -156,7 +156,7 @@ export function setupGoogleAuth(app: Express) {
       });
 
       if (isNewUser && email) {
-        sendWelcomeEmail(email, firstName || '').catch((err: any) =>
+        sendWelcomeEmail(userId, email, firstName || '').catch((err: any) =>
           console.error('[Welcome Email] Google OAuth send failed:', err)
         );
       }

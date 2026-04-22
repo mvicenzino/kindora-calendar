@@ -140,7 +140,7 @@ export async function setupAuth(app: Express) {
         });
 
         if (isNewReplitUser && claims["email"]) {
-          sendWelcomeEmail(claims["email"], claims["first_name"] || '').catch((err: any) =>
+          sendWelcomeEmail(claims["sub"], claims["email"], claims["first_name"] || '').catch((err: any) =>
             console.error('[Welcome Email] Replit OAuth send failed:', err)
           );
         }
@@ -220,7 +220,7 @@ export async function setupAuth(app: Express) {
         authProvider: "local",
       });
 
-      sendWelcomeEmail(cleanEmail, cleanFirstName).catch((err: any) =>
+      sendWelcomeEmail(userId, cleanEmail, cleanFirstName).catch((err: any) =>
         console.error('[Welcome Email] Local register send failed:', err)
       );
 
