@@ -249,7 +249,8 @@ interface KiraToolResult {
 async function executeKiraTool(
   toolName: string,
   args: Record<string, unknown>,
-  familyId: string
+  familyId: string,
+  userId?: string
 ): Promise<KiraToolResult> {
   try {
     if (toolName === "create_calendar_event") {
@@ -265,13 +266,20 @@ async function executeKiraTool(
       if (isNaN(startTime.getTime())) throw new Error("Invalid start datetime");
       const endTime = endRaw ? new Date(endRaw) : new Date(startTime.getTime() + 60 * 60 * 1000);
 
-      // Resolve member names → IDs
+      // Resolve member names → IDs. If Kira didn't specify any members (or the
+      // names she gave don't match anyone), fall back to the calling user's own
+      // family-member row so the event isn't orphaned and shows up under the
+      // person who created it.
+      const allMembers = await storage.getFamilyMembers(familyId);
       let memberIds: string[] = [];
       if (memberNames.length > 0) {
-        const members = await storage.getFamilyMembers(familyId);
-        memberIds = members
+        memberIds = allMembers
           .filter(m => memberNames.some(n => m.name.toLowerCase().includes(n.toLowerCase())))
           .map(m => m.id);
+      }
+      if (memberIds.length === 0 && userId) {
+        const self = allMembers.find(m => (m as any).userId === userId);
+        if (self) memberIds = [self.id];
       }
 
       const basePayload = {
@@ -679,7 +687,7 @@ export function registerAdvisorRoutes(app: Express): void {
           let args: Record<string, unknown> = {};
           try { args = JSON.parse(tc.arguments || "{}"); } catch {}
           console.log(`[Kira tool] executing ${tc.name} args=${JSON.stringify(args)}`);
-          const result = await executeKiraTool(tc.name, args, familyId);
+          const result = await executeKiraTool(tc.name, args, familyId, userId);
           console.log(`[Kira tool] result: success=${result.success} summary="${result.summary}" error=${result.error ?? "none"}`);
           toolResults.push(result);
           // Stream the action card event to the client
