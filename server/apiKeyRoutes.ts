@@ -180,11 +180,11 @@ export function registerApiKeyRoutes(app: Express) {
   app.get("/api/v1/whoami", whoami);
   app.post("/api/v1/whoami", whoami);
 
-  // ─── Public calendar API ──────────────────────────────────────────────
-  // GET or POST /api/v1/events
+  // ─── Public calendar API: list events ─────────────────────────────────
+  // GET /api/v1/events
   //   Auth: Authorization: Bearer <key>  OR  X-API-Key: <key>  OR  ?key=<key>
   //   Query: &start=YYYY-MM-DD  &end=YYYY-MM-DD  &familyId=<id>
-  const eventsHandler = async (req: Request, res: Response) => {
+  const eventsListHandler = async (req: Request, res: Response) => {
     try {
       const rawKey = extractApiKey(req);
 
@@ -271,6 +271,104 @@ export function registerApiKeyRoutes(app: Express) {
       res.status(500).json({ error: "Internal server error" });
     }
   };
-  app.get("/api/v1/events", eventsHandler);
-  app.post("/api/v1/events", eventsHandler);
+  app.get("/api/v1/events", eventsListHandler);
+
+  // ─── Public calendar API: create an event ─────────────────────────────
+  // POST /api/v1/events
+  //   Auth: same options as GET
+  //   Body (JSON):
+  //     title*       string
+  //     startTime*   ISO-8601 string (e.g. "2026-04-25T22:00:00-05:00")
+  //     endTime*     ISO-8601 string
+  //     description? string
+  //     color?       hex (default "#6366F1")
+  //     category?    "personal" | "medical" | "school" | "work" | "other" (default "other")
+  //     isImportant? boolean
+  //     memberIds?   string[]
+  //     familyId?    overrides the key's family
+  app.post("/api/v1/events", async (req: Request, res: Response) => {
+    try {
+      const rawKey = extractApiKey(req);
+      if (!rawKey) {
+        return res.status(401).json({
+          error: "Missing API key.",
+          hint: "Send 'Authorization: Bearer <key>', or 'X-API-Key: <key>', or '?key=<key>'.",
+        });
+      }
+      const keyRow = await resolveApiKey(rawKey);
+      if (!keyRow) return res.status(401).json({ error: "Invalid or revoked API key" });
+
+      const body = (req.body ?? {}) as Record<string, any>;
+      const familyId = (body.familyId as string | undefined) ?? keyRow.familyId;
+      if (!familyId) {
+        return res.status(400).json({ error: "familyId is required (or attach one to the API key)" });
+      }
+
+      // Validate family exists
+      const [fam] = await db.select().from(families).where(eq(families.id, familyId));
+      if (!fam) return res.status(400).json({ error: "Unknown familyId" });
+
+      const title = typeof body.title === "string" ? body.title.trim() : "";
+      if (!title) return res.status(400).json({ error: "title is required" });
+
+      const startRaw = body.startTime ?? body.start;
+      const endRaw = body.endTime ?? body.end;
+      if (!startRaw || !endRaw) {
+        return res.status(400).json({ error: "startTime and endTime are required (ISO-8601)" });
+      }
+      const startTime = new Date(startRaw);
+      const endTime = new Date(endRaw);
+      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+        return res.status(400).json({ error: "startTime and endTime must be valid ISO-8601 dates" });
+      }
+      if (endTime < startTime) {
+        return res.status(400).json({ error: "endTime must be the same or after startTime" });
+      }
+
+      const allowedCategories = new Set(["personal", "medical", "school", "work", "other"]);
+      const category = allowedCategories.has(body.category) ? body.category : "other";
+      const color = typeof body.color === "string" && /^#[0-9a-fA-F]{6}$/.test(body.color)
+        ? body.color
+        : "#6366F1";
+      const memberIds = Array.isArray(body.memberIds)
+        ? body.memberIds.filter((m: unknown) => typeof m === "string")
+        : [];
+      const description = typeof body.description === "string" ? body.description : null;
+      const isImportant = body.isImportant === true;
+
+      const [created] = await db.insert(events).values({
+        familyId,
+        title,
+        description,
+        startTime,
+        endTime,
+        memberIds,
+        color,
+        category,
+        isImportant,
+      }).returning();
+
+      res.status(201).json({
+        ok: true,
+        event: {
+          id: created.id,
+          title: created.title,
+          description: created.description ?? null,
+          start: created.startTime.toISOString(),
+          end: created.endTime.toISOString(),
+          allDay: false,
+          category: created.category,
+          color: created.color,
+          important: created.isImportant,
+          completed: created.completed,
+          members: created.memberIds ?? [],
+          familyId: created.familyId,
+          createdAt: created.createdAt?.toISOString() ?? null,
+        },
+      });
+    } catch (err) {
+      console.error("Calendar API create error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 }
