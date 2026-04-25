@@ -502,7 +502,172 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to delete family" });
     }
   });
-  
+
+  // One-time admin endpoint: consolidate Mike's duplicate Kindora accounts.
+  // Only callable by the keeper account (mvicenzino@gmail.com / google-110610540501901085708).
+  // Requires a typed confirmation token in the body (CSRF defense + accident defense).
+  // Removes the two unused user accounts and their empty families.
+  app.post("/api/admin/consolidate-mike-accounts", isAuthenticated, async (req: any, res) => {
+    const KEEPER_USER_ID = "google-110610540501901085708";
+    const KEEPER_EMAIL = "mvicenzino@gmail.com";
+    const KEEPER_FAMILY_ID = "3eb14ef0-440c-4429-979a-29eceab7f32e";
+    const TARGET_USER_IDS = [
+      "google-107841888028246915408", // mike@kindora.ai
+      "66802b05-1bbf-49d1-a3c9-b5d7b13d875e", // m_vicenzino@yahoo.com
+    ];
+    const TARGET_USER_EMAILS = ["mike@kindora.ai", "m_vicenzino@yahoo.com"];
+    const TARGET_FAMILY_IDS = [
+      "6f6391af-cc4e-4bde-bcfe-811dfc4cbdfb", // The Kindora Family
+      "55d36d7a-3976-4acd-bfbf-709f2ba3d6a4", // empty Mike's Family (yahoo)
+    ];
+    const REQUIRED_CONFIRMATION = "DELETE DUPLICATES";
+
+    try {
+      const callerId = req.user.claims.sub;
+      const callerEmail = (req.user.claims.email || "").toLowerCase();
+
+      // Strict identity guard: must be the keeper account, by ID AND email.
+      if (callerId !== KEEPER_USER_ID || callerEmail !== KEEPER_EMAIL) {
+        return res.status(403).json({ error: "Not authorized for this operation" });
+      }
+
+      // CSRF / accident defense: require a typed confirmation token in the body.
+      const confirmation = (req.body?.confirm || "").toString();
+      if (confirmation !== REQUIRED_CONFIRMATION) {
+        return res.status(400).json({
+          error: `Confirmation required. Send { "confirm": "${REQUIRED_CONFIRMATION}" }.`,
+        });
+      }
+
+      // Safety: refuse if the keeper account or its real family aren't intact.
+      const keeperCheck = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM users WHERE id = ${KEEPER_USER_ID}) AS keeper_user,
+          (SELECT COUNT(*)::int FROM families WHERE id = ${KEEPER_FAMILY_ID}) AS keeper_family,
+          (SELECT COUNT(*)::int FROM events WHERE family_id = ${KEEPER_FAMILY_ID}) AS keeper_events
+      `);
+      const ck: any = (keeperCheck as any).rows?.[0] ?? (keeperCheck as any)[0];
+      if (!ck || ck.keeper_user < 1 || ck.keeper_family < 1 || ck.keeper_events < 1) {
+        return res.status(409).json({
+          error: "Safety check failed: keeper account or family not found as expected",
+          details: ck,
+        });
+      }
+
+      // Refuse if target families are not actually empty (defense in depth).
+      const targetCheck = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM events WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS events,
+          (SELECT COUNT(*)::int FROM medications WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS meds,
+          (SELECT COUNT(*)::int FROM symptom_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS symptoms,
+          (SELECT COUNT(*)::int FROM family_messages WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS msgs,
+          (SELECT COUNT(*)::int FROM care_documents WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS docs
+      `);
+      const tc: any = (targetCheck as any).rows?.[0] ?? (targetCheck as any)[0];
+      const totalContent = (tc?.events ?? 0) + (tc?.meds ?? 0) + (tc?.symptoms ?? 0) + (tc?.msgs ?? 0) + (tc?.docs ?? 0);
+      if (totalContent > 0) {
+        return res.status(409).json({
+          error: "Safety check failed: target families are not empty",
+          details: tc,
+        });
+      }
+
+      // Verify the targeted users are exactly who we think they are.
+      const targetUsersCheck = await db.execute(sql`
+        SELECT id, email FROM users WHERE id = ANY(${TARGET_USER_IDS}::varchar[])
+      `);
+      const tuRows = ((targetUsersCheck as any).rows ?? targetUsersCheck ?? []) as Array<{ id: string; email: string }>;
+      for (const u of tuRows) {
+        if (!TARGET_USER_EMAILS.includes((u.email || "").toLowerCase())) {
+          return res.status(409).json({
+            error: `Safety check failed: target user ${u.id} has unexpected email ${u.email}`,
+          });
+        }
+      }
+
+      // Verify the targeted users have NO memberships in any family other than their own targets.
+      const stragglerMemberships = await db.execute(sql`
+        SELECT user_id, family_id FROM family_memberships
+        WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])
+          AND family_id <> ALL(${TARGET_FAMILY_IDS}::varchar[])
+      `);
+      const sm = ((stragglerMemberships as any).rows ?? stragglerMemberships ?? []) as any[];
+      if (sm.length > 0) {
+        return res.status(409).json({
+          error: "Safety check failed: target users have memberships in other families",
+          details: sm,
+        });
+      }
+
+      // Verify the targeted users have NOT authored content in the keeper's family
+      // (or any other family). If they have, fail closed — we won't silently delete that data.
+      const authoredCheck = await db.execute(sql`
+        SELECT
+          (SELECT COUNT(*)::int FROM event_notes WHERE author_user_id = ANY(${TARGET_USER_IDS}::varchar[]) AND family_id <> ALL(${TARGET_FAMILY_IDS}::varchar[])) AS notes,
+          (SELECT COUNT(*)::int FROM family_messages WHERE author_user_id = ANY(${TARGET_USER_IDS}::varchar[]) AND family_id <> ALL(${TARGET_FAMILY_IDS}::varchar[])) AS msgs
+      `);
+      const ac: any = (authoredCheck as any).rows?.[0] ?? (authoredCheck as any)[0];
+      if ((ac?.notes ?? 0) + (ac?.msgs ?? 0) > 0) {
+        return res.status(409).json({
+          error: "Safety check failed: target users have authored content in other families",
+          details: ac,
+        });
+      }
+
+      // Run all deletes in a single transaction.
+      const summary = await db.transaction(async (tx) => {
+        // Tables that reference user_id directly
+        await tx.execute(sql`DELETE FROM family_memberships WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM family_members WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM push_subscriptions WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM advisor_messages WHERE conversation_id IN (SELECT id FROM advisor_conversations WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]))`);
+        await tx.execute(sql`DELETE FROM advisor_conversations WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM advisor_usage WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM google_calendar_connections WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM kira_memories WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM weekly_summary_preferences WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM weekly_summary_schedules WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM api_keys WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM beta_feedback WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM tasks WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM emergency_bridge_tokens WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR created_by_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM parsed_invoices WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR created_by_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM caregiver_pay_rates WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR caregiver_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM caregiver_time_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR caregiver_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM hydration_logs WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM symptom_system_ratings WHERE entry_id IN (SELECT id FROM symptom_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]))`);
+        await tx.execute(sql`DELETE FROM symptom_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM medication_logs WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM medications WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM event_notes WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR author_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM messages WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM family_messages WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR author_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM care_documents WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM events WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+
+        // Now delete the empty families themselves
+        const famDel = await tx.execute(sql`DELETE FROM families WHERE id = ANY(${TARGET_FAMILY_IDS}::varchar[]) RETURNING id, name`);
+        const familiesDeleted = ((famDel as any).rows ?? famDel ?? []) as Array<{ id: string; name: string }>;
+
+        // Finally delete the user accounts
+        const userDel = await tx.execute(sql`DELETE FROM users WHERE id = ANY(${TARGET_USER_IDS}::varchar[]) RETURNING id, email`);
+        const usersDeleted = ((userDel as any).rows ?? userDel ?? []) as Array<{ id: string; email: string }>;
+
+        return { familiesDeleted, usersDeleted };
+      });
+
+      console.log("[Admin] Mike account consolidation complete:", JSON.stringify(summary));
+      res.json({
+        success: true,
+        message: "Duplicate accounts and empty families have been removed.",
+        ...summary,
+      });
+    } catch (error: any) {
+      console.error("Error consolidating Mike accounts:", error);
+      res.status(500).json({ error: "Cleanup failed", detail: error?.message });
+    }
+  });
+
   // Get user's role in a family
   app.get("/api/family/:familyId/role", isAuthenticated, async (req: any, res) => {
     try {

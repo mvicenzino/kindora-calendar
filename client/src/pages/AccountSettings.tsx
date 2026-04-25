@@ -327,7 +327,121 @@ function AccountTab() {
 
       {/* Push Notifications Card */}
       <PushNotificationsCard />
+
+      {/* One-time cleanup card — only visible to the keeper account */}
+      {user?.id === "google-110610540501901085708" && user?.email === "mvicenzino@gmail.com" && (
+        <ConsolidateMikeAccountsCard />
+      )}
     </div>
+  );
+}
+
+function ConsolidateMikeAccountsCard() {
+  const { toast } = useToast();
+  const [done, setDone] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const REQUIRED = "DELETE DUPLICATES";
+
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/consolidate-mike-accounts", {
+        confirm: REQUIRED,
+      });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setDone(true);
+      setOpen(false);
+      setConfirmText("");
+      const famCount = data.familiesDeleted?.length ?? 0;
+      const userCount = data.usersDeleted?.length ?? 0;
+      toast({
+        title: "All cleaned up",
+        description: `Removed ${userCount} duplicate account${userCount === 1 ? "" : "s"} and ${famCount} empty famil${famCount === 1 ? "y" : "ies"}.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Cleanup failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Card data-testid="card-consolidate-mike">
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Clean Up Duplicate Accounts
+        </CardTitle>
+        <CardDescription className="text-xs">
+          You have two extra empty Kindora accounts (mike@kindora.ai and m_vicenzino@yahoo.com)
+          that aren't being used. This removes them and their empty family workspaces.
+          Your real "Mike's Family" with all your events, meds, and members stays exactly as it is.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <AlertDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setConfirmText(""); }}>
+          <AlertDialogTrigger asChild>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={cleanupMutation.isPending || done}
+              data-testid="button-consolidate-mike"
+            >
+              {cleanupMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cleaning up...
+                </>
+              ) : done ? (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Done
+                </>
+              ) : (
+                "Remove duplicate accounts"
+              )}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Permanently delete duplicate accounts?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This deletes the empty <b>mike@kindora.ai</b> and <b>m_vicenzino@yahoo.com</b> accounts
+                and their empty family workspaces. Your real Mike's Family and all your data stays untouched.
+                Type <b>{REQUIRED}</b> below to confirm.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={REQUIRED}
+              className="h-9"
+              data-testid="input-confirm-consolidate"
+            />
+            <AlertDialogFooter>
+              <AlertDialogCancel data-testid="button-cancel-consolidate">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={confirmText !== REQUIRED || cleanupMutation.isPending}
+                onClick={(e) => {
+                  e.preventDefault();
+                  cleanupMutation.mutate();
+                }}
+                data-testid="button-confirm-consolidate"
+              >
+                {cleanupMutation.isPending ? "Deleting..." : "Yes, delete them"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </CardContent>
+    </Card>
   );
 }
 
