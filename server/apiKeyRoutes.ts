@@ -24,6 +24,44 @@ async function resolveApiKey(key: string) {
   return row;
 }
 
+// Pull an API key out of the request from any of the common places agents put it:
+//   - Authorization: Bearer <key>
+//   - Authorization: <key>          (raw, no scheme)
+//   - X-API-Key: <key>
+//   - apiKey / api-key / api_key headers
+//   - ?key=<key> query string
+//   - ?apiKey=<key> / ?api_key=<key> query string
+//   - JSON body { key | apiKey | api_key }
+function extractApiKey(req: Request): string | null {
+  const h = req.headers;
+  const auth = (h.authorization ?? "").trim();
+  if (auth) {
+    if (/^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, "").trim();
+    return auth; // raw token in Authorization header
+  }
+  const headerCandidates = [
+    h["x-api-key"],
+    h["apikey"],
+    h["api-key"],
+    h["api_key"],
+  ];
+  for (const v of headerCandidates) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+    if (Array.isArray(v) && v[0]?.trim()) return v[0].trim();
+  }
+  const q = req.query as Record<string, unknown>;
+  for (const name of ["key", "apiKey", "api_key", "api-key"]) {
+    const v = q[name];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  for (const name of ["key", "apiKey", "api_key"]) {
+    const v = body[name];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
 export function registerApiKeyRoutes(app: Express) {
   // ─── Admin: list all API keys ─────────────────────────────────────────
   app.get("/api/admin/api-keys", isAuthenticated, async (req: Request, res: Response) => {
@@ -67,34 +105,62 @@ export function registerApiKeyRoutes(app: Express) {
     }
   });
 
+  // ─── Public: whoami (auth check) ──────────────────────────────────────
+  // GET or POST /api/v1/whoami — quick way for an agent to verify its key works.
+  const whoami = async (req: Request, res: Response) => {
+    const rawKey = extractApiKey(req);
+    if (!rawKey) {
+      return res.status(401).json({
+        error: "Missing API key.",
+        hint: "Send 'Authorization: Bearer <key>', or 'X-API-Key: <key>', or '?key=<key>'.",
+      });
+    }
+    const keyRow = await resolveApiKey(rawKey);
+    if (!keyRow) {
+      return res.status(401).json({ error: "Invalid or revoked API key" });
+    }
+    let familyName: string | null = null;
+    if (keyRow.familyId) {
+      const [fam] = await db.select().from(families).where(eq(families.id, keyRow.familyId));
+      familyName = fam?.name ?? null;
+    }
+    res.json({
+      ok: true,
+      keyName: keyRow.name,
+      familyId: keyRow.familyId ?? null,
+      familyName,
+      lastUsedAt: new Date().toISOString(),
+    });
+  };
+  app.get("/api/v1/whoami", whoami);
+  app.post("/api/v1/whoami", whoami);
+
   // ─── Public calendar API ──────────────────────────────────────────────
-  // GET /api/v1/events
-  //   Headers: Authorization: Bearer <key>
-  //   Query:   ?key=<key>  (alternative)
-  //           &start=2026-04-01          (ISO date, inclusive)
-  //           &end=2026-04-30            (ISO date, inclusive)
-  //           &familyId=<id>             (optional, overrides key's family)
-  app.get("/api/v1/events", async (req: Request, res: Response) => {
+  // GET or POST /api/v1/events
+  //   Auth: Authorization: Bearer <key>  OR  X-API-Key: <key>  OR  ?key=<key>
+  //   Query: &start=YYYY-MM-DD  &end=YYYY-MM-DD  &familyId=<id>
+  const eventsHandler = async (req: Request, res: Response) => {
     try {
-      const authHeader = req.headers.authorization ?? "";
-      const rawKey =
-        (authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null) ??
-        (req.query.key as string | undefined);
+      const rawKey = extractApiKey(req);
 
       if (!rawKey) {
-        return res.status(401).json({ error: "Missing API key. Send via Authorization: Bearer <key> or ?key=" });
+        return res.status(401).json({
+          error: "Missing API key.",
+          hint: "Send 'Authorization: Bearer <key>', or 'X-API-Key: <key>', or '?key=<key>'.",
+        });
       }
 
       const keyRow = await resolveApiKey(rawKey);
       if (!keyRow) return res.status(401).json({ error: "Invalid or revoked API key" });
 
-      const familyId = (req.query.familyId as string | undefined) ?? keyRow.familyId;
+      const params = { ...(req.query as any), ...(req.body ?? {}) };
+      const familyId = (params.familyId as string | undefined) ?? keyRow.familyId;
       if (!familyId) {
         return res.status(400).json({ error: "familyId is required (or attach one to the API key)" });
       }
 
-      const startParam = req.query.start as string | undefined;
-      const endParam = req.query.end as string | undefined;
+      const startParam = params.start as string | undefined;
+      const endParam = params.end as string | undefined;
 
       const startDate = startParam ? new Date(startParam) : (() => {
         const d = new Date(); d.setHours(0, 0, 0, 0); return d;
@@ -159,5 +225,7 @@ export function registerApiKeyRoutes(app: Express) {
       console.error("Calendar API error:", err);
       res.status(500).json({ error: "Internal server error" });
     }
-  });
+  };
+  app.get("/api/v1/events", eventsHandler);
+  app.post("/api/v1/events", eventsHandler);
 }
