@@ -213,6 +213,16 @@ app.use((req, res, next) => {
 
   const server = await registerRoutes(app);
 
+  // Any unmatched /api/* path must return a JSON 404 — never fall through
+  // to the SPA, which would return HTML 200 and silently mask client errors
+  // (e.g. POST to a typo URL like /api/v1/event vs /api/v1/events).
+  app.all("/api/*", (req: Request, res: Response) => {
+    res.status(404).json({
+      error: "Not found",
+      hint: `No API route matches ${req.method} ${req.path}. Check the URL — common pitfalls: trailing 's' (events vs event), missing /api prefix, or wrong HTTP method.`,
+    });
+  });
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
