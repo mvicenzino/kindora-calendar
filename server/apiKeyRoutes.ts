@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { db } from "./db";
 import { apiKeys, events, families, familyMembers, familyMemberships } from "@shared/schema";
-import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull, sql } from "drizzle-orm";
 import { isAuthenticated } from "./replitAuth";
 import crypto from "crypto";
 
@@ -207,15 +207,23 @@ export function registerApiKeyRoutes(app: Express) {
       const startParam = params.start as string | undefined;
       const endParam = params.end as string | undefined;
 
-      const startDate = startParam ? new Date(startParam) : (() => {
-        const d = new Date(); d.setHours(0, 0, 0, 0); return d;
+      // Parse a YYYY-MM-DD as UTC start-of-day; parse anything else as ISO.
+      const parseStart = (s: string): Date =>
+        /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T00:00:00Z") : new Date(s);
+      const parseEnd = (s: string): Date =>
+        /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T23:59:59.999Z") : new Date(s);
+
+      const startDate = startParam ? parseStart(startParam) : (() => {
+        // Default window starts 30 days in the past so freshly created events
+        // (and events whose timezone offset shifts them earlier in UTC) show up.
+        const d = new Date(); d.setUTCDate(d.getUTCDate() - 30); d.setUTCHours(0, 0, 0, 0); return d;
       })();
-      const endDate = endParam ? new Date(endParam + "T23:59:59Z") : (() => {
-        const d = new Date(); d.setDate(d.getDate() + 90); return d;
+      const endDate = endParam ? parseEnd(endParam) : (() => {
+        const d = new Date(); d.setUTCDate(d.getUTCDate() + 180); d.setUTCHours(23, 59, 59, 999); return d;
       })();
 
       if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD." });
+        return res.status(400).json({ error: "Invalid date format. Use YYYY-MM-DD or full ISO-8601." });
       }
 
       // Fetch family info and members for name resolution
@@ -223,12 +231,14 @@ export function registerApiKeyRoutes(app: Express) {
       const members = await db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId));
       const memberMap = new Map(members.map((m) => [m.id, m.name]));
 
-      // Fetch events in range (includes non-recurring + recurring parents)
+      // Overlap semantics: include any event whose [startTime, endTime] interval
+      // overlaps the requested window. Catches events that span midnight or were
+      // created in a different timezone than the query window.
       const rows = await db.select().from(events).where(
         and(
           eq(events.familyId, familyId),
           or(
-            and(gte(events.startTime, startDate), lte(events.startTime, endDate)),
+            and(lte(events.startTime, endDate), gte(events.endTime, startDate)),
             // Also include recurring parents that started before range (rrule may produce occurrences in range)
             and(eq(events.isRecurringParent, true), lte(events.startTime, endDate))
           )
@@ -256,6 +266,22 @@ export function registerApiKeyRoutes(app: Express) {
         createdAt: e.createdAt?.toISOString() ?? null,
       }));
 
+      // If no events matched, count what's actually in the family so the
+      // caller can tell the difference between "wrong key/family" and
+      // "right family, just nothing in this date window".
+      let hint: string | undefined;
+      if (formatted.length === 0) {
+        const [{ c: totalInFamily } = { c: 0 }] = await db
+          .select({ c: sql<number>`count(*)::int` })
+          .from(events)
+          .where(eq(events.familyId, familyId));
+        if (totalInFamily === 0) {
+          hint = "This family has no events at all. Check that the API key is attached to the right family, or POST /api/v1/events to create one.";
+        } else {
+          hint = `This family has ${totalInFamily} event(s), but none overlap the requested window (${startDate.toISOString()} → ${endDate.toISOString()}). Try widening 'start'/'end', or omit them to use the default −30d → +180d window.`;
+        }
+      }
+
       res.json({
         family: { id: familyId, name: family?.name ?? familyId },
         query: {
@@ -264,6 +290,7 @@ export function registerApiKeyRoutes(app: Express) {
         },
         total: formatted.length,
         events: formatted,
+        ...(hint ? { hint } : {}),
         generated: new Date().toISOString(),
       });
     } catch (err) {

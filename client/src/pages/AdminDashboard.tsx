@@ -895,14 +895,14 @@ X-API-Key: YOUR_KEY
             <p className="text-[11px] text-muted-foreground mt-1">Use whichever your client supports. The endpoint also accepts <code className="bg-muted px-1 rounded">apiKey</code>, <code className="bg-muted px-1 rounded">api-key</code>, and <code className="bg-muted px-1 rounded">api_key</code> as header or query names.</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Query params</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Query params (list endpoint)</p>
             <div className="space-y-1 text-xs text-muted-foreground">
-              <p><code className="bg-muted px-1 rounded">start</code> — ISO date (e.g. <code className="bg-muted px-1 rounded">2026-04-01</code>). Defaults to today.</p>
-              <p><code className="bg-muted px-1 rounded">end</code> — ISO date (e.g. <code className="bg-muted px-1 rounded">2026-04-30</code>). Defaults to 90 days out.</p>
+              <p><code className="bg-muted px-1 rounded">start</code> — <code className="bg-muted px-1 rounded">YYYY-MM-DD</code> (treated as UTC start-of-day) or full ISO-8601 (e.g. <code className="bg-muted px-1 rounded">2026-04-25T00:00:00-05:00</code>). Defaults to <strong>30 days ago</strong>.</p>
+              <p><code className="bg-muted px-1 rounded">end</code> — same formats. Defaults to <strong>180 days out</strong>.</p>
               <p><code className="bg-muted px-1 rounded">familyId</code> — Override the family on the key.</p>
             </div>
             <p className="text-[11px] text-muted-foreground mt-2">
-              <strong>Heads up:</strong> events are filtered to the date range. If a new event isn't showing up, it's almost always because it's outside the start/end window.
+              <strong>Filter is overlap-based:</strong> any event whose [start, end] interval overlaps the requested window is returned. To find events on a specific local date, either use ISO timestamps with the user's timezone offset, or widen the YYYY-MM-DD range by ±1 day to absorb timezone shifts. If <code className="bg-muted px-1 rounded">total</code> is 0, the response includes a <code className="bg-muted px-1 rounded">hint</code> field explaining whether the family has any events at all and what to try next.
             </p>
           </div>
           <div>
