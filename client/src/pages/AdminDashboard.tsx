@@ -880,9 +880,12 @@ function ApiKeysPanel() {
         <CardContent className="space-y-4 text-sm">
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Endpoints</p>
-            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono break-all whitespace-pre-wrap">{`GET   ${baseUrl}/api/v1/events     (list events)
-POST  ${baseUrl}/api/v1/events     (create event)
-GET   ${baseUrl}/api/v1/whoami     (auth check)`}</code>
+            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono break-all whitespace-pre-wrap">{`GET     ${baseUrl}/api/v1/events           (list events)
+POST    ${baseUrl}/api/v1/events           (create event)
+GET     ${baseUrl}/api/v1/events/:id       (fetch one event)
+PATCH   ${baseUrl}/api/v1/events/:id       (update event)
+DELETE  ${baseUrl}/api/v1/events/:id       (delete event)
+GET     ${baseUrl}/api/v1/whoami           (auth check)`}</code>
           </div>
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Authentication (any of these)</p>

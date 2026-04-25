@@ -371,4 +371,166 @@ export function registerApiKeyRoutes(app: Express) {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+
+  // ─── Helper: authenticate + resolve family + load event by id ─────────
+  type EventLoadResult =
+    | { error: string; status: number; hint?: string }
+    | { event: typeof events.$inferSelect; familyId: string };
+
+  async function authAndLoadEvent(req: Request): Promise<EventLoadResult> {
+    const rawKey = extractApiKey(req);
+    if (!rawKey) {
+      return {
+        error: "Missing API key.",
+        hint: "Send 'Authorization: Bearer <key>', or 'X-API-Key: <key>', or '?key=<key>'.",
+        status: 401,
+      };
+    }
+    const keyRow = await resolveApiKey(rawKey);
+    if (!keyRow) return { error: "Invalid or revoked API key", status: 401 };
+
+    const familyIdOverride = (req.query.familyId as string | undefined) ?? (req.body?.familyId as string | undefined);
+    const familyId = familyIdOverride ?? keyRow.familyId;
+    if (!familyId) {
+      return { error: "familyId is required (or attach one to the API key)", status: 400 };
+    }
+
+    const eventId = req.params.id;
+    if (!eventId) return { error: "Event id is required in the URL path", status: 400 };
+
+    const [event] = await db.select().from(events).where(eq(events.id, eventId));
+    if (!event) return { error: "Event not found", status: 404 };
+    if (event.familyId !== familyId) {
+      // Don't leak existence of events in other families.
+      return { error: "Event not found", status: 404 };
+    }
+    return { event, familyId };
+  }
+
+  function formatEvent(e: typeof events.$inferSelect) {
+    return {
+      id: e.id,
+      title: e.title,
+      description: e.description ?? null,
+      start: e.startTime.toISOString(),
+      end: e.endTime.toISOString(),
+      allDay: false,
+      category: e.category,
+      color: e.color,
+      important: e.isImportant,
+      completed: e.completed,
+      completedAt: e.completedAt?.toISOString() ?? null,
+      members: e.memberIds ?? [],
+      familyId: e.familyId,
+      recurring: {
+        isParent: e.isRecurringParent ?? false,
+        rrule: e.rrule ?? null,
+        legacyRule: e.recurrenceRule ?? null,
+      },
+      createdAt: e.createdAt?.toISOString() ?? null,
+    };
+  }
+
+  // ─── Public calendar API: fetch a single event by id ──────────────────
+  // GET /api/v1/events/:id
+  app.get("/api/v1/events/:id", async (req: Request, res: Response) => {
+    try {
+      const result = await authAndLoadEvent(req);
+      if ("error" in result) return res.status(result.status).json({ error: result.error, ...(result.hint ? { hint: result.hint } : {}) });
+      res.json({ ok: true, event: formatEvent(result.event) });
+    } catch (err) {
+      console.error("Calendar API get-one error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── Public calendar API: update an event ─────────────────────────────
+  // PATCH /api/v1/events/:id
+  //   Body: any subset of { title, description, startTime, endTime, color,
+  //     category, isImportant, completed, memberIds }
+  app.patch("/api/v1/events/:id", async (req: Request, res: Response) => {
+    try {
+      const result = await authAndLoadEvent(req);
+      if ("error" in result) return res.status(result.status).json({ error: result.error, ...(result.hint ? { hint: result.hint } : {}) });
+
+      const body = (req.body ?? {}) as Record<string, any>;
+      const updates: Record<string, unknown> = {};
+
+      if (typeof body.title === "string") {
+        const t = body.title.trim();
+        if (!t) return res.status(400).json({ error: "title cannot be empty" });
+        updates.title = t;
+      }
+      if (body.description === null || typeof body.description === "string") {
+        updates.description = body.description;
+      }
+
+      const newStart = body.startTime ?? body.start;
+      const newEnd = body.endTime ?? body.end;
+      let nextStart = result.event.startTime;
+      let nextEnd = result.event.endTime;
+      if (newStart !== undefined) {
+        const d = new Date(newStart);
+        if (isNaN(d.getTime())) return res.status(400).json({ error: "startTime must be a valid ISO-8601 date" });
+        updates.startTime = d;
+        nextStart = d;
+      }
+      if (newEnd !== undefined) {
+        const d = new Date(newEnd);
+        if (isNaN(d.getTime())) return res.status(400).json({ error: "endTime must be a valid ISO-8601 date" });
+        updates.endTime = d;
+        nextEnd = d;
+      }
+      if (nextEnd < nextStart) {
+        return res.status(400).json({ error: "endTime must be the same or after startTime" });
+      }
+
+      if (typeof body.color === "string") {
+        if (!/^#[0-9a-fA-F]{6}$/.test(body.color)) {
+          return res.status(400).json({ error: "color must be a 6-digit hex like #F59E0B" });
+        }
+        updates.color = body.color;
+      }
+      if (typeof body.category === "string") {
+        const allowed = new Set(["personal", "medical", "school", "work", "other"]);
+        if (!allowed.has(body.category)) {
+          return res.status(400).json({ error: "category must be one of: personal, medical, school, work, other" });
+        }
+        updates.category = body.category;
+      }
+      if (typeof body.isImportant === "boolean") updates.isImportant = body.isImportant;
+      if (typeof body.completed === "boolean") {
+        updates.completed = body.completed;
+        updates.completedAt = body.completed ? new Date() : null;
+      }
+      if (Array.isArray(body.memberIds)) {
+        updates.memberIds = body.memberIds.filter((m: unknown) => typeof m === "string");
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "Nothing to update. Send at least one field." });
+      }
+
+      const [updated] = await db.update(events).set(updates).where(eq(events.id, result.event.id)).returning();
+      res.json({ ok: true, event: formatEvent(updated) });
+    } catch (err) {
+      console.error("Calendar API update error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // ─── Public calendar API: delete an event ─────────────────────────────
+  // DELETE /api/v1/events/:id
+  app.delete("/api/v1/events/:id", async (req: Request, res: Response) => {
+    try {
+      const result = await authAndLoadEvent(req);
+      if ("error" in result) return res.status(result.status).json({ error: result.error, ...(result.hint ? { hint: result.hint } : {}) });
+
+      await db.delete(events).where(eq(events.id, result.event.id));
+      res.json({ ok: true, deleted: { id: result.event.id, title: result.event.title } });
+    } catch (err) {
+      console.error("Calendar API delete error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
 }
