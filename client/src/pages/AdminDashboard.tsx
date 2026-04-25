@@ -20,7 +20,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { Redirect } from "wouter";
 import { useState } from "react";
-import type { BetaFeedback, User as UserType, ApiKey } from "@shared/schema";
+import type { BetaFeedback, User as UserType, ApiKey, Family } from "@shared/schema";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ADMIN_ID = "google-110610540501901085708";
 
@@ -686,7 +687,7 @@ export default function AdminDashboard() {
 function ApiKeysPanel() {
   const queryClient = useQueryClient();
   const [newKeyName, setNewKeyName] = useState("");
-  const [newKeyFamilyId, setNewKeyFamilyId] = useState("");
+  const [newKeyFamilyId, setNewKeyFamilyId] = useState<string>("");
   const [justCreated, setJustCreated] = useState<ApiKey & { key: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -695,10 +696,17 @@ function ApiKeysPanel() {
     staleTime: 0,
   });
 
+  const { data: families = [] } = useQuery<Family[]>({
+    queryKey: ["/api/families"],
+  });
+
+  const familyName = (id: string | null | undefined) =>
+    (id && families.find((f) => f.id === id)?.name) || null;
+
   const createKey = useMutation({
     mutationFn: () => apiRequest("POST", "/api/admin/api-keys", {
       name: newKeyName.trim(),
-      familyId: newKeyFamilyId.trim() || undefined,
+      familyId: newKeyFamilyId || undefined,
     }).then((r) => r.json()),
     onSuccess: (created) => {
       setJustCreated(created);
@@ -706,6 +714,12 @@ function ApiKeysPanel() {
       setNewKeyFamilyId("");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/api-keys"] });
     },
+  });
+
+  const updateKeyFamily = useMutation({
+    mutationFn: ({ id, familyId }: { id: string; familyId: string | null }) =>
+      apiRequest("PATCH", `/api/admin/api-keys/${id}`, { familyId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/api-keys"] }),
   });
 
   const deleteKey = useMutation({
@@ -764,13 +778,18 @@ function ApiKeysPanel() {
               className="text-sm flex-1 min-w-48"
               data-testid="input-api-key-name"
             />
-            <Input
-              placeholder="Family ID (optional)"
-              value={newKeyFamilyId}
-              onChange={(e) => setNewKeyFamilyId(e.target.value)}
-              className="text-sm w-64"
-              data-testid="input-api-key-family-id"
-            />
+            <Select value={newKeyFamilyId} onValueChange={setNewKeyFamilyId}>
+              <SelectTrigger className="text-sm w-64" data-testid="select-api-key-family">
+                <SelectValue placeholder="Auto-attach my first family" />
+              </SelectTrigger>
+              <SelectContent>
+                {families.map((f) => (
+                  <SelectItem key={f.id} value={f.id} data-testid={`select-family-${f.id}`}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               size="default"
               onClick={() => createKey.mutate()}
@@ -782,7 +801,7 @@ function ApiKeysPanel() {
             </Button>
           </div>
           <p className="text-[11px] text-muted-foreground">
-            If you leave Family ID blank, attach a family later or pass <code className="bg-muted px-1 rounded">?familyId=</code> in each API request.
+            If you don't pick a family, your first family is attached automatically so the key just works.
           </p>
         </CardContent>
       </Card>
@@ -801,29 +820,51 @@ function ApiKeysPanel() {
             <p className="text-xs text-muted-foreground py-4 text-center">No API keys yet.</p>
           )}
           <div className="space-y-2">
-            {keys.map((k) => (
-              <div key={k.id} className="flex items-center gap-3 rounded-lg border border-border/50 px-3 py-2.5">
-                <Key className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{k.name}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Created {k.createdAt ? format(new Date(k.createdAt), "MMM d, yyyy") : "—"}
-                    {k.lastUsedAt && <> · Last used {format(new Date(k.lastUsedAt), "MMM d, yyyy 'at' h:mm a")}</>}
-                    {k.familyId && <> · Family: <code className="bg-muted px-1 rounded">{k.familyId}</code></>}
-                  </p>
+            {keys.map((k) => {
+              const fname = familyName(k.familyId);
+              return (
+                <div key={k.id} className="flex items-center gap-3 rounded-lg border border-border/50 px-3 py-2.5">
+                  <Key className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium flex items-center gap-2 flex-wrap">
+                      {k.name}
+                      {fname ? (
+                        <Badge variant="secondary" className="text-[10px]">{fname}</Badge>
+                      ) : (
+                        <Badge variant="destructive" className="text-[10px]">No family attached</Badge>
+                      )}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Created {k.createdAt ? format(new Date(k.createdAt), "MMM d, yyyy") : "—"}
+                      {k.lastUsedAt && <> · Last used {format(new Date(k.lastUsedAt), "MMM d, yyyy 'at' h:mm a")}</>}
+                    </p>
+                  </div>
+                  <Select
+                    value={k.familyId ?? ""}
+                    onValueChange={(v) => updateKeyFamily.mutate({ id: k.id, familyId: v || null })}
+                  >
+                    <SelectTrigger className="text-xs h-9 w-44" data-testid={`select-attach-family-${k.id}`}>
+                      <SelectValue placeholder="Attach family" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {families.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive flex-shrink-0"
+                    onClick={() => deleteKey.mutate(k.id)}
+                    disabled={deleteKey.isPending}
+                    data-testid={`button-delete-api-key-${k.id}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-destructive flex-shrink-0"
-                  onClick={() => deleteKey.mutate(k.id)}
-                  disabled={deleteKey.isPending}
-                  data-testid={`button-delete-api-key-${k.id}`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -838,17 +879,16 @@ function ApiKeysPanel() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Endpoint</p>
-            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono break-all">
-              GET {baseUrl}/api/v1/events
-            </code>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Endpoints</p>
+            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono break-all whitespace-pre-wrap">{`GET or POST  ${baseUrl}/api/v1/events
+GET or POST  ${baseUrl}/api/v1/whoami    (auth check)`}</code>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Authentication</p>
-            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono">
-              Authorization: Bearer YOUR_KEY
-            </code>
-            <p className="text-[11px] text-muted-foreground mt-1">Or append <code className="bg-muted px-1 rounded">?key=YOUR_KEY</code> to the URL.</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Authentication (any of these)</p>
+            <code className="block bg-muted rounded px-3 py-2 text-xs font-mono whitespace-pre-wrap">{`Authorization: Bearer YOUR_KEY
+X-API-Key: YOUR_KEY
+?key=YOUR_KEY  (URL query string)`}</code>
+            <p className="text-[11px] text-muted-foreground mt-1">Use whichever your client supports. The endpoint also accepts <code className="bg-muted px-1 rounded">apiKey</code>, <code className="bg-muted px-1 rounded">api-key</code>, and <code className="bg-muted px-1 rounded">api_key</code> as header or query names.</p>
           </div>
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Query params</p>
@@ -857,6 +897,9 @@ function ApiKeysPanel() {
               <p><code className="bg-muted px-1 rounded">end</code> — ISO date (e.g. <code className="bg-muted px-1 rounded">2026-04-30</code>). Defaults to 90 days out.</p>
               <p><code className="bg-muted px-1 rounded">familyId</code> — Override the family on the key.</p>
             </div>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              <strong>Heads up:</strong> events are filtered to the date range. If a new event isn't showing up, it's almost always because it's outside the start/end window.
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Example curl</p>

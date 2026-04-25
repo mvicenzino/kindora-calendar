@@ -1,6 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { db } from "./db";
-import { apiKeys, events, families, familyMembers } from "@shared/schema";
+import { apiKeys, events, families, familyMembers, familyMemberships } from "@shared/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { isAuthenticated } from "./replitAuth";
 import crypto from "crypto";
@@ -82,15 +82,60 @@ export function registerApiKeyRoutes(app: Express) {
     try {
       const key = generateKey();
       const userId = (req as any).user?.claims?.sub ?? ADMIN_USER_ID;
+
+      // Validate the family if one was supplied; otherwise auto-attach the
+      // creator's first family so the key works out of the box.
+      let resolvedFamilyId: string | null = null;
+      if (familyId) {
+        const [fam] = await db.select().from(families).where(eq(families.id, familyId));
+        if (!fam) return res.status(400).json({ error: "Unknown familyId" });
+        resolvedFamilyId = familyId;
+      } else {
+        const memberships = await db
+          .select({ familyId: familyMemberships.familyId })
+          .from(familyMemberships)
+          .where(eq(familyMemberships.userId, userId));
+        if (memberships.length > 0) {
+          resolvedFamilyId = memberships[0].familyId;
+        }
+      }
+
       const [row] = await db.insert(apiKeys).values({
         key,
         name: name.trim(),
         userId,
-        familyId: familyId || null,
+        familyId: resolvedFamilyId,
       }).returning();
       res.status(201).json({ ...row, key });
     } catch (err) {
       res.status(500).json({ error: "Failed to create API key" });
+    }
+  });
+
+  // ─── Admin: update an API key (rename / re-bind family) ───────────────
+  app.patch("/api/admin/api-keys/:id", isAuthenticated, async (req: Request, res: Response) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: "Forbidden" });
+    const { name, familyId } = req.body ?? {};
+    const updates: Record<string, unknown> = {};
+    if (typeof name === "string" && name.trim()) updates.name = name.trim();
+    if (familyId !== undefined) updates.familyId = familyId || null;
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "Nothing to update. Provide name and/or familyId." });
+    }
+    try {
+      if (updates.familyId) {
+        const [fam] = await db.select().from(families).where(eq(families.id, updates.familyId as string));
+        if (!fam) return res.status(400).json({ error: "Unknown familyId" });
+      }
+      const [row] = await db
+        .update(apiKeys)
+        .set(updates)
+        .where(eq(apiKeys.id, req.params.id))
+        .returning();
+      if (!row) return res.status(404).json({ error: "Key not found" });
+      res.json(row);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to update API key" });
     }
   });
 
