@@ -2685,16 +2685,29 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No families found for user" });
       }
       
-      // Calculate week range (current week or specified week)
-      const weekOffset = req.body.weekOffset || 0; // 0 = current week, 1 = next week
-      const today = new Date();
-      const targetDate = new Date(today);
-      targetDate.setDate(targetDate.getDate() + (weekOffset * 7));
-      
-      const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 }); // Sunday
-      const weekEnd = endOfWeek(targetDate, { weekStartsOn: 0 }); // Saturday
-      const weekRange = `${format(weekStart, 'MMM d')}–${format(weekEnd, 'd')}`;
-      
+      // Resolve recipient's timezone with Intl validation fallback so a bad DB
+      // value can't crash this handler. Default to America/New_York if missing.
+      const now = new Date();
+      let userTz = (user as any).timezone || "America/New_York";
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: userTz }).format(now);
+      } catch {
+        userTz = "America/New_York";
+      }
+
+      // Calculate week range in the recipient's timezone (current week or
+      // specified week via weekOffset). Anchored at noon-local for DST safety.
+      const weekOffset = req.body.weekOffset || 0;
+      const targetInstant = new Date(now.getTime() + weekOffset * 7 * 86400000);
+      const { weekStart, weekEnd, dayKeys } = getLocalWeekInTz(targetInstant, userTz);
+      const dayKeySet = new Set(dayKeys);
+      const weekRangeFmt = new Intl.DateTimeFormat("en-US", {
+        timeZone: userTz, month: "short", day: "numeric",
+      });
+      const startStr = weekRangeFmt.format(weekStart);
+      const endDay = new Intl.DateTimeFormat("en-US", { timeZone: userTz, day: "numeric" }).format(weekEnd);
+      const weekRange = `${startStr}–${endDay}`;
+
       // Collect events from all families
       const allFamilySummaries: string[] = [];
       let totalEventCount = 0;
@@ -2703,34 +2716,27 @@ Visit Kindora Calendar: ${joinUrl}
       for (const family of families) {
         const events = await storage.getEvents(family.id);
         const familyMembers = await storage.getFamilyMembers(family.id);
-        
-        // Filter events for the specified week
-        const weekEvents = events.filter(event => {
-          const eventDate = new Date(event.startTime);
-          return eventDate >= weekStart && eventDate <= weekEnd;
-        }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-        
-        // Map events with member names
-        const eventSummaries = weekEvents.map(event => {
-          const memberNames = (event.memberIds || [])
-            .map(id => familyMembers.find(m => m.id === id)?.name)
-            .filter(Boolean) as string[];
-          
-          // Check if it's an all-day event (ends at 23:58 or 23:59)
-          const endTime = new Date(event.endTime);
-          const isAllDay = endTime.getHours() === 23 && endTime.getMinutes() >= 58;
-          
-          return {
-            id: event.id,
-            title: event.title,
-            startTime: new Date(event.startTime),
-            endTime: endTime,
-            description: event.description,
-            memberNames,
-            isAllDay
-          };
-        });
-        
+
+        // Filter & shape: include events whose start-day (in userTz) falls in
+        // the recipient's Sun..Sat week; compute isAllDay in userTz.
+        const eventSummaries = events
+          .map(event => {
+            const memberNames = (event.memberIds || [])
+              .map(id => familyMembers.find(m => m.id === id)?.name)
+              .filter(Boolean) as string[];
+            return {
+              id: event.id,
+              title: event.title,
+              startTime: new Date(event.startTime),
+              endTime: new Date(event.endTime),
+              description: event.description,
+              memberNames,
+            };
+          })
+          .filter(e => dayKeySet.has(tzDayKey(e.startTime, userTz)))
+          .map(e => ({ ...e, isAllDay: isAllDayInTz(e.endTime, userTz) }))
+          .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
         totalEventCount += eventSummaries.length;
         
         // Generate HTML for this family
@@ -2740,7 +2746,8 @@ Visit Kindora Calendar: ${joinUrl}
           weekStart,
           weekEnd,
           events: eventSummaries,
-          recipientName
+          recipientName,
+          timezone: userTz,
         });
         
         const textContent = generateWeeklySummaryText({
@@ -2748,7 +2755,8 @@ Visit Kindora Calendar: ${joinUrl}
           weekStart,
           weekEnd,
           events: eventSummaries,
-          recipientName
+          recipientName,
+          timezone: userTz,
         });
         
         // Send email for this family
@@ -2802,44 +2810,44 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(404).json({ error: "Family not found" });
       }
       
-      // Calculate week range
+      // Resolve recipient's timezone with Intl validation fallback.
+      const now = new Date();
+      let userTz = (user as any)?.timezone || "America/New_York";
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: userTz }).format(now);
+      } catch {
+        userTz = "America/New_York";
+      }
+
+      // Calculate week range in the recipient's timezone.
       const weekOffset = parseInt(req.query.weekOffset as string) || 0;
-      const today = new Date();
-      const targetDate = new Date(today);
-      targetDate.setDate(targetDate.getDate() + (weekOffset * 7));
-      
-      const weekStart = startOfWeek(targetDate, { weekStartsOn: 0 });
-      const weekEnd = endOfWeek(targetDate, { weekStartsOn: 0 });
-      
+      const targetInstant = new Date(now.getTime() + weekOffset * 7 * 86400000);
+      const { weekStart, weekEnd, dayKeys } = getLocalWeekInTz(targetInstant, userTz);
+      const dayKeySet = new Set(dayKeys);
+
       const events = await storage.getEvents(familyId);
       const familyMembers = await storage.getFamilyMembers(familyId);
-      
-      // Filter events for the specified week
-      const weekEvents = events.filter(event => {
-        const eventDate = new Date(event.startTime);
-        return eventDate >= weekStart && eventDate <= weekEnd;
-      }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-      
-      // Map events with member names
-      const eventSummaries = weekEvents.map(event => {
-        const memberNames = (event.memberIds || [])
-          .map(id => familyMembers.find(m => m.id === id)?.name)
-          .filter(Boolean) as string[];
-        
-        const endTime = new Date(event.endTime);
-        const isAllDay = endTime.getHours() === 23 && endTime.getMinutes() >= 58;
-        
-        return {
-          id: event.id,
-          title: event.title,
-          startTime: new Date(event.startTime),
-          endTime: endTime,
-          description: event.description,
-          memberNames,
-          isAllDay
-        };
-      });
-      
+
+      // Filter & shape: include events whose start-day (in userTz) falls in
+      // the recipient's Sun..Sat week; compute isAllDay in userTz.
+      const eventSummaries = events
+        .map(event => {
+          const memberNames = (event.memberIds || [])
+            .map(id => familyMembers.find(m => m.id === id)?.name)
+            .filter(Boolean) as string[];
+          return {
+            id: event.id,
+            title: event.title,
+            startTime: new Date(event.startTime),
+            endTime: new Date(event.endTime),
+            description: event.description,
+            memberNames,
+          };
+        })
+        .filter(e => dayKeySet.has(tzDayKey(e.startTime, userTz)))
+        .map(e => ({ ...e, isAllDay: isAllDayInTz(e.endTime, userTz) }))
+        .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
       const recipientName = user?.firstName || user?.email?.split('@')[0] || 'User';
       
       const htmlContent = generateWeeklySummaryHtml({
@@ -2847,7 +2855,8 @@ Visit Kindora Calendar: ${joinUrl}
         weekStart,
         weekEnd,
         events: eventSummaries,
-        recipientName
+        recipientName,
+        timezone: userTz,
       });
       
       res.setHeader('Content-Type', 'text/html');
