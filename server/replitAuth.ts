@@ -180,7 +180,7 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const { email, password, firstName, lastName } = req.body;
+      const { email, password, firstName, lastName, timezone } = req.body;
 
       if (!email || !password || !firstName) {
         return res.status(400).json({ message: "Email, password, and first name are required" });
@@ -211,6 +211,23 @@ export async function setupAuth(app: Express) {
       const passwordHash = await bcrypt.hash(password, 12);
       const userId = randomUUID();
 
+      // Validate the IANA timezone string. We do a cheap shape check first,
+      // then ask Intl to actually round-trip it — anything Intl rejects could
+      // later crash the weekly summary cron with a RangeError.
+      let cleanTimezone: string | null = null;
+      if (
+        typeof timezone === "string" &&
+        timezone.length > 0 && timezone.length < 64 &&
+        /^[A-Za-z_+\-/0-9]+$/.test(timezone)
+      ) {
+        try {
+          new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+          cleanTimezone = timezone;
+        } catch {
+          cleanTimezone = null;
+        }
+      }
+
       const user = await storage.upsertUser({
         id: userId,
         email: cleanEmail,
@@ -218,6 +235,7 @@ export async function setupAuth(app: Express) {
         lastName: cleanLastName,
         passwordHash,
         authProvider: "local",
+        ...(cleanTimezone ? { timezone: cleanTimezone } : {}),
       });
 
       sendWelcomeEmail(userId, cleanEmail, cleanFirstName).catch((err: any) =>

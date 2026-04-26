@@ -58,6 +58,7 @@ export const users = pgTable("users", {
   subscriptionStatus: varchar("subscription_status").default("inactive"),
   welcomeEmailClaimedAt: timestamp("welcome_email_claimed_at"),
   welcomeEmailSentAt: timestamp("welcome_email_sent_at"),
+  timezone: varchar("timezone"), // IANA timezone (e.g. "America/New_York"); set on signup or first visit
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

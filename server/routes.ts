@@ -14,7 +14,7 @@ import { requireFamily, requireCare } from "./tierMiddleware";
 import { setupGoogleAuth } from "./googleAuth";
 import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
-import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail, sendEmail } from "./emailService";
+import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail, sendEmail, getLocalWeekInTz, tzDayKey, isAllDayInTz } from "./emailService";
 import { startOfWeek, endOfWeek, format, addDays, subDays } from "date-fns";
 import OpenAI from "openai";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
@@ -323,6 +323,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  // Update the user's IANA timezone. Used both as an explicit Settings control
+  // and as an auto-detect call from the client on first visit when timezone is null.
+  app.patch("/api/auth/user/timezone", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { timezone } = req.body ?? {};
+
+      if (typeof timezone !== "string" || timezone.length === 0 || timezone.length > 64) {
+        return res.status(400).json({ message: "Invalid timezone" });
+      }
+      // IANA TZ identifiers are letters/digits/underscores/hyphens/plus/slash.
+      if (!/^[A-Za-z_+\-/0-9]+$/.test(timezone)) {
+        return res.status(400).json({ message: "Invalid timezone format" });
+      }
+      // Validate by asking Intl to parse it; throws RangeError on unknown zones.
+      try {
+        new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date());
+      } catch {
+        return res.status(400).json({ message: "Unknown timezone" });
+      }
+
+      const existing = await storage.getUser(userId);
+      if (!existing) return res.status(404).json({ message: "User not found" });
+
+      // If the caller is the auto-detect hook, only set when not already set.
+      // Explicit setting (forceSet=true in body) always overwrites.
+      const force = req.body?.forceSet === true;
+      if (existing.timezone && !force) {
+        const { passwordHash, ...safeUser } = existing;
+        return res.json(safeUser);
+      }
+
+      const updated = await storage.upsertUser({ id: userId, timezone });
+      const { passwordHash, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (error) {
+      console.error("Error updating timezone:", error);
+      res.status(500).json({ message: "Failed to update timezone" });
     }
   });
 
@@ -2980,69 +3021,88 @@ Visit Kindora Calendar: ${joinUrl}
               .map(m => ({ userId: m.userId, user: m.user }));
           }
           
-          // Calculate week range
-          const today = new Date();
-          const weekStart = startOfWeek(today, { weekStartsOn: 0 });
-          const weekEnd = endOfWeek(today, { weekStartsOn: 0 });
-          const weekRange = `${format(weekStart, 'MMM d')}–${format(weekEnd, 'd')}`;
-          
-          // Get events for this week
+          // We compute the week range per-recipient (in their own timezone)
+          // so a person in Pacific time sees the same Sun–Sat their calendar
+          // shows them, not the server's idea of "this week".
+          // Pull the entire family's events once and filter per recipient.
           const events = await storage.getEvents(schedule.familyId);
           const familyMembers = await storage.getFamilyMembers(schedule.familyId);
-          
-          const weekEvents = events.filter(event => {
-            const eventDate = new Date(event.startTime);
-            return eventDate >= weekStart && eventDate <= weekEnd;
-          }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-          
-          const eventSummaries = weekEvents.map(event => {
+
+          // Pre-compute the per-event base shape; isAllDay is computed later
+          // per-recipient because it depends on the recipient's timezone.
+          const allEventSummaries = events.map(event => {
             const memberNames = (event.memberIds || [])
               .map(id => familyMembers.find(m => m.id === id)?.name)
               .filter(Boolean) as string[];
-            
-            const endTime = new Date(event.endTime);
-            const isAllDay = endTime.getHours() === 23 && endTime.getMinutes() >= 58;
-            
+
             return {
               id: event.id,
               title: event.title,
               startTime: new Date(event.startTime),
-              endTime: endTime,
+              endTime: new Date(event.endTime),
               description: event.description,
               memberNames,
-              isAllDay
             };
           });
-          
+
           // Send to each opted-in user
+          const now = new Date();
           for (const { user } of usersToEmail) {
             if (!user.email) continue;
-            
+
             const recipientName = user.firstName || user.email.split('@')[0] || 'User';
-            
+            let userTz = (user as any).timezone || schedule.timezone || "America/New_York";
+            // Defensive Intl validation — fall back to a known good zone if a
+            // bad value somehow made it into the DB. Prevents cron RangeErrors.
+            try {
+              new Intl.DateTimeFormat("en-US", { timeZone: userTz }).format(now);
+            } catch {
+              userTz = "America/New_York";
+            }
+
+            const { weekStart, weekEnd, dayKeys } = getLocalWeekInTz(now, userTz);
+            const dayKeySet = new Set(dayKeys);
+
+            // Filter to events whose start-day (in userTz) falls within the
+            // recipient's Sun..Sat week, and recompute isAllDay using userTz.
+            const weekEvents = allEventSummaries
+              .filter(e => dayKeySet.has(tzDayKey(e.startTime, userTz)))
+              .map(e => ({ ...e, isAllDay: isAllDayInTz(e.endTime, userTz) }))
+              .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+            // Human-readable week range in the recipient's tz.
+            const weekRangeFmt = new Intl.DateTimeFormat("en-US", {
+              timeZone: userTz, month: "short", day: "numeric",
+            });
+            const startStr = weekRangeFmt.format(weekStart);
+            const endDay = new Intl.DateTimeFormat("en-US", { timeZone: userTz, day: "numeric" }).format(weekEnd);
+            const weekRange = `${startStr}–${endDay}`;
+
             const htmlContent = generateWeeklySummaryHtml({
               familyName: family.name,
               weekStart,
               weekEnd,
-              events: eventSummaries,
-              recipientName
+              events: weekEvents,
+              recipientName,
+              timezone: userTz,
             });
-            
+
             const textContent = generateWeeklySummaryText({
               familyName: family.name,
               weekStart,
               weekEnd,
-              events: eventSummaries,
-              recipientName
+              events: weekEvents,
+              recipientName,
+              timezone: userTz,
             });
-            
+
             const result = await sendWeeklySummaryEmail(
               user.email,
               htmlContent,
               textContent,
               weekRange
             );
-            
+
             if (result.success) {
               familyResults.usersSent++;
             } else {

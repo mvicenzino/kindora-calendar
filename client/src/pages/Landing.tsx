@@ -93,7 +93,15 @@ export default function Landing() {
 
   const registerMutation = useMutation({
     mutationFn: async (data: { email: string; password: string; firstName: string; lastName: string }) => {
-      const res = await apiRequest("POST", "/api/auth/register", data);
+      // Capture the user's IANA timezone from the browser so weekly summary
+      // emails (and other time-formatted communication) match their local time.
+      let timezone: string | undefined;
+      try {
+        timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+      } catch {
+        timezone = undefined;
+      }
+      const res = await apiRequest("POST", "/api/auth/register", { ...data, timezone });
       return res.json();
     },
     onSuccess: () => {

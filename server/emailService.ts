@@ -103,23 +103,180 @@ interface WeeklySummaryData {
   weekEnd: Date;
   events: EventSummary[];
   recipientName: string;
+  /** IANA timezone the recipient lives in (e.g. "America/New_York"). */
+  timezone?: string;
+}
+
+// ─── Timezone-aware formatting helpers ──────────────────────────────────────
+// We use native Intl APIs so we don't need date-fns-tz. All "what day is this
+// event on" decisions are made in the recipient's timezone, otherwise an
+// 11pm event on Sunday in Pacific time would show up under Monday in an
+// email rendered server-side in UTC.
+
+export function tzParts(d: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "";
+  let h = parseInt(get("hour"), 10);
+  // Some Intl impls return "24" for midnight; normalize to 0.
+  if (h === 24) h = 0;
+  return {
+    y: parseInt(get("year"), 10),
+    mo: parseInt(get("month"), 10),
+    d: parseInt(get("day"), 10),
+    h,
+    mi: parseInt(get("minute"), 10),
+    s: parseInt(get("second"), 10),
+  };
+}
+
+export function tzDayKey(d: Date, timeZone: string): string {
+  const { y, mo, d: dd } = tzParts(d, timeZone);
+  return `${y}-${String(mo).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+}
+
+// Returns the offset (in minutes) such that local-time = utc-time + offset
+// for the given instant in the given IANA timezone.
+function offsetMinutes(date: Date, timeZone: string): number {
+  const p = tzParts(date, timeZone);
+  const localAsUtc = Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi, p.s);
+  return Math.round((localAsUtc - date.getTime()) / 60000);
+}
+
+// Computes the UTC instant that maps to (year, month, day, hh:mm) local time
+// in the given IANA timezone. Iterates twice to handle DST boundaries.
+export function instantForLocalDateTime(
+  y: number, m: number, d: number, hh: number, mi: number, tz: string,
+): Date {
+  let utcMs = Date.UTC(y, m - 1, d, hh, mi, 0);
+  let off = offsetMinutes(new Date(utcMs), tz);
+  utcMs = Date.UTC(y, m - 1, d, hh, mi, 0) - off * 60000;
+  off = offsetMinutes(new Date(utcMs), tz);
+  utcMs = Date.UTC(y, m - 1, d, hh, mi, 0) - off * 60000;
+  return new Date(utcMs);
+}
+
+// Returns the recipient-local Sun..Sat week containing `now`, in the given tz.
+//   - weekStart: a Date instant corresponding to noon-local on Sunday
+//   - weekEnd:   a Date instant corresponding to noon-local on Saturday
+//   - dayKeys:   the 7 YYYY-MM-DD strings for Sun..Sat (in tz)
+// Anchoring at noon-local (instead of midnight) keeps `addDays(weekStart, i)`
+// safely on the same local calendar date even across DST transitions.
+export function getLocalWeekInTz(
+  now: Date, tz: string,
+): { weekStart: Date; weekEnd: Date; dayKeys: string[] } {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric", month: "2-digit", day: "2-digit", weekday: "short",
+  });
+  const parts = fmt.formatToParts(now);
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? "";
+  const y = parseInt(get("year"), 10);
+  const m = parseInt(get("month"), 10);
+  const d = parseInt(get("day"), 10);
+  const wdIdx = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(get("weekday"));
+
+  // Walk back wdIdx days to get Sunday's local date. We use UTC arithmetic on
+  // a Date built from the local Y/M/D — these objects are only used to compute
+  // calendar arithmetic; we never treat them as real instants.
+  const todayUtcMs = Date.UTC(y, m - 1, d);
+  const dayKeys: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(todayUtcMs + (i - wdIdx) * 86400000);
+    dayKeys.push(
+      `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`,
+    );
+  }
+
+  const [sunY, sunM, sunD] = dayKeys[0].split("-").map(Number);
+  const [satY, satM, satD] = dayKeys[6].split("-").map(Number);
+  const weekStart = instantForLocalDateTime(sunY, sunM, sunD, 12, 0, tz);
+  const weekEnd   = instantForLocalDateTime(satY, satM, satD, 12, 0, tz);
+  return { weekStart, weekEnd, dayKeys };
+}
+
+// True if the given event end-time falls at 23:58 or 23:59 local time in `tz`.
+// All-day events created in the app use that end-of-day convention.
+export function isAllDayInTz(endTime: Date, tz: string): boolean {
+  const { h, mi } = tzParts(endTime, tz);
+  return h === 23 && mi >= 58;
+}
+
+function fmtTime(d: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone, hour: "numeric", minute: "2-digit", hour12: true,
+  }).format(d).toLowerCase().replace(" ", "");
+  // e.g. "9:30am" — compact format that matches the existing email aesthetic
+}
+
+function fmtTimeWithSpace(d: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone, hour: "numeric", minute: "2-digit", hour12: true,
+  }).format(d);
+  // e.g. "9:30 AM"
+}
+
+function fmtDateHeader(d: Date, timeZone: string): string {
+  // "Monday, December 9th"
+  const base = new Intl.DateTimeFormat("en-US", {
+    timeZone, weekday: "long", month: "long", day: "numeric",
+  }).format(d);
+  // append ordinal suffix to the day number
+  const day = parseInt(new Intl.DateTimeFormat("en-US", { timeZone, day: "numeric" }).format(d), 10);
+  const suffix = (() => {
+    if (day >= 11 && day <= 13) return "th";
+    switch (day % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
+  })();
+  return base.replace(String(day), `${day}${suffix}`);
+}
+
+function fmtWeekRange(start: Date, end: Date, timeZone: string): string {
+  const startStr = new Intl.DateTimeFormat("en-US", {
+    timeZone, month: "short", day: "numeric",
+  }).format(start);
+  const endParts = tzParts(end, timeZone);
+  return `${startStr}–${endParts.d}, ${endParts.y}`;
+}
+
+function tzShortName(timeZone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone, timeZoneName: "short",
+    }).formatToParts(new Date());
+    return parts.find(p => p.type === "timeZoneName")?.value ?? "";
+  } catch {
+    return "";
+  }
 }
 
 export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
   const { familyName, weekStart, weekEnd, events, recipientName } = data;
-  
-  const weekRange = `${format(weekStart, 'MMM d')}–${format(weekEnd, 'd, yyyy')}`;
-  
+  const tz = data.timezone || "America/New_York";
+
+  const weekRange = fmtWeekRange(weekStart, weekEnd, tz);
+  const tzLabel = tzShortName(tz);
+
+  // Group events by their date in the recipient's timezone, not the server's.
+  const eventsByDay = new Map<string, EventSummary[]>();
+  for (const ev of events) {
+    const key = tzDayKey(new Date(ev.startTime), tz);
+    if (!eventsByDay.has(key)) eventsByDay.set(key, []);
+    eventsByDay.get(key)!.push(ev);
+  }
+
   const days: { date: Date; events: EventSummary[] }[] = [];
   for (let i = 0; i < 7; i++) {
     const day = addDays(weekStart, i);
-    const dayEvents = events.filter(e => isSameDay(new Date(e.startTime), day));
+    const dayEvents = eventsByDay.get(tzDayKey(day, tz)) ?? [];
     days.push({ date: day, events: dayEvents });
   }
 
   const dayRows = days.map(({ date, events: dayEvents }) => {
-    const dateHeader = format(date, 'EEEE, MMMM do');
-    
+    const dateHeader = fmtDateHeader(date, tz);
+
     if (dayEvents.length === 0) {
       return `
         <tr>
@@ -138,7 +295,7 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
     const eventRows = dayEvents.map(event => {
       const timeStr = event.isAllDay 
         ? 'All Day' 
-        : format(new Date(event.startTime), 'h:mm a');
+        : fmtTimeWithSpace(new Date(event.startTime), tz);
       const members = event.memberNames.length > 0 
         ? `<span style="color: #fdba74;">●</span> ${event.memberNames.join(', ')}` 
         : '';
@@ -278,28 +435,39 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
 
 export function generateWeeklySummaryText(data: WeeklySummaryData): string {
   const { familyName, weekStart, weekEnd, events, recipientName } = data;
-  
-  const weekRange = `${format(weekStart, 'MMM d')}–${format(weekEnd, 'd, yyyy')}`;
-  
+  const tz = data.timezone || "America/New_York";
+  const tzLabel = tzShortName(tz);
+
+  const weekRange = fmtWeekRange(weekStart, weekEnd, tz);
+
+  // Group by recipient-local day, same as HTML version.
+  const eventsByDay = new Map<string, EventSummary[]>();
+  for (const ev of events) {
+    const key = tzDayKey(new Date(ev.startTime), tz);
+    if (!eventsByDay.has(key)) eventsByDay.set(key, []);
+    eventsByDay.get(key)!.push(ev);
+  }
+
   let text = `Hi ${recipientName},\n\n`;
   text += `Here's your family's agenda for ${weekRange}\n`;
-  text += `Family: ${familyName}\n\n`;
-  text += `${'='.repeat(40)}\n\n`;
-  
+  text += `Family: ${familyName}\n`;
+  if (tzLabel) text += `Times in ${tzLabel}\n`;
+  text += `\n${'='.repeat(40)}\n\n`;
+
   for (let i = 0; i < 7; i++) {
     const day = addDays(weekStart, i);
-    const dayEvents = events.filter(e => isSameDay(new Date(e.startTime), day));
-    
-    text += `${format(day, 'EEEE, MMMM do')}\n`;
+    const dayEvents = eventsByDay.get(tzDayKey(day, tz)) ?? [];
+
+    text += `${fmtDateHeader(day, tz)}\n`;
     text += `${'-'.repeat(30)}\n`;
-    
+
     if (dayEvents.length === 0) {
       text += `  No events scheduled\n`;
     } else {
       dayEvents.forEach(event => {
-        const timeStr = event.isAllDay 
-          ? 'All Day' 
-          : format(new Date(event.startTime), 'h:mm a');
+        const timeStr = event.isAllDay
+          ? 'All Day'
+          : fmtTimeWithSpace(new Date(event.startTime), tz);
         text += `  ${timeStr} - ${event.title}`;
         if (event.memberNames.length > 0) {
           text += ` (${event.memberNames.join(', ')})`;
@@ -309,10 +477,10 @@ export function generateWeeklySummaryText(data: WeeklySummaryData): string {
     }
     text += '\n';
   }
-  
+
   text += `${'='.repeat(40)}\n\n`;
   text += `View your full calendar at Kindora\n`;
-  
+
   return text;
 }
 
