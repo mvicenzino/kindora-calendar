@@ -85,6 +85,9 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', eventId, 'notes', familyId] });
+      // Also refresh the calendar list so the note-count badge on tiles updates.
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/all-event-notes'] });
       setNewNote('');
       setReplyContent('');
       setReplyingTo(null);
@@ -108,6 +111,8 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', eventId, 'notes', familyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/all-event-notes'] });
       toast({
         title: "Note deleted",
         description: "The note has been removed.",

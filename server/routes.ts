@@ -1399,12 +1399,18 @@ Visit Kindora Calendar: ${joinUrl}
       }
       
       const allNotes = await storage.getAllEventNotesForFamily(familyId);
-      
+
+      // Normalize the lookup key so legacy notes that were stored under an
+      // occurrence id (e.g. "abc_occ_3" before the normalization fix) still
+      // roll up to their parent recurring event.
       const notesByEvent = new Map<string, typeof allNotes>();
       for (const note of allNotes) {
-        const arr = notesByEvent.get(note.eventId) || [];
+        const key = note.eventId.includes('_occ_')
+          ? note.eventId.split('_occ_')[0]
+          : note.eventId;
+        const arr = notesByEvent.get(key) || [];
         arr.push(note);
-        notesByEvent.set(note.eventId, arr);
+        notesByEvent.set(key, arr);
       }
       
       const authorCache = new Map<string, any>();
@@ -1790,6 +1796,13 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
+  // Notes attach to a recurring series (parent) rather than to an expanded
+  // virtual occurrence. Occurrence ids look like "<parentId>_occ_<index>";
+  // strip that suffix so all occurrences share one note thread and the
+  // tile-level noteCount badge lights up on every instance.
+  const normalizeRecurringEventId = (id: string): string =>
+    id.includes('_occ_') ? id.split('_occ_')[0] : id;
+
   // Event Notes Routes (protected) - Threaded notes for family members and caregivers
   app.get("/api/events/:eventId/notes", isAuthenticated, async (req: any, res) => {
     try {
@@ -1804,8 +1817,11 @@ Visit Kindora Calendar: ${joinUrl}
       if (!role) {
         return res.status(403).json({ error: "You are not a member of this family" });
       }
-      
-      const notes = await storage.getEventNotes(req.params.eventId, familyId);
+
+      const notes = await storage.getEventNotes(
+        normalizeRecurringEventId(req.params.eventId),
+        familyId,
+      );
       
       // Enrich notes with author information
       const enrichedNotes = await Promise.all(notes.map(async (note) => {
@@ -1848,7 +1864,7 @@ Visit Kindora Calendar: ${joinUrl}
       
       const noteData = {
         ...req.body,
-        eventId: req.params.eventId,
+        eventId: normalizeRecurringEventId(req.params.eventId),
         authorUserId: userId,
       };
       
@@ -1893,7 +1909,10 @@ Visit Kindora Calendar: ${joinUrl}
       }
       
       // Only allow owner/member to delete notes, or the note author
-      const notes = await storage.getEventNotes(req.params.eventId, familyId);
+      const notes = await storage.getEventNotes(
+        normalizeRecurringEventId(req.params.eventId),
+        familyId,
+      );
       const noteToDelete = notes.find(n => n.id === req.params.noteId);
       
       if (!noteToDelete) {
@@ -1937,10 +1956,16 @@ Visit Kindora Calendar: ${joinUrl}
       ]);
       
       const eventMap = new Map(events.map(e => [e.id, e]));
-      
+
+      // Look up real event by eventId, falling back to the parent id for
+      // legacy notes saved against an occurrence id (pre-normalization).
       const allNotes = allFamilyNotes
         .map(note => {
-          const event = eventMap.get(note.eventId);
+          const event =
+            eventMap.get(note.eventId) ||
+            (note.eventId.includes('_occ_')
+              ? eventMap.get(note.eventId.split('_occ_')[0])
+              : undefined);
           return event ? {
             ...note,
             eventTitle: event.title,

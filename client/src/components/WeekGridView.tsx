@@ -7,7 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useEventDrag } from "@/hooks/useEventDrag";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
-import { X } from "lucide-react";
+import { X, MessageSquare } from "lucide-react";
 
 interface WeekGridViewProps {
   date: Date;
@@ -307,6 +307,17 @@ export default function WeekGridView({ date, events, members, onEventClick, onAd
                             <span className="truncate">{event.title}</span>
                             {event.googleEventId && (
                               <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '8px', width: '12px', height: '12px' }}>G</span>
+                            )}
+                            {(event.noteCount ?? 0) > 0 && (
+                              <span
+                                className="flex-shrink-0 inline-flex items-center gap-0.5 text-muted-foreground"
+                                style={{ fontSize: evMeta }}
+                                data-testid={`notes-indicator-${event.id}`}
+                                title={`${event.noteCount} note${event.noteCount === 1 ? '' : 's'}`}
+                              >
+                                <MessageSquare className="w-2.5 h-2.5" />
+                                {event.noteCount}
+                              </span>
                             )}
                           </p>
                           {displayHeight > 25 && (

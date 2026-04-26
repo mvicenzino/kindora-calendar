@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback, useRef } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, startOfWeek, endOfWeek, isSameMonth, addMonths, subMonths, isToday } from "date-fns";
 import { useCalendarTextSize } from "@/hooks/useCalendarTextSize";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { UiEvent, UiFamilyMember } from "@shared/types";
 
@@ -267,6 +267,16 @@ export default function MonthGridView({ date, events, members, onEventClick, onA
                           <span className="truncate">{event.title}</span>
                           {event.googleEventId && (
                             <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full font-bold leading-none" style={{ background: '#4285f4', color: '#fff', fontSize: '7px', width: '11px', height: '11px' }}>G</span>
+                          )}
+                          {(event.noteCount ?? 0) > 0 && (
+                            <span
+                              className="flex-shrink-0 inline-flex items-center gap-0.5 text-muted-foreground ml-auto"
+                              data-testid={`notes-indicator-${event.id}`}
+                              title={`${event.noteCount} note${event.noteCount === 1 ? '' : 's'}`}
+                            >
+                              <MessageSquare className="w-2.5 h-2.5" />
+                              <span style={{ fontSize: '9px' }}>{event.noteCount}</span>
+                            </span>
                           )}
                         </div>
                       );
