@@ -74,7 +74,7 @@ export function getSession() {
   });
 }
 
-function createLocalUserSession(userId: string, email: string, firstName: string, lastName: string, profileImageUrl?: string | null) {
+export function createLocalUserSession(userId: string, email: string, firstName: string, lastName: string, profileImageUrl?: string | null) {
   return {
     claims: {
       sub: userId,

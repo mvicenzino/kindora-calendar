@@ -105,6 +105,9 @@ interface WeeklySummaryData {
   recipientName: string;
   /** IANA timezone the recipient lives in (e.g. "America/New_York"). */
   timezone?: string;
+  /** Optional URL for the "View Calendar" button — typically a magic-link
+   *  that auto-logs the recipient in. Falls back to the public app URL. */
+  calendarUrl?: string;
 }
 
 // ─── Timezone-aware formatting helpers ──────────────────────────────────────
@@ -255,6 +258,10 @@ function tzShortName(timeZone: string): string {
 export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
   const { familyName, weekStart, weekEnd, events, recipientName } = data;
   const tz = data.timezone || "America/New_York";
+  const calendarUrl = data.calendarUrl
+    || (process.env.REPLIT_DOMAINS?.split(',')[0]
+      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+      : 'https://kindora.replit.app');
 
   const weekRange = fmtWeekRange(weekStart, weekEnd, tz);
   const tzLabel = tzShortName(tz);
@@ -405,7 +412,7 @@ export function generateWeeklySummaryHtml(data: WeeklySummaryData): string {
           <!-- CTA Button -->
           <tr>
             <td style="padding: 0 24px 28px; text-align: center;">
-              <a href="${process.env.REPLIT_DOMAINS?.split(',')[0] ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'https://kindora.replit.app'}" 
+              <a href="${calendarUrl}" 
                  style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%); color: white; text-decoration: none; padding: 14px 36px; border-radius: 25px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
                 View Full Calendar
               </a>
@@ -437,6 +444,10 @@ export function generateWeeklySummaryText(data: WeeklySummaryData): string {
   const { familyName, weekStart, weekEnd, events, recipientName } = data;
   const tz = data.timezone || "America/New_York";
   const tzLabel = tzShortName(tz);
+  const calendarUrl = data.calendarUrl
+    || (process.env.REPLIT_DOMAINS?.split(',')[0]
+      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+      : 'https://kindora.replit.app');
 
   const weekRange = fmtWeekRange(weekStart, weekEnd, tz);
 
@@ -479,7 +490,7 @@ export function generateWeeklySummaryText(data: WeeklySummaryData): string {
   }
 
   text += `${'='.repeat(40)}\n\n`;
-  text += `View your full calendar at Kindora\n`;
+  text += `View your full calendar: ${calendarUrl}\n`;
 
   return text;
 }

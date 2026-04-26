@@ -15,6 +15,8 @@ import { setupGoogleAuth } from "./googleAuth";
 import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
 import { generateWeeklySummaryHtml, generateWeeklySummaryText, sendWeeklySummaryEmail, sendEmail, getLocalWeekInTz, tzDayKey, isAllDayInTz } from "./emailService";
+import { createLocalUserSession } from "./replitAuth";
+import { verifyMagicToken, buildMagicCalendarUrl, getPublicBaseUrl } from "./magicLink";
 import { startOfWeek, endOfWeek, format, addDays, subDays } from "date-fns";
 import OpenAI from "openai";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
@@ -364,6 +366,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating timezone:", error);
       res.status(500).json({ message: "Failed to update timezone" });
+    }
+  });
+
+  // Magic-link auto-login: consumed by the "View Calendar" link in weekly
+  // summary emails. Verifies an HMAC-signed token, creates a session for the
+  // matching user, and redirects to the in-app destination.
+  app.get("/api/auth/magic-login", async (req: any, res) => {
+    const token = typeof req.query.token === "string" ? req.query.token : "";
+    const nextRaw = typeof req.query.next === "string" ? req.query.next : "/";
+    // Strict same-origin path validation to defeat open-redirect tricks:
+    // require a single leading "/", forbid "//" (protocol-relative) and "\"
+    // (which some agents normalize to "/"), and only allow safe path chars.
+    // Anything else falls back to "/".
+    const safeNextPattern = /^\/(?![\/\\])[A-Za-z0-9\-._~!$&'()*+,;=:@%\/?#]*$/;
+    const next =
+      nextRaw === "/" || (safeNextPattern.test(nextRaw) && !nextRaw.includes("\\"))
+        ? nextRaw
+        : "/";
+
+    const result = verifyMagicToken(token);
+    if (!result.ok) {
+      // Bounce expired / bad links to the home page so they can sign in
+      // manually rather than seeing a raw error.
+      return res.redirect(`/?magic=expired`);
+    }
+
+    try {
+      const user = await storage.getUser(result.userId);
+      if (!user || !user.email) {
+        return res.redirect(`/?magic=expired`);
+      }
+
+      const sessionUser = createLocalUserSession(
+        user.id,
+        user.email,
+        user.firstName || "",
+        user.lastName || "",
+        user.profileImageUrl || null,
+      );
+      (req as any).session.passport = { user: sessionUser };
+      (req as any).session.save((err: any) => {
+        if (err) {
+          console.error("Magic login session save error:", err);
+          return res.redirect(`/?magic=expired`);
+        }
+        return res.redirect(next);
+      });
+    } catch (err) {
+      console.error("Magic login error:", err);
+      return res.redirect(`/?magic=expired`);
     }
   });
 
@@ -2708,6 +2760,10 @@ Visit Kindora Calendar: ${joinUrl}
       const endDay = new Intl.DateTimeFormat("en-US", { timeZone: userTz, day: "numeric" }).format(weekEnd);
       const weekRange = `${startStr}–${endDay}`;
 
+      // One magic-link per email send: lets the recipient hit "View Calendar"
+      // and land already signed in. Token is HMAC-signed and expires in 14d.
+      const calendarUrl = buildMagicCalendarUrl(user.id, getPublicBaseUrl(), "/");
+
       // Collect events from all families
       const allFamilySummaries: string[] = [];
       let totalEventCount = 0;
@@ -2748,6 +2804,7 @@ Visit Kindora Calendar: ${joinUrl}
           events: eventSummaries,
           recipientName,
           timezone: userTz,
+          calendarUrl,
         });
         
         const textContent = generateWeeklySummaryText({
@@ -2757,6 +2814,7 @@ Visit Kindora Calendar: ${joinUrl}
           events: eventSummaries,
           recipientName,
           timezone: userTz,
+          calendarUrl,
         });
         
         // Send email for this family
@@ -2849,7 +2907,11 @@ Visit Kindora Calendar: ${joinUrl}
         .sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
       const recipientName = user?.firstName || user?.email?.split('@')[0] || 'User';
-      
+
+      // Even in the preview, render the same magic-link the user would receive
+      // by email, so what they see matches what gets sent.
+      const calendarUrl = buildMagicCalendarUrl(userId, getPublicBaseUrl(), "/");
+
       const htmlContent = generateWeeklySummaryHtml({
         familyName: family.name,
         weekStart,
@@ -2857,6 +2919,7 @@ Visit Kindora Calendar: ${joinUrl}
         events: eventSummaries,
         recipientName,
         timezone: userTz,
+        calendarUrl,
       });
       
       res.setHeader('Content-Type', 'text/html');
@@ -3087,6 +3150,10 @@ Visit Kindora Calendar: ${joinUrl}
             const endDay = new Intl.DateTimeFormat("en-US", { timeZone: userTz, day: "numeric" }).format(weekEnd);
             const weekRange = `${startStr}–${endDay}`;
 
+            // Per-recipient magic-link so the "View Calendar" button auto-logs
+            // them in. Token is HMAC-signed and expires after 14 days.
+            const calendarUrl = buildMagicCalendarUrl(user.id, getPublicBaseUrl(), "/");
+
             const htmlContent = generateWeeklySummaryHtml({
               familyName: family.name,
               weekStart,
@@ -3094,6 +3161,7 @@ Visit Kindora Calendar: ${joinUrl}
               events: weekEvents,
               recipientName,
               timezone: userTz,
+              calendarUrl,
             });
 
             const textContent = generateWeeklySummaryText({
@@ -3103,6 +3171,7 @@ Visit Kindora Calendar: ${joinUrl}
               events: weekEvents,
               recipientName,
               timezone: userTz,
+              calendarUrl,
             });
 
             const result = await sendWeeklySummaryEmail(
