@@ -110,11 +110,29 @@ function GoogleCalendarSync() {
   const syncMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/google-calendar/sync"),
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      // Calendar pages use keys like ['/api/events?familyId=...'] — broad
+      // string-equal invalidation won't match, so use a predicate that
+      // matches any query whose first key starts with /api/events.
+      queryClient.invalidateQueries({
+        predicate: (q) => {
+          const k = q.queryKey?.[0];
+          return typeof k === "string" && k.startsWith("/api/events");
+        },
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/google-calendar/status"] });
+
+      const errCount = data.errors?.length ?? 0;
+      const fetched = data.fetched ?? data.created + data.updated;
+      const parts = [
+        `${data.created} new`,
+        `${data.updated} updated`,
+        `${fetched} fetched from Google`,
+      ];
+      if (errCount > 0) parts.push(`${errCount} error(s)`);
       toast({
-        title: "Google Calendar Synced",
-        description: `${data.created} new events added, ${data.updated} updated.`,
+        title: errCount > 0 ? "Sync finished with errors" : "Google Calendar synced",
+        description: parts.join(" · ") + (errCount > 0 ? `\nFirst error: ${data.errors[0]}` : ""),
+        variant: errCount > 0 ? "destructive" : "default",
       });
     },
     onError: (err: any) => {

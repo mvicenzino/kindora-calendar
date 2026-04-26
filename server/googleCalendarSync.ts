@@ -89,29 +89,45 @@ export async function listCalendars(accessToken: string): Promise<GCalCalendar[]
   }));
 }
 
-// Fetch events from a single Google Calendar
+// Fetch events from a single Google Calendar (handles pagination via nextPageToken)
 async function fetchCalendarEvents(accessToken: string, calendarId: string): Promise<GCalEvent[]> {
   // Sync 90 days back and 365 days forward
   const timeMin = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const timeMax = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
-  const params = new URLSearchParams({
-    maxResults: "500",
-    singleEvents: "true", // Expand recurring events into individual instances
-    orderBy: "startTime",
-    timeMin,
-    timeMax,
-  });
+  const all: any[] = [];
+  let pageToken: string | undefined;
+  let pages = 0;
+  const MAX_PAGES = 20; // safety: 20 pages × 500 = 10,000 events per calendar
 
-  const res = await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calendarId)}/events?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  const data = await res.json() as any;
-  if (!res.ok) {
-    console.error(`[GCalSync] Failed to fetch events for ${calendarId}:`, data);
-    return [];
+  do {
+    const params = new URLSearchParams({
+      maxResults: "500",
+      singleEvents: "true", // Expand recurring events into individual instances
+      orderBy: "startTime",
+      timeMin,
+      timeMax,
+    });
+    if (pageToken) params.set("pageToken", pageToken);
+
+    const res = await fetch(`${GCAL_API}/calendars/${encodeURIComponent(calendarId)}/events?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const data = await res.json() as any;
+    if (!res.ok) {
+      console.error(`[GCalSync] Failed to fetch events for ${calendarId}:`, data);
+      throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    }
+    all.push(...(data.items ?? []));
+    pageToken = data.nextPageToken;
+    pages++;
+  } while (pageToken && pages < MAX_PAGES);
+
+  if (pages >= MAX_PAGES && pageToken) {
+    console.warn(`[GCalSync] Calendar ${calendarId} hit page limit (${MAX_PAGES} pages, ${all.length} events). Some events may be missed.`);
   }
-  return (data.items ?? []).filter((e: any) => e.status !== "cancelled");
+
+  return all.filter((e: any) => e.status !== "cancelled");
 }
 
 // Strip HTML from Google Calendar descriptions and extract Zoom/Meet links cleanly
@@ -202,25 +218,47 @@ const CALENDAR_COLORS = [
 
 // Main sync function: pull selected calendars into Kindora
 export async function syncGoogleCalendars(userId: string, familyId: string): Promise<{
-  created: number; updated: number; skipped: number; errors: string[];
+  created: number; updated: number; skipped: number; fetched: number;
+  errors: string[]; perCalendar: Array<{ id: string; name?: string; fetched: number; created: number; updated: number; error?: string }>;
 }> {
   const conn = await storage.getGoogleCalendarConnection(userId);
   if (!conn || conn.selectedCalendarIds.length === 0) {
-    return { created: 0, updated: 0, skipped: 0, errors: ["No calendars selected"] };
+    return { created: 0, updated: 0, skipped: 0, fetched: 0, errors: ["No calendars selected"], perCalendar: [] };
   }
 
   const accessToken = await getValidAccessToken(userId);
+
+  // Refresh the calendar list so we know the human-readable name for each
+  // selected calendar (and so newly added Google calendars are visible in
+  // the UI on next /status fetch).
+  let calendarsByName: Record<string, string> = {};
+  try {
+    const cals = await listCalendars(accessToken);
+    calendarsByName = Object.fromEntries(cals.map(c => [c.id, c.summary]));
+  } catch (err) {
+    console.warn("[GCalSync] Could not refresh calendar list:", err);
+  }
+
   let created = 0;
   let updated = 0;
   let skipped = 0;
+  let fetched = 0;
   const errors: string[] = [];
+  const perCalendar: Array<{ id: string; name?: string; fetched: number; created: number; updated: number; error?: string }> = [];
 
   for (let i = 0; i < conn.selectedCalendarIds.length; i++) {
     const calId = conn.selectedCalendarIds[i];
     const color = CALENDAR_COLORS[i % CALENDAR_COLORS.length];
+    const calName = calendarsByName[calId];
+    let calFetched = 0;
+    let calCreated = 0;
+    let calUpdated = 0;
+    let calError: string | undefined;
 
     try {
       const gEvents = await fetchCalendarEvents(accessToken, calId);
+      calFetched = gEvents.length;
+      fetched += gEvents.length;
 
       for (const gEvent of gEvents) {
         const payload = mapGCalEvent(gEvent, familyId, color);
@@ -238,24 +276,36 @@ export async function syncGoogleCalendars(userId: string, familyId: string): Pro
               endTime: payload.endTime,
             });
             updated++;
+            calUpdated++;
           } else {
             await storage.createEvent(familyId, payload);
             created++;
+            calCreated++;
           }
         } catch (err) {
           console.error(`[GCalSync] Error processing event ${gEvent.id}:`, err);
-          errors.push(`Event "${gEvent.summary}": ${String(err)}`);
+          errors.push(`Event "${gEvent.summary}" in ${calName ?? calId}: ${String(err)}`);
         }
       }
     } catch (err) {
-      console.error(`[GCalSync] Error fetching calendar ${calId}:`, err);
-      errors.push(`Calendar ${calId}: ${String(err)}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[GCalSync] Error fetching calendar ${calId} (${calName ?? "unknown"}):`, err);
+      errors.push(`Calendar "${calName ?? calId}": ${msg}`);
+      calError = msg;
     }
+
+    perCalendar.push({ id: calId, name: calName, fetched: calFetched, created: calCreated, updated: calUpdated, error: calError });
   }
 
-  // Update last synced timestamp
-  await storage.updateGoogleCalendarConnection(userId, { lastSyncedAt: new Date() });
+  // Only update lastSyncedAt if at least one calendar succeeded; otherwise
+  // the UI's "synced X minutes ago" would be misleading.
+  if (errors.length === 0 || created + updated > 0) {
+    await storage.updateGoogleCalendarConnection(userId, { lastSyncedAt: new Date() });
+  }
 
-  console.log(`[GCalSync] Done — created=${created} updated=${updated} skipped=${skipped} errors=${errors.length}`);
-  return { created, updated, skipped, errors };
+  console.log(`[GCalSync] Done — fetched=${fetched} created=${created} updated=${updated} skipped=${skipped} errors=${errors.length}`);
+  if (perCalendar.length > 0) {
+    console.log(`[GCalSync] Per-calendar:`, perCalendar.map(p => `${p.name ?? p.id}: ${p.fetched} fetched, ${p.created} new, ${p.updated} upd${p.error ? ` (ERR: ${p.error})` : ""}`).join(" | "));
+  }
+  return { created, updated, skipped, fetched, errors, perCalendar };
 }
