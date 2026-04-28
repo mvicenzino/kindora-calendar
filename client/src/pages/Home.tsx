@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import ViewSwitcherBar, { type CalendarLayout, type CalendarView } from "@/components/ViewSwitcherBar";
+import { useCalendarDefaults } from "@/hooks/useCalendarDefaults";
 import SearchPanel from "@/components/SearchPanel";
 import TodayView from "@/components/TodayView";
 import WeekView from "@/components/WeekView";
@@ -37,8 +38,7 @@ export default function Home() {
   const { isCaregiver, can, isLoading: isRoleLoading } = useUserRole();
   const { theme, setTheme } = useTheme();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<CalendarView>('day');
-  const [layout, setLayout] = useState<CalendarLayout>('grid');
+  const { view, setView, layout, setLayout } = useCalendarDefaults();
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
   const [memberModalOpen, setMemberModalOpen] = useState(false);
