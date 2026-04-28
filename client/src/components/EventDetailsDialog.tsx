@@ -342,6 +342,7 @@ export default function EventDetailsDialog({ isOpen, onClose, onEdit, onDelete, 
                 eventId={event.id}
                 familyId={activeFamilyId}
                 currentUserId={currentUser?.id}
+                onNoteCreated={onClose}
               />
             </div>
           )}

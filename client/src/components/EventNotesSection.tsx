@@ -40,9 +40,10 @@ interface EventNotesSectionProps {
   familyId: string;
   currentUserId?: string;
   showEmojiPicker?: boolean;
+  onNoteCreated?: () => void;
 }
 
-export default function EventNotesSection({ eventId, familyId, currentUserId, showEmojiPicker = true }: EventNotesSectionProps) {
+export default function EventNotesSection({ eventId, familyId, currentUserId, showEmojiPicker = true, onNoteCreated }: EventNotesSectionProps) {
   const [newNote, setNewNote] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState('');
@@ -83,10 +84,13 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
       });
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', eventId, 'notes', familyId] });
-      // Also refresh the calendar list so the note-count badge on tiles updates.
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      // Also refresh any calendar/event-list query (keys like
+      // '/api/events?familyId=...') so the note-count badge updates immediately.
+      queryClient.invalidateQueries({
+        predicate: (q) => typeof q.queryKey[0] === 'string' && (q.queryKey[0] as string).startsWith('/api/events'),
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/all-event-notes'] });
       setNewNote('');
       setReplyContent('');
@@ -95,6 +99,11 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
         title: "Note added",
         description: "Your note has been added to this event.",
       });
+      // Close the parent dialog only when a top-level note was added
+      // so users can see the updated badge on the calendar tile.
+      if (!variables.parentNoteId) {
+        onNoteCreated?.();
+      }
     },
     onError: () => {
       toast({
@@ -111,7 +120,9 @@ export default function EventNotesSection({ eventId, familyId, currentUserId, sh
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', eventId, 'notes', familyId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      queryClient.invalidateQueries({
+        predicate: (q) => typeof q.queryKey[0] === 'string' && (q.queryKey[0] as string).startsWith('/api/events'),
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/all-event-notes'] });
       toast({
         title: "Note deleted",
