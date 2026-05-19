@@ -136,6 +136,27 @@ function AccountTab() {
     },
   });
 
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/checkout/create-session");
+      return res.json();
+    },
+    onSuccess: (data: { url: string }) => {
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Could not start checkout",
+        description: error.message || "Please try again in a moment.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const billingEnabled = import.meta.env.VITE_BILLING_ENABLED === "true";
+
   const sub = subscriptionQuery.data;
   const isFamily = sub?.tier === "family";
   const isCanceling = sub?.status === "canceling";
@@ -206,6 +227,8 @@ function AccountTab() {
               <Badge data-testid="badge-plan-tier" className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 no-default-hover-elevate no-default-active-elevate">
                 Family Plan
               </Badge>
+            ) : billingEnabled ? (
+              <Badge variant="secondary" data-testid="badge-plan-tier">Free</Badge>
             ) : (
               <Badge variant="secondary" data-testid="badge-plan-tier">Beta</Badge>
             )}
@@ -215,7 +238,9 @@ function AccountTab() {
               ? isCanceling
                 ? "Your subscription is set to cancel at the end of the billing period."
                 : "You have access to all premium features."
-              : "You're in the Kindora beta — full access, on us."}
+              : billingEnabled
+                ? "Start your 14-day free trial of the Kindora Family Plan — $7/month after. Cancel anytime."
+                : "You're in the Kindora beta — full access, on us."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -229,9 +254,30 @@ function AccountTab() {
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted-foreground pt-1">
-                Kindora is free during beta. Pricing will be introduced soon — beta users will get early notice.
-              </p>
+              {billingEnabled ? (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+                  <Button
+                    onClick={() => checkoutMutation.mutate()}
+                    disabled={checkoutMutation.isPending}
+                    data-testid="button-start-trial"
+                    className="gap-2"
+                  >
+                    {checkoutMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Crown className="h-4 w-4" />
+                    )}
+                    Start 14-day free trial
+                  </Button>
+                  <p className="text-xs text-muted-foreground">
+                    $7/month after trial. No charge today. Cancel anytime from your billing portal.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground pt-1">
+                  Kindora is free during beta. Pricing will be introduced soon — beta users will get early notice.
+                </p>
+              )}
             </div>
           )}
 
