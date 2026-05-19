@@ -615,6 +615,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ];
     const REQUIRED_CONFIRMATION = "DELETE DUPLICATES";
 
+    // Build proper Postgres array literals (drizzle's sql tag binds JS arrays
+    // as a single record param, which Postgres can't cast to varchar[]).
+    const userIdsArr = sql`ARRAY[${sql.join(TARGET_USER_IDS.map((v) => sql`${v}`), sql`, `)}]::varchar[]`;
+    const familyIdsArr = sql`ARRAY[${sql.join(TARGET_FAMILY_IDS.map((v) => sql`${v}`), sql`, `)}]::varchar[]`;
+
     try {
       const callerId = req.user.claims.sub;
       const callerEmail = (req.user.claims.email || "").toLowerCase();
@@ -650,11 +655,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Refuse if target families are not actually empty (defense in depth).
       const targetCheck = await db.execute(sql`
         SELECT
-          (SELECT COUNT(*)::int FROM events WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS events,
-          (SELECT COUNT(*)::int FROM medications WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS meds,
-          (SELECT COUNT(*)::int FROM symptom_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS symptoms,
-          (SELECT COUNT(*)::int FROM family_messages WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS msgs,
-          (SELECT COUNT(*)::int FROM care_documents WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])) AS docs
+          (SELECT COUNT(*)::int FROM events WHERE family_id = ANY(${familyIdsArr})) AS events,
+          (SELECT COUNT(*)::int FROM medications WHERE family_id = ANY(${familyIdsArr})) AS meds,
+          (SELECT COUNT(*)::int FROM symptom_entries WHERE family_id = ANY(${familyIdsArr})) AS symptoms,
+          (SELECT COUNT(*)::int FROM family_messages WHERE family_id = ANY(${familyIdsArr})) AS msgs,
+          (SELECT COUNT(*)::int FROM care_documents WHERE family_id = ANY(${familyIdsArr})) AS docs
       `);
       const tc: any = (targetCheck as any).rows?.[0] ?? (targetCheck as any)[0];
       const totalContent = (tc?.events ?? 0) + (tc?.meds ?? 0) + (tc?.symptoms ?? 0) + (tc?.msgs ?? 0) + (tc?.docs ?? 0);
@@ -667,7 +672,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify the targeted users are exactly who we think they are.
       const targetUsersCheck = await db.execute(sql`
-        SELECT id, email FROM users WHERE id = ANY(${TARGET_USER_IDS}::varchar[])
+        SELECT id, email FROM users WHERE id = ANY(${userIdsArr})
       `);
       const tuRows = ((targetUsersCheck as any).rows ?? targetUsersCheck ?? []) as Array<{ id: string; email: string }>;
       for (const u of tuRows) {
@@ -681,8 +686,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify the targeted users have NO memberships in any family other than their own targets.
       const stragglerMemberships = await db.execute(sql`
         SELECT user_id, family_id FROM family_memberships
-        WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])
-          AND family_id <> ALL(${TARGET_FAMILY_IDS}::varchar[])
+        WHERE user_id = ANY(${userIdsArr})
+          AND family_id <> ALL(${familyIdsArr})
       `);
       const sm = ((stragglerMemberships as any).rows ?? stragglerMemberships ?? []) as any[];
       if (sm.length > 0) {
@@ -696,8 +701,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // (or any other family). If they have, fail closed — we won't silently delete that data.
       const authoredCheck = await db.execute(sql`
         SELECT
-          (SELECT COUNT(*)::int FROM event_notes WHERE author_user_id = ANY(${TARGET_USER_IDS}::varchar[]) AND family_id <> ALL(${TARGET_FAMILY_IDS}::varchar[])) AS notes,
-          (SELECT COUNT(*)::int FROM family_messages WHERE author_user_id = ANY(${TARGET_USER_IDS}::varchar[]) AND family_id <> ALL(${TARGET_FAMILY_IDS}::varchar[])) AS msgs
+          (SELECT COUNT(*)::int FROM event_notes WHERE author_user_id = ANY(${userIdsArr}) AND family_id <> ALL(${familyIdsArr})) AS notes,
+          (SELECT COUNT(*)::int FROM family_messages WHERE author_user_id = ANY(${userIdsArr}) AND family_id <> ALL(${familyIdsArr})) AS msgs
       `);
       const ac: any = (authoredCheck as any).rows?.[0] ?? (authoredCheck as any)[0];
       if ((ac?.notes ?? 0) + (ac?.msgs ?? 0) > 0) {
@@ -710,40 +715,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Run all deletes in a single transaction.
       const summary = await db.transaction(async (tx) => {
         // Tables that reference user_id directly
-        await tx.execute(sql`DELETE FROM family_memberships WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM family_members WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM push_subscriptions WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM advisor_messages WHERE conversation_id IN (SELECT id FROM advisor_conversations WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]))`);
-        await tx.execute(sql`DELETE FROM advisor_conversations WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM advisor_usage WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM google_calendar_connections WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM kira_memories WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM weekly_summary_preferences WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[]) OR family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM weekly_summary_schedules WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM api_keys WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM beta_feedback WHERE user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM tasks WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM emergency_bridge_tokens WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR created_by_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM parsed_invoices WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR created_by_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM caregiver_pay_rates WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR caregiver_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM caregiver_time_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR caregiver_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM hydration_logs WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM symptom_system_ratings WHERE entry_id IN (SELECT id FROM symptom_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]))`);
-        await tx.execute(sql`DELETE FROM symptom_entries WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM medication_logs WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM medications WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM event_notes WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR author_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM messages WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM family_messages WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[]) OR author_user_id = ANY(${TARGET_USER_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM care_documents WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
-        await tx.execute(sql`DELETE FROM events WHERE family_id = ANY(${TARGET_FAMILY_IDS}::varchar[])`);
+        await tx.execute(sql`DELETE FROM family_memberships WHERE user_id = ANY(${userIdsArr}) OR family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM family_members WHERE user_id = ANY(${userIdsArr}) OR family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM push_subscriptions WHERE user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM advisor_messages WHERE conversation_id IN (SELECT id FROM advisor_conversations WHERE user_id = ANY(${userIdsArr}))`);
+        await tx.execute(sql`DELETE FROM advisor_conversations WHERE user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM advisor_usage WHERE user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM google_calendar_connections WHERE user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM kira_memories WHERE user_id = ANY(${userIdsArr}) OR family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM weekly_summary_preferences WHERE user_id = ANY(${userIdsArr}) OR family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM weekly_summary_schedules WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM api_keys WHERE user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM beta_feedback WHERE user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM tasks WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM emergency_bridge_tokens WHERE family_id = ANY(${familyIdsArr}) OR created_by_user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM parsed_invoices WHERE family_id = ANY(${familyIdsArr}) OR created_by_user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM caregiver_pay_rates WHERE family_id = ANY(${familyIdsArr}) OR caregiver_user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM caregiver_time_entries WHERE family_id = ANY(${familyIdsArr}) OR caregiver_user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM hydration_logs WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM symptom_system_ratings WHERE entry_id IN (SELECT id FROM symptom_entries WHERE family_id = ANY(${familyIdsArr}))`);
+        await tx.execute(sql`DELETE FROM symptom_entries WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM medication_logs WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM medications WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM event_notes WHERE family_id = ANY(${familyIdsArr}) OR author_user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM messages WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM family_messages WHERE family_id = ANY(${familyIdsArr}) OR author_user_id = ANY(${userIdsArr})`);
+        await tx.execute(sql`DELETE FROM care_documents WHERE family_id = ANY(${familyIdsArr})`);
+        await tx.execute(sql`DELETE FROM events WHERE family_id = ANY(${familyIdsArr})`);
 
         // Now delete the empty families themselves
-        const famDel = await tx.execute(sql`DELETE FROM families WHERE id = ANY(${TARGET_FAMILY_IDS}::varchar[]) RETURNING id, name`);
+        const famDel = await tx.execute(sql`DELETE FROM families WHERE id = ANY(${familyIdsArr}) RETURNING id, name`);
         const familiesDeleted = ((famDel as any).rows ?? famDel ?? []) as Array<{ id: string; name: string }>;
 
         // Finally delete the user accounts
-        const userDel = await tx.execute(sql`DELETE FROM users WHERE id = ANY(${TARGET_USER_IDS}::varchar[]) RETURNING id, email`);
+        const userDel = await tx.execute(sql`DELETE FROM users WHERE id = ANY(${userIdsArr}) RETURNING id, email`);
         const usersDeleted = ((userDel as any).rows ?? userDel ?? []) as Array<{ id: string; email: string }>;
 
         return { familiesDeleted, usersDeleted };
