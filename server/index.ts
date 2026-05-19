@@ -136,12 +136,35 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+
+      const SENSITIVE_PATH_PREFIXES = [
+        "/api/auth",
+        "/api/login",
+        "/api/register",
+        "/api/users",
+        "/api/families",
+        "/api/family",
+        "/api/messages",
+        "/api/family-messages",
+        "/api/event-notes",
+        "/api/symptoms",
+        "/api/medications",
+        "/api/care-documents",
+        "/api/advisor",
+        "/api/stripe",
+        "/api/push",
+        "/api/google-calendar",
+        "/api/schedule",
+      ];
+      const isSensitive = SENSITIVE_PATH_PREFIXES.some(p => path.startsWith(p));
+
+      if (capturedJsonResponse && !isSensitive && res.statusCode >= 400) {
+        const summary = JSON.stringify(capturedJsonResponse).slice(0, 200);
+        logLine += ` :: ${summary}`;
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
+      if (logLine.length > 200) {
+        logLine = logLine.slice(0, 199) + "…";
       }
 
       log(logLine);
