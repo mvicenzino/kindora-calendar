@@ -355,7 +355,7 @@ export default function Intro() {
 
       <div className="pb-8 px-6 text-center">
         <p className="text-white/20 text-xs">
-          Setup takes about 2 minutes · Free during beta
+          Setup takes about 2 minutes · 14-day free trial, cancel anytime
         </p>
       </div>
     </div>

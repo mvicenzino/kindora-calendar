@@ -178,7 +178,6 @@ export default function Landing() {
             <img src={logo} alt="Kindora" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex-shrink-0" />
             <span className="flex items-center gap-1.5">
               <span className="text-lg sm:text-xl font-bold text-white">Kindora</span>
-              <span className="text-[10px] font-semibold px-1.5 py-px rounded-full border border-white/30 text-white/60 leading-none tracking-wide">beta</span>
             </span>
           </div>
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">

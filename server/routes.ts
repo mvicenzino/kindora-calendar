@@ -4146,11 +4146,35 @@ Visit Kindora Calendar: ${joinUrl}
       const user = await storage.getUser(userId);
       if (!user) return res.status(404).json({ message: "User not found" });
 
+      // If the user has a live Stripe subscription, fetch trial / period info
+      // so the UI can show real dates ("Trial ends Mar 20" / "Cancels Apr 4").
+      let trialEnd: number | null = null;
+      let currentPeriodEnd: number | null = null;
+      let cancelAtPeriodEnd = false;
+      let liveStatus: string | null = null;
+
+      if (user.stripeSubscriptionId) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          const sub: any = await stripe.subscriptions.retrieve(user.stripeSubscriptionId);
+          trialEnd = sub.trial_end ?? null;
+          currentPeriodEnd = sub.current_period_end ?? null;
+          cancelAtPeriodEnd = !!sub.cancel_at_period_end;
+          liveStatus = sub.status ?? null;
+        } catch (e: any) {
+          console.warn("Could not fetch live subscription from Stripe:", e?.message);
+        }
+      }
+
       res.json({
         tier: user.subscriptionTier || "free",
         status: user.subscriptionStatus || "inactive",
         stripeCustomerId: user.stripeCustomerId || null,
         stripeSubscriptionId: user.stripeSubscriptionId || null,
+        trialEnd,
+        currentPeriodEnd,
+        cancelAtPeriodEnd,
+        liveStatus,
       });
     } catch (error: any) {
       console.error("Error fetching subscription status:", error);

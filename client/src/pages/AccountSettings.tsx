@@ -27,6 +27,23 @@ interface SubscriptionStatus {
   status: string;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
+  trialEnd: number | null;
+  currentPeriodEnd: number | null;
+  cancelAtPeriodEnd: boolean;
+  liveStatus: string | null;
+}
+
+function formatEpoch(epoch: number | null): string {
+  if (!epoch) return "the end of your billing period";
+  try {
+    return new Date(epoch * 1000).toLocaleDateString(undefined, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return "the end of your billing period";
+  }
 }
 
 const PLAN_FEATURES = {
@@ -159,7 +176,12 @@ function AccountTab() {
 
   const sub = subscriptionQuery.data;
   const isFamily = sub?.tier === "family";
-  const isCanceling = sub?.status === "canceling";
+  const isCanceling = sub?.status === "canceling" || sub?.cancelAtPeriodEnd === true;
+  const inTrial = sub?.liveStatus === "trialing";
+  const trialEndsLabel = formatEpoch(sub?.trialEnd ?? null);
+  const periodEndsLabel = formatEpoch(sub?.currentPeriodEnd ?? null);
+  // When in trial, the next billing date is the trial end. Otherwise it's the period end.
+  const nextChargeLabel = inTrial ? trialEndsLabel : periodEndsLabel;
 
   const [firstName, setFirstName] = useState(user?.firstName || "");
   const [lastName, setLastName] = useState(user?.lastName || "");
@@ -236,8 +258,12 @@ function AccountTab() {
           <CardDescription>
             {isFamily
               ? isCanceling
-                ? "Your subscription is set to cancel at the end of the billing period."
-                : "You have access to all premium features."
+                ? inTrial
+                  ? `Your free trial will end on ${trialEndsLabel} and you won't be charged.`
+                  : `Your subscription will end on ${periodEndsLabel}. You'll keep full access until then.`
+                : inTrial
+                  ? `Free trial active. First charge of $7 on ${trialEndsLabel}. Cancel anytime before then.`
+                  : `Family Plan active. Next charge on ${nextChargeLabel}.`
               : billingEnabled
                 ? "Start your 14-day free trial of the Kindora Family Plan — $7/month after. Cancel anytime."
                 : "You're in the Kindora beta — full access, on us."}
@@ -340,10 +366,13 @@ function AccountTab() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
+                        <AlertDialogTitle>
+                          {inTrial ? "Cancel your free trial?" : "Cancel your subscription?"}
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
-                          Your Family Plan will remain active until the end of your current billing period.
-                          After that, you'll be downgraded to the Free Plan with limited features.
+                          {inTrial
+                            ? `You won't be charged. You'll keep full access until ${trialEndsLabel}, then your account moves to the Free Plan.`
+                            : `Your Family Plan stays active until ${periodEndsLabel}. After that, your account moves to the Free Plan with limited features. No further charges.`}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -356,7 +385,7 @@ function AccountTab() {
                           {cancelMutation.isPending ? (
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           ) : null}
-                          Yes, Cancel
+                          {inTrial ? "Yes, cancel trial" : "Yes, cancel"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
