@@ -10,7 +10,7 @@ import { registerApiKeyRoutes } from "./apiKeyRoutes";
 import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema, insertTaskSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { requireFamily, requireCare } from "./tierMiddleware";
+import { requireFamily } from "./tierMiddleware";
 import { setupGoogleAuth } from "./googleAuth";
 import { getUserFamilyRole, PermissionError, hasPermission, getPermissionsForRole } from "./permissions";
 import type { FamilyRole } from "@shared/schema";
@@ -2079,7 +2079,7 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
-  app.get("/api/medications", isAuthenticated, requireCare, async (req: any, res) => {
+  app.get("/api/medications", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2160,7 +2160,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Create a medication (owners and members only)
-  app.post("/api/medications", isAuthenticated, requireCare, async (req: any, res) => {
+  app.post("/api/medications", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2601,7 +2601,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Get user's time entries
-  app.get("/api/caregiver/time-entries", isAuthenticated, requireCare, async (req: any, res) => {
+  app.get("/api/caregiver/time-entries", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -2624,7 +2624,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Create a new time entry
-  app.post("/api/caregiver/time-entries", isAuthenticated, requireCare, async (req: any, res) => {
+  app.post("/api/caregiver/time-entries", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3246,7 +3246,7 @@ Visit Kindora Calendar: ${joinUrl}
   // ========== Care Documents Routes ==========
   
   // Get all care documents for a family
-  app.get("/api/care-documents", isAuthenticated, requireCare, async (req: any, res) => {
+  app.get("/api/care-documents", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3350,7 +3350,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
   
   // Create a care document record after upload
-  app.post("/api/care-documents", isAuthenticated, requireCare, async (req: any, res) => {
+  app.post("/api/care-documents", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3606,7 +3606,7 @@ Visit Kindora Calendar: ${joinUrl}
   // ========================================
   
   // Get emergency bridge tokens for a family (authenticated)
-  app.get("/api/emergency-bridge/tokens", isAuthenticated, requireCare, async (req: any, res) => {
+  app.get("/api/emergency-bridge/tokens", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -3633,7 +3633,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
   
   // Create an emergency bridge token (authenticated)
-  app.post("/api/emergency-bridge/tokens", isAuthenticated, requireCare, async (req: any, res) => {
+  app.post("/api/emergency-bridge/tokens", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
@@ -4373,7 +4373,7 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // NLP Calendar Ask — answers natural language questions about the family's events
-  app.post("/api/calendar/ask", isAuthenticated, requireCare, async (req: any, res) => {
+  app.post("/api/calendar/ask", isAuthenticated, requireFamily, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { question, familyId: bodyFamilyId, localNow, tzOffsetMinutes } = req.body;
@@ -4487,6 +4487,9 @@ Always return valid JSON matching one of the three formats above.`,
 
       // Handle ADD EVENT intent
       if (parsed.intent === 'add' && parsed.event) {
+        if (!hasPermission({ userId, familyId, role }, 'canCreateEvents')) {
+          return res.status(403).json({ error: "You don't have permission to create events." });
+        }
         const { title, startTime, endTime, category, description, location } = parsed.event;
 
         if (!title || !startTime || !endTime) {
@@ -4535,6 +4538,9 @@ Always return valid JSON matching one of the three formats above.`,
 
       // Handle RESCHEDULE intent
       if (parsed.intent === 'reschedule' && parsed.eventId && parsed.newStartTime && parsed.newEndTime) {
+        if (!hasPermission({ userId, familyId, role }, 'canEditEvents')) {
+          return res.status(403).json({ error: "You don't have permission to reschedule events." });
+        }
         const { eventId, newStartTime, newEndTime } = parsed;
 
         // Verify the event belongs to this family
