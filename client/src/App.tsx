@@ -35,6 +35,7 @@ import Tasks from "@/pages/Tasks";
 import FamilyDashboard from "@/pages/FamilyDashboard";
 import NotFound from "@/pages/not-found";
 import AppSidebar from "@/components/AppSidebar";
+import AdminActivityBanner from "@/components/AdminActivityBanner";
 import Header from "@/components/Header";
 import ThemeToggle from "@/components/ThemeToggle";
 import FamilySelector from "@/components/FamilySelector";
@@ -178,6 +179,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <Header />
             </div>
           </header>
+          <AdminActivityBanner />
           <DemoBanner />
           <main className="flex-1 overflow-y-auto overflow-x-hidden">
             {children}
