@@ -161,7 +161,7 @@ export default function Help() {
           <p className="text-sm text-muted-foreground mb-5 max-w-sm mx-auto">During beta, every support message goes directly to our founder. We typically respond within 24 hours.</p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link href="/support"><Button className="gap-2">Contact Support<ArrowRight className="w-4 h-4" /></Button></Link>
-            <a href="mailto:mvicenzino@gmail.com"><Button variant="outline">Email directly</Button></a>
+            <a href="mailto:mike@kindora.ai"><Button variant="outline">Email directly</Button></a>
           </div>
         </div>
       </main>

@@ -99,7 +99,7 @@ export default function HelpDrawer({ open, onClose }: HelpDrawerProps) {
             <Link href="/support" onClick={onClose} className="flex-1">
               <Button size="sm" className="w-full gap-1.5 text-xs"><MessageSquare className="w-3.5 h-3.5" />Contact Support</Button>
             </Link>
-            <a href="mailto:mvicenzino@gmail.com" className="flex-1">
+            <a href="mailto:mike@kindora.ai" className="flex-1">
               <Button size="sm" variant="outline" className="w-full text-xs">Email us</Button>
             </a>
           </div>

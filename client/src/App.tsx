@@ -76,7 +76,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
           >
             Reload App
           </button>
-          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", marginTop: "0.25rem" }}>If this keeps happening, contact support@kindora.ai</p>
+          <p style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.3)", marginTop: "0.25rem" }}>If this keeps happening, contact mike@kindora.ai</p>
         </div>
       );
     }

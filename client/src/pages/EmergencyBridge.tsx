@@ -100,8 +100,8 @@ export default function EmergencyBridge() {
             </div>
             <p className="text-xs text-muted-foreground pt-1">
               Need help? Contact{' '}
-              <a href="mailto:support@kindora.ai" className="text-primary underline underline-offset-2">
-                support@kindora.ai
+              <a href="mailto:mike@kindora.ai" className="text-primary underline underline-offset-2">
+                mike@kindora.ai
               </a>
             </p>
           </CardContent>

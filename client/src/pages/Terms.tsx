@@ -125,7 +125,7 @@ export default function Terms() {
           <section className="space-y-3">
             <h3 className="text-lg font-semibold text-foreground">13. Contact</h3>
             <p className="text-muted-foreground leading-relaxed">
-              If you have questions about these Terms, please contact us at <a href="mailto:support@kindora.ai" className="text-primary underline decoration-primary/40 hover:decoration-primary transition-colors" data-testid="link-terms-email">support@kindora.ai</a>.
+              If you have questions about these Terms, please contact us at <a href="mailto:mike@kindora.ai" className="text-primary underline decoration-primary/40 hover:decoration-primary transition-colors" data-testid="link-terms-email">mike@kindora.ai</a>.
             </p>
           </section>
         </div>
