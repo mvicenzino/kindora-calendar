@@ -289,17 +289,17 @@ export default function AppSidebar() {
             <BookOpen className="w-4 h-4 flex-shrink-0" />
           </button>
 
+          <button onClick={function() { setHelpOpen(true); }} data-testid="button-sidebar-support" className="flex items-center gap-2 w-full px-2.5 py-2 rounded-md bg-primary/10 border border-primary/20 text-primary hover-elevate active-elevate-2 transition-colors mb-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2" title="Help and Support">
+            <HelpCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-xs font-semibold group-data-[collapsible=icon]:hidden">Help &amp; Support</span>
+          </button>
           <button onClick={() => setReleaseNotesOpen(true)} data-testid="button-release-notes" className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-0.5 group-data-[collapsible=icon]:justify-center" title="What's New">
             <History className="w-4 h-4 flex-shrink-0" />
             <span className="text-[11px] font-medium group-data-[collapsible=icon]:hidden">What's New</span>
           </button>
-          <button onClick={openFeedback} data-testid="button-beta-feedback" className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-0.5 group-data-[collapsible=icon]:justify-center" title="Share Beta Feedback">
+          <button onClick={openFeedback} data-testid="button-beta-feedback" className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors mb-1 group-data-[collapsible=icon]:justify-center" title="Share Beta Feedback">
             <MessageSquarePlus className="w-4 h-4 flex-shrink-0" />
             <span className="text-[11px] font-medium group-data-[collapsible=icon]:hidden">Beta Feedback</span>
-          </button>
-          <button onClick={function() { setHelpOpen(true); }} data-testid="button-sidebar-support" className="flex items-center gap-2 w-full px-2.5 py-2 rounded-md bg-primary/10 border border-primary/20 text-primary hover-elevate active-elevate-2 transition-colors mb-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:p-2" title="Help and Support">
-            <HelpCircle className="w-4 h-4 flex-shrink-0" />
-            <span className="text-xs font-semibold group-data-[collapsible=icon]:hidden">Help &amp; Support</span>
           </button>
           <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
             <Avatar className="w-5 h-5 flex-shrink-0">
