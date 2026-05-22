@@ -13,7 +13,17 @@ const BETA_MODE = process.env.BETA_MODE === "true";
 
 async function getUserTier(userId: string): Promise<SubscriptionTier> {
   const user = await storage.getUser(userId);
-  const tier = (user?.subscriptionTier as SubscriptionTier) || "free";
+  if (!user) return "free";
+
+  // Trialing or active Stripe subscribers get full Family access even if
+  // the tier column wasn't explicitly set by the webhook.
+  const status = user.subscriptionStatus;
+  if (status === "trialing" || status === "active") {
+    const tier = (user.subscriptionTier as SubscriptionTier) || "family";
+    return tier in TIER_RANK ? tier : "family";
+  }
+
+  const tier = (user.subscriptionTier as SubscriptionTier) || "free";
   return tier in TIER_RANK ? tier : "free";
 }
 
@@ -24,6 +34,10 @@ function requireTier(minimumTier: SubscriptionTier): RequestHandler {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      // Demo users bypass tier gating — the demo is a sales surface and
+      // must show every feature working.
+      if (userId.startsWith("demo-")) return next();
 
       const userTier = await getUserTier(userId);
 
