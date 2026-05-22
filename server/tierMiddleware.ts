@@ -9,7 +9,10 @@ const TIER_RANK: Record<SubscriptionTier, number> = {
   care: 2,
 };
 
-const BETA_MODE = process.env.BETA_MODE === "true";
+// BETA_LAUNCH: paywall temporarily disabled while we onboard beta users.
+// Flip this back to `process.env.BETA_MODE === "true"` (or simpler, just
+// delete this override) when ready to re-enforce subscription tiers.
+const BETA_MODE = true;
 
 async function getUserTier(userId: string): Promise<SubscriptionTier> {
   const user = await storage.getUser(userId);
