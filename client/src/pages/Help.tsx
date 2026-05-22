@@ -37,7 +37,7 @@ const FAQ_ITEMS: FAQItem[] = [
   { category: "Caregiving", question: "How does caregiver time tracking work?", answer: "In the Care section, caregivers can log their hours under the Time Tracking tab. Family owners can set an hourly pay rate in Settings. The dashboard shows total hours worked and earnings for the current period." },
   { category: "Caregiving", question: "What is Emergency Bridge mode?", answer: "Emergency Bridge creates a temporary secure link you can share with a doctor or emergency contact. It gives them read-only access to relevant care information — medications, conditions, emergency contacts — without needing a Kindora account." },
   { category: "Documents", question: "What can I store in the Documents vault?", answer: "Insurance cards, medical records, care plans, legal documents, and advance directives. Only family owners and caregivers with permission can access them." },
-  { category: "Account", question: "How do I contact support or give feedback?", answer: "Use the Contact Support button below, or email us directly at mvicenzino@gmail.com. During beta, every message goes directly to our founder and we typically respond within 24 hours." },
+  { category: "Account", question: "How do I contact support or give feedback?", answer: "Use the Contact Support button below, or email us directly at mike@kindora.ai. During beta, every message goes directly to our founder and we typically respond within 24 hours." },
 ];
 
 const CATEGORIES = ["All", "Getting Started", "Calendar", "Caregiving", "Documents", "Account"];
