@@ -1,0 +1,1 @@
+- [Per-user Google OAuth pattern](google-oauth-per-user.md) — how Calendar & Drive each store per-user refresh tokens; never use shared Replit Connectors for user data (privacy leak).

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { ResourcesSection } from "@/components/ResourcesSection";
@@ -137,11 +137,26 @@ export default function Documents() {
 
   const currentFolderId = driveFolderStack[driveFolderStack.length - 1]?.id;
   
-  const { data: driveStatus } = useQuery<{ connected: boolean }>({
+  const { data: driveStatus } = useQuery<{ connected: boolean; googleEmail?: string | null }>({
     queryKey: ['/api/google-drive/status'],
     enabled: !!activeFamilyId && can('canViewDocuments'),
     staleTime: 60000,
   });
+
+  // Show a toast after the Google Drive OAuth redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gdrive = params.get("gdrive");
+    if (gdrive === "connected") {
+      toast({ title: "Google Drive connected!", description: "You can now import files from your Drive." });
+      queryClient.invalidateQueries({ queryKey: ['/api/google-drive/status'] });
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (gdrive === "error") {
+      const reason = params.get("reason") ?? "unknown";
+      toast({ title: "Couldn't connect Google Drive", description: `Error: ${reason}. Please try again.`, variant: "destructive" });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
   
   const { data: driveFilesData, isLoading: isLoadingDriveFiles, refetch: refetchDriveFiles } = useQuery<{ files: DriveFile[], nextPageToken?: string }>({
     queryKey: ['/api/google-drive/files', currentFolderId],
@@ -401,7 +416,7 @@ export default function Documents() {
             
             {canUpload && activeTab === "vault" && (
               <div className="flex items-center gap-2">
-                {driveStatus?.connected && (
+                {driveStatus?.connected ? (
                   <Button 
                     variant="outline"
                     onClick={openDriveDialog}
@@ -410,6 +425,16 @@ export default function Documents() {
                   >
                     <SiGoogledrive className="w-4 h-4" />
                     <span className="hidden sm:inline">Import from </span>Drive
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline"
+                    onClick={() => { window.location.href = "/api/google-drive/connect"; }}
+                    className="gap-2 text-xs"
+                    data-testid="button-connect-drive"
+                  >
+                    <SiGoogledrive className="w-4 h-4" />
+                    <span className="hidden sm:inline">Connect </span>Drive
                   </Button>
                 )}
                 <Button 

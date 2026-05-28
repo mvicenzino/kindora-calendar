@@ -1,50 +1,81 @@
 import { google } from 'googleapis';
+import { storage } from './storage';
 
-let connectionSettings: any;
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
-async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
-  }
-  
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
-    : null;
+export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
-
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-drive',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
-      }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
-
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
-
-  if (!connectionSettings || !accessToken) {
-    throw new Error('Google Drive not connected');
-  }
-  return accessToken;
+// Resolve the Drive-specific OAuth callback URL
+export function resolveDriveCallbackURL(): string {
+  if (process.env.GOOGLE_DRIVE_CALLBACK_URL) return process.env.GOOGLE_DRIVE_CALLBACK_URL;
+  if (process.env.NODE_ENV === "production") return "https://kindora.ai/api/google-drive/callback";
+  const domain = (process.env.REPLIT_DOMAINS || "").split(",")[0].trim();
+  return domain
+    ? `https://${domain}/api/google-drive/callback`
+    : "http://localhost:5000/api/google-drive/callback";
 }
 
-async function getUncachableGoogleDriveClient() {
-  const accessToken = await getAccessToken();
+// Get a valid access token for a specific user, refreshing if needed
+export async function getValidDriveAccessToken(userId: string): Promise<string> {
+  const conn = await storage.getGoogleDriveConnection(userId);
+  if (!conn) throw new Error("No Google Drive connection found");
 
-  const oauth2Client = new google.auth.OAuth2();
-  oauth2Client.setCredentials({
-    access_token: accessToken
+  const now = new Date();
+  // Use cached token if still valid (with 60s buffer)
+  if (conn.accessToken && conn.accessTokenExpiresAt && conn.accessTokenExpiresAt > new Date(now.getTime() + 60_000)) {
+    return conn.accessToken;
+  }
+
+  // Refresh the token
+  const body = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+    refresh_token: conn.refreshToken,
+    grant_type: "refresh_token",
   });
 
+  const res = await fetch(GOOGLE_TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: body.toString(),
+  });
+
+  const data = await res.json() as any;
+  if (!res.ok || !data.access_token) {
+    throw new Error(`Drive token refresh failed: ${JSON.stringify(data)}`);
+  }
+
+  const expiresAt = new Date(now.getTime() + (data.expires_in ?? 3600) * 1000);
+  await storage.updateGoogleDriveConnection(userId, {
+    accessToken: data.access_token,
+    accessTokenExpiresAt: expiresAt,
+  });
+
+  return data.access_token;
+}
+
+// Build an authenticated Drive client for a specific user
+async function getDriveClientForUser(userId: string) {
+  const accessToken = await getValidDriveAccessToken(userId);
+
+  const oauth2Client = new google.auth.OAuth2();
+  oauth2Client.setCredentials({ access_token: accessToken });
+
   return google.drive({ version: 'v3', auth: oauth2Client });
+}
+
+// Fetch the connected Google account's email (for display)
+export async function fetchGoogleEmail(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    return data.email ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export interface DriveFile {
@@ -57,13 +88,13 @@ export interface DriveFile {
   webViewLink?: string;
 }
 
-export async function listDriveFiles(folderId?: string, pageToken?: string): Promise<{ files: DriveFile[], nextPageToken?: string }> {
-  const drive = await getUncachableGoogleDriveClient();
-  
+export async function listDriveFiles(userId: string, folderId?: string, pageToken?: string): Promise<{ files: DriveFile[], nextPageToken?: string }> {
+  const drive = await getDriveClientForUser(userId);
+
   // Use 'root' to show items in My Drive root, or specific folder ID
   const parentId = folderId || 'root';
   const query = `'${parentId}' in parents and trashed = false`;
-  
+
   const response = await drive.files.list({
     q: query,
     pageSize: 50,
@@ -81,9 +112,18 @@ export async function listDriveFiles(folderId?: string, pageToken?: string): Pro
   };
 }
 
-export async function getDriveFile(fileId: string): Promise<DriveFile> {
-  const drive = await getUncachableGoogleDriveClient();
-  
+export async function getDriveFileMeta(userId: string, fileId: string): Promise<{ id: string; name: string; mimeType: string; size?: string }> {
+  const drive = await getDriveClientForUser(userId);
+  const response = await drive.files.get({
+    fileId: fileId,
+    fields: 'id, name, mimeType, size',
+  });
+  return response.data as { id: string; name: string; mimeType: string; size?: string };
+}
+
+export async function getDriveFile(userId: string, fileId: string): Promise<DriveFile> {
+  const drive = await getDriveClientForUser(userId);
+
   const response = await drive.files.get({
     fileId: fileId,
     fields: 'id, name, mimeType, size, modifiedTime, iconLink, webViewLink',
@@ -92,28 +132,28 @@ export async function getDriveFile(fileId: string): Promise<DriveFile> {
   return response.data as DriveFile;
 }
 
-export async function downloadDriveFile(fileId: string): Promise<{ buffer: Buffer, mimeType: string, name: string, size: string }> {
-  const drive = await getUncachableGoogleDriveClient();
-  
+export async function downloadDriveFile(userId: string, fileId: string): Promise<{ buffer: Buffer, mimeType: string, name: string, size: string }> {
+  const drive = await getDriveClientForUser(userId);
+
   const metadata = await drive.files.get({
     fileId: fileId,
     fields: 'id, name, mimeType, size',
   });
 
   const { name, mimeType, size } = metadata.data;
-  
+
   if (!name || !mimeType) {
     throw new Error('Could not retrieve file metadata');
   }
 
   const isGoogleDoc = mimeType.startsWith('application/vnd.google-apps.');
-  
+
   let buffer: Buffer;
-  
+
   if (isGoogleDoc) {
     let exportMimeType = 'application/pdf';
     let exportExtension = '.pdf';
-    
+
     if (mimeType === 'application/vnd.google-apps.spreadsheet') {
       exportMimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       exportExtension = '.xlsx';
@@ -121,14 +161,14 @@ export async function downloadDriveFile(fileId: string): Promise<{ buffer: Buffe
       exportMimeType = 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
       exportExtension = '.pptx';
     }
-    
+
     const response = await drive.files.export({
       fileId: fileId,
       mimeType: exportMimeType,
     }, { responseType: 'arraybuffer' });
-    
+
     buffer = Buffer.from(response.data as ArrayBuffer);
-    
+
     const baseName = name.replace(/\.[^/.]+$/, '');
     return {
       buffer,
@@ -141,9 +181,9 @@ export async function downloadDriveFile(fileId: string): Promise<{ buffer: Buffe
       fileId: fileId,
       alt: 'media',
     }, { responseType: 'arraybuffer' });
-    
+
     buffer = Buffer.from(response.data as ArrayBuffer);
-    
+
     return {
       buffer,
       mimeType,
@@ -153,9 +193,9 @@ export async function downloadDriveFile(fileId: string): Promise<{ buffer: Buffe
   }
 }
 
-export async function checkDriveConnection(): Promise<boolean> {
+export async function checkDriveConnection(userId: string): Promise<boolean> {
   try {
-    await getAccessToken();
+    await getValidDriveAccessToken(userId);
     return true;
   } catch {
     return false;

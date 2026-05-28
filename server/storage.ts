@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, type Task, type InsertTask, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections, tasks } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, type GoogleDriveConnection, type InsertGoogleDriveConnection, type Task, type InsertTask, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections, googleDriveConnections, tasks } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -180,6 +180,10 @@ export interface IStorage {
   upsertGoogleCalendarConnection(data: Omit<InsertGoogleCalendarConnection, "id">): Promise<GoogleCalendarConnection>;
   updateGoogleCalendarConnection(userId: string, updates: Partial<GoogleCalendarConnection>): Promise<void>;
   deleteGoogleCalendarConnection(userId: string): Promise<void>;
+  getGoogleDriveConnection(userId: string): Promise<GoogleDriveConnection | null>;
+  upsertGoogleDriveConnection(data: Omit<InsertGoogleDriveConnection, "id">): Promise<GoogleDriveConnection>;
+  updateGoogleDriveConnection(userId: string, updates: Partial<GoogleDriveConnection>): Promise<void>;
+  deleteGoogleDriveConnection(userId: string): Promise<void>;
   getEventByGoogleId(familyId: string, googleEventId: string): Promise<Event | null>;
   // Tasks
   getTasks(familyId: string): Promise<Task[]>;
@@ -1343,6 +1347,10 @@ export class MemStorage implements IStorage {
   async upsertGoogleCalendarConnection(_data: any): Promise<GoogleCalendarConnection> { throw new Error("Not supported in demo mode"); }
   async updateGoogleCalendarConnection(_userId: string, _updates: any): Promise<void> {}
   async deleteGoogleCalendarConnection(_userId: string): Promise<void> {}
+  async getGoogleDriveConnection(_userId: string): Promise<GoogleDriveConnection | null> { return null; }
+  async upsertGoogleDriveConnection(_data: any): Promise<GoogleDriveConnection> { throw new Error("Not supported in demo mode"); }
+  async updateGoogleDriveConnection(_userId: string, _updates: any): Promise<void> {}
+  async deleteGoogleDriveConnection(_userId: string): Promise<void> {}
   async getEventByGoogleId(_familyId: string, _googleEventId: string): Promise<Event | null> { return null; }
 
   // Tasks
@@ -2575,6 +2583,28 @@ class DrizzleStorage implements IStorage {
     await this.db.delete(googleCalendarConnections).where(eq(googleCalendarConnections.userId, userId));
   }
 
+  async getGoogleDriveConnection(userId: string): Promise<GoogleDriveConnection | null> {
+    const rows = await this.db.select().from(googleDriveConnections).where(eq(googleDriveConnections.userId, userId)).limit(1);
+    return rows[0] ?? null;
+  }
+
+  async upsertGoogleDriveConnection(data: Omit<InsertGoogleDriveConnection, "id">): Promise<GoogleDriveConnection> {
+    const rows = await this.db
+      .insert(googleDriveConnections)
+      .values(data)
+      .onConflictDoUpdate({ target: googleDriveConnections.userId, set: data })
+      .returning();
+    return rows[0];
+  }
+
+  async updateGoogleDriveConnection(userId: string, updates: Partial<GoogleDriveConnection>): Promise<void> {
+    await this.db.update(googleDriveConnections).set(updates).where(eq(googleDriveConnections.userId, userId));
+  }
+
+  async deleteGoogleDriveConnection(userId: string): Promise<void> {
+    await this.db.delete(googleDriveConnections).where(eq(googleDriveConnections.userId, userId));
+  }
+
   async getEventByGoogleId(familyId: string, googleEventId: string): Promise<Event | null> {
     const rows = await this.db.select().from(events)
       .where(and(eq(events.familyId, familyId), eq(events.googleEventId, googleEventId)))
@@ -3153,6 +3183,10 @@ class DemoAwareStorage implements IStorage {
   async upsertGoogleCalendarConnection(data: any) { return this.persistentStorage.upsertGoogleCalendarConnection(data); }
   async updateGoogleCalendarConnection(userId: string, updates: any) { return this.persistentStorage.updateGoogleCalendarConnection(userId, updates); }
   async deleteGoogleCalendarConnection(userId: string) { return this.persistentStorage.deleteGoogleCalendarConnection(userId); }
+  async getGoogleDriveConnection(userId: string) { return this.persistentStorage.getGoogleDriveConnection(userId); }
+  async upsertGoogleDriveConnection(data: any) { return this.persistentStorage.upsertGoogleDriveConnection(data); }
+  async updateGoogleDriveConnection(userId: string, updates: any) { return this.persistentStorage.updateGoogleDriveConnection(userId, updates); }
+  async deleteGoogleDriveConnection(userId: string) { return this.persistentStorage.deleteGoogleDriveConnection(userId); }
   async getEventByGoogleId(familyId: string, googleEventId: string) { return this.persistentStorage.getEventByGoogleId(familyId, googleEventId); }
 
   // Tasks — route to family-appropriate storage

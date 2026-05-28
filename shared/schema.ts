@@ -597,6 +597,20 @@ export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSe
 export const insertGoogleCalendarConnectionSchema = createInsertSchema(googleCalendarConnections).omit({ id: true, createdAt: true });
 export type InsertGoogleCalendarConnection = z.infer<typeof insertGoogleCalendarConnectionSchema>;
 
+export const googleDriveConnections = pgTable("google_drive_connections", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  refreshToken: text("refresh_token").notNull(),
+  accessToken: text("access_token"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at"),
+  googleEmail: text("google_email"),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type GoogleDriveConnection = typeof googleDriveConnections.$inferSelect;
+export const insertGoogleDriveConnectionSchema = createInsertSchema(googleDriveConnections).omit({ id: true, createdAt: true });
+export type InsertGoogleDriveConnection = z.infer<typeof insertGoogleDriveConnectionSchema>;
+
 export const insertSymptomSystemRatingSchema = createInsertSchema(symptomSystemRatings).omit({ id: true });
 export type InsertSymptomSystemRating = z.infer<typeof insertSymptomSystemRatingSchema>;
 export type SymptomSystemRating = typeof symptomSystemRatings.$inferSelect;

@@ -3438,24 +3438,237 @@ Visit Kindora Calendar: ${joinUrl}
   // Google Drive Integration Routes
   // ========================================
   
-  // Check if Google Drive is connected
-  // NOTE: Google Drive integration is temporarily disabled. The previous implementation
-  // used a single shared Replit Connector tied to the repl owner's account, which would
-  // expose the owner's personal Drive to every user. Re-enable only once per-user OAuth
-  // (similar to the Google Calendar sync) is implemented.
-  app.get("/api/google-drive/status", isAuthenticated, async (_req: any, res) => {
-    res.json({ connected: false, disabled: true });
-  });
+  // ── Google Drive (per-user OAuth) ───────────────────────────────────────────
+  // Each user connects their OWN Google Drive. We store a per-user refresh token
+  // (mirrors the Google Calendar sync flow). Browse-and-import on demand only —
+  // no Drive data is copied unless the user explicitly imports a file.
+  {
+    const {
+      resolveDriveCallbackURL,
+      getValidDriveAccessToken,
+      fetchGoogleEmail,
+      listDriveFiles,
+      getDriveFileMeta,
+      downloadDriveFile,
+      DRIVE_SCOPE,
+    } = await import("./googleDriveService");
+    const driveClientId = process.env.GOOGLE_CLIENT_ID ?? "";
+    const driveClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "";
+    const driveCallbackURL = resolveDriveCallbackURL();
 
-  // List files from Google Drive — disabled
-  app.get("/api/google-drive/files", isAuthenticated, async (_req: any, res) => {
-    res.status(410).json({ error: "Google Drive import is temporarily unavailable while we rebuild it for per-user access." });
-  });
+    // GET /api/google-drive/status — connection info
+    app.get("/api/google-drive/status", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const conn = await storage.getGoogleDriveConnection(userId);
+        if (!conn) return res.json({ connected: false });
 
-  // Import a file from Google Drive — disabled (see note above)
-  app.post("/api/google-drive/import", isAuthenticated, async (_req: any, res) => {
-    res.status(410).json({ error: "Google Drive import is temporarily unavailable while we rebuild it for per-user access." });
-  });
+        try {
+          await getValidDriveAccessToken(userId);
+        } catch (err) {
+          console.error("[Drive status] Could not refresh token:", err);
+          return res.json({ connected: false, error: "token_expired" });
+        }
+
+        res.json({
+          connected: true,
+          googleEmail: conn.googleEmail,
+          lastUsedAt: conn.lastUsedAt,
+        });
+      } catch (err) {
+        res.status(500).json({ error: String(err) });
+      }
+    });
+
+    // GET /api/google-drive/connect — kick off OAuth
+    app.get("/api/google-drive/connect", isAuthenticated, (req: any, res) => {
+      const state = crypto.randomBytes(24).toString("hex");
+      (req.session as any).gdriveOAuthState = state;
+
+      const params = new URLSearchParams({
+        client_id: driveClientId,
+        redirect_uri: driveCallbackURL,
+        response_type: "code",
+        scope: `${DRIVE_SCOPE} https://www.googleapis.com/auth/userinfo.email`,
+        access_type: "offline",
+        prompt: "consent", // Force consent to always get refresh token
+        state,
+      });
+
+      res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    });
+
+    // GET /api/google-drive/callback — handle OAuth redirect
+    app.get("/api/google-drive/callback", isAuthenticated, async (req: any, res) => {
+      const { code, state, error } = req.query as Record<string, string>;
+
+      if (error) return res.redirect("/documents?gdrive=error&reason=" + encodeURIComponent(error));
+
+      const savedState = (req.session as any).gdriveOAuthState;
+      if (!state || state !== savedState) return res.redirect("/documents?gdrive=error&reason=state_mismatch");
+      delete (req.session as any).gdriveOAuthState;
+
+      if (!code) return res.redirect("/documents?gdrive=error&reason=no_code");
+
+      try {
+        const tokenBody = new URLSearchParams({
+          code,
+          client_id: driveClientId,
+          client_secret: driveClientSecret,
+          redirect_uri: driveCallbackURL,
+          grant_type: "authorization_code",
+        });
+
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: tokenBody.toString(),
+        });
+        const tokenData = await tokenRes.json() as any;
+        if (!tokenRes.ok || !tokenData.refresh_token) {
+          console.error("[Drive callback] Token error:", tokenData);
+          return res.redirect("/documents?gdrive=error&reason=token_failed");
+        }
+
+        const userId = req.user.claims.sub;
+        const expiresAt = new Date(Date.now() + (tokenData.expires_in ?? 3600) * 1000);
+        const googleEmail = tokenData.access_token ? await fetchGoogleEmail(tokenData.access_token) : null;
+
+        await storage.upsertGoogleDriveConnection({
+          userId,
+          refreshToken: tokenData.refresh_token,
+          accessToken: tokenData.access_token,
+          accessTokenExpiresAt: expiresAt,
+          googleEmail,
+          lastUsedAt: null,
+        });
+
+        console.log("[Drive callback] Connected for user:", userId);
+        res.redirect("/documents?gdrive=connected");
+      } catch (err) {
+        console.error("[Drive callback] Error:", err);
+        res.redirect("/documents?gdrive=error&reason=server_error");
+      }
+    });
+
+    // GET /api/google-drive/files — list the connected user's Drive files
+    app.get("/api/google-drive/files", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const conn = await storage.getGoogleDriveConnection(userId);
+        if (!conn) return res.status(400).json({ error: "Google Drive not connected" });
+
+        const folderId = (req.query.folderId as string) || undefined;
+        const pageToken = (req.query.pageToken as string) || undefined;
+        const result = await listDriveFiles(userId, folderId, pageToken);
+        res.json(result);
+      } catch (err) {
+        console.error("[Drive files] Error:", err);
+        res.status(500).json({ error: String(err) });
+      }
+    });
+
+    // POST /api/google-drive/import — import a Drive file into the care vault
+    app.post("/api/google-drive/import", isAuthenticated, requireFamily, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const familyId = await getFamilyId(req, userId);
+        if (!familyId) return res.status(400).json({ error: "No family found for user" });
+
+        const role = await getUserFamilyRole(storage, userId, familyId);
+        if (!role) return res.status(403).json({ error: "You are not a member of this family" });
+
+        const context = { userId, familyId, role };
+        if (!hasPermission(context, 'canUploadDocuments')) {
+          return res.status(403).json({ error: "You don't have permission to upload documents" });
+        }
+
+        const conn = await storage.getGoogleDriveConnection(userId);
+        if (!conn) return res.status(400).json({ error: "Google Drive not connected" });
+
+        const { fileId, title, documentType, description, memberId } = req.body as Record<string, string>;
+        if (!fileId) return res.status(400).json({ error: "fileId is required" });
+
+        const validTypes = ['medical', 'insurance', 'legal', 'care_plan', 'other'] as const;
+        type DocType = typeof validTypes[number];
+        const docType: DocType = (validTypes as readonly string[]).includes(documentType) ? (documentType as DocType) : 'other';
+
+        const privateDir = process.env.PRIVATE_OBJECT_DIR;
+        if (!privateDir) {
+          console.error("PRIVATE_OBJECT_DIR not configured");
+          return res.status(500).json({ error: "Object storage not configured. Please contact support." });
+        }
+
+        // Guard against very large files (50MB) before buffering into memory
+        const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
+        try {
+          const meta = await getDriveFileMeta(userId, fileId);
+          if (meta.size && Number(meta.size) > MAX_IMPORT_BYTES) {
+            return res.status(413).json({ error: "File is too large to import (50MB limit)." });
+          }
+        } catch {
+          // Non-fatal: some Google-native docs don't report a size; fall through to download
+        }
+
+        // Download the file contents from the user's Drive
+        const { buffer, mimeType, name, size } = await downloadDriveFile(userId, fileId);
+        if (buffer.length > MAX_IMPORT_BYTES) {
+          return res.status(413).json({ error: "File is too large to import (50MB limit)." });
+        }
+
+        // Stage it in object storage via a presigned upload URL
+        const objectStorageService = new ObjectStorageService();
+        const timestamp = Date.now();
+        const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const subPath = `care-documents/${familyId}/${timestamp}-${safeName}`;
+        const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURLWithPath(subPath);
+
+        const uploadRes = await fetch(uploadURL, {
+          method: "PUT",
+          headers: { "Content-Type": mimeType },
+          body: buffer,
+        });
+        if (!uploadRes.ok) {
+          console.error("[Drive import] Upload failed:", uploadRes.status, await uploadRes.text().catch(() => ""));
+          return res.status(500).json({ error: "Failed to store imported file" });
+        }
+
+        const document = await storage.createCareDocument(familyId, {
+          title: title || name,
+          documentType: docType,
+          description: description || null,
+          memberId: memberId || null,
+          uploadedBy: userId,
+          fileUrl: objectPath,
+          fileName: name,
+          fileSize: size || null,
+          mimeType: mimeType || null,
+        });
+
+        await storage.updateGoogleDriveConnection(userId, { lastUsedAt: new Date() });
+
+        res.status(201).json(document);
+      } catch (err) {
+        console.error("[Drive import] Error:", err);
+        res.status(500).json({ error: String(err) });
+      }
+    });
+
+    // DELETE /api/google-drive/disconnect — revoke and remove connection
+    app.delete("/api/google-drive/disconnect", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const conn = await storage.getGoogleDriveConnection(userId);
+        if (conn?.accessToken) {
+          await fetch(`https://oauth2.googleapis.com/revoke?token=${conn.accessToken}`, { method: "POST" }).catch(() => {});
+        }
+        await storage.deleteGoogleDriveConnection(userId);
+        res.json({ success: true });
+      } catch (err) {
+        res.status(500).json({ error: String(err) });
+      }
+    });
+  }
 
   // ========================================
   // Emergency Bridge Routes
