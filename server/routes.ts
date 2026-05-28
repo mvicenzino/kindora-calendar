@@ -3439,166 +3439,22 @@ Visit Kindora Calendar: ${joinUrl}
   // ========================================
   
   // Check if Google Drive is connected
-  app.get("/api/google-drive/status", isAuthenticated, async (req: any, res) => {
-    try {
-      const { checkDriveConnection } = await import("./googleDriveService");
-      const connected = await checkDriveConnection();
-      res.json({ connected });
-    } catch (error) {
-      res.json({ connected: false });
-    }
+  // NOTE: Google Drive integration is temporarily disabled. The previous implementation
+  // used a single shared Replit Connector tied to the repl owner's account, which would
+  // expose the owner's personal Drive to every user. Re-enable only once per-user OAuth
+  // (similar to the Google Calendar sync) is implemented.
+  app.get("/api/google-drive/status", isAuthenticated, async (_req: any, res) => {
+    res.json({ connected: false, disabled: true });
   });
-  
-  // List files from Google Drive
-  app.get("/api/google-drive/files", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const familyId = await getFamilyId(req, userId);
-      if (!familyId) {
-        return res.status(400).json({ error: "No family found for user" });
-      }
-      
-      const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role || (role !== 'owner' && role !== 'member')) {
-        return res.status(403).json({ error: "Only family owners and members can access Google Drive" });
-      }
-      
-      const { listDriveFiles } = await import("./googleDriveService");
-      const folderId = req.query.folderId as string | undefined;
-      const pageToken = req.query.pageToken as string | undefined;
-      
-      const result = await listDriveFiles(folderId, pageToken);
-      res.json(result);
-    } catch (error: any) {
-      console.error("Error listing Google Drive files:", error);
-      if (error.message?.includes('not connected')) {
-        return res.status(401).json({ error: "Google Drive not connected" });
-      }
-      res.status(500).json({ error: "Failed to list Google Drive files" });
-    }
+
+  // List files from Google Drive — disabled
+  app.get("/api/google-drive/files", isAuthenticated, async (_req: any, res) => {
+    res.status(410).json({ error: "Google Drive import is temporarily unavailable while we rebuild it for per-user access." });
   });
-  
-  // Import a file from Google Drive
-  app.post("/api/google-drive/import", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const familyId = await getFamilyId(req, userId);
-      if (!familyId) {
-        return res.status(400).json({ error: "No family found for user" });
-      }
-      
-      const role = await getUserFamilyRole(storage, userId, familyId);
-      if (!role) {
-        return res.status(403).json({ error: "You are not a member of this family" });
-      }
-      
-      const context = { userId, familyId, role };
-      if (!hasPermission(context, 'canImportSchedules')) {
-        return res.status(403).json({ error: "You don't have permission to import from Google Drive" });
-      }
-      
-      const { fileId, title, documentType, description, memberId } = req.body;
-      
-      if (!fileId || !title || !documentType) {
-        return res.status(400).json({ error: "fileId, title, and documentType are required" });
-      }
-      
-      const validTypes = ['medical', 'insurance', 'legal', 'care_plan', 'other'];
-      if (!validTypes.includes(documentType)) {
-        return res.status(400).json({ error: `Invalid document type. Must be one of: ${validTypes.join(', ')}` });
-      }
-      
-      const { downloadDriveFile, getDriveFile } = await import("./googleDriveService");
-      
-      // First check file metadata before downloading
-      const fileMetadata = await getDriveFile(fileId);
-      
-      // Validate file size (max 25MB to prevent memory issues)
-      const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
-      if (fileMetadata.size && parseInt(fileMetadata.size) > MAX_FILE_SIZE) {
-        return res.status(400).json({ error: "File too large. Maximum size is 25MB." });
-      }
-      
-      // Validate MIME type - allow common document types
-      const allowedMimeTypes = [
-        'application/pdf',
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic',
-        'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'text/plain', 'text/csv',
-        // Google Docs types (will be exported as PDF/Office)
-        'application/vnd.google-apps.document',
-        'application/vnd.google-apps.spreadsheet',
-        'application/vnd.google-apps.presentation',
-      ];
-      
-      const isAllowedType = allowedMimeTypes.some(type => 
-        fileMetadata.mimeType === type || fileMetadata.mimeType.startsWith('image/')
-      );
-      
-      if (!isAllowedType) {
-        return res.status(400).json({ error: "File type not supported. Please upload PDFs, images, or common document formats." });
-      }
-      
-      console.log("Importing from Google Drive:", { fileId, fileName: fileMetadata.name, mimeType: fileMetadata.mimeType });
-      
-      const { buffer, mimeType, name, size } = await downloadDriveFile(fileId);
-      
-      // Double-check downloaded file size
-      if (buffer.length > MAX_FILE_SIZE) {
-        return res.status(400).json({ error: "Downloaded file too large. Maximum size is 25MB." });
-      }
-      
-      const privateDir = process.env.PRIVATE_OBJECT_DIR;
-      if (!privateDir) {
-        return res.status(500).json({ error: "Object storage not configured" });
-      }
-      
-      const objectStorageService = new ObjectStorageService();
-      const timestamp = Date.now();
-      const safeName = name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const subPath = `care-documents/${familyId}/${timestamp}-${safeName}`;
-      
-      console.log("Uploading to object storage:", { subPath, size: buffer.length });
-      
-      const { uploadURL, objectPath } = await objectStorageService.getObjectEntityUploadURLWithPath(subPath);
-      
-      const uploadResponse = await fetch(uploadURL, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': mimeType,
-        },
-        body: buffer,
-      });
-      
-      if (!uploadResponse.ok) {
-        throw new Error(`Failed to upload to storage: ${uploadResponse.status}`);
-      }
-      
-      console.log("Creating care document record...");
-      
-      const document = await storage.createCareDocument(familyId, {
-        title,
-        documentType,
-        description: description || null,
-        memberId: memberId || null,
-        uploadedBy: userId,
-        fileUrl: objectPath,
-        fileName: name,
-        fileSize: size,
-        mimeType,
-      });
-      
-      console.log("Google Drive import complete:", document.id);
-      res.status(201).json(document);
-    } catch (error: any) {
-      console.error("Error importing from Google Drive:", error);
-      if (error.message?.includes('not connected')) {
-        return res.status(401).json({ error: "Google Drive not connected" });
-      }
-      res.status(500).json({ error: `Failed to import from Google Drive: ${error.message}` });
-    }
+
+  // Import a file from Google Drive — disabled (see note above)
+  app.post("/api/google-drive/import", isAuthenticated, async (_req: any, res) => {
+    res.status(410).json({ error: "Google Drive import is temporarily unavailable while we rebuild it for per-user access." });
   });
 
   // ========================================
