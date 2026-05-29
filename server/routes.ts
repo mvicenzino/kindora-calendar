@@ -1246,6 +1246,10 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
       const members = await storage.getFamilyMembers(familyId);
       res.json(members);
     } catch (error) {
@@ -1385,6 +1389,10 @@ Visit Kindora Calendar: ${joinUrl}
       const familyId = await getFamilyId(req, userId);
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
+      }
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
       }
       const events = await storage.getEvents(familyId);
       
@@ -1735,6 +1743,10 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
       const event = await storage.toggleEventCompletion(req.params.id, familyId);
       res.json(event);
     } catch (error) {
@@ -1753,6 +1765,10 @@ Visit Kindora Calendar: ${joinUrl}
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
       }
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
       const messages = await storage.getMessages(req.params.eventId, familyId);
       res.json(messages);
     } catch (error) {
@@ -1766,6 +1782,10 @@ Visit Kindora Calendar: ${joinUrl}
       const familyId = await getFamilyId(req, userId);
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
+      }
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
       }
       const messageData = {
         ...req.body,
@@ -1793,6 +1813,10 @@ Visit Kindora Calendar: ${joinUrl}
       const familyId = await getFamilyId(req, userId);
       if (!familyId) {
         return res.status(400).json({ error: "No family found for user" });
+      }
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
       }
       await storage.deleteMessage(req.params.id, familyId);
       res.status(204).send();
@@ -2893,6 +2917,11 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found for user" });
       }
       
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
       const family = await storage.getFamilyById(familyId);
       if (!family) {
         return res.status(404).json({ error: "Family not found" });
@@ -3043,6 +3072,11 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(400).json({ error: "No family found" });
       }
       
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      
       const preference = await storage.getWeeklySummaryPreference(userId, familyId);
       
       res.json({
@@ -3066,6 +3100,11 @@ Visit Kindora Calendar: ${joinUrl}
       
       if (!familyId) {
         return res.status(400).json({ error: "Family ID is required" });
+      }
+      
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
       }
       
       const preference = await storage.upsertWeeklySummaryPreference(userId, familyId, optedIn ?? true);
@@ -4692,6 +4731,8 @@ Always return valid JSON matching one of the three formats above.`,
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
       if (!familyId) return res.status(400).json({ error: "No family found" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ error: "You are not a member of this family" });
       const { systems, ...entryData } = req.body;
       const entry = await storage.createSymptomEntry(
         { ...entryData, familyId },
@@ -4709,6 +4750,8 @@ Always return valid JSON matching one of the three formats above.`,
       const userId = req.user.claims.sub;
       const familyId = await getFamilyId(req, userId);
       if (!familyId) return res.status(400).json({ error: "No family found" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ error: "You are not a member of this family" });
       const { memberId, startDate, endDate } = req.query as Record<string, string | undefined>;
       const entries = await storage.getSymptomEntries(familyId, memberId, startDate, endDate);
       res.json(entries);
@@ -4767,6 +4810,8 @@ Always return valid JSON matching one of the three formats above.`,
       const userId = req.user.claims.sub;
       const familyId = req.query.familyId as string || await storage.getUserFamily(userId).then(f => f?.id);
       if (!familyId) return res.status(400).json({ message: "No family found" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
       const date = req.query.date as string || new Date().toISOString().slice(0, 10);
       const logs = await storage.getHydrationLogs(familyId, date);
       res.json(logs);
@@ -4784,6 +4829,8 @@ Always return valid JSON matching one of the three formats above.`,
       }
       const familyId = bodyFamilyId || await storage.getUserFamily(userId).then(f => f?.id);
       if (!familyId) return res.status(400).json({ message: "No family found" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
       const log = await storage.upsertHydrationLog({ familyId, memberId, date, glassesCount: Math.max(0, Number(glassesCount)), goalGlasses: Number(goalGlasses) });
       res.json(log);
     } catch (err) {
@@ -4794,8 +4841,11 @@ Always return valid JSON matching one of the three formats above.`,
   // ── Tasks ──────────────────────────────────────────────────────────────────
   app.get("/api/tasks", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const familyId = req.query.familyId as string;
       if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
       const taskList = await storage.getTasks(familyId);
       res.json(taskList);
     } catch (err) {
@@ -4808,6 +4858,9 @@ Always return valid JSON matching one of the three formats above.`,
       const userId = req.user.claims.sub;
       const body = { ...req.body, createdByUserId: userId };
       if (body.dueDate && typeof body.dueDate === "string") body.dueDate = new Date(body.dueDate);
+      if (!body.familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, body.familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
       const parsed = insertTaskSchema.safeParse(body);
       if (!parsed.success) return res.status(400).json({ message: "Invalid task data", errors: parsed.error.errors });
       const task = await storage.createTask(parsed.data);
@@ -4819,8 +4872,11 @@ Always return valid JSON matching one of the three formats above.`,
 
   app.put("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { familyId, ...updates } = req.body;
       if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
       if (updates.dueDate && typeof updates.dueDate === "string") updates.dueDate = new Date(updates.dueDate);
       const task = await storage.updateTask(req.params.id, familyId, updates);
       res.json(task);
@@ -4831,8 +4887,11 @@ Always return valid JSON matching one of the three formats above.`,
 
   app.delete("/api/tasks/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const familyId = req.query.familyId as string;
       if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
       await storage.deleteTask(req.params.id, familyId);
       res.status(204).send();
     } catch (err) {
@@ -4845,6 +4904,8 @@ Always return valid JSON matching one of the three formats above.`,
       const userId = req.user.claims.sub;
       const { familyId } = req.body;
       if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
       const task = await storage.toggleTaskCompletion(req.params.id, familyId, userId);
       res.json(task);
     } catch (err) {
@@ -5069,6 +5130,8 @@ Always return valid JSON matching one of the three formats above.`,
         const userId = req.user.claims.sub;
         const familyId = await getFamilyId(req, userId);
         if (!familyId) return res.status(400).json({ error: "No family found" });
+        const role = await getUserFamilyRole(storage, userId, familyId);
+        if (!role) return res.status(403).json({ error: "You are not a member of this family" });
         const result = await syncGoogleCalendars(userId, familyId);
         res.json(result);
       } catch (err) {

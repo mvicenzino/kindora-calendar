@@ -55,6 +55,11 @@ export default function Privacy() {
               <li>Caregiver time entries, pay rates, and invoicing data.</li>
               <li>Family messages and event notes.</li>
             </ul>
+            <p className="text-muted-foreground leading-relaxed font-medium mt-2">Connected Google Accounts (optional):</p>
+            <ul className="list-disc list-inside text-muted-foreground leading-relaxed space-y-1 ml-4">
+              <li>If you choose to connect Google Calendar or Google Drive, we store an access token tied to <span className="font-medium">your individual user account</span> — never shared across family members. Each person connects their own Google account, and disconnecting removes the stored token and revokes our access.</li>
+              <li>We request only the minimum scopes needed to read your calendar events or import the Drive files you select, and we never modify or delete content in your Google account.</li>
+            </ul>
             <p className="text-muted-foreground leading-relaxed font-medium mt-2">Automatically Collected Information:</p>
             <ul className="list-disc list-inside text-muted-foreground leading-relaxed space-y-1 ml-4">
               <li>Session data and cookies for authentication.</li>
@@ -88,9 +93,12 @@ export default function Privacy() {
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">5. Data Security</h3>
+            <h3 className="text-lg font-semibold text-foreground">5. Data Security & Family Isolation</h3>
             <p className="text-muted-foreground leading-relaxed">
-              We implement industry-standard security measures to protect your data, including encrypted connections (TLS/SSL), secure password hashing (bcrypt), HTTP-only session cookies, rate limiting, and security headers. However, no method of electronic transmission or storage is 100% secure, and we cannot guarantee absolute security.
+              We implement industry-standard security measures to protect your data, including encrypted connections (TLS/SSL) for all data in transit, secure password hashing (bcrypt), HTTP-only session cookies, rate limiting, and security headers.
+            </p>
+            <p className="text-muted-foreground leading-relaxed">
+              Your family's data is isolated from other families. Every request to read or change calendar events, documents, health and symptom data, messages, and other records is checked on the server to confirm you are a member of that specific family, and your role (owner, member, or caregiver) determines what you can see and do. Connected Google accounts are scoped to the individual user who connected them and are never shared with other members. However, no method of electronic transmission or storage is 100% secure, and we cannot guarantee absolute security.
             </p>
           </section>
 

@@ -482,6 +482,12 @@ export default function Documents() {
           )}
 
           {activeTab === "vault" && (<>
+          <div className="flex items-start gap-3 rounded-md border border-indigo-500/20 bg-indigo-500/5 px-4 py-3" data-testid="note-vault-privacy">
+            <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              These documents stay private to your family. Access is verified on our servers for every request, and role-based permissions control who can view each file. Connected Google accounts are tied to each person individually and never shared.
+            </p>
+          </div>
           <Card>
             <CardContent className="pt-3">
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">

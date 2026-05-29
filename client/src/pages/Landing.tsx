@@ -1120,6 +1120,60 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Trust & Security Section */}
+      <section className="px-4 md:px-6 py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/6 via-transparent to-blue-500/4" />
+        <div className="max-w-5xl mx-auto relative">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-sm font-semibold px-4 py-1.5 rounded-full mb-5 border border-indigo-500/20">
+              <Shield className="w-4 h-4" />
+              Built for Privacy
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3 leading-tight">
+              Your family's data stays your family's
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Kindora holds sensitive medical, legal, and financial details. We treat that responsibility seriously — here's how we protect it.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
+                <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <p className="font-semibold text-foreground text-sm mb-1.5">Family-isolated by design</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">Every request is checked on our servers to confirm you belong to that family. One family can never see another's data.</p>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
+                <Shield className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <p className="font-semibold text-foreground text-sm mb-1.5">Role-based access</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">Owners, members, and caregivers each see only what their role allows. You decide who can view sensitive records.</p>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
+                <HardDrive className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <p className="font-semibold text-foreground text-sm mb-1.5">Your Google account is yours</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">Each person connects their own Google Calendar or Drive. Connections are never shared between members, and you can disconnect anytime.</p>
+            </div>
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4">
+                <Lock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <p className="font-semibold text-foreground text-sm mb-1.5">Encrypted & never sold</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">All data travels over encrypted connections. We don't sell your information or show you ads — ever.</p>
+            </div>
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground mt-6 max-w-2xl mx-auto">
+            Read our full <a href="/privacy" className="text-primary underline decoration-primary/40 hover:decoration-primary transition-colors" data-testid="link-privacy-policy">Privacy Policy</a> for the complete details on how we handle your data.
+          </p>
+        </div>
+      </section>
+
       {/* Free Resources Section */}
       <section className="px-4 md:px-6 py-16 md:py-20 relative">
         <div className="max-w-6xl mx-auto">
