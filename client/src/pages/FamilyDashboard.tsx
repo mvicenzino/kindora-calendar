@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useKiraPanel } from "@/contexts/KiraPanelContext";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -37,8 +38,27 @@ export default function FamilyDashboard() {
   const [, navigate] = useLocation();
   const { activeFamilyId } = useActiveFamily();
   const { user } = useAuth();
+  const { can } = useUserRole();
   const { openPanel } = useKiraPanel();
   const { toast } = useToast();
+
+  const deleteEventMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/events/${id}`, { familyId: activeFamilyId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/events?familyId=${activeFamilyId}`] });
+      toast({ title: "Event deleted" });
+    },
+    onError: () => {
+      toast({ title: "Couldn't delete event", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const handleDeleteEvent = (eventId: string) => {
+    const realId = eventId.includes('_occ_') ? eventId.split('_occ_')[0] : eventId;
+    deleteEventMutation.mutate(realId);
+  };
 
   const [createEventOpen, setCreateEventOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<UiEvent | null>(null);
@@ -702,10 +722,10 @@ export default function FamilyDashboard() {
             setSelectedEvent(null);
             navigate("/calendar");
           }}
-          onDelete={(id) => {
+          onDelete={can('canDeleteEvents') ? (id) => {
             setSelectedEvent(null);
-            queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-          }}
+            handleDeleteEvent(id);
+          } : undefined}
         />
       )}
     </div>

@@ -10,7 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar, Clock, Users, Trash2, X, Repeat, ChevronDown, MessageCircle, Smile, Tag, Flag } from "lucide-react";
-import { format, addDays, addWeeks, addMonths, addYears } from "date-fns";
+import { format } from "date-fns";
+import { RRule } from "rrule";
 import { useState, useEffect, useRef } from 'react';
 import type { UiFamilyMember } from "@shared/types";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -20,6 +21,16 @@ import { EVENT_CATEGORIES, CATEGORY_CONFIG, type EventCategory } from "@shared/s
 
 type RecurrenceRule = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'yearly' | null;
 type EndCondition = 'never' | 'after' | 'on';
+
+const WEEKDAYS: { code: string; label: string }[] = [
+  { code: 'SU', label: 'S' },
+  { code: 'MO', label: 'M' },
+  { code: 'TU', label: 'T' },
+  { code: 'WE', label: 'W' },
+  { code: 'TH', label: 'T' },
+  { code: 'FR', label: 'F' },
+  { code: 'SA', label: 'S' },
+];
 
 interface Event {
   id?: string;
@@ -119,9 +130,65 @@ export default function EventModal({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
   const [showRecurrenceDropdown, setShowRecurrenceDropdown] = useState(false);
   const recurrenceDropdownRef = useRef<HTMLDivElement>(null);
+  const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
+
+  // Unsaved-changes guard state
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const initialSnapshotRef = useRef<string>("");
+  const baselineCapturedRef = useRef(false);
+
+  const toggleWeekday = (code: string) => {
+    setSelectedWeekdays(prev =>
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+    );
+  };
+
+  // Serialize the meaningful form fields so we can detect unsaved changes.
+  const serializeForm = (s: {
+    title: string; description: string; members: string[];
+    category: EventCategory; isImportant: boolean;
+    startDate: string; startTime: string; endTime: string; isSometimeToday: boolean;
+    recurrenceRule: RecurrenceRule; endCondition: EndCondition;
+    recurrenceCount: string; recurrenceEndDate: string; weekdays: string[];
+  }) => JSON.stringify({
+    title: s.title.trim(),
+    description: s.description.trim(),
+    members: [...s.members].sort(),
+    category: s.category,
+    isImportant: s.isImportant,
+    startDate: s.startDate,
+    startTime: s.startTime,
+    endTime: s.endTime,
+    isSometimeToday: s.isSometimeToday,
+    recurrenceRule: s.recurrenceRule,
+    endCondition: s.endCondition,
+    recurrenceCount: s.recurrenceCount,
+    recurrenceEndDate: s.recurrenceEndDate,
+    weekdays: [...s.weekdays].sort(),
+  });
+
+  const isDirty = () => {
+    if (isReadOnly) return false;
+    const current = serializeForm({
+      title, description, members: selectedMemberIds,
+      category, isImportant,
+      startDate, startTime, endTime, isSometimeToday,
+      recurrenceRule, endCondition, recurrenceCount, recurrenceEndDate,
+      weekdays: selectedWeekdays,
+    });
+    return current !== initialSnapshotRef.current;
+  };
+
+  const attemptClose = () => {
+    if (isDirty()) {
+      setShowDiscardConfirm(true);
+    } else {
+      onClose();
+    }
+  };
 
   // Parse an RRULE string into component state values
-  const parseRRule = (rrule: string): { rule: RecurrenceRule; endCondition: EndCondition; count: string; untilDate: string } => {
+  const parseRRule = (rrule: string): { rule: RecurrenceRule; endCondition: EndCondition; count: string; untilDate: string; weekdays: string[] } => {
     const parts: Record<string, string> = {};
     rrule.split(';').forEach(p => { const [k, v] = p.split('='); if (k && v !== undefined) parts[k] = v; });
     const freq = parts['FREQ'];
@@ -141,7 +208,8 @@ export default function EventModal({
       const u = parts['UNTIL'].replace('Z', '').split('T')[0];
       if (u.length === 8) untilDate = `${u.slice(0,4)}-${u.slice(4,6)}-${u.slice(6,8)}`;
     }
-    return { rule, endCondition: ec, count, untilDate };
+    const weekdays = parts['BYDAY'] ? parts['BYDAY'].split(',').map(d => d.trim()).filter(Boolean) : [];
+    return { rule, endCondition: ec, count, untilDate, weekdays };
   };
 
   // Reset form when modal closes
@@ -161,6 +229,9 @@ export default function EventModal({
       setRecurrenceCount("10");
       setRecurrenceEndDate("");
       setShowRecurrenceDropdown(false);
+      setSelectedWeekdays([]);
+      setShowDiscardConfirm(false);
+      baselineCapturedRef.current = false;
     }
   }, [isOpen]);
 
@@ -168,57 +239,90 @@ export default function EventModal({
   useEffect(() => {
     if (!isOpen) return;
     
+    // Collect the values we will populate so we can both set state and capture
+    // an initial snapshot for unsaved-changes detection.
+    let next = {
+      title: "",
+      description: "",
+      members: [] as string[],
+      category: 'other' as EventCategory,
+      isImportant: false,
+      startDate: format(new Date(), 'yyyy-MM-dd'),
+      startTime: getDefaultTimes().start,
+      endTime: getDefaultTimes().end,
+      isSometimeToday: false,
+      recurrenceRule: null as RecurrenceRule,
+      endCondition: 'never' as EndCondition,
+      recurrenceCount: '10',
+      recurrenceEndDate: '',
+      weekdays: [] as string[],
+    };
+
     if (event) {
-      setTitle(event.title || "");
-      setDescription(event.description || "");
       const eventMemberIds = event.memberIds || [];
-      setSelectedMemberIds(eventMemberIds);
-      setMemberId(eventMemberIds[0] || members[0]?.id || "");
-      setCategory(event.category || 'other');
-      setIsImportant(event.isImportant || false);
-      setStartDate(format(event.startTime, 'yyyy-MM-dd'));
-      setStartTime(format(event.startTime, 'HH:mm'));
-      setEndTime(format(event.endTime, 'HH:mm'));
-      setIsSometimeToday(false);
+      next.title = event.title || "";
+      next.description = event.description || "";
+      next.members = eventMemberIds;
+      next.category = event.category || 'other';
+      next.isImportant = event.isImportant || false;
+      next.startDate = format(event.startTime, 'yyyy-MM-dd');
+      next.startTime = format(event.startTime, 'HH:mm');
+      next.endTime = format(event.endTime, 'HH:mm');
       // Restore recurrence from rrule string or legacy field
       if (event.rrule) {
         const parsed = parseRRule(event.rrule);
-        setRecurrenceRule(parsed.rule);
-        setEndCondition(parsed.endCondition);
-        setRecurrenceCount(parsed.count);
-        setRecurrenceEndDate(parsed.untilDate);
+        next.recurrenceRule = parsed.rule;
+        next.endCondition = parsed.endCondition;
+        next.recurrenceCount = parsed.count;
+        next.recurrenceEndDate = parsed.untilDate;
+        next.weekdays = parsed.weekdays;
       } else if (event.recurrenceRule) {
-        setRecurrenceRule(event.recurrenceRule);
-        setEndCondition(event.recurrenceCount ? 'after' : event.recurrenceEndDate ? 'on' : 'never');
-        setRecurrenceCount(event.recurrenceCount || '10');
-        setRecurrenceEndDate(event.recurrenceEndDate ? format(new Date(event.recurrenceEndDate), 'yyyy-MM-dd') : '');
-      } else {
-        setRecurrenceRule(null);
-        setEndCondition('never');
-        setRecurrenceCount('10');
-        setRecurrenceEndDate('');
+        next.recurrenceRule = event.recurrenceRule;
+        next.endCondition = event.recurrenceCount ? 'after' : event.recurrenceEndDate ? 'on' : 'never';
+        next.recurrenceCount = event.recurrenceCount || '10';
+        next.recurrenceEndDate = event.recurrenceEndDate ? format(new Date(event.recurrenceEndDate), 'yyyy-MM-dd') : '';
       }
+      setMemberId(eventMemberIds[0] || members[0]?.id || "");
     } else {
-      setTitle("");
-      setDescription("");
       if (selectedDate && (selectedDate.getHours() !== 0 || selectedDate.getMinutes() !== 0)) {
-        setStartDate(format(selectedDate, 'yyyy-MM-dd'));
-        setStartTime(format(selectedDate, 'HH:mm'));
+        next.startDate = format(selectedDate, 'yyyy-MM-dd');
+        next.startTime = format(selectedDate, 'HH:mm');
         const end = new Date(selectedDate.getTime() + 60 * 60 * 1000);
-        setEndTime(format(end, 'HH:mm'));
+        next.endTime = format(end, 'HH:mm');
       } else {
         const times = getDefaultTimes();
-        setStartDate(selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
-        setStartTime(times.start);
-        setEndTime(times.end);
+        next.startDate = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+        next.startTime = times.start;
+        next.endTime = times.end;
       }
-      setIsSometimeToday(false);
-      
       // Auto-select first member if available
       if (members.length > 0) {
+        next.members = [members[0].id];
         setMemberId(members[0].id);
-        setSelectedMemberIds([members[0].id]);
       }
+    }
+
+    setTitle(next.title);
+    setDescription(next.description);
+    setSelectedMemberIds(next.members);
+    setCategory(next.category);
+    setIsImportant(next.isImportant);
+    setStartDate(next.startDate);
+    setStartTime(next.startTime);
+    setEndTime(next.endTime);
+    setIsSometimeToday(next.isSometimeToday);
+    setRecurrenceRule(next.recurrenceRule);
+    setEndCondition(next.endCondition);
+    setRecurrenceCount(next.recurrenceCount);
+    setRecurrenceEndDate(next.recurrenceEndDate);
+    setSelectedWeekdays(next.weekdays);
+
+    // Capture the dirty-detection baseline only once per modal open, so a later
+    // members refresh (which re-runs this effect) cannot silently clear the
+    // unsaved-changes state.
+    if (!baselineCapturedRef.current) {
+      initialSnapshotRef.current = serializeForm(next);
+      baselineCapturedRef.current = true;
     }
   }, [event, selectedDate, isOpen, members]);
 
@@ -285,7 +389,14 @@ export default function EventModal({
     
     const parts = [`FREQ=${freq}`];
     if (recurrenceRule === 'biweekly') parts.push('INTERVAL=2');
-    
+
+    if ((recurrenceRule === 'weekly' || recurrenceRule === 'biweekly') && selectedWeekdays.length > 0) {
+      const ordered = WEEKDAYS
+        .map(w => w.code)
+        .filter(code => selectedWeekdays.includes(code));
+      parts.push(`BYDAY=${ordered.join(',')}`);
+    }
+
     if (endCondition === 'after' && recurrenceCount) {
       parts.push(`COUNT=${recurrenceCount}`);
     } else if (endCondition === 'on' && recurrenceEndDate) {
@@ -354,7 +465,8 @@ export default function EventModal({
   const selectedMember = members.find(m => m.id === memberId);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) attemptClose(); }}>
       <DialogContent
         className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl p-0 border-0 overflow-hidden rounded-2xl flex flex-col gap-0"
         style={{
@@ -381,7 +493,7 @@ export default function EventModal({
               </h2>
             </div>
             <button
-              onClick={onClose}
+              onClick={attemptClose}
               className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
               style={{ background: 'hsl(var(--muted) / 0.4)' }}
               data-testid="button-close-modal"
@@ -715,7 +827,40 @@ export default function EventModal({
                     </div>
                   )}
                 </div>
-                
+
+                {/* Weekday picker - Only for weekly / biweekly repeats */}
+                {(recurrenceRule === 'weekly' || recurrenceRule === 'biweekly') && (
+                  <div className="space-y-2 pt-2">
+                    <Label className="text-sm font-medium text-muted-foreground">Repeat on</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {WEEKDAYS.map((wd) => {
+                        const active = selectedWeekdays.includes(wd.code);
+                        return (
+                          <button
+                            key={wd.code}
+                            type="button"
+                            onClick={() => toggleWeekday(wd.code)}
+                            data-testid={`button-weekday-${wd.code}`}
+                            aria-pressed={active}
+                            className={`w-9 h-9 rounded-full text-sm font-medium transition-all border ${
+                              active
+                                ? 'bg-purple-600 text-white border-purple-400'
+                                : 'bg-muted/50 text-muted-foreground border-border hover:bg-muted'
+                            }`}
+                          >
+                            {wd.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-muted-foreground text-xs">
+                      {selectedWeekdays.length === 0
+                        ? 'Repeats on the start date\u2019s weekday. Pick days to repeat on multiple weekdays.'
+                        : 'Repeats on the selected day(s) each cycle.'}
+                    </p>
+                  </div>
+                )}
+
                 {/* End Condition - Only show when recurrence is selected */}
                 {recurrenceRule && (
                   <div className="space-y-3 pt-2">
@@ -795,29 +940,31 @@ export default function EventModal({
 
                     {/* Preview of next occurrences */}
                     {recurrenceRule && (() => {
-                      const previewDates: Date[] = [];
-                      const base = new Date(`${startDate}T${isSometimeToday ? '12:00' : startTime}`);
-                      let current = new Date(base);
-                      for (let i = 0; i < 3; i++) {
-                        switch (recurrenceRule) {
-                          case 'daily': current = addDays(current, 1); break;
-                          case 'weekly': current = addWeeks(current, 1); break;
-                          case 'biweekly': current = addWeeks(current, 2); break;
-                          case 'monthly': current = addMonths(current, 1); break;
-                          case 'yearly': current = addYears(current, 1); break;
+                      let previewDates: Date[] = [];
+                      try {
+                        const rruleStr = buildRRuleString();
+                        if (rruleStr) {
+                          const dtstart = new Date(`${startDate}T${isSometimeToday ? '12:00' : startTime}`);
+                          const rule = new RRule({ ...RRule.parseString(rruleStr), dtstart });
+                          previewDates = rule.all((_d, i) => i < 3);
                         }
-                        previewDates.push(new Date(current));
+                      } catch {
+                        previewDates = [];
                       }
                       return (
                         <div className="bg-muted/50 rounded-xl p-3 border border-border" data-testid="recurrence-preview">
-                          <p className="text-muted-foreground text-xs mb-1.5">Next occurrences:</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {previewDates.map((d, i) => (
-                              <span key={i} className="text-muted-foreground text-xs bg-muted px-2 py-0.5 rounded-full">
-                                {format(d, 'MMM d, yyyy')}
-                              </span>
-                            ))}
-                          </div>
+                          <p className="text-muted-foreground text-xs mb-1.5">First occurrences:</p>
+                          {previewDates.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {previewDates.map((d, i) => (
+                                <span key={i} className="text-muted-foreground text-xs bg-muted px-2 py-0.5 rounded-full">
+                                  {format(d, 'EEE, MMM d')}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-muted-foreground text-xs">No upcoming occurrences for this setting.</p>
+                          )}
                         </div>
                       );
                     })()}
@@ -900,7 +1047,7 @@ export default function EventModal({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onClose}
+                  onClick={attemptClose}
                   data-testid="button-cancel"
                   className="rounded-lg text-xs"
                 >
@@ -921,5 +1068,27 @@ export default function EventModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showDiscardConfirm} onOpenChange={setShowDiscardConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard changes?</AlertDialogTitle>
+          <AlertDialogDescription>
+            You have unsaved changes to this event. If you close now, they will be lost.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="button-discard-cancel">Continue editing</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => { setShowDiscardConfirm(false); onClose(); }}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            data-testid="button-discard-confirm"
+          >
+            Discard
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

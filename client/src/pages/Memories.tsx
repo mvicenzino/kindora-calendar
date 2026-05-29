@@ -79,7 +79,7 @@ export default function Memories() {
             </div>
             <Button
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/calendar")}
               className="gap-1.5 text-xs"
               data-testid="button-add-memory"
             >
@@ -102,7 +102,7 @@ export default function Memories() {
             </div>
             <Button
               size="sm"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/calendar")}
               className="gap-1.5"
               data-testid="button-add-first-memory"
             >
