@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { chatStorage } from "./replit_integrations/chat/storage";
 import { isAuthenticated } from "./replitAuth";
 import { storage } from "./storage";
+import type { InsertEvent } from "@shared/schema";
 import { format } from "date-fns";
 
 const openai = new OpenAI({
@@ -48,9 +49,16 @@ Important boundaries:
 - Remind users you're an AI when it feels appropriate, not defensively
 
 ACTION TOOLS — Use these proactively and immediately:
-- When the user asks to schedule, add, book, or create any meeting/appointment/event → call create_calendar_event RIGHT AWAY. Do not ask for confirmation; just do it and confirm in your narrative.
+- When the user asks to schedule, add, book, or create a NEW meeting/appointment/event → call create_calendar_event RIGHT AWAY. Do not ask for confirmation; just do it and confirm in your narrative.
+- When the user wants to CHANGE an event that already exists — referenced by name (e.g. "make my standup repeat every Tue and Thu", "move the dentist appointment to 3pm", "add a weekly repeat to book club", "rename soccer") → call update_calendar_event, NOT create_calendar_event. Creating a new event for an existing one makes an unwanted duplicate.
 - When the user wants to log symptoms, health notes, or how they're feeling → call log_health_note RIGHT AWAY.
 - Never say "I'll do that" without actually calling the tool. Take the action first, then describe what you did.
+- In your narrative, be clear about WHICH action you took: say you "created" a new event vs. "updated" an existing one, so the user knows nothing was duplicated.
+
+UPDATING EXISTING EVENTS — When the user adds a repeat to, moves, renames, or otherwise modifies something already on the calendar:
+- Call update_calendar_event with event_title set to the existing event's current name plus ONLY the fields that change.
+- To turn a one-time event into a recurring one, pass the rrule field to update_calendar_event — do not create a second event.
+- If the user says "my <event>" or refers to it as already scheduled, assume it exists and use update_calendar_event.
 
 RECURRING EVENTS — Always use the rrule parameter when the user says "every", "each", "daily", "weekly", "weekdays", "recurring", or describes a repeating schedule:
 - Every weekday (Mon–Fri): FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR
@@ -61,7 +69,8 @@ RECURRING EVENTS — Always use the rrule parameter when the user says "every", 
 - Every year: FREQ=YEARLY
 - To limit occurrences add COUNT=N (e.g. FREQ=WEEKLY;BYDAY=MO;COUNT=10)
 - To end by a date add UNTIL=YYYYMMDDTHHMMSSZ (e.g. FREQ=WEEKLY;BYDAY=MO;UNTIL=20251231T235959Z)
-- NEVER include "RRULE:" prefix — only the rule content after the colon.`;
+- NEVER include "RRULE:" prefix — only the rule content after the colon.
+- SERIES START: Set start_datetime to the FIRST day that matches the rule on or after the user's local today. If today's weekday is part of the repeat, the series MUST include today — never skip ahead to a later week. (For example, if today is Thursday and the user wants every Tuesday and Thursday, the series starts today, not next Tuesday.)`;
 
 function buildSystemPrompt(
   family?: {
@@ -192,6 +201,68 @@ async function getFamilyForUser(userId: string) {
   }
 }
 
+// RFC 5545 weekday codes indexed to match JS Date.getUTCDay() (0 = Sunday).
+const RRULE_WEEKDAY_CODES = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+
+// When a recurrence targets specific weekdays (BYDAY), make sure the series
+// anchor lands on the FIRST matching weekday on/after the user's local "today",
+// preserving the intended local time-of-day. This prevents a repeat that
+// includes today's weekday from silently starting a week (or more) later.
+//
+// We only adjust when the LLM's chosen start is near-term (within ~14 days), so
+// a deliberately future start ("starting next month, every Tue/Thu") is left
+// untouched.
+function computeRecurrenceStart(
+  startTime: Date,
+  rruleRaw: string,
+  timeContext?: { localNow: string; tzOffsetMinutes: number }
+): Date {
+  const m = /BYDAY=([^;]+)/i.exec(rruleRaw);
+  if (!m) return startTime;
+
+  const targetDays = new Set(
+    m[1]
+      .split(",")
+      .map(d => RRULE_WEEKDAY_CODES.indexOf(d.trim().toUpperCase()))
+      .filter(i => i >= 0)
+  );
+  if (targetDays.size === 0) return startTime;
+
+  // tzOffsetMinutes follows JS getTimezoneOffset(): UTC = local + offset.
+  const offsetMs = (timeContext?.tzOffsetMinutes ?? 0) * 60000;
+
+  // Intended local wall-clock time-of-day comes from the LLM's start_datetime.
+  const localStart = new Date(startTime.getTime() - offsetMs);
+  const hour = localStart.getUTCHours();
+  const minute = localStart.getUTCMinutes();
+  const second = localStart.getUTCSeconds();
+
+  // The user's local "today" (date portion).
+  const nowMs = timeContext?.localNow ? new Date(timeContext.localNow).getTime() : Date.now();
+  const localNow = new Date(nowMs - offsetMs);
+  const baseY = localNow.getUTCFullYear();
+  const baseMo = localNow.getUTCMonth();
+  const baseD = localNow.getUTCDate();
+
+  // First matching weekday on/after local today, at the intended time-of-day.
+  let anchor: Date | null = null;
+  for (let add = 0; add < 7; add++) {
+    const candLocal = new Date(Date.UTC(baseY, baseMo, baseD + add, hour, minute, second));
+    if (targetDays.has(candLocal.getUTCDay())) {
+      anchor = new Date(candLocal.getTime() + offsetMs);
+      break;
+    }
+  }
+  if (!anchor) return startTime;
+
+  // Only pull the anchor earlier when the LLM's start was near-term; respect a
+  // clearly intentional far-future start.
+  const FOURTEEN_DAYS = 14 * 24 * 60 * 60 * 1000;
+  if (startTime.getTime() - anchor.getTime() > FOURTEEN_DAYS) return startTime;
+
+  return anchor;
+}
+
 // ─── Kira Action Tools ───────────────────────────────────────────────────────
 
 const KIRA_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
@@ -215,6 +286,30 @@ const KIRA_TOOLS: OpenAI.Chat.Completions.ChatCompletionTool[] = [
           },
         },
         required: ["title", "start_datetime"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_calendar_event",
+      description: "Update an EXISTING calendar event that the user refers to by name (e.g. 'make my standup repeat every Tue and Thu', 'move the dentist appointment to 3pm', 'rename soccer to soccer practice', 'add a weekly repeat to book club'). Finds the existing event by its current title and applies only the changes given. ALWAYS prefer this over create_calendar_event when the user is changing something already on the calendar — calling create would make a duplicate. To add a repeat to a one-time event, pass the rrule field.",
+      parameters: {
+        type: "object",
+        properties: {
+          event_title: { type: "string", description: "The current title (or a distinctive part of it) of the existing event to update (required)" },
+          new_title: { type: "string", description: "New title, only if the user wants to rename the event" },
+          start_datetime: { type: "string", description: "New ISO 8601 UTC datetime for event start, only if the time/date is changing" },
+          end_datetime: { type: "string", description: "New ISO 8601 UTC datetime for event end (optional)" },
+          description: { type: "string", description: "New notes/details, only if changing" },
+          category: { type: "string", enum: ["medical", "school", "activity", "work", "family", "eldercare", "other"], description: "New category, only if changing" },
+          member_names: { type: "array", items: { type: "string" }, description: "New set of family member names this event is for, only if changing" },
+          rrule: {
+            type: "string",
+            description: "RFC 5545 RRULE string to make the event recurring (or change its recurrence). Use ONLY the rule portion, never include 'RRULE:' prefix. Examples: every weekday='FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', every Tue & Thu='FREQ=WEEKLY;BYDAY=TU,TH', weekly='FREQ=WEEKLY', biweekly='FREQ=WEEKLY;INTERVAL=2', monthly='FREQ=MONTHLY'. Add COUNT=N or UNTIL=YYYYMMDDTHHMMSSZ to end the series.",
+          },
+        },
+        required: ["event_title"],
       },
     },
   },
@@ -250,7 +345,8 @@ async function executeKiraTool(
   toolName: string,
   args: Record<string, unknown>,
   familyId: string,
-  userId?: string
+  userId?: string,
+  timeContext?: { localNow: string; tzOffsetMinutes: number }
 ): Promise<KiraToolResult> {
   try {
     if (toolName === "create_calendar_event") {
@@ -290,17 +386,24 @@ async function executeKiraTool(
         endTime,
         memberIds,
         color: "#f97316",
-        category,
+        category: category as InsertEvent["category"],
         completed: false,
         isImportant: false,
       };
 
       let event: Awaited<ReturnType<typeof storage.createEvent>>;
+      let finalStart = startTime;
 
       if (rruleRaw) {
+        // Anchor the series so a repeat that includes today's weekday starts today.
+        finalStart = computeRecurrenceStart(startTime, rruleRaw, timeContext);
+        const durationMs = endTime.getTime() - startTime.getTime();
+        const finalEnd = new Date(finalStart.getTime() + durationMs);
         // Create a recurring parent event
         const parent = await storage.createEvent(familyId, {
           ...basePayload,
+          startTime: finalStart,
+          endTime: finalEnd,
           rrule: rruleRaw,
           isRecurringParent: true,
         });
@@ -312,13 +415,118 @@ async function executeKiraTool(
         event = await storage.createEvent(familyId, basePayload);
       }
 
-      const dateStr = format(startTime, "EEE, MMM d 'at' h:mm a");
+      const dateStr = format(finalStart, "EEE, MMM d 'at' h:mm a");
       const recurringSuffix = rruleRaw ? " (recurring)" : "";
       return {
         name: toolName,
         success: true,
         summary: `Created "${title}" on ${dateStr}${recurringSuffix}`,
-        data: { id: event.id, title, startTime: startTime.toISOString(), category, rrule: rruleRaw ?? undefined },
+        data: { id: event.id, title, startTime: finalStart.toISOString(), category, rrule: rruleRaw ?? undefined },
+      };
+    }
+
+    if (toolName === "update_calendar_event") {
+      const eventTitleQuery = String(args.event_title ?? "").trim();
+      if (!eventTitleQuery) throw new Error("No event name was provided to update");
+
+      // Find the best-matching existing event by title within the family.
+      const allEvents = await storage.getEvents(familyId);
+      const q = eventTitleQuery.toLowerCase();
+      const exact = allEvents.filter(e => e.title.toLowerCase().trim() === q);
+      const partial = allEvents.filter(e => {
+        const t = e.title.toLowerCase();
+        return t.includes(q) || q.includes(t);
+      });
+      const candidates = exact.length > 0 ? exact : partial;
+      if (candidates.length === 0) {
+        return {
+          name: toolName,
+          success: false,
+          error: `I couldn't find an event called "${eventTitleQuery}" on your calendar.`,
+          summary: `No event matching "${eventTitleQuery}" found`,
+        };
+      }
+      // Prefer recurring parents first (so we edit the series template, not an
+      // instance), then the soonest upcoming event; otherwise the most recent past.
+      const now = Date.now();
+      candidates.sort((a, b) => {
+        if (!!a.isRecurringParent !== !!b.isRecurringParent) return a.isRecurringParent ? -1 : 1;
+        const at = new Date(a.startTime).getTime();
+        const bt = new Date(b.startTime).getTime();
+        const aFuture = at >= now;
+        const bFuture = bt >= now;
+        if (aFuture && bFuture) return at - bt;
+        if (aFuture) return -1;
+        if (bFuture) return 1;
+        return bt - at;
+      });
+      let target = candidates[0];
+      // If the matched row is an instance of a series, edit its parent instead
+      // of turning a single occurrence into a second parent.
+      if (target.recurringEventId && target.recurringEventId !== target.id) {
+        const parent = allEvents.find(e => e.id === target.recurringEventId);
+        if (parent) target = parent;
+      }
+
+      const newTitle = args.new_title ? String(args.new_title) : undefined;
+      const newDescription = args.description !== undefined ? String(args.description) : undefined;
+      const newCategory = args.category ? String(args.category) : undefined;
+      const rruleRaw = args.rrule ? String(args.rrule).replace(/^RRULE:/i, "").trim() : undefined;
+      const memberNames: string[] = Array.isArray(args.member_names) ? args.member_names.map(String) : [];
+
+      // Resolve new members if provided.
+      let newMemberIds: string[] | undefined;
+      if (memberNames.length > 0) {
+        const allMembers = await storage.getFamilyMembers(familyId);
+        newMemberIds = allMembers
+          .filter(m => memberNames.some(n => m.name.toLowerCase().includes(n.toLowerCase())))
+          .map(m => m.id);
+      }
+
+      // Determine the start/end to use (defaults to the existing event's times).
+      const existingStart = new Date(target.startTime);
+      const existingEnd = new Date(target.endTime);
+      const existingDuration = existingEnd.getTime() - existingStart.getTime();
+      let nextStart = args.start_datetime ? new Date(String(args.start_datetime)) : existingStart;
+      if (isNaN(nextStart.getTime())) nextStart = existingStart;
+      let nextEnd = args.end_datetime ? new Date(String(args.end_datetime)) : new Date(nextStart.getTime() + existingDuration);
+      if (isNaN(nextEnd.getTime())) nextEnd = new Date(nextStart.getTime() + existingDuration);
+
+      const updatePayload: Record<string, unknown> = {};
+      if (newTitle) updatePayload.title = newTitle;
+      if (newDescription !== undefined) updatePayload.description = newDescription;
+      if (newCategory) updatePayload.category = newCategory;
+      // Only change members when at least one name actually resolved — never
+      // silently strip existing assignments because of a typo'd name.
+      if (newMemberIds && newMemberIds.length > 0) updatePayload.memberIds = newMemberIds;
+
+      const startChanged = !!args.start_datetime || !!args.end_datetime;
+
+      if (rruleRaw) {
+        // Adding/changing a repeat: anchor the series start, convert to a parent.
+        const anchoredStart = computeRecurrenceStart(nextStart, rruleRaw, timeContext);
+        const anchoredEnd = new Date(anchoredStart.getTime() + (nextEnd.getTime() - nextStart.getTime()));
+        updatePayload.startTime = anchoredStart;
+        updatePayload.endTime = anchoredEnd;
+        updatePayload.rrule = rruleRaw;
+        updatePayload.isRecurringParent = true;
+        updatePayload.recurringEventId = target.id;
+        nextStart = anchoredStart;
+      } else if (startChanged) {
+        updatePayload.startTime = nextStart;
+        updatePayload.endTime = nextEnd;
+      }
+
+      const updated = await storage.updateEvent(target.id, familyId, updatePayload as Partial<InsertEvent>);
+
+      const finalTitle = newTitle ?? target.title;
+      const dateStr = format(new Date(updated.startTime), "EEE, MMM d 'at' h:mm a");
+      const recurringSuffix = rruleRaw ? " (now recurring)" : "";
+      return {
+        name: toolName,
+        success: true,
+        summary: `Updated "${finalTitle}" — ${dateStr}${recurringSuffix}`,
+        data: { id: target.id, title: finalTitle, startTime: new Date(updated.startTime).toISOString(), rrule: rruleRaw ?? undefined },
       };
     }
 
@@ -687,7 +895,7 @@ export function registerAdvisorRoutes(app: Express): void {
           let args: Record<string, unknown> = {};
           try { args = JSON.parse(tc.arguments || "{}"); } catch {}
           console.log(`[Kira tool] executing ${tc.name} args=${JSON.stringify(args)}`);
-          const result = await executeKiraTool(tc.name, args, familyId, userId);
+          const result = await executeKiraTool(tc.name, args, familyId, userId, timeContext);
           console.log(`[Kira tool] result: success=${result.success} summary="${result.summary}" error=${result.error ?? "none"}`);
           toolResults.push(result);
           // Stream the action card event to the client

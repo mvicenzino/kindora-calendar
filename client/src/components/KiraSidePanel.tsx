@@ -34,7 +34,7 @@ interface KiraToolResult {
 function PanelActionCard({ tool }: { tool: KiraToolResult }) {
   const [, navigate] = useLocation();
   const { closePanel } = useKiraPanel();
-  const isEvent = tool.name === "create_calendar_event";
+  const isEvent = tool.name === "create_calendar_event" || tool.name === "update_calendar_event";
   const isHealth = tool.name === "log_health_note";
 
   return (
@@ -375,7 +375,7 @@ export function KiraSidePanel() {
                 setStreamingTools(prev => [...prev, evt.tool]);
                 // Immediately refresh relevant data so the user sees results now
                 if (evt.tool.success) {
-                  if (evt.tool.name === "create_calendar_event") {
+                  if (evt.tool.name === "create_calendar_event" || evt.tool.name === "update_calendar_event") {
                     queryClient.invalidateQueries({
                       predicate: (q) => typeof q.queryKey[0] === "string" && q.queryKey[0].startsWith("/api/events"),
                     });

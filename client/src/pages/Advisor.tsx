@@ -45,7 +45,7 @@ interface KiraToolResult {
 
 function ActionCard({ tool }: { tool: KiraToolResult }) {
   const [, navigate] = useLocation();
-  const isEvent = tool.name === "create_calendar_event";
+  const isEvent = tool.name === "create_calendar_event" || tool.name === "update_calendar_event";
   const isHealth = tool.name === "log_health_note";
 
   return (
