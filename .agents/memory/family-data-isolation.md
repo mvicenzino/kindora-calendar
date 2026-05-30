@@ -22,3 +22,10 @@ medical/legal data.
 calls. Don't gate it conditionally (e.g. `if (body.familyId)`) — require the id and always
 check. Endpoints that look up a record first (e.g. `/api/symptoms/:id`) check the role
 against the record's own `familyId` instead.
+
+**Regression test:** `server/__tests__/familyIsolation.test.ts` (registered as the `test`
+validation command, run with `tsx`) registers two local users/families and asserts user A
+gets 403 (not 200/500) targeting family B across every family-scoped endpoint, plus a
+positive control that A can reach its own family. Add any NEW family-scoped endpoint to this
+test. It hits the live dev server (default `http://localhost:5000`, override `TEST_BASE_URL`)
+so the workflow must be running; it self-cleans the rows it creates.
