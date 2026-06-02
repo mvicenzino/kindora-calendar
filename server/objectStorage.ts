@@ -137,13 +137,24 @@ export class ObjectStorageService {
     return `/objects/${entityId}`;
   }
 
-  async downloadObject(file: File, res: Response, cacheTtlSec: number = 3600) {
+  async downloadObject(
+    file: File,
+    res: Response,
+    opts: { cacheTtlSec?: number; noStore?: boolean } = {}
+  ) {
+    const { cacheTtlSec = 3600, noStore = false } = opts;
     try {
       const [metadata] = await file.getMetadata();
+      // All /objects/ content is private to a family/user, so never allow
+      // shared/proxy caches to retain it. Sensitive files (medical/legal
+      // vault) use no-store so they are not written to disk at all.
+      const cacheControl = noStore
+        ? "private, no-store, max-age=0"
+        : `private, max-age=${cacheTtlSec}`;
       res.set({
         "Content-Type": metadata.contentType || "application/octet-stream",
         "Content-Length": metadata.size,
-        "Cache-Control": `public, max-age=${cacheTtlSec}`,
+        "Cache-Control": cacheControl,
       });
 
       const stream = file.createReadStream();

@@ -254,12 +254,33 @@ async function main() {
     familyId: B,
   });
 
+  // Object storage (vault file delivery). The actual file bytes are served by
+  // GET /objects/...; these must never be reachable anonymously, and vault
+  // files (care-documents/<familyId>/...) must reject members of other families.
+  {
+    const vaultPath = `/objects/care-documents/${B}/123-secret.pdf`;
+    // Anonymous (no cookie) must be rejected with 401 — not served, not 404-file.
+    const anon = await api("GET", vaultPath);
+    if (anon.status === 401) ok("GET /objects/care-documents (anonymous) → 401");
+    else fail("GET /objects/care-documents (anonymous)", `expected 401 but got ${anon.status}`);
+
+    const anonUpload = await api("POST", "/api/objects/upload");
+    if (anonUpload.status === 401) ok("POST /api/objects/upload (anonymous) → 401");
+    else fail("POST /api/objects/upload (anonymous)", `expected 401 but got ${anonUpload.status}`);
+
+    // User A (authenticated) hitting family B's vault path must be 403.
+    await expectForbidden("GET /objects/care-documents (family B)", "GET", vaultPath, userA);
+  }
+
   console.log("\nPositive control (user A → own family A) must NOT be 403:");
   const A = userA.familyId;
   await expectAllowed("GET  /api/events (own family)", "GET", `/api/events?familyId=${A}`, userA);
   await expectAllowed("GET  /api/symptoms (own family)", "GET", `/api/symptoms?familyId=${A}`, userA);
   await expectAllowed("GET  /api/tasks (own family)", "GET", `/api/tasks?familyId=${A}`, userA);
   await expectAllowed("GET  /api/family-members (own family)", "GET", `/api/family-members?familyId=${A}`, userA);
+  // Own-family vault path passes the membership gate (404 for a missing file,
+  // never 403/401) — proves the gate doesn't lock members out of their vault.
+  await expectAllowed("GET /objects/care-documents (own family)", "GET", `/objects/care-documents/${A}/nope.pdf`, userA);
 
   // Best-effort cleanup of the families/users we created.
   await cleanup([userA, userB]);

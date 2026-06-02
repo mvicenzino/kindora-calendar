@@ -2707,11 +2707,39 @@ Visit Kindora Calendar: ${joinUrl}
   });
 
   // Object Storage Routes
-  app.get("/objects/:objectPath(*)", async (req, res) => {
+  // Private file delivery. Every object under /objects/ belongs to a family or
+  // user, so this route ALWAYS requires authentication. Sensitive vault files
+  // (care-documents/<familyId>/...) additionally require that the caller is a
+  // member of that family — this is the access-control gate that prevents
+  // medical/legal/insurance documents from leaking across families or to
+  // anonymous visitors who happen to have the URL.
+  app.get("/objects/:objectPath(*)", isAuthenticated, async (req: any, res) => {
     const objectStorageService = new ObjectStorageService();
     try {
+      const userId = req.user.claims.sub;
+      // req.path looks like /objects/<entity>/<...>; segments[1] is the entity
+      // bucket prefix (e.g. "care-documents" or "uploads").
+      const segments = req.path.split("/").filter(Boolean);
+      // Reject traversal-style segments so the authorized prefix can never
+      // diverge from the object key that is actually fetched.
+      if (segments.some((s: string) => s === "." || s === "..")) {
+        return res.sendStatus(404);
+      }
+      const isVaultDocument = segments[1] === "care-documents";
+
+      if (isVaultDocument) {
+        const docFamilyId = segments[2];
+        if (!docFamilyId) {
+          return res.sendStatus(404);
+        }
+        const role = await getUserFamilyRole(storage, userId, docFamilyId);
+        if (!role) {
+          return res.sendStatus(403);
+        }
+      }
+
       const objectFile = await objectStorageService.getObjectEntityFile(req.path);
-      objectStorageService.downloadObject(objectFile, res);
+      objectStorageService.downloadObject(objectFile, res, { noStore: isVaultDocument });
     } catch (error) {
       console.error("Error accessing object:", error);
       if (error instanceof ObjectNotFoundError) {
@@ -2721,7 +2749,7 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
-  app.post("/api/objects/upload", async (req, res) => {
+  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
     const objectStorageService = new ObjectStorageService();
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     res.json({ uploadURL });
