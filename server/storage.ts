@@ -278,6 +278,7 @@ export class MemStorage implements IStorage {
       subscriptionStatus: existingUser?.subscriptionStatus ?? "inactive",
       welcomeEmailClaimedAt: existingUser?.welcomeEmailClaimedAt ?? null,
       welcomeEmailSentAt: existingUser?.welcomeEmailSentAt ?? null,
+      timezone: user.timezone ?? existingUser?.timezone ?? null,
       createdAt: existingUser?.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -540,6 +541,7 @@ export class MemStorage implements IStorage {
       color: insertMember.color,
       avatar: insertMember.avatar ?? null,
       role: insertMember.role ?? "family",
+      userId: insertMember.userId ?? null,
       familyId,
       createdAt: new Date(),
     };
@@ -615,6 +617,7 @@ export class MemStorage implements IStorage {
       rrule: insertEvent.rrule ?? null,
       isRecurringParent: insertEvent.isRecurringParent ?? null,
       isImportant: insertEvent.isImportant ?? false,
+      googleEventId: insertEvent.googleEventId ?? null,
       completed: false,
       completedAt: null,
       createdAt: new Date(),
@@ -848,6 +851,7 @@ export class MemStorage implements IStorage {
       familyId,
       authorUserId: insertMessage.authorUserId,
       content: insertMessage.content,
+      messageType: insertMessage.messageType ?? "family",
       parentMessageId: insertMessage.parentMessageId ?? null,
       createdAt: insertMessage.createdAt || new Date(),
     };
@@ -1235,20 +1239,20 @@ export class MemStorage implements IStorage {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.usersMap.values());
+    return Array.from(this.users.values());
   }
 
   async getAdminStats(): Promise<{ totalUsers: number; totalFamilies: number; totalEvents: number; totalFeedback: number }> {
-    return { totalUsers: this.usersMap.size, totalFamilies: this.familiesMap.size, totalEvents: this.eventsMap.size, totalFeedback: 0 };
+    return { totalUsers: this.users.size, totalFamilies: this.families.size, totalEvents: this.events.size, totalFeedback: 0 };
   }
 
   async getAdminAnalytics(): Promise<AdminAnalytics> {
     return {
-      totalUsers: this.usersMap.size, newUsersThisWeek: 0, newUsersThisMonth: 0,
+      totalUsers: this.users.size, newUsersThisWeek: 0, newUsersThisMonth: 0,
       googleUsers: 0, emailUsers: 0, replitUsers: 0,
-      activeSubscribers: 0, trialSubscribers: 0, freeUsers: this.usersMap.size, estimatedMrr: 0,
-      totalFamilies: this.familiesMap.size, newFamiliesThisWeek: 0,
-      totalEvents: this.eventsMap.size, totalMessages: 0, totalSymptomEntries: 0,
+      activeSubscribers: 0, trialSubscribers: 0, freeUsers: this.users.size, estimatedMrr: 0,
+      totalFamilies: this.families.size, newFamiliesThisWeek: 0,
+      totalEvents: this.events.size, totalMessages: 0, totalSymptomEntries: 0,
       totalMedications: 0, totalDocuments: 0, totalMedicationLogs: 0, totalFeedback: 0,
       weeklySignups: [],
     };
@@ -1757,7 +1761,7 @@ class DrizzleStorage implements IStorage {
         .select({ userId: familyMembers.userId })
         .from(familyMembers)
         .where(eq(familyMembers.familyId, familyId));
-      const existingUserIds = new Set(existing.map(e => e.userId).filter(Boolean));
+      const existingUserIds = new Set(existing.map((e: { userId: string | null }) => e.userId).filter(Boolean));
 
       for (const m of memberships) {
         if (m.userId && !existingUserIds.has(m.userId)) {
@@ -2110,13 +2114,13 @@ class DrizzleStorage implements IStorage {
     const allScheduleRows = await this.db
       .select({ familyId: weeklySummarySchedules.familyId })
       .from(weeklySummarySchedules);
-    const scheduledFamilyIds = new Set(allScheduleRows.map(s => s.familyId));
+    const scheduledFamilyIds = new Set(allScheduleRows.map((s: { familyId: string }) => s.familyId));
 
     const allFamilies = await this.db.select({ id: families.id }).from(families);
     const now = new Date();
     const defaultSchedules: WeeklySummarySchedule[] = allFamilies
-      .filter(f => !scheduledFamilyIds.has(f.id))
-      .map(f => ({
+      .filter((f: { id: string }) => !scheduledFamilyIds.has(f.id))
+      .map((f: { id: string }) => ({
         id: "",
         familyId: f.id,
         isEnabled: true,

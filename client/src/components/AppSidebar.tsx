@@ -22,7 +22,9 @@ import { apiRequest } from "@/lib/queryClient";
 
 const logo = "/kindora-logo.jpeg";
 
-const familyNavItems = [
+type NavItemType = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
+
+const familyNavItems: NavItemType[] = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Calendar", url: "/calendar", icon: Calendar },
   { title: "Tasks", url: "/tasks", icon: CheckSquare },
@@ -134,7 +136,7 @@ export default function AppSidebar() {
     setFeedbackOpen(true);
   }
 
-  const { data: userRole } = useQuery({
+  const { data: userRole } = useQuery<{ role?: string }>({
     queryKey: ["/api/family/" + activeFamilyId + "/role"],
     enabled: !!activeFamilyId,
   });
@@ -143,13 +145,13 @@ export default function AppSidebar() {
   const isOwnerOrMember = userRole?.role === "owner" || userRole?.role === "member";
   const isAdmin = user?.id === "google-110610540501901085708" || user?.email === "mvicenzino@gmail.com";
 
-  function handleNavClick(e, url) {
+  function handleNavClick(e: React.MouseEvent, url: string) {
     e.preventDefault();
     setLocation(url);
     setOpenMobile(false);
   }
 
-  function NavItem({ item }) {
+  function NavItem({ item }: { item: NavItemType }) {
     const isActive = location === item.url || (item.url === "/" && location === "") || (item.url !== "/" && location.startsWith(item.url + "/"));
     const isMessages = item.url === "/messages";
     const showBadge = isMessages && unreadCount > 0;

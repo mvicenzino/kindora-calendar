@@ -51,19 +51,62 @@ interface EmergencyBridgeToken {
 }
 
 
-function ImportMedicationsDialog({ familyId, members, onImported }) {
+interface MemberRow {
+  id: string;
+  name: string;
+  color: string;
+  avatar?: string | null;
+  role?: string | null;
+}
+
+interface MedRow {
+  id: string;
+  memberId: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  instructions?: string | null;
+  scheduledTimes?: string[] | null;
+  isActive?: boolean;
+}
+
+interface ParsedMed {
+  name: string;
+  dosage: string;
+  frequency: string;
+  scheduledTimes?: string[];
+  instructions?: string;
+}
+
+interface VaultDoc {
+  id: string;
+  title: string;
+  fileName: string;
+  documentType: string;
+}
+
+interface MedFormState {
+  memberId: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  instructions: string;
+  scheduledTimes: string;
+}
+
+function ImportMedicationsDialog({ familyId, members, onImported }: { familyId: string; members: MemberRow[]; onImported?: () => void }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState('source');
   const [source, setSource] = useState('text');
   const [inputText, setInputText] = useState('');
-  const [selectedVaultDoc, setSelectedVaultDoc] = useState(null);
-  const [parsedMeds, setParsedMeds] = useState([]);
-  const [selectedMeds, setSelectedMeds] = useState({});
+  const [selectedVaultDoc, setSelectedVaultDoc] = useState<VaultDoc | null>(null);
+  const [parsedMeds, setParsedMeds] = useState<ParsedMed[]>([]);
+  const [selectedMeds, setSelectedMeds] = useState<Record<number, boolean>>({});
   const [assignMemberId, setAssignMemberId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: vaultDocs = [] } = useQuery({
+  const { data: vaultDocs = [] } = useQuery<VaultDoc[]>({
     queryKey: ['/api/care-documents?familyId=' + familyId],
     enabled: !!familyId && open,
   });
@@ -74,32 +117,34 @@ function ImportMedicationsDialog({ familyId, members, onImported }) {
 
   const resetDialog = () => { setStep('source'); setSource('text'); setInputText(''); setSelectedVaultDoc(null); setParsedMeds([]); setSelectedMeds({}); setAssignMemberId(''); setIsLoading(false); };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = async (event) => {
-      const base64 = event.target.result.split(',')[1];
+      const result = event.target?.result;
+      if (typeof result !== 'string') return;
+      const base64 = result.split(',')[1];
       await parseMedications({ imageBase64: base64, mimeType: file.type });
     };
     reader.readAsDataURL(file);
   };
 
-  const handleVaultDocSelect = async (doc) => {
+  const handleVaultDocSelect = async (doc: VaultDoc) => {
     setSelectedVaultDoc(doc);
     setIsLoading(true);
     await parseMedications({ documentId: doc.id });
   };
 
-  const parseMedications = async (payload) => {
+  const parseMedications = async (payload: Record<string, unknown>) => {
     setIsLoading(true);
     try {
       const res = await apiRequest('POST', '/api/medications/import-ai', { ...payload, familyId });
       const data = await res.json();
       if (data.medications && data.medications.length > 0) {
         setParsedMeds(data.medications);
-        const allSelected = {};
-        data.medications.forEach((m, i) => { allSelected[i] = true; });
+        const allSelected: Record<number, boolean> = {};
+        data.medications.forEach((_m: ParsedMed, i: number) => { allSelected[i] = true; });
         setSelectedMeds(allSelected);
         setStep('preview');
       } else {
@@ -251,16 +296,16 @@ function ImportMedicationsDialog({ familyId, members, onImported }) {
 }
 
 
-function MedicationManager({ familyId, isOwnerOrMember }) {
+function MedicationManager({ familyId, isOwnerOrMember }: { familyId: string; isOwnerOrMember: boolean }) {
   const { toast } = useToast();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [editingMed, setEditingMed] = useState(null);
-  const [expandedMember, setExpandedMember] = useState(null);
-  const [medForm, setMedForm] = useState({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
+  const [editingMed, setEditingMed] = useState<MedRow | null>(null);
+  const [expandedMember, setExpandedMember] = useState<string | null>(null);
+  const [medForm, setMedForm] = useState<MedFormState>({ memberId: "", name: "", dosage: "", frequency: "", instructions: "", scheduledTimes: "" });
   const [pendingLogMed, setPendingLogMed] = useState<{ id: string; name: string; loggedBy: string; loggedAt: string } | null>(null);
 
-  const { data: rawMembers = [] } = useQuery({ queryKey: ['/api/family-members', familyId], enabled: !!familyId });
-  const { data: medications = [] } = useQuery({ queryKey: ['/api/medications?familyId=' + familyId], enabled: !!familyId });
+  const { data: rawMembers = [] } = useQuery<MemberRow[]>({ queryKey: ['/api/family-members', familyId], enabled: !!familyId });
+  const { data: medications = [] } = useQuery<MedRow[]>({ queryKey: ['/api/medications?familyId=' + familyId], enabled: !!familyId });
   const { data: todayLogs = [] } = useQuery<any[]>({
     queryKey: ['/api/medication-logs/today', familyId],
     queryFn: () => fetch(`/api/medication-logs/today?familyId=${familyId}`).then(r => r.json()),
@@ -311,7 +356,7 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
   }
 
   const createMedMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: MedFormState) => {
       const times = data.scheduledTimes ? data.scheduledTimes.split(',').map(t => t.trim()).filter(Boolean) : [];
       const res = await apiRequest('POST', '/api/medications', { memberId: data.memberId, name: data.name.trim(), dosage: data.dosage.trim(), frequency: data.frequency.trim(), instructions: data.instructions.trim() || null, scheduledTimes: times.length > 0 ? times : null, familyId });
       return res.json();
@@ -321,7 +366,7 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
   });
 
   const updateMedMutation = useMutation({
-    mutationFn: async (data) => {
+    mutationFn: async (data: MedFormState & { id: string }) => {
       const times = data.scheduledTimes ? data.scheduledTimes.split(',').map(t => t.trim()).filter(Boolean) : [];
       const res = await apiRequest('PATCH', '/api/medications/' + data.id + '?familyId=' + familyId, { name: data.name.trim(), dosage: data.dosage.trim(), frequency: data.frequency.trim(), instructions: data.instructions.trim() || null, scheduledTimes: times.length > 0 ? times : null });
       return res.json();
@@ -331,13 +376,13 @@ function MedicationManager({ familyId, isOwnerOrMember }) {
   });
 
   const deleteMedMutation = useMutation({
-    mutationFn: async (medId) => { await apiRequest('DELETE', '/api/medications/' + medId + '?familyId=' + familyId); },
+    mutationFn: async (medId: string) => { await apiRequest('DELETE', '/api/medications/' + medId + '?familyId=' + familyId); },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['/api/medications?familyId=' + familyId] }); toast({ title: "Medication removed" }); },
     onError: (error) => { toast({ title: "Could not remove", description: error.message, variant: "destructive" }); },
   });
 
-  const openEdit = (med) => { setEditingMed(med); setMedForm({ memberId: med.memberId, name: med.name, dosage: med.dosage, frequency: med.frequency, instructions: med.instructions || "", scheduledTimes: med.scheduledTimes ? med.scheduledTimes.join(', ') : "" }); };
-  const medsByMember = rawMembers.reduce((acc, member) => { acc[member.id] = medications.filter(m => m.memberId === member.id && m.isActive); return acc; }, {});
+  const openEdit = (med: MedRow) => { setEditingMed(med); setMedForm({ memberId: med.memberId, name: med.name, dosage: med.dosage, frequency: med.frequency, instructions: med.instructions || "", scheduledTimes: med.scheduledTimes ? med.scheduledTimes.join(', ') : "" }); };
+  const medsByMember = rawMembers.reduce((acc: Record<string, MedRow[]>, member) => { acc[member.id] = medications.filter(m => m.memberId === member.id && m.isActive); return acc; }, {} as Record<string, MedRow[]>);
   const membersWithMeds = rawMembers.filter(m => (medsByMember[m.id] || []).length > 0);
   const isFormValid = medForm.memberId && medForm.name.trim() && medForm.dosage.trim() && medForm.frequency;
 

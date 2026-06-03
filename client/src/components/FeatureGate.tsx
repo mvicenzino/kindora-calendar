@@ -1,7 +1,7 @@
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import { UpgradeModal } from "./UpgradeModal";
 import { Loader2 } from "lucide-react";
 
 export type FeatureTier = "free" | "family" | "care";
@@ -38,7 +38,7 @@ export function FeatureGate({
   showMessage = true,
 }: FeatureGateProps) {
   const { user } = useAuth();
-  const [showUpgradeModal, setShowUpgradeModal] = React.useState(false);
+  const [, setLocation] = useLocation();
 
   const { data: subscription, isLoading } = useQuery<SubscriptionStatus>({
     queryKey: ["/api/subscription/status"],
@@ -94,7 +94,7 @@ export function FeatureGate({
                 )}
               </div>
               <button
-                onClick={() => setShowUpgradeModal(true)}
+                onClick={() => setLocation("/settings")}
                 className="text-sm font-medium text-amber-700 dark:text-amber-300 hover:underline flex-shrink-0"
               >
                 Upgrade
@@ -102,11 +102,6 @@ export function FeatureGate({
             </div>
           </div>
         )}
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => setShowUpgradeModal(false)}
-          requiredTier={feature}
-        />
       </>
     );
   }

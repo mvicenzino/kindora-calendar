@@ -254,7 +254,7 @@ function ChecklistView({
     setChecked(prev => {
       const next = new Set(prev);
       next.has(itemId) ? next.delete(itemId) : next.add(itemId);
-      lsSet(key, [...next]);
+      lsSet(key, Array.from(next));
       return next;
     });
   }
@@ -264,7 +264,7 @@ function ChecklistView({
     setChecked(prev => {
       const next = new Set(prev);
       section.items.forEach(i => allChecked ? next.delete(i.id) : next.add(i.id));
-      lsSet(key, [...next]);
+      lsSet(key, Array.from(next));
       return next;
     });
   }

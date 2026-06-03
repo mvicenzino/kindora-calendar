@@ -1757,7 +1757,7 @@ export default function Health() {
                 <CardContent className="py-12 text-center">
                   <Activity className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground mb-3">No entries yet.</p>
-                  <Button size="sm" onClick={openNew} data-testid="button-first-entry">
+                  <Button size="sm" onClick={() => openNew()} data-testid="button-first-entry">
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
                     Log First Entry
                   </Button>

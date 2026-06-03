@@ -3607,7 +3607,8 @@ Visit Kindora Calendar: ${joinUrl}
     });
 
     // GET /api/google-drive/connect — kick off OAuth
-    app.get("/api/google-drive/connect", isAuthenticated, (req: any, res) => {
+    app.get("/api/google-drive/connect", isAuthenticated, async (req: any, res) => {
+      const crypto = await import('crypto');
       const state = crypto.randomBytes(24).toString("hex");
       (req.session as any).gdriveOAuthState = state;
 
