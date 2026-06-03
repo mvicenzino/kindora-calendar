@@ -185,6 +185,7 @@ export interface IStorage {
   updateGoogleDriveConnection(userId: string, updates: Partial<GoogleDriveConnection>): Promise<void>;
   deleteGoogleDriveConnection(userId: string): Promise<void>;
   getEventByGoogleId(familyId: string, googleEventId: string): Promise<Event | null>;
+  getEventByPhotoUrl(photoUrl: string): Promise<Event | null>;
   // Tasks
   getTasks(familyId: string): Promise<Task[]>;
   createTask(task: InsertTask): Promise<Task>;
@@ -1352,6 +1353,15 @@ export class MemStorage implements IStorage {
   async updateGoogleDriveConnection(_userId: string, _updates: any): Promise<void> {}
   async deleteGoogleDriveConnection(_userId: string): Promise<void> {}
   async getEventByGoogleId(_familyId: string, _googleEventId: string): Promise<Event | null> { return null; }
+  async getEventByPhotoUrl(photoUrl: string): Promise<Event | null> {
+    const matches = Array.from(this.events.values()).filter((e) => e.photoUrl === photoUrl);
+    // Ambiguity = insecurity: if the same (legacy) object path is bound across
+    // more than one family, ownership can't be trusted, so deny rather than
+    // resolve to an arbitrary family.
+    const families = new Set(matches.map((e) => e.familyId));
+    if (families.size !== 1) return null;
+    return matches[0] ?? null;
+  }
 
   // Tasks
   private tasksStore: Task[] = [];
@@ -2612,6 +2622,17 @@ class DrizzleStorage implements IStorage {
     return rows[0] ?? null;
   }
 
+  async getEventByPhotoUrl(photoUrl: string): Promise<Event | null> {
+    const rows = await this.db.select().from(events)
+      .where(eq(events.photoUrl, photoUrl));
+    // Ambiguity = insecurity: if the same (legacy) object path is bound across
+    // more than one family, ownership can't be trusted, so deny rather than
+    // resolve to an arbitrary family via limit(1).
+    const families = new Set(rows.map((r) => r.familyId));
+    if (families.size !== 1) return null;
+    return rows[0] ?? null;
+  }
+
   // Tasks
   async getTasks(familyId: string): Promise<Task[]> {
     return await this.db.select().from(tasks)
@@ -3188,6 +3209,7 @@ class DemoAwareStorage implements IStorage {
   async updateGoogleDriveConnection(userId: string, updates: any) { return this.persistentStorage.updateGoogleDriveConnection(userId, updates); }
   async deleteGoogleDriveConnection(userId: string) { return this.persistentStorage.deleteGoogleDriveConnection(userId); }
   async getEventByGoogleId(familyId: string, googleEventId: string) { return this.persistentStorage.getEventByGoogleId(familyId, googleEventId); }
+  async getEventByPhotoUrl(photoUrl: string) { return this.persistentStorage.getEventByPhotoUrl(photoUrl); }
 
   // Tasks — route to family-appropriate storage
   async getTasks(familyId: string): Promise<Task[]> {

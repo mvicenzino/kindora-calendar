@@ -1490,6 +1490,8 @@ Visit Kindora Calendar: ${joinUrl}
       }
       
       const eventData = result.data;
+      // Defense in depth: photoUrl is set only via PUT /api/events/:id/photo.
+      delete (eventData as any).photoUrl;
       
       if (eventData.rrule) {
         const parentEvent = await storage.createEvent(familyId, {
@@ -1689,6 +1691,8 @@ Visit Kindora Calendar: ${joinUrl}
       if (!result.success) {
         return res.status(400).json({ error: result.error.message });
       }
+      // Defense in depth: photoUrl is set only via PUT /api/events/:id/photo.
+      delete (result.data as any).photoUrl;
       
       const event = await storage.updateEvent(req.params.id, familyId, result.data);
       res.json(event);
@@ -2725,14 +2729,34 @@ Visit Kindora Calendar: ${joinUrl}
       if (segments.some((s: string) => s === "." || s === "..")) {
         return res.sendStatus(404);
       }
-      const isVaultDocument = segments[1] === "care-documents";
+      const prefix = segments[1];
+      const isVaultDocument = prefix === "care-documents";
 
-      if (isVaultDocument) {
-        const docFamilyId = segments[2];
-        if (!docFamilyId) {
+      if (prefix === "care-documents" || prefix === "event-photos") {
+        // These carry their owning family in the path:
+        //   care-documents/<familyId>/...  and  event-photos/<familyId>/...
+        // Ownership is fixed by the path, so a pure membership check is enough
+        // and can't be confused by a mutable reference.
+        const objFamilyId = segments[2];
+        if (!objFamilyId) {
           return res.sendStatus(404);
         }
-        const role = await getUserFamilyRole(storage, userId, docFamilyId);
+        const role = await getUserFamilyRole(storage, userId, objFamilyId);
+        if (!role) {
+          return res.sendStatus(403);
+        }
+      } else {
+        // Legacy event photos at uploads/<uuid> have no family in the path.
+        // Resolve the owning event by its stored photoUrl and require
+        // membership. New uploads no longer land here; this protects photos
+        // attached before the family-scoped path scheme existed.
+        const owningEvent = await storage.getEventByPhotoUrl(req.path);
+        if (!owningEvent) {
+          // Not attached to any family resource (e.g. an orphaned object) —
+          // don't serve it to arbitrary authenticated users.
+          return res.sendStatus(404);
+        }
+        const role = await getUserFamilyRole(storage, userId, owningEvent.familyId);
         if (!role) {
           return res.sendStatus(403);
         }
@@ -2749,10 +2773,29 @@ Visit Kindora Calendar: ${joinUrl}
     }
   });
 
-  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
-    const objectStorageService = new ObjectStorageService();
-    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-    res.json({ uploadURL });
+  app.post("/api/objects/upload", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+      // Scope the upload into the caller's family so the object's owner is fixed
+      // by its storage path (event-photos/<familyId>/<uuid>), exactly like the
+      // vault. Read authorization is then a pure path check — no reliance on a
+      // mutable, client-supplied photoUrl reference.
+      const objectStorageService = new ObjectStorageService();
+      const subPath = `event-photos/${familyId}/${crypto.randomUUID()}`;
+      const { uploadURL } = await objectStorageService.getObjectEntityUploadURLWithPath(subPath);
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL" });
+    }
   });
 
   app.put("/api/events/:id/photo", isAuthenticated, async (req: any, res) => {
@@ -2786,7 +2829,23 @@ Visit Kindora Calendar: ${joinUrl}
 
       const objectStorageService = new ObjectStorageService();
       const objectPath = objectStorageService.normalizeObjectEntityPath(req.body.photoURL);
-      
+
+      // Ownership binding. A user must not be able to point their event at a file
+      // they don't own, because the object-read gate trusts this binding for
+      // legacy paths. Accept only:
+      //   - a fresh family-scoped upload under THIS family's prefix, or
+      //   - a legacy path already bound to one of this family's own events
+      //     (e.g. re-using a photo on another event in the family).
+      const pathSegments = objectPath.split("/").filter(Boolean);
+      const isOwnFamilyScopedPath =
+        pathSegments[1] === "event-photos" && pathSegments[2] === familyId;
+      if (!isOwnFamilyScopedPath) {
+        const existingOwner = await storage.getEventByPhotoUrl(objectPath);
+        if (!existingOwner || existingOwner.familyId !== familyId) {
+          return res.status(403).json({ error: "That file is not available to this family." });
+        }
+      }
+
       const event = await storage.updateEvent(req.params.id, familyId, { photoUrl: objectPath });
       res.json(event);
     } catch (error) {

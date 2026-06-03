@@ -124,7 +124,11 @@ export const events = pgTable("events", {
   isImportant: boolean("is_important").notNull().default(false),
   googleEventId: text("google_event_id"), // Set when event was synced from Google Calendar
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (table) => ({
+  // Object-storage authorization resolves the owning event by photoUrl, so this
+  // lookup must be indexed (it runs on every /objects/uploads/<id> fetch).
+  photoUrlIdx: index("events_photo_url_idx").on(table.photoUrl),
+}));
 
 // Messages table (now belongs to family instead of user)
 export const messages = pgTable("messages", {
@@ -333,6 +337,12 @@ export const insertEventSchema = createInsertSchema(events).omit({
   completed: true,
   completedAt: true,
   createdAt: true,
+  // photoUrl is intentionally NOT writable via generic event create/update.
+  // It may only be set through PUT /api/events/:id/photo, which enforces that
+  // the referenced object belongs to the caller's family. Allowing it here
+  // would let a user bind their event to another family's (or an orphaned)
+  // object path and read those bytes via the legacy object-read fallback.
+  photoUrl: true,
 }).extend({
   title: z.string().min(1, "Title is required").trim(),
   memberIds: z.array(z.string()),

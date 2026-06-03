@@ -272,6 +272,121 @@ async function main() {
     await expectForbidden("GET /objects/care-documents (family B)", "GET", vaultPath, userA);
   }
 
+  // Event photos now live at /objects/event-photos/<familyId>/<uuid> — the owning
+  // family is encoded in the path, exactly like the vault, so authorization is a
+  // pure path check. Create an event in family B, attach a family-scoped photo
+  // path, then prove other families can't read it or rebind it. Save the path
+  // for the positive control below.
+  let bEventPhotoPath = "";
+  {
+    const start = new Date();
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const created = await api("POST", "/api/events", {
+      cookie: userB.cookie,
+      body: {
+        familyId: B,
+        title: "B private photo event",
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+        memberIds: [],
+        color: "#3366ff",
+        category: "other",
+      },
+    });
+    if (created.status === 200 || created.status === 201) {
+      const eventId = created.json?.id;
+      bEventPhotoPath = `/objects/event-photos/${B}/isolation-test-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const attach = await api("PUT", `/api/events/${eventId}/photo`, {
+        cookie: userB.cookie,
+        body: { photoURL: bEventPhotoPath },
+      });
+      if (attach.status === 200) {
+        const anonPhoto = await api("GET", bEventPhotoPath);
+        if (anonPhoto.status === 401) ok("GET event photo (anonymous) → 401");
+        else fail("GET event photo (anonymous)", `expected 401 but got ${anonPhoto.status}`);
+
+        await expectForbidden("GET event photo (family B path, user A)", "GET", bEventPhotoPath, userA);
+
+        // Reference-confusion guard: user A must NOT be able to point one of
+        // their OWN events at family B's photo path. The attach must be rejected.
+        const aStart = new Date();
+        const aEnd = new Date(aStart.getTime() + 60 * 60 * 1000);
+        const aEvent = await api("POST", "/api/events", {
+          cookie: userA.cookie,
+          body: {
+            familyId: userA.familyId,
+            title: "A confusion attempt",
+            startTime: aStart.toISOString(),
+            endTime: aEnd.toISOString(),
+            memberIds: [],
+            color: "#3366ff",
+            category: "other",
+          },
+        });
+        if (aEvent.status === 200 || aEvent.status === 201) {
+          await expectForbidden(
+            "PUT /photo rebinding family B's photo path",
+            "PUT",
+            `/api/events/${aEvent.json?.id}/photo`,
+            userA,
+            { photoURL: bEventPhotoPath }
+          );
+
+          // Orphan-takeover guard: user A must NOT be able to bind an unknown
+          // legacy uploads/<uuid> path (an orphaned object owned by nobody) to
+          // their own event — that would let them read arbitrary leftover bytes.
+          const orphanPath = `/objects/uploads/orphan-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          await expectForbidden(
+            "PUT /photo binding orphan legacy path",
+            "PUT",
+            `/api/events/${aEvent.json?.id}/photo`,
+            userA,
+            { photoURL: orphanPath }
+          );
+
+          // Bypass guard: photoUrl must NOT be settable through the generic event
+          // create/update routes (only via PUT /photo). Otherwise an attacker
+          // could bind a foreign/orphan legacy path and read it via the legacy
+          // object-read fallback. The field must be silently stripped.
+          const createWithPhoto = await api("POST", "/api/events", {
+            cookie: userA.cookie,
+            body: {
+              familyId: userA.familyId,
+              title: "A sneaky photo create",
+              startTime: aStart.toISOString(),
+              endTime: aEnd.toISOString(),
+              memberIds: [],
+              color: "#3366ff",
+              category: "other",
+              photoUrl: orphanPath,
+            },
+          });
+          if ((createWithPhoto.status === 200 || createWithPhoto.status === 201) && !createWithPhoto.json?.photoUrl) {
+            ok("POST /api/events strips client-supplied photoUrl");
+          } else {
+            fail("POST /api/events strips photoUrl", `status ${createWithPhoto.status}, photoUrl=${JSON.stringify(createWithPhoto.json?.photoUrl)}`);
+          }
+
+          const updateWithPhoto = await api("PUT", `/api/events/${aEvent.json?.id}`, {
+            cookie: userA.cookie,
+            body: { title: "A sneaky photo update", photoUrl: orphanPath },
+          });
+          if ((updateWithPhoto.status === 200 || updateWithPhoto.status === 201) && !updateWithPhoto.json?.photoUrl) {
+            ok("PUT /api/events/:id strips client-supplied photoUrl");
+          } else {
+            fail("PUT /api/events/:id strips photoUrl", `status ${updateWithPhoto.status}, photoUrl=${JSON.stringify(updateWithPhoto.json?.photoUrl)}`);
+          }
+        } else {
+          fail("create event (family A, confusion)", `expected 200/201 but got ${aEvent.status}`);
+        }
+      } else {
+        fail("attach event photo (family B)", `expected 200 but got ${attach.status} :: ${attach.text.slice(0, 120)}`);
+      }
+    } else {
+      fail("create event (family B)", `expected 200/201 but got ${created.status} :: ${created.text.slice(0, 120)}`);
+    }
+  }
+
   console.log("\nPositive control (user A → own family A) must NOT be 403:");
   const A = userA.familyId;
   await expectAllowed("GET  /api/events (own family)", "GET", `/api/events?familyId=${A}`, userA);
@@ -281,6 +396,19 @@ async function main() {
   // Own-family vault path passes the membership gate (404 for a missing file,
   // never 403/401) — proves the gate doesn't lock members out of their vault.
   await expectAllowed("GET /objects/care-documents (own family)", "GET", `/objects/care-documents/${A}/nope.pdf`, userA);
+  // Owning family member reaching their own event photo must NOT be 403 (404
+  // since the bytes don't exist in storage, but membership passed) — proves the
+  // gate doesn't lock members out of their own event photos.
+  if (bEventPhotoPath) {
+    await expectAllowed("GET /objects/uploads event photo (own family B)", "GET", bEventPhotoPath, userB);
+  }
+
+  // Unit-level guard for the legacy uploads/<uuid> ambiguity fix. HTTP can't
+  // distinguish "ownership denied" from "object bytes missing" (both 404), so
+  // assert the storage primitive directly: a legacy photoUrl bound across two
+  // different families must resolve to null (deny), while a single-family
+  // binding resolves normally.
+  await assertAmbiguityDeny();
 
   // Best-effort cleanup of the families/users we created.
   await cleanup([userA, userB]);
@@ -293,6 +421,46 @@ async function main() {
   }
   console.log("\nAll family-isolation checks passed.");
   process.exit(0);
+}
+
+async function assertAmbiguityDeny() {
+  let famA = "", famB = "";
+  try {
+    const { db } = await import("../db");
+    const { storage } = await import("../storage");
+    const { events } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const sharedPath = `/objects/uploads/ambiguity-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    famA = `amb-fam-a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    famB = `amb-fam-b-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const now = new Date();
+    const base = {
+      title: "ambiguity probe",
+      startTime: now,
+      endTime: new Date(now.getTime() + 3600_000),
+      memberIds: [] as string[],
+      color: "#3366ff",
+      category: "other",
+      photoUrl: sharedPath,
+    };
+
+    // Single family binding → resolves to that family's event.
+    await db.insert(events).values({ ...base, familyId: famA });
+    const single = await storage.getEventByPhotoUrl(sharedPath);
+    if (single && single.familyId === famA) ok("getEventByPhotoUrl resolves a single-family binding");
+    else fail("getEventByPhotoUrl single-family", `expected event in ${famA} but got ${JSON.stringify(single?.familyId)}`);
+
+    // Add a second binding in a DIFFERENT family → ambiguous → must deny (null).
+    await db.insert(events).values({ ...base, familyId: famB });
+    const ambiguous = await storage.getEventByPhotoUrl(sharedPath);
+    if (ambiguous === null) ok("getEventByPhotoUrl denies cross-family duplicate (null)");
+    else fail("getEventByPhotoUrl cross-family duplicate", `expected null but got family ${JSON.stringify(ambiguous?.familyId)}`);
+
+    await db.delete(events).where(eq(events.photoUrl, sharedPath));
+  } catch (err) {
+    fail("ambiguity-deny unit check", `harness error: ${String(err).slice(0, 160)}`);
+  }
 }
 
 async function cleanup(sessions: Session[]) {
