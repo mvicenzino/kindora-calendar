@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, type GoogleDriveConnection, type InsertGoogleDriveConnection, type Task, type InsertTask, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections, googleDriveConnections, tasks } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type UpdateEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, type GoogleDriveConnection, type InsertGoogleDriveConnection, type Task, type InsertTask, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections, googleDriveConnections, tasks } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -70,7 +70,7 @@ export interface IStorage {
   getEvents(familyId: string): Promise<Event[]>;
   getEvent(id: string, familyId: string): Promise<Event | undefined>;
   createEvent(familyId: string, event: InsertEvent): Promise<Event>;
-  updateEvent(id: string, familyId: string, event: Partial<InsertEvent>): Promise<Event>;
+  updateEvent(id: string, familyId: string, event: UpdateEvent): Promise<Event>;
   deleteEvent(id: string, familyId: string): Promise<void>;
   toggleEventCompletion(id: string, familyId: string): Promise<Event>;
 
@@ -609,7 +609,7 @@ export class MemStorage implements IStorage {
       id,
       familyId,
       description: insertEvent.description || null,
-      photoUrl: insertEvent.photoUrl || null,
+      photoUrl: null,
       recurrenceRule: insertEvent.recurrenceRule ?? null,
       recurrenceEndDate: insertEvent.recurrenceEndDate ?? null,
       recurringEventId: insertEvent.recurringEventId ?? null,
@@ -626,7 +626,7 @@ export class MemStorage implements IStorage {
     return event;
   }
 
-  async updateEvent(id: string, familyId: string, updateData: Partial<InsertEvent>): Promise<Event> {
+  async updateEvent(id: string, familyId: string, updateData: UpdateEvent): Promise<Event> {
     const existingEvent = this.events.get(id);
     if (!existingEvent || existingEvent.familyId !== familyId) {
       throw new NotFoundError(`Event with id ${id} not found`);
@@ -1827,7 +1827,7 @@ class DrizzleStorage implements IStorage {
     return result[0];
   }
 
-  async updateEvent(id: string, familyId: string, updateData: Partial<InsertEvent>): Promise<Event> {
+  async updateEvent(id: string, familyId: string, updateData: UpdateEvent): Promise<Event> {
     const result = await this.db.update(events).set(updateData).where(
       and(eq(events.id, id), eq(events.familyId, familyId))
     ).returning();
@@ -2632,7 +2632,7 @@ class DrizzleStorage implements IStorage {
     // Ambiguity = insecurity: if the same (legacy) object path is bound across
     // more than one family, ownership can't be trusted, so deny rather than
     // resolve to an arbitrary family via limit(1).
-    const families = new Set(rows.map((r) => r.familyId));
+    const families = new Set(rows.map((r: Event) => r.familyId));
     if (families.size !== 1) return null;
     return rows[0] ?? null;
   }
@@ -2847,7 +2847,7 @@ class DemoAwareStorage implements IStorage {
     return storage.createEvent(familyId, event);
   }
 
-  async updateEvent(id: string, familyId: string, event: Partial<InsertEvent>): Promise<Event> {
+  async updateEvent(id: string, familyId: string, event: UpdateEvent): Promise<Event> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.updateEvent(id, familyId, event);
   }

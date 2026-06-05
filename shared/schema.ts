@@ -651,6 +651,9 @@ export type FamilyMember = typeof familyMembers.$inferSelect;
 
 // Event types
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+// photoUrl is omitted from InsertEvent for security (see insertEventSchema), but
+// the dedicated photo endpoint (PUT /api/events/:id/photo) needs to set it.
+export type UpdateEvent = Partial<InsertEvent> & { photoUrl?: string | null };
 export type Event = typeof events.$inferSelect;
 
 // Message types
