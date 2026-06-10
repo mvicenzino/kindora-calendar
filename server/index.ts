@@ -174,7 +174,48 @@ app.use((req, res, next) => {
   next();
 });
 
+// Validate environment configuration at startup so missing config fails fast
+// and loudly, instead of surfacing as confusing runtime errors later.
+function validateEnv() {
+  // Boot-critical: the app cannot function correctly without these.
+  const required: Record<string, string | undefined> = {
+    DATABASE_URL: process.env.DATABASE_URL,
+    SESSION_SECRET: process.env.SESSION_SECRET,
+  };
+  // Strongly recommended: features silently degrade or break without these.
+  const recommended: Record<string, string | undefined> = {
+    REPLIT_DOMAINS: process.env.REPLIT_DOMAINS,
+    EMAIL_FROM_ADDRESS: process.env.EMAIL_FROM_ADDRESS,
+    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  };
+
+  const missingRequired = Object.entries(required)
+    .filter(([, v]) => !v || v.trim() === "")
+    .map(([k]) => k);
+  if (missingRequired.length > 0) {
+    console.error(
+      `[startup] FATAL: missing required environment variable(s): ${missingRequired.join(", ")}. ` +
+        `The server cannot start without them.`,
+    );
+    process.exit(1);
+  }
+
+  const missingRecommended = Object.entries(recommended)
+    .filter(([, v]) => !v || v.trim() === "")
+    .map(([k]) => k);
+  if (missingRecommended.length > 0) {
+    console.warn(
+      `[startup] WARNING: missing recommended environment variable(s): ${missingRecommended.join(", ")}. ` +
+        `Some features (email, Google sign-in, links) may not work until these are set.`,
+    );
+  }
+}
+
 (async () => {
+  validateEnv();
+
   // Initialize Stripe schema and sync data
   try {
     const databaseUrl = process.env.DATABASE_URL;
@@ -250,8 +291,14 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
+    // Log the error for diagnostics, but do NOT re-throw it. Re-throwing after
+    // the response has been sent escapes Express and crashes the process
+    // (unhandled exception), turning one bad request into full downtime.
+    console.error(`[error handler] ${status} ${message}`, err?.stack || err);
+
+    if (!res.headersSent) {
+      res.status(status).json({ message });
+    }
   });
 
   if (app.get("env") === "development") {

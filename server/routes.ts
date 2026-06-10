@@ -766,6 +766,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Privacy: download everything we hold about the signed-in user as a JSON file.
+  app.get("/api/account/export", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = await storage.exportUserData(userId);
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="kindora-data-export-${stamp}.json"`);
+      res.send(JSON.stringify(data, null, 2));
+    } catch (error: any) {
+      console.error("Error exporting account data:", error);
+      res.status(500).json({ error: "Failed to export your data" });
+    }
+  });
+
+  // Privacy: permanently delete the signed-in user's account and their data.
+  // Requires a typed confirmation to guard against accidents.
+  app.delete("/api/account", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const confirm = (req.body?.confirm || "").toString();
+      if (confirm !== "DELETE") {
+        return res.status(400).json({ error: 'Confirmation required. Send { "confirm": "DELETE" }.' });
+      }
+
+      const summary = await storage.deleteUserAndData(userId);
+      console.log(`[account] User ${userId} deleted account:`, JSON.stringify(summary));
+
+      // End the session so the now-deleted user is fully logged out.
+      // Note: only destroy the session here. Do NOT also call req.logout(),
+      // because passport's logout asynchronously touches req.session
+      // (regenerate/save) and races with destroy(), crashing the process.
+      req.session.destroy((err: any) => {
+        res.clearCookie("connect.sid");
+        if (err) {
+          // Fail closed: the account data is gone, but if we cannot tear down
+          // the session we must not report success — the client should treat
+          // this as an error and retry/refresh rather than stay "logged in".
+          console.error("Error destroying session after account deletion:", err);
+          return res.status(500).json({ error: "Account deleted, but session teardown failed. Please sign out." });
+        }
+        res.json({ success: true, ...summary });
+      });
+    } catch (error: any) {
+      console.error("Error deleting account:", error);
+      res.status(500).json({ error: "Failed to delete your account" });
+    }
+  });
+
   // Get user's role in a family
   app.get("/api/family/:familyId/role", isAuthenticated, async (req: any, res) => {
     try {

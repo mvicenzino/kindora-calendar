@@ -35,6 +35,41 @@ export class NotFoundError extends Error {
   }
 }
 
+// Shape of a full user data export (privacy / "download my data").
+export interface UserDataExport {
+  exportedAt: string;
+  user: Partial<User>;
+  families: Array<{
+    family: Family;
+    yourRole: string;
+    members: FamilyMember[];
+    events: Event[];
+    messages: Message[];
+    eventNotes: EventNote[];
+    familyMessages: FamilyMessage[];
+    medications: Medication[];
+    medicationLogs: MedicationLog[];
+    symptomEntries: SymptomEntry[];
+    symptomSystemRatings: SymptomSystemRating[];
+    hydrationLogs: HydrationLog[];
+    careDocuments: CareDocument[];
+    parsedInvoices: ParsedInvoice[];
+    caregiverPayRates: CaregiverPayRate[];
+    caregiverTimeEntries: CaregiverTimeEntry[];
+    tasks: Task[];
+    kiraMemories: KiraMemory[];
+  }>;
+  advisorConversations: Array<Record<string, any>>;
+  connections: { googleCalendar: boolean; googleDrive: boolean };
+}
+
+// Summary returned after an account is deleted.
+export interface AccountDeletionSummary {
+  familiesPurged: number;
+  familiesLeft: number;
+  userDeleted: boolean;
+}
+
 export interface IStorage {
   // User operations (MANDATORY for auth)
   getUser(id: string): Promise<User | undefined>;
@@ -46,6 +81,13 @@ export interface IStorage {
   updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
+  // Privacy: export everything we hold about a user (their profile + the
+  // families they belong to and that data). Returns a plain JSON-serializable object.
+  exportUserData(userId: string): Promise<UserDataExport>;
+  // Privacy: permanently delete a user's account. Families the user solely
+  // owns are fully purged; shared families have the user removed (ownership
+  // transferred if needed). Returns a summary of what was removed.
+  deleteUserAndData(userId: string): Promise<AccountDeletionSummary>;
 
   // Family operations
   createFamily(userId: string, family: InsertFamily): Promise<Family>;
@@ -328,6 +370,125 @@ export class MemStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     this.users.delete(id);
+  }
+
+  async exportUserData(userId: string): Promise<UserDataExport> {
+    const user = this.users.get(userId);
+    if (!user) throw new NotFoundError("User not found");
+    const { passwordHash, ...safeUser } = user as any;
+
+    const myMemberships = Array.from(this.familyMemberships.values()).filter(m => m.userId === userId);
+    const families: UserDataExport["families"] = myMemberships.map((m) => {
+      const fam = this.families.get(m.familyId)!;
+      const symptoms = Array.from(this.symptomEntriesMap.values()).filter(s => s.familyId === m.familyId);
+      const entryIds = new Set(symptoms.map(s => s.id));
+      const isCaregiver = m.role === "caregiver";
+      const famMsgs = Array.from(this.familyMessagesMap.values())
+        .filter(x => x.familyId === m.familyId)
+        .filter(x => !isCaregiver || x.messageType === "caregiver");
+      return {
+        family: fam,
+        yourRole: m.role,
+        members: Array.from(this.familyMembers.values()).filter(x => x.familyId === m.familyId),
+        events: Array.from(this.events.values()).filter(x => x.familyId === m.familyId),
+        messages: Array.from(this.messages.values()).filter(x => x.familyId === m.familyId),
+        eventNotes: Array.from(this.eventNotesMap.values()).filter(x => x.familyId === m.familyId),
+        familyMessages: famMsgs,
+        medications: Array.from(this.medicationsMap.values()).filter(x => x.familyId === m.familyId),
+        medicationLogs: Array.from(this.medicationLogsMap.values()).filter(x => x.familyId === m.familyId),
+        symptomEntries: symptoms,
+        symptomSystemRatings: Array.from(this.symptomSystemRatingsMap.values()).filter(x => entryIds.has(x.entryId)),
+        hydrationLogs: Array.from(this.hydrationLogsMap.values()).filter(x => x.familyId === m.familyId),
+        careDocuments: Array.from(this.careDocumentsMap.values()).filter(x => x.familyId === m.familyId),
+        parsedInvoices: [],
+        // Pay rates and time entries are personal — own records only.
+        caregiverPayRates: Array.from(this.caregiverPayRatesMap.values()).filter(x => x.familyId === m.familyId && x.caregiverUserId === userId),
+        caregiverTimeEntries: Array.from(this.caregiverTimeEntriesMap.values()).filter(x => x.familyId === m.familyId && x.caregiverUserId === userId),
+        tasks: [],
+        kiraMemories: this.kiraMemoriesStore.filter(x => x.familyId === m.familyId),
+      };
+    }).filter(f => f.family);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      user: safeUser,
+      families,
+      advisorConversations: [],
+      connections: { googleCalendar: false, googleDrive: false },
+    };
+  }
+
+  async deleteUserAndData(userId: string): Promise<AccountDeletionSummary> {
+    const myMemberships = Array.from(this.familyMemberships.values()).filter(m => m.userId === userId);
+    let familiesPurged = 0;
+    let familiesLeft = 0;
+
+    for (const m of myMemberships) {
+      const others = Array.from(this.familyMemberships.values()).filter(
+        x => x.familyId === m.familyId && x.userId !== userId,
+      );
+      if (others.length === 0) {
+        // Purge the whole family from every in-memory map.
+        const fid = m.familyId;
+        const purgeFrom = <T extends { familyId?: string }>(map: Map<string, T>) => {
+          for (const [k, v] of Array.from(map.entries())) {
+            if (v.familyId === fid) map.delete(k);
+          }
+        };
+        const symptomIds = new Set(
+          Array.from(this.symptomEntriesMap.values()).filter(s => s.familyId === fid).map(s => s.id),
+        );
+        for (const [k, v] of Array.from(this.symptomSystemRatingsMap.entries())) {
+          if (symptomIds.has(v.entryId)) this.symptomSystemRatingsMap.delete(k);
+        }
+        purgeFrom(this.familyMembers);
+        purgeFrom(this.events);
+        purgeFrom(this.messages);
+        purgeFrom(this.eventNotesMap);
+        purgeFrom(this.medicationsMap);
+        purgeFrom(this.medicationLogsMap);
+        purgeFrom(this.familyMessagesMap);
+        purgeFrom(this.caregiverPayRatesMap);
+        purgeFrom(this.caregiverTimeEntriesMap);
+        purgeFrom(this.careDocumentsMap);
+        purgeFrom(this.emergencyBridgeTokensMap);
+        purgeFrom(this.symptomEntriesMap);
+        purgeFrom(this.hydrationLogsMap);
+        this.kiraMemoriesStore = this.kiraMemoriesStore.filter(x => x.familyId !== fid);
+        for (const [k, v] of Array.from(this.familyMemberships.entries())) {
+          if (v.familyId === fid) this.familyMemberships.delete(k);
+        }
+        this.families.delete(fid);
+        familiesPurged++;
+      } else {
+        // Transfer ownership if this user was the sole owner, then remove them.
+        if (m.role === "owner" && !others.some(o => o.role === "owner")) {
+          const heir = others[0];
+          this.familyMemberships.set(heir.id, { ...heir, role: "owner" });
+        }
+        for (const [k, v] of Array.from(this.familyMemberships.entries())) {
+          if (v.familyId === m.familyId && v.userId === userId) this.familyMemberships.delete(k);
+        }
+        for (const [k, v] of Array.from(this.familyMembers.entries())) {
+          if (v.familyId === m.familyId && v.userId === userId) this.familyMembers.delete(k);
+        }
+        // Remove the departing user's personal employment + access records;
+        // shared collaborative content stays for the remaining members.
+        for (const [k, v] of Array.from(this.caregiverPayRatesMap.entries())) {
+          if (v.familyId === m.familyId && v.caregiverUserId === userId) this.caregiverPayRatesMap.delete(k);
+        }
+        for (const [k, v] of Array.from(this.caregiverTimeEntriesMap.entries())) {
+          if (v.familyId === m.familyId && v.caregiverUserId === userId) this.caregiverTimeEntriesMap.delete(k);
+        }
+        for (const [k, v] of Array.from(this.emergencyBridgeTokensMap.entries())) {
+          if (v.familyId === m.familyId && v.createdByUserId === userId) this.emergencyBridgeTokensMap.delete(k);
+        }
+        familiesLeft++;
+      }
+    }
+
+    this.users.delete(userId);
+    return { familiesPurged, familiesLeft, userDeleted: true };
   }
 
   // Family operations
@@ -1543,6 +1704,221 @@ class DrizzleStorage implements IStorage {
     await this.db.delete(users).where(eq(users.id, id));
   }
 
+  async exportUserData(userId: string): Promise<UserDataExport> {
+    const user = await this.getUser(userId);
+    if (!user) throw new NotFoundError("User not found");
+
+    // Strip sensitive auth/billing secrets — the user owns this data, but we
+    // never echo password hashes or payment processor internals back out.
+    const { passwordHash, ...safeUser } = user as any;
+
+    const memberships = await this.db
+      .select()
+      .from(familyMemberships)
+      .where(eq(familyMemberships.userId, userId));
+
+    const families: UserDataExport["families"] = [];
+    for (const m of memberships) {
+      const familyId = m.familyId;
+      const fam = await this.getFamilyById(familyId);
+      if (!fam) continue;
+
+      const [
+        members, evts, msgs, notes, famMsgs, meds, medLogs,
+        symptoms, hydration, docs, invoices, payRates, timeEntries, taskRows, memories,
+      ] = await Promise.all([
+        this.db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId)),
+        this.db.select().from(events).where(eq(events.familyId, familyId)),
+        this.db.select().from(messages).where(eq(messages.familyId, familyId)),
+        this.db.select().from(eventNotes).where(eq(eventNotes.familyId, familyId)),
+        this.db.select().from(familyMessages).where(eq(familyMessages.familyId, familyId)),
+        this.db.select().from(medications).where(eq(medications.familyId, familyId)),
+        this.db.select().from(medicationLogs).where(eq(medicationLogs.familyId, familyId)),
+        this.db.select().from(symptomEntries).where(eq(symptomEntries.familyId, familyId)),
+        this.db.select().from(hydrationLogs).where(eq(hydrationLogs.familyId, familyId)),
+        this.db.select().from(careDocuments).where(eq(careDocuments.familyId, familyId)),
+        this.db.select().from(parsedInvoices).where(eq(parsedInvoices.familyId, familyId)),
+        // Pay rates and time entries are personal: every member only ever sees
+        // their OWN through the app, so the export must do the same.
+        this.db.select().from(caregiverPayRates).where(and(eq(caregiverPayRates.familyId, familyId), eq(caregiverPayRates.caregiverUserId, userId))),
+        this.db.select().from(caregiverTimeEntries).where(and(eq(caregiverTimeEntries.familyId, familyId), eq(caregiverTimeEntries.caregiverUserId, userId))),
+        this.db.select().from(tasks).where(eq(tasks.familyId, familyId)),
+        this.db.select().from(kiraMemories).where(eq(kiraMemories.familyId, familyId)),
+      ]);
+
+      const entryIds = symptoms.map((s: SymptomEntry) => s.id);
+      const systemRatings = entryIds.length
+        ? await this.db.select().from(symptomSystemRatings).where(inArray(symptomSystemRatings.entryId, entryIds))
+        : [];
+
+      // Caregivers see a reduced view in-app — mirror that in the export so it
+      // can't be used to read data the user couldn't otherwise access.
+      const isCaregiver = m.role === "caregiver";
+      const exportInvoices = isCaregiver
+        ? invoices.map((inv: ParsedInvoice) => ({ ...inv, senderEmail: null, snippet: null }))
+        : invoices;
+      const exportFamilyMessages = isCaregiver
+        ? famMsgs.filter((msg: FamilyMessage) => msg.messageType === "caregiver")
+        : famMsgs;
+
+      families.push({
+        family: fam,
+        yourRole: m.role,
+        members,
+        events: evts,
+        messages: msgs,
+        eventNotes: notes,
+        familyMessages: exportFamilyMessages,
+        medications: meds,
+        medicationLogs: medLogs,
+        symptomEntries: symptoms,
+        symptomSystemRatings: systemRatings,
+        hydrationLogs: hydration,
+        careDocuments: docs,
+        parsedInvoices: exportInvoices,
+        caregiverPayRates: payRates,
+        caregiverTimeEntries: timeEntries,
+        tasks: taskRows,
+        kiraMemories: memories,
+      });
+    }
+
+    // Advisor (Kira) conversations + messages live in a separate integration
+    // schema; pull them with raw SQL so the export is complete.
+    let advisorConversations: Array<Record<string, any>> = [];
+    try {
+      const convRows: any = await this.db.execute(sql`
+        SELECT id, title, created_at FROM advisor_conversations WHERE user_id = ${userId} ORDER BY created_at
+      `);
+      const convs = (convRows.rows ?? convRows ?? []) as Array<{ id: string; title: string; created_at: any }>;
+      advisorConversations = await Promise.all(convs.map(async (c) => {
+        const msgRows: any = await this.db.execute(sql`
+          SELECT role, content, created_at FROM advisor_messages WHERE conversation_id = ${c.id} ORDER BY created_at
+        `);
+        return { ...c, messages: msgRows.rows ?? msgRows ?? [] };
+      }));
+    } catch (err) {
+      console.error("[exportUserData] advisor export failed (non-fatal):", err);
+    }
+
+    const [calConn] = await this.db.select().from(googleCalendarConnections).where(eq(googleCalendarConnections.userId, userId)).limit(1);
+    const [driveConn] = await this.db.select().from(googleDriveConnections).where(eq(googleDriveConnections.userId, userId)).limit(1);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      user: safeUser,
+      families,
+      advisorConversations,
+      connections: { googleCalendar: !!calConn, googleDrive: !!driveConn },
+    };
+  }
+
+  async deleteUserAndData(userId: string): Promise<AccountDeletionSummary> {
+    const memberships = await this.db
+      .select()
+      .from(familyMemberships)
+      .where(eq(familyMemberships.userId, userId));
+
+    // Decide, per family, whether to purge the whole family (the user is the
+    // only account in it) or just remove this user (other accounts remain).
+    const purgeFamilyIds: string[] = [];
+    const leaveFamilyIds: string[] = [];
+    const transferOwnership: Array<{ familyId: string; newOwnerUserId: string }> = [];
+
+    for (const m of memberships) {
+      const others = await this.db
+        .select()
+        .from(familyMemberships)
+        .where(and(eq(familyMemberships.familyId, m.familyId), sql`${familyMemberships.userId} <> ${userId}`));
+      if (others.length === 0) {
+        purgeFamilyIds.push(m.familyId);
+      } else {
+        leaveFamilyIds.push(m.familyId);
+        // If the departing user is an owner, make sure the family keeps one.
+        if (m.role === "owner") {
+          const remainingOwner = others.find((o: FamilyMembership) => o.role === "owner");
+          if (!remainingOwner) {
+            transferOwnership.push({ familyId: m.familyId, newOwnerUserId: others[0].userId });
+          }
+        }
+      }
+    }
+
+    let familiesPurged = 0;
+    let familiesLeft = 0;
+
+    await this.db.transaction(async (tx: any) => {
+      // 1. Fully purge families the user solely occupies — delete every
+      //    family-scoped row across all tables, then the family itself.
+      for (const fid of purgeFamilyIds) {
+        await tx.execute(sql`DELETE FROM family_memberships WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM family_members WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM kira_memories WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM weekly_summary_preferences WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM weekly_summary_schedules WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM tasks WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM emergency_bridge_tokens WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM parsed_invoices WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM caregiver_pay_rates WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM caregiver_time_entries WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM hydration_logs WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM symptom_system_ratings WHERE entry_id IN (SELECT id FROM symptom_entries WHERE family_id = ${fid})`);
+        await tx.execute(sql`DELETE FROM symptom_entries WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM medication_logs WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM medications WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM event_notes WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM messages WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM family_messages WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM care_documents WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM api_keys WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM events WHERE family_id = ${fid}`);
+        await tx.execute(sql`DELETE FROM families WHERE id = ${fid}`);
+        familiesPurged++;
+      }
+
+      // 2. Shared families: transfer ownership if needed, then remove the user.
+      for (const t of transferOwnership) {
+        await tx.execute(sql`UPDATE family_memberships SET role = 'owner' WHERE family_id = ${t.familyId} AND user_id = ${t.newOwnerUserId}`);
+      }
+      for (const fid of leaveFamilyIds) {
+        await tx.execute(sql`DELETE FROM family_memberships WHERE family_id = ${fid} AND user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM family_members WHERE family_id = ${fid} AND user_id = ${userId}`);
+        // Remove the departing user's personal employment + access records.
+        // Shared collaborative content (notes, messages, documents, invoices,
+        // tasks) is intentionally retained — it belongs to the family the
+        // remaining members still use.
+        await tx.execute(sql`DELETE FROM caregiver_pay_rates WHERE family_id = ${fid} AND caregiver_user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM caregiver_time_entries WHERE family_id = ${fid} AND caregiver_user_id = ${userId}`);
+        await tx.execute(sql`DELETE FROM emergency_bridge_tokens WHERE family_id = ${fid} AND created_by_user_id = ${userId}`);
+        familiesLeft++;
+      }
+
+      // 3. Delete all remaining user-scoped rows (not tied to a purged family).
+      await tx.execute(sql`DELETE FROM advisor_messages WHERE conversation_id IN (SELECT id FROM advisor_conversations WHERE user_id = ${userId})`);
+      await tx.execute(sql`DELETE FROM advisor_conversations WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM advisor_usage WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM push_subscriptions WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM google_calendar_connections WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM google_drive_connections WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM api_keys WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM beta_feedback WHERE user_id = ${userId}`);
+      await tx.execute(sql`DELETE FROM weekly_summary_preferences WHERE user_id = ${userId}`);
+
+      // 4. Invalidate every server-side session belonging to this user (across
+      //    all devices), so a stale session can never re-create the deleted
+      //    account via upsert. Sessions are stored as JSON text by
+      //    connect-pg-simple; match on the embedded passport user id.
+      await tx.execute(
+        sql`DELETE FROM sessions WHERE (sess::jsonb -> 'passport' -> 'user' -> 'claims' ->> 'sub') = ${userId}`
+      );
+
+      // 5. Finally, the user account itself.
+      await tx.execute(sql`DELETE FROM users WHERE id = ${userId}`);
+    });
+
+    return { familiesPurged, familiesLeft, userDeleted: true };
+  }
+
   // Family operations
   async createFamily(userId: string, familyData: InsertFamily): Promise<Family> {
     let inviteCode = this.generateInviteCode();
@@ -2737,6 +3113,14 @@ class DemoAwareStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     return this.getStorage(id).deleteUser(id);
+  }
+
+  async exportUserData(userId: string): Promise<UserDataExport> {
+    return this.getStorage(userId).exportUserData(userId);
+  }
+
+  async deleteUserAndData(userId: string): Promise<AccountDeletionSummary> {
+    return this.getStorage(userId).deleteUserAndData(userId);
   }
 
   // Family operations

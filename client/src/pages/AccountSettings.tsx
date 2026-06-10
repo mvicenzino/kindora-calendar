@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, Crown, User, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock, MessageSquare, Mail, Calendar as CalendarIcon, Sun, Moon } from "lucide-react";
+import { Check, Crown, User, Loader2, ExternalLink, XCircle, RefreshCw, Users, Upload, Sparkles, CreditCard, Bell, BellOff, Smartphone, Send, Type, Clock, MessageSquare, Mail, Calendar as CalendarIcon, Sun, Moon, Download, Trash2 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useCalendarTextSize, TEXT_SCALE_LABELS, TEXT_SCALE_SIZES } from "@/hooks/useCalendarTextSize";
 import type { CalendarTextScale } from "@/hooks/useCalendarTextSize";
@@ -403,11 +403,151 @@ function AccountTab() {
       {/* Push Notifications Card */}
       <PushNotificationsCard />
 
+      {/* Data & Privacy Card */}
+      <DataAndPrivacyCard />
+
       {/* One-time cleanup card — only visible to the keeper account */}
       {user?.id === "google-110610540501901085708" && user?.email === "mvicenzino@gmail.com" && (
         <ConsolidateMikeAccountsCard />
       )}
     </div>
+  );
+}
+
+function DataAndPrivacyCard() {
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const REQUIRED = "DELETE";
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/account/export", { credentials: "include" });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kindora-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "Download started", description: "Your data export is downloading now." });
+    } catch {
+      toast({ title: "Export failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", "/api/account", { confirm: REQUIRED });
+      return res.json();
+    },
+    onSuccess: () => {
+      // Session is gone; do a full reload to the landing page.
+      window.location.href = "/";
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Couldn't delete account",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Card data-testid="card-data-privacy">
+      <CardHeader>
+        <CardTitle className="text-sm">Your Data &amp; Privacy</CardTitle>
+        <CardDescription className="text-xs">
+          Download a copy of everything in your account, or permanently delete your account.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label className="text-sm">Download my data</Label>
+          <p className="text-xs text-muted-foreground">
+            Get a single file with your profile and all your families' calendars, notes, health logs, and more.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting}
+            data-testid="button-export-data"
+          >
+            {exporting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Preparing...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Download my data
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="space-y-2 border-t pt-5">
+          <Label className="text-sm">Delete my account</Label>
+          <p className="text-xs text-muted-foreground">
+            This permanently removes your account. Families only you belong to are fully deleted,
+            including their events, notes, and health records. This cannot be undone.
+          </p>
+          <AlertDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setConfirmText(""); }}>
+            <AlertDialogTrigger asChild>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={deleteMutation.isPending}
+                data-testid="button-delete-account"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete my account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Permanently delete your account?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete your Kindora account and the data in families only you
+                  belong to. Families you share with others will continue without you. This cannot be undone.
+                  Type <b>{REQUIRED}</b> below to confirm.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <Input
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={REQUIRED}
+                className="h-9"
+                data-testid="input-confirm-delete-account"
+              />
+              <AlertDialogFooter>
+                <AlertDialogCancel data-testid="button-cancel-delete-account">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={confirmText !== REQUIRED || deleteMutation.isPending}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    deleteMutation.mutate();
+                  }}
+                  data-testid="button-confirm-delete-account"
+                >
+                  {deleteMutation.isPending ? "Deleting..." : "Yes, delete my account"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
