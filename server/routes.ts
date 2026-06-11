@@ -298,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const user = await storage.getUser(userId);
       if (user) {
-        const { passwordHash, ...safeUser } = user;
+        const { passwordHash, emailVerifyToken, emailVerifyExpires, passwordResetToken, passwordResetExpires, ...safeUser } = user;
         res.json(safeUser);
       } else {
         res.json(null);
@@ -320,7 +320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cleanFirst = firstName.trim().replace(/[<>]/g, '');
       const cleanLast = lastName ? lastName.trim().replace(/[<>]/g, '') : null;
       const updated = await storage.upsertUser({ id: userId, firstName: cleanFirst, lastName: cleanLast });
-      const { passwordHash, ...safeUser } = updated;
+      const { passwordHash, emailVerifyToken, emailVerifyExpires, passwordResetToken, passwordResetExpires, ...safeUser } = updated;
       res.json(safeUser);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -356,12 +356,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Explicit setting (forceSet=true in body) always overwrites.
       const force = req.body?.forceSet === true;
       if (existing.timezone && !force) {
-        const { passwordHash, ...safeUser } = existing;
+        const { passwordHash, emailVerifyToken, emailVerifyExpires, passwordResetToken, passwordResetExpires, ...safeUser } = existing;
         return res.json(safeUser);
       }
 
       const updated = await storage.upsertUser({ id: userId, timezone });
-      const { passwordHash, ...safeUser } = updated;
+      const { passwordHash, emailVerifyToken, emailVerifyExpires, passwordResetToken, passwordResetExpires, ...safeUser } = updated;
       res.json(safeUser);
     } catch (error) {
       console.error("Error updating timezone:", error);

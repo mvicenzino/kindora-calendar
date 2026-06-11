@@ -2,7 +2,7 @@ import { Switch, Route, Redirect, useLocation } from "wouter";
 import { Component, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { HelmetProvider } from "react-helmet-async";
@@ -28,6 +28,9 @@ import Help from "@/pages/Help";
 import About from "@/pages/About";
 import Support from "@/pages/Support";
 import PublicResources from "@/pages/PublicResources";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import VerifyEmail from "@/pages/VerifyEmail";
 import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
 import Health from "@/pages/Health";
@@ -47,7 +50,10 @@ import SmartReminders from "@/components/SmartReminders";
 import WelcomeModal from "@/components/WelcomeModal";
 import { KiraPanelProvider, useKiraPanel } from "@/contexts/KiraPanelContext";
 import { KiraSidePanel } from "@/components/KiraSidePanel";
-import { Sparkles } from "lucide-react";
+import { Sparkles, MailWarning } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/queryClient";
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean; error: string }> {
   constructor(props: { children: ReactNode }) {
@@ -159,6 +165,51 @@ function KiraHeaderPill() {
   );
 }
 
+function VerifyEmailBanner() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const isDemo = user?.id?.startsWith("demo-") ?? false;
+  const [resent, setResent] = useState(false);
+
+  const resendMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/auth/resend-verification");
+      return res.json();
+    },
+    onSuccess: () => {
+      setResent(true);
+      toast({ title: "Verification email sent", description: "Check your inbox for the link." });
+    },
+    onError: () => {
+      toast({ title: "Couldn't send email", description: "Please try again in a moment.", variant: "destructive" });
+    },
+  });
+
+  // Only show for real, signed-in users whose email isn't verified yet.
+  if (!user || isDemo || (user as any).emailVerified !== false) return null;
+
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-primary/10 border-b border-primary/20"
+      data-testid="banner-verify-email"
+    >
+      <div className="flex items-center gap-2 text-sm text-foreground">
+        <MailWarning className="w-4 h-4 text-primary flex-shrink-0" />
+        <span>Please confirm your email address to secure your account.</span>
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={resendMutation.isPending || resent}
+        onClick={() => resendMutation.mutate()}
+        data-testid="button-resend-verification"
+      >
+        {resent ? "Email sent" : resendMutation.isPending ? "Sending..." : "Resend email"}
+      </Button>
+    </div>
+  );
+}
+
 function AppShell({ children }: { children: React.ReactNode }) {
   useMessageNotifications();
   const { user } = useAuth();
@@ -180,6 +231,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </header>
           <AdminActivityBanner />
+          <VerifyEmailBanner />
           <DemoBanner />
           <main className="flex-1 overflow-y-auto overflow-x-hidden">
             {children}
@@ -232,6 +284,9 @@ function Router() {
         <Route path="/resources" component={PublicResources} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/verify-email" component={VerifyEmail} />
         <Route path="/help" component={Help} />
         <Route path="/about" component={About} />
         <Route path="/support" component={Support} />

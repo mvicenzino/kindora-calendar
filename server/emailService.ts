@@ -848,3 +848,99 @@ export async function sendWelcomeEmail(
 
   return result;
 }
+
+// ── App base URL helper ─────────────────────────────────────────────────────
+// Prefers APP_URL (set in production), then the first Replit domain (dev),
+// then localhost. Used for building links in transactional emails.
+export function getAppBaseUrl(): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, '');
+  const domain = process.env.REPLIT_DOMAINS?.split(',')[0]?.trim();
+  if (domain) return `https://${domain}`;
+  return 'http://localhost:5000';
+}
+
+// ── Shared transactional email shell ────────────────────────────────────────
+function transactionalShell(opts: {
+  heading: string;
+  bodyHtml: string;
+  ctaLabel: string;
+  ctaUrl: string;
+}): string {
+  const { heading, bodyHtml, ctaLabel, ctaUrl } = opts;
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${heading}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #1a1d2e; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1d2e; padding: 24px 0;">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width: 560px; background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.04) 100%); border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+          <tr>
+            <td style="background: rgba(0,0,0,0.2); padding: 20px 28px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <div style="font-size: 22px; font-weight: 800; color: #fdba74; letter-spacing: -0.3px;">Kindora</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 28px 28px 8px;">
+              <div style="color: rgba(255,255,255,0.95); font-size: 19px; font-weight: 700; margin-bottom: 12px;">${heading}</div>
+              <div style="color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.6;">${bodyHtml}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 28px 28px; text-align: center;">
+              <a href="${ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); color: white; text-decoration: none; padding: 14px 36px; border-radius: 10px; font-weight: 600; font-size: 14px;">${ctaLabel}</a>
+              <div style="color: rgba(255,255,255,0.35); font-size: 11px; margin-top: 18px; word-break: break-all;">
+                Or paste this link into your browser:<br>${ctaUrl}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="background: rgba(0,0,0,0.15); padding: 16px 28px; text-align: center; border-top: 1px solid rgba(255,255,255,0.08);">
+              <div style="color: rgba(255,255,255,0.3); font-size: 11px;">
+                <a href="https://kindora.ai" style="color: rgba(255,255,255,0.3); text-decoration: none;">kindora.ai</a>
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+export async function sendPasswordResetEmail(
+  toEmail: string,
+  resetLink: string,
+): Promise<{ success: boolean; error?: string }> {
+  const html = transactionalShell({
+    heading: 'Reset your password',
+    bodyHtml: `We received a request to reset the password for your Kindora account. Click the button below to choose a new password. This link expires in 1 hour.<br><br>If you didn't request this, you can safely ignore this email — your password won't change.`,
+    ctaLabel: 'Reset Password',
+    ctaUrl: resetLink,
+  });
+  const text = `Reset your Kindora password\n\nWe received a request to reset your password. Open this link to choose a new one (expires in 1 hour):\n\n${resetLink}\n\nIf you didn't request this, ignore this email.`;
+  return sendEmail({ to: toEmail, subject: 'Reset your Kindora password', html, text });
+}
+
+export async function sendVerificationEmail(
+  toEmail: string,
+  firstName: string,
+  verifyLink: string,
+): Promise<{ success: boolean; error?: string }> {
+  const name = firstName || 'there';
+  const html = transactionalShell({
+    heading: 'Confirm your email',
+    bodyHtml: `Hi ${name}, thanks for joining Kindora! Please confirm your email address so we can keep your account secure and send you important updates like family invites.`,
+    ctaLabel: 'Confirm Email',
+    ctaUrl: verifyLink,
+  });
+  const text = `Hi ${name},\n\nThanks for joining Kindora! Please confirm your email address by opening this link:\n\n${verifyLink}\n\nIf you didn't create a Kindora account, you can ignore this email.`;
+  return sendEmail({ to: toEmail, subject: 'Confirm your Kindora email', html, text });
+}

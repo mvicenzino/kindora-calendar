@@ -9,8 +9,21 @@ import pg from "pg";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 import { seedDemoAccount } from "./demoSeed";
-import { randomUUID } from "crypto";
-import { sendWelcomeEmail } from "./emailService";
+import { randomUUID, randomBytes, createHash } from "crypto";
+import { sendWelcomeEmail, sendPasswordResetEmail, sendVerificationEmail, getAppBaseUrl } from "./emailService";
+
+// Generates a URL-safe random token and its sha256 hash. We email the raw
+// token (in a link) but only ever store the hash, so a database leak can't be
+// used to reset passwords or verify emails.
+function generateToken(): { token: string; tokenHash: string } {
+  const token = randomBytes(32).toString("hex");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  return { token, tokenHash };
+}
+
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 function sanitizeInput(input: string): string {
   return input.replace(/[<>]/g, '').trim();
@@ -137,6 +150,7 @@ export async function setupAuth(app: Express) {
           lastName: claims["last_name"],
           profileImageUrl: claims["profile_image_url"],
           authProvider: "replit",
+          emailVerified: true,
         });
 
         if (isNewReplitUser && claims["email"]) {
@@ -228,6 +242,10 @@ export async function setupAuth(app: Express) {
         }
       }
 
+      // Email verification: store only the hash of a token; email the raw token.
+      const { token: verifyToken, tokenHash: verifyHash } = generateToken();
+      const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
       const user = await storage.upsertUser({
         id: userId,
         email: cleanEmail,
@@ -235,11 +253,19 @@ export async function setupAuth(app: Express) {
         lastName: cleanLastName,
         passwordHash,
         authProvider: "local",
+        emailVerified: false,
+        emailVerifyToken: verifyHash,
+        emailVerifyExpires: verifyExpires,
         ...(cleanTimezone ? { timezone: cleanTimezone } : {}),
       });
 
       sendWelcomeEmail(userId, cleanEmail, cleanFirstName).catch((err: any) =>
         console.error('[Welcome Email] Local register send failed:', err)
+      );
+
+      const verifyLink = `${getAppBaseUrl()}/verify-email?token=${verifyToken}`;
+      sendVerificationEmail(cleanEmail, cleanFirstName, verifyLink).catch((err: any) =>
+        console.error('[Verify Email] Local register send failed:', err)
       );
 
       const sessionUser = createLocalUserSession(user.id, user.email!, user.firstName!, user.lastName || "");
@@ -299,6 +325,124 @@ export async function setupAuth(app: Express) {
     } catch (error: any) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Password reset — request. Always responds 200 regardless of whether the
+  // email exists, to avoid leaking which addresses are registered.
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      const cleanEmail = sanitizeInput(email).toLowerCase();
+      const user = await storage.getUserByEmail(cleanEmail);
+
+      // Only send a reset link to local-password accounts. OAuth-only users
+      // have no password to reset.
+      if (user && user.passwordHash) {
+        const { token, tokenHash } = generateToken();
+        const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+        await storage.updateUserSecurityFields(user.id, {
+          passwordResetToken: tokenHash,
+          passwordResetExpires: expires,
+        });
+        const resetLink = `${getAppBaseUrl()}/reset-password?token=${token}`;
+        sendPasswordResetEmail(user.email!, resetLink).catch((err: any) =>
+          console.error("[Reset Email] send failed:", err)
+        );
+      }
+
+      res.json({ message: "If an account exists for that email, a reset link has been sent." });
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Request failed" });
+    }
+  });
+
+  // Password reset — set a new password using the emailed token.
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ message: "Invalid or expired reset link" });
+      }
+      if (!password || typeof password !== "string" || password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters" });
+      }
+
+      const user = await storage.getUserByPasswordResetToken(hashToken(token));
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired reset link" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 10);
+      await storage.updateUserSecurityFields(user.id, {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      });
+
+      res.json({ message: "Password updated. You can now sign in." });
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Reset failed" });
+    }
+  });
+
+  // Email verification — confirm via the emailed token.
+  app.get("/api/auth/verify-email", async (req, res) => {
+    try {
+      const token = req.query.token;
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ message: "Invalid or expired verification link" });
+      }
+      const user = await storage.getUserByEmailVerifyToken(hashToken(token));
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired verification link" });
+      }
+      await storage.updateUserSecurityFields(user.id, {
+        emailVerified: true,
+        emailVerifyToken: null,
+        emailVerifyExpires: null,
+      });
+      res.json({ message: "Your email has been verified." });
+    } catch (error: any) {
+      console.error("Verify email error:", error);
+      res.status(500).json({ message: "Verification failed" });
+    }
+  });
+
+  // Email verification — resend link to the signed-in user.
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const sessionUser = (req as any).user || (req as any).session?.passport?.user;
+      const userId = sessionUser?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Not signed in" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (user.emailVerified) {
+        return res.json({ message: "Your email is already verified." });
+      }
+      const { token, tokenHash } = generateToken();
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+      await storage.updateUserSecurityFields(user.id, {
+        emailVerifyToken: tokenHash,
+        emailVerifyExpires: expires,
+      });
+      const verifyLink = `${getAppBaseUrl()}/verify-email?token=${token}`;
+      sendVerificationEmail(user.email, user.firstName || "", verifyLink).catch((err: any) =>
+        console.error("[Verify Email] resend failed:", err)
+      );
+      res.json({ message: "Verification email sent." });
+    } catch (error: any) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ message: "Resend failed" });
     }
   });
 

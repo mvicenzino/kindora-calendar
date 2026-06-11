@@ -1,3 +1,4 @@
 - [Per-user Google OAuth pattern](google-oauth-per-user.md) — how Calendar & Drive each store per-user refresh tokens; never use shared Replit Connectors for user data (privacy leak).
 - [Family data isolation (IDOR guard)](family-data-isolation.md) — every family-scoped route must call getUserFamilyRole and 403 if null; resolving familyId is not authorization.
 - [Dependency vuln overrides](dependency-vuln-overrides.md) — transitive advisories pinned via package.json `overrides`; direct deps can't be overridden (EOVERRIDE); verify with build not tsc.
+- [Auth token flows](auth-token-flows.md) — reset/verify tokens stored as sha256 hash (raw emailed), expiry-checked, cleared on use; strip new token fields from /api/auth/user; verification is soft/non-blocking.

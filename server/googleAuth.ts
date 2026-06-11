@@ -153,6 +153,7 @@ export function setupGoogleAuth(app: Express) {
         lastName,
         profileImageUrl,
         authProvider: "google",
+        emailVerified: true,
       });
 
       if (isNewUser && email) {

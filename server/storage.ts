@@ -70,6 +70,17 @@ export interface AccountDeletionSummary {
   userDeleted: boolean;
 }
 
+// Partial security-field update for auth flows (password reset + email verify).
+// Only keys present are written; pass null to clear a token/expiry.
+export interface UserSecurityFields {
+  passwordHash?: string;
+  emailVerified?: boolean;
+  emailVerifyToken?: string | null;
+  emailVerifyExpires?: Date | null;
+  passwordResetToken?: string | null;
+  passwordResetExpires?: Date | null;
+}
+
 export interface IStorage {
   // User operations (MANDATORY for auth)
   getUser(id: string): Promise<User | undefined>;
@@ -80,6 +91,9 @@ export interface IStorage {
   releaseWelcomeEmailClaim(userId: string): Promise<void>;
   updateUserSubscription(userId: string, data: { stripeCustomerId?: string; stripeSubscriptionId?: string | null; subscriptionTier?: string; subscriptionStatus?: string }): Promise<User | undefined>;
   getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined>;
+  getUserByPasswordResetToken(tokenHash: string): Promise<User | undefined>;
+  getUserByEmailVerifyToken(tokenHash: string): Promise<User | undefined>;
+  updateUserSecurityFields(userId: string, fields: UserSecurityFields): Promise<void>;
   deleteUser(id: string): Promise<void>;
   // Privacy: export everything we hold about a user (their profile + the
   // families they belong to and that data). Returns a plain JSON-serializable object.
@@ -314,6 +328,11 @@ export class MemStorage implements IStorage {
       profileImageUrl: user.profileImageUrl ?? existingUser?.profileImageUrl ?? null,
       passwordHash: user.passwordHash ?? existingUser?.passwordHash ?? null,
       authProvider: user.authProvider ?? existingUser?.authProvider ?? "local",
+      emailVerified: user.emailVerified ?? existingUser?.emailVerified ?? false,
+      emailVerifyToken: user.emailVerifyToken ?? existingUser?.emailVerifyToken ?? null,
+      emailVerifyExpires: user.emailVerifyExpires ?? existingUser?.emailVerifyExpires ?? null,
+      passwordResetToken: user.passwordResetToken ?? existingUser?.passwordResetToken ?? null,
+      passwordResetExpires: user.passwordResetExpires ?? existingUser?.passwordResetExpires ?? null,
       stripeCustomerId: existingUser?.stripeCustomerId ?? null,
       stripeSubscriptionId: existingUser?.stripeSubscriptionId ?? null,
       subscriptionTier: existingUser?.subscriptionTier ?? "free",
@@ -366,6 +385,28 @@ export class MemStorage implements IStorage {
 
   async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(u => u.stripeCustomerId === stripeCustomerId);
+  }
+
+  async getUserByPasswordResetToken(tokenHash: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      u => u.passwordResetToken === tokenHash &&
+        u.passwordResetExpires != null &&
+        new Date(u.passwordResetExpires).getTime() > Date.now()
+    );
+  }
+
+  async getUserByEmailVerifyToken(tokenHash: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      u => u.emailVerifyToken === tokenHash &&
+        u.emailVerifyExpires != null &&
+        new Date(u.emailVerifyExpires).getTime() > Date.now()
+    );
+  }
+
+  async updateUserSecurityFields(userId: string, fields: UserSecurityFields): Promise<void> {
+    const user = this.users.get(userId);
+    if (!user) return;
+    this.users.set(userId, { ...user, ...fields, updatedAt: new Date() });
   }
 
   async deleteUser(id: string): Promise<void> {
@@ -1698,6 +1739,31 @@ class DrizzleStorage implements IStorage {
   async getUserByStripeCustomerId(stripeCustomerId: string): Promise<User | undefined> {
     const result = await this.db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId)).limit(1);
     return result[0];
+  }
+
+  async getUserByPasswordResetToken(tokenHash: string): Promise<User | undefined> {
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(and(eq(users.passwordResetToken, tokenHash), sql`${users.passwordResetExpires} > now()`))
+      .limit(1);
+    return result[0];
+  }
+
+  async getUserByEmailVerifyToken(tokenHash: string): Promise<User | undefined> {
+    const result = await this.db
+      .select()
+      .from(users)
+      .where(and(eq(users.emailVerifyToken, tokenHash), sql`${users.emailVerifyExpires} > now()`))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateUserSecurityFields(userId: string, fields: UserSecurityFields): Promise<void> {
+    await this.db
+      .update(users)
+      .set({ ...fields, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async deleteUser(id: string): Promise<void> {
@@ -3109,6 +3175,22 @@ class DemoAwareStorage implements IStorage {
     const demoUser = await this.demoStorage.getUserByStripeCustomerId(stripeCustomerId);
     if (demoUser) return demoUser;
     return this.persistentStorage.getUserByStripeCustomerId(stripeCustomerId);
+  }
+
+  async getUserByPasswordResetToken(tokenHash: string): Promise<User | undefined> {
+    const demoUser = await this.demoStorage.getUserByPasswordResetToken(tokenHash);
+    if (demoUser) return demoUser;
+    return this.persistentStorage.getUserByPasswordResetToken(tokenHash);
+  }
+
+  async getUserByEmailVerifyToken(tokenHash: string): Promise<User | undefined> {
+    const demoUser = await this.demoStorage.getUserByEmailVerifyToken(tokenHash);
+    if (demoUser) return demoUser;
+    return this.persistentStorage.getUserByEmailVerifyToken(tokenHash);
+  }
+
+  async updateUserSecurityFields(userId: string, fields: UserSecurityFields): Promise<void> {
+    return this.getStorage(userId).updateUserSecurityFields(userId, fields);
   }
 
   async deleteUser(id: string): Promise<void> {

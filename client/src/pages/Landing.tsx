@@ -347,6 +347,17 @@ export default function Landing() {
                     data-testid="input-password"
                   />
                 </div>
+                {authMode === "login" && (
+                  <div className="flex justify-end">
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      data-testid="link-forgot-password"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                )}
               </div>
 
               <Button
