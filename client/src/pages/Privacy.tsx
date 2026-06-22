@@ -30,7 +30,7 @@ export default function Privacy() {
         <div className="backdrop-blur-xl bg-card border border-border rounded-md p-6 md:p-10 text-foreground space-y-6">
           <div>
             <h2 className="text-2xl font-bold text-foreground font-['Space_Grotesk'] mb-2" data-testid="text-privacy-title">Privacy Policy</h2>
-            <p className="text-muted-foreground text-sm">Last updated: March 15, 2026</p>
+            <p className="text-muted-foreground text-sm">Last updated: June 22, 2026</p>
           </div>
 
           <section className="space-y-3">
@@ -58,7 +58,9 @@ export default function Privacy() {
             <p className="text-muted-foreground leading-relaxed font-medium mt-2">Connected Google Accounts (optional):</p>
             <ul className="list-disc list-inside text-muted-foreground leading-relaxed space-y-1 ml-4">
               <li>If you choose to connect Google Calendar or Google Drive, we store an access token tied to <span className="font-medium">your individual user account</span> — never shared across family members. Each person connects their own Google account, and disconnecting removes the stored token and revokes our access.</li>
-              <li>We request only the minimum scopes needed to read your calendar events or import the Drive files you select, and we never modify or delete content in your Google account.</li>
+              <li><span className="font-medium">Google Calendar (read):</span> We read events from the calendars you select so we can show them inside Kindora. This is one-way (Google → Kindora) and is the default.</li>
+              <li><span className="font-medium">Google Calendar (two-way sync, optional):</span> If you turn on two-way sync, you grant Kindora permission to create, update, and delete events in the single Google calendar you designate. We only write events that you create or edit inside Kindora — we do not alter unrelated events in your Google account. You can turn two-way sync off, or change the target calendar, at any time in Settings.</li>
+              <li><span className="font-medium">Google Drive (read):</span> We access only the specific files you choose to import. We never modify or delete content in your Google Drive.</li>
             </ul>
             <p className="text-muted-foreground leading-relaxed font-medium mt-2">Automatically Collected Information:</p>
             <ul className="list-disc list-inside text-muted-foreground leading-relaxed space-y-1 ml-4">
@@ -93,7 +95,19 @@ export default function Privacy() {
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">5. Data Security & Family Isolation</h3>
+            <h3 className="text-lg font-semibold text-foreground">5. Google API Services — Limited Use Disclosure</h3>
+            <p className="text-muted-foreground leading-relaxed">
+              Kindora's use and transfer of information received from Google APIs to any other app will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline decoration-primary/40 hover:decoration-primary transition-colors" data-testid="link-google-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. Specifically:
+            </p>
+            <ul className="list-disc list-inside text-muted-foreground leading-relaxed space-y-1 ml-4">
+              <li>We use Google Calendar and Google Drive data only to provide and improve the features you explicitly connect (showing your calendar in Kindora, syncing events you create in Kindora, and importing Drive files you select).</li>
+              <li>We do not transfer or sell this data to third parties, except as needed to provide the Service at your direction, for security, or to comply with applicable law.</li>
+              <li>We do not use Google user data for advertising, and we do not allow humans to read it unless we have your consent, it is necessary for security or to comply with law, or the data has been aggregated and anonymized.</li>
+            </ul>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground">6. Data Security & Family Isolation</h3>
             <p className="text-muted-foreground leading-relaxed">
               We implement industry-standard security measures to protect your data, including encrypted connections (TLS/SSL) for all data in transit, secure password hashing (bcrypt), HTTP-only session cookies, rate limiting, and security headers.
             </p>
@@ -103,14 +117,14 @@ export default function Privacy() {
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">6. Data Retention</h3>
+            <h3 className="text-lg font-semibold text-foreground">7. Data Retention</h3>
             <p className="text-muted-foreground leading-relaxed">
               We retain your data for as long as your account is active or as needed to provide the Service. When you delete your account, we will delete or anonymize your personal data within 30 days, except where retention is required by law. Care documents and medical information will be permanently deleted upon account deletion.
             </p>
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">7. Your Rights</h3>
+            <h3 className="text-lg font-semibold text-foreground">8. Your Rights</h3>
             <p className="text-muted-foreground leading-relaxed">Depending on your jurisdiction, you may have the right to:</p>
             <ul className="list-disc list-inside text-muted-foreground leading-relaxed space-y-1 ml-4">
               <li>Access, correct, or delete your personal data.</li>
@@ -125,35 +139,35 @@ export default function Privacy() {
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">8. Cookies & Tracking</h3>
+            <h3 className="text-lg font-semibold text-foreground">9. Cookies & Tracking</h3>
             <p className="text-muted-foreground leading-relaxed">
               We use session cookies to maintain your login state. We do not use third-party advertising cookies or tracking pixels. Session cookies are HTTP-only and expire when you log out or after a period of inactivity.
             </p>
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">9. Children's Privacy</h3>
+            <h3 className="text-lg font-semibold text-foreground">10. Children's Privacy</h3>
             <p className="text-muted-foreground leading-relaxed">
               The Service is not directed at children under 13 (or 16 in certain jurisdictions). We do not knowingly collect personal information from children. If you believe a child has provided us with personal data, please contact us and we will delete it promptly. Family members may enter schedule and care information about minors, but this data is managed by the adult account holder.
             </p>
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">10. International Users</h3>
+            <h3 className="text-lg font-semibold text-foreground">11. International Users</h3>
             <p className="text-muted-foreground leading-relaxed">
               If you access the Service from outside the United States, your data may be transferred to and processed in the United States. By using the Service, you consent to this transfer. We endeavor to comply with applicable data protection laws, including GDPR for users in the European Economic Area.
             </p>
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">11. Changes to This Policy</h3>
+            <h3 className="text-lg font-semibold text-foreground">12. Changes to This Policy</h3>
             <p className="text-muted-foreground leading-relaxed">
               We may update this Privacy Policy from time to time. We will notify you of material changes by posting the updated policy on this page and updating the "Last updated" date. Your continued use of the Service after changes constitutes acceptance of the updated policy.
             </p>
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">12. Contact Us</h3>
+            <h3 className="text-lg font-semibold text-foreground">13. Contact Us</h3>
             <p className="text-muted-foreground leading-relaxed">
               For privacy-related questions or concerns, contact us at:
             </p>

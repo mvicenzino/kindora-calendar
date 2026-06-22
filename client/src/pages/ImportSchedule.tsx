@@ -232,6 +232,17 @@ function GoogleCalendarSync() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               Connect your Google account to keep your calendars in sync with Kindora. Pull events from any of your Google Calendars, and optionally push events you create in Kindora back to Google (two-way sync).
             </p>
+            <div className="rounded-lg bg-muted/40 p-3 space-y-1.5">
+              <p className="text-xs font-medium text-foreground">What Kindora can access</p>
+              <ul className="text-xs text-muted-foreground leading-relaxed space-y-1 list-disc list-inside">
+                <li>Read events from the Google calendars you choose, to show them in Kindora.</li>
+                <li>If you turn on two-way sync, create, edit, and delete events in the one calendar you pick — only for events you make or change in Kindora.</li>
+              </ul>
+              <p className="text-xs text-muted-foreground">
+                We never sell your data or touch unrelated events. See our{" "}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline decoration-primary/40 hover:decoration-primary transition-colors" data-testid="link-gcal-privacy">Privacy Policy</a>.
+              </p>
+            </div>
             <Button
               onClick={() => { window.location.href = "/api/google-calendar/connect"; }}
               data-testid="button-gcal-connect"
