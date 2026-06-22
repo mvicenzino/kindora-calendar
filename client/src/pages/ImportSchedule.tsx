@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { 
@@ -75,6 +76,9 @@ interface GCalStatus {
   lastSyncedAt?: string | null;
   calendars?: GCalCalendar[];
   error?: string;
+  canWrite?: boolean;
+  pushEnabled?: boolean;
+  writeCalendarId?: string;
 }
 
 function GoogleCalendarSync() {
@@ -148,6 +152,22 @@ function GoogleCalendarSync() {
     },
   });
 
+  const settingsMutation = useMutation({
+    mutationFn: (updates: { pushEnabled?: boolean; writeCalendarId?: string }) =>
+      apiRequest("PATCH", "/api/google-calendar/settings", updates),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/google-calendar/status"] }),
+    onError: (err: any) => {
+      const msg = String(err);
+      toast({
+        title: "Couldn't update two-way sync",
+        description: msg.includes("reconnect_required")
+          ? "Please reconnect Google Calendar to grant edit permission."
+          : msg,
+        variant: "destructive",
+      });
+    },
+  });
+
   const toggleCalendar = (calId: string, checked: boolean) => {
     const current = status?.selectedCalendarIds ?? [];
     const updated = checked ? [...current, calId] : current.filter(id => id !== calId);
@@ -210,7 +230,7 @@ function GoogleCalendarSync() {
         ) : !status?.connected ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Connect your Google account to automatically pull events from any of your Google Calendars into Kindora. Events sync in one direction — Google → Kindora.
+              Connect your Google account to keep your calendars in sync with Kindora. Pull events from any of your Google Calendars, and optionally push events you create in Kindora back to Google (two-way sync).
             </p>
             <Button
               onClick={() => { window.location.href = "/api/google-calendar/connect"; }}
@@ -268,6 +288,61 @@ function GoogleCalendarSync() {
                 )}
               </>
             )}
+
+            {/* Two-way sync */}
+            <div className="border-t pt-3 mt-3 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Two-way sync</p>
+                  <p className="text-xs text-muted-foreground">
+                    Also add events you create in Kindora to your Google Calendar.
+                  </p>
+                </div>
+                {status.canWrite && (
+                  <Switch
+                    checked={!!status.pushEnabled}
+                    onCheckedChange={(checked) => settingsMutation.mutate({ pushEnabled: checked })}
+                    disabled={settingsMutation.isPending}
+                    data-testid="switch-gcal-twoway"
+                  />
+                )}
+              </div>
+
+              {!status.canWrite ? (
+                <div className="rounded-lg bg-muted/40 p-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Two-way sync needs permission to edit your Google Calendar. Reconnect to enable it — your synced events stay intact.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { window.location.href = "/api/google-calendar/connect"; }}
+                    data-testid="button-gcal-reconnect"
+                  >
+                    <Link className="w-3.5 h-3.5 mr-1.5" />
+                    Reconnect to enable
+                  </Button>
+                </div>
+              ) : status.pushEnabled ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground">Add new events to</span>
+                  <Select
+                    value={status.writeCalendarId || "primary"}
+                    onValueChange={(v) => settingsMutation.mutate({ writeCalendarId: v })}
+                  >
+                    <SelectTrigger className="w-[220px]" data-testid="select-gcal-write-calendar">
+                      <SelectValue placeholder="Choose calendar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="primary">Primary calendar</SelectItem>
+                      {status.calendars?.filter(c => !c.primary).map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.summary}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
       </CardContent>

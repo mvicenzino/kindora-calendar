@@ -1,5 +1,6 @@
 import { storage } from "./storage";
 import { format, addDays } from "date-fns";
+import type { Event, GoogleCalendarConnection } from "@shared/schema";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GCAL_API = "https://www.googleapis.com/calendar/v3";
@@ -172,7 +173,7 @@ function cleanGCalDescription(html: string | null | undefined): string | null {
 }
 
 // Map a Google Calendar event to a Kindora event payload
-function mapGCalEvent(gEvent: GCalEvent, familyId: string, color: string) {
+function mapGCalEvent(gEvent: GCalEvent, familyId: string, color: string, calendarId: string) {
   const startRaw = gEvent.start.dateTime ?? gEvent.start.date;
   const endRaw = gEvent.end.dateTime ?? gEvent.end.date;
 
@@ -207,6 +208,7 @@ function mapGCalEvent(gEvent: GCalEvent, familyId: string, color: string) {
     completed: false,
     isImportant: false,
     googleEventId: gEvent.id,
+    googleCalendarId: calendarId,
   };
 }
 
@@ -261,19 +263,21 @@ export async function syncGoogleCalendars(userId: string, familyId: string): Pro
       fetched += gEvents.length;
 
       for (const gEvent of gEvents) {
-        const payload = mapGCalEvent(gEvent, familyId, color);
+        const payload = mapGCalEvent(gEvent, familyId, color, calId);
         if (!payload) { skipped++; continue; }
 
         try {
           // Check if we already have this event (by Google event ID)
           const existing = await storage.getEventByGoogleId(familyId, gEvent.id);
           if (existing) {
-            // Update title/times in case they changed
+            // Update title/times in case they changed (also backfill the source
+            // calendar id so two-way edits/deletes target the right calendar)
             await storage.updateEvent(existing.id, familyId, {
               title: payload.title,
               description: payload.description,
               startTime: payload.startTime,
               endTime: payload.endTime,
+              googleCalendarId: payload.googleCalendarId,
             });
             updated++;
             calUpdated++;
@@ -308,4 +312,100 @@ export async function syncGoogleCalendars(userId: string, familyId: string): Pro
     console.log(`[GCalSync] Per-calendar:`, perCalendar.map(p => `${p.name ?? p.id}: ${p.fetched} fetched, ${p.created} new, ${p.updated} upd${p.error ? ` (ERR: ${p.error})` : ""}`).join(" | "));
   }
   return { created, updated, skipped, fetched, errors, perCalendar };
+}
+
+// ── Two-way sync (Kindora → Google) ─────────────────────────────────────────
+// These helpers are deliberately only invoked from the HTTP event routes
+// (create/update/delete), never from the pull sync above. That keeps the sync
+// loop-safe: a pull writes events via storage directly (no push trigger), and a
+// push writes to Google directly (no pull trigger).
+
+// Whether the granted OAuth scopes allow writing events to Google.
+export function connectionCanWrite(conn: GoogleCalendarConnection | null | undefined): boolean {
+  if (!conn) return false;
+  const scopes = (conn.scope || "").split(/\s+/).filter(Boolean);
+  return (
+    scopes.includes("https://www.googleapis.com/auth/calendar") ||
+    scopes.includes("https://www.googleapis.com/auth/calendar.events")
+  );
+}
+
+// Build a Google Calendar event body from a Kindora event.
+function mapKindoraToGoogleBody(event: Event) {
+  return {
+    summary: event.title || "(No title)",
+    description: event.description || undefined,
+    start: { dateTime: new Date(event.startTime).toISOString() },
+    end: { dateTime: new Date(event.endTime).toISOString() },
+  };
+}
+
+// Push a Kindora-origin event to Google: updates the linked Google event if one
+// exists, otherwise creates a new one and stores the link back on the event.
+export async function pushKindoraEvent(userId: string, familyId: string, event: Event): Promise<void> {
+  const conn = await storage.getGoogleCalendarConnection(userId);
+  if (!conn || !conn.pushEnabled || !connectionCanWrite(conn)) return;
+  // v1: recurring events are not mapped to Google recurrence — skip them.
+  if (event.isRecurringParent || event.rrule || event.recurrenceRule) return;
+
+  const token = await getValidAccessToken(userId);
+  const body = mapKindoraToGoogleBody(event);
+
+  if (event.googleEventId) {
+    // Update the existing Google event (covers events imported from Google and
+    // then edited inside Kindora).
+    const calId = event.googleCalendarId || conn.writeCalendarId || "primary";
+    const res = await fetch(
+      `${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(event.googleEventId)}`,
+      {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      console.error(`[GCal push] update failed for event ${event.id}:`, data);
+    }
+  } else {
+    // Create a new Google event and remember its id + calendar for future syncs.
+    const calId = conn.writeCalendarId || "primary";
+    const res = await fetch(
+      `${GCAL_API}/calendars/${encodeURIComponent(calId)}/events`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.id) {
+      // Direct storage write (not the HTTP route) — does not re-trigger a push.
+      await storage.updateEvent(event.id, familyId, {
+        googleEventId: data.id,
+        googleCalendarId: calId,
+      } as any);
+    } else {
+      console.error(`[GCal push] create failed for event ${event.id}:`, data);
+    }
+  }
+}
+
+// Delete the Google event linked to a Kindora event (best-effort).
+export async function deleteKindoraEventFromGoogle(userId: string, event: Event): Promise<void> {
+  const conn = await storage.getGoogleCalendarConnection(userId);
+  if (!conn || !conn.pushEnabled || !connectionCanWrite(conn)) return;
+  if (!event.googleEventId) return;
+
+  const calId = event.googleCalendarId || conn.writeCalendarId || "primary";
+  const token = await getValidAccessToken(userId);
+  const res = await fetch(
+    `${GCAL_API}/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(event.googleEventId)}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+  );
+  // 404/410 mean it's already gone on Google — treat as success.
+  if (!res.ok && res.status !== 404 && res.status !== 410) {
+    const data = await res.json().catch(() => ({}));
+    console.error(`[GCal push] delete failed for event ${event.id}:`, data);
+  }
 }

@@ -22,6 +22,7 @@ import OpenAI from "openai";
 import { isGmailConnected, scanForInvoices, type ParsedInvoice as GmailParsedInvoice } from "./gmailService";
 import { parseScheduleFromText, parseScheduleFromImage, parseScheduleFromPdf, type ParsedScheduleEvent } from "./scheduleParser";
 import { parseICalData } from "./icalParser";
+import { pushKindoraEvent, deleteKindoraEventFromGoogle } from "./googleCalendarSync";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
@@ -1558,6 +1559,10 @@ Visit Kindora Calendar: ${joinUrl}
         res.status(201).json(createdEvents[0]);
       } else {
         const event = await storage.createEvent(familyId, eventData);
+        // Two-way sync: push to Google (fire-and-forget; never blocks the response).
+        pushKindoraEvent(userId, familyId, event).catch((err) =>
+          console.error("[GCal push] create error:", err),
+        );
         res.status(201).json(event);
       }
     } catch (error) {
@@ -1744,6 +1749,10 @@ Visit Kindora Calendar: ${joinUrl}
       delete (result.data as any).photoUrl;
       
       const event = await storage.updateEvent(req.params.id, familyId, result.data);
+      // Two-way sync: reflect the edit on Google (fire-and-forget).
+      pushKindoraEvent(userId, familyId, event).catch((err) =>
+        console.error("[GCal push] update error:", err),
+      );
       res.json(event);
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -1776,7 +1785,14 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: "You don't have permission to delete events" });
       }
       
+      // Capture the event before deleting so we can remove it from Google too.
+      const existingForSync = await storage.getEvent(req.params.id, familyId);
       await storage.deleteEvent(req.params.id, familyId);
+      if (existingForSync) {
+        deleteKindoraEventFromGoogle(userId, existingForSync).catch((err) =>
+          console.error("[GCal push] delete error:", err),
+        );
+      }
       res.status(204).send();
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -5145,8 +5161,11 @@ Always return valid JSON matching one of the three formats above.`,
 
   // ── Google Calendar Sync ────────────────────────────────────────────────────
   {
-    const { resolveCalendarCallbackURL, listCalendars, getValidAccessToken, syncGoogleCalendars } = await import("./googleCalendarSync");
-    const GC_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+    const { resolveCalendarCallbackURL, listCalendars, getValidAccessToken, syncGoogleCalendars, connectionCanWrite } = await import("./googleCalendarSync");
+    // Read + write events: calendar.readonly lets us list calendars and read
+    // events; calendar.events adds the ability to write events back to Google
+    // (two-way sync). Existing read-only connections must reconnect to grant it.
+    const GC_SCOPE = "https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events";
     const clientId = process.env.GOOGLE_CLIENT_ID ?? "";
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "";
     const callbackURL = resolveCalendarCallbackURL();
@@ -5172,6 +5191,10 @@ Always return valid JSON matching one of the three formats above.`,
           selectedCalendarIds: conn.selectedCalendarIds,
           lastSyncedAt: conn.lastSyncedAt,
           calendars,
+          // Two-way sync state
+          canWrite: connectionCanWrite(conn),
+          pushEnabled: conn.pushEnabled,
+          writeCalendarId: conn.writeCalendarId,
         });
       } catch (err) {
         res.status(500).json({ error: String(err) });
@@ -5238,6 +5261,8 @@ Always return valid JSON matching one of the three formats above.`,
           accessTokenExpiresAt: expiresAt,
           selectedCalendarIds: [],
           lastSyncedAt: null,
+          // Persist granted scopes so we can detect two-way write access.
+          scope: tokenData.scope ?? null,
         });
 
         console.log("[GCal callback] Connected for user:", userId);
@@ -5255,6 +5280,31 @@ Always return valid JSON matching one of the three formats above.`,
         const { selectedCalendarIds } = req.body as { selectedCalendarIds: string[] };
         if (!Array.isArray(selectedCalendarIds)) return res.status(400).json({ error: "selectedCalendarIds must be an array" });
         await storage.updateGoogleCalendarConnection(userId, { selectedCalendarIds });
+        res.json({ success: true });
+      } catch (err) {
+        res.status(500).json({ error: String(err) });
+      }
+    });
+
+    // PATCH /api/google-calendar/settings — toggle two-way push + target calendar
+    app.patch("/api/google-calendar/settings", isAuthenticated, async (req: any, res) => {
+      try {
+        const userId = req.user.claims.sub;
+        const { pushEnabled, writeCalendarId } = req.body as { pushEnabled?: boolean; writeCalendarId?: string };
+        const updates: Record<string, any> = {};
+        if (typeof pushEnabled === "boolean") updates.pushEnabled = pushEnabled;
+        if (typeof writeCalendarId === "string" && writeCalendarId.trim()) updates.writeCalendarId = writeCalendarId.trim();
+        if (Object.keys(updates).length === 0) {
+          return res.status(400).json({ error: "Nothing to update" });
+        }
+        // Can't turn on two-way push without write permission — force a reconnect.
+        if (updates.pushEnabled === true) {
+          const conn = await storage.getGoogleCalendarConnection(userId);
+          if (!connectionCanWrite(conn)) {
+            return res.status(400).json({ error: "reconnect_required" });
+          }
+        }
+        await storage.updateGoogleCalendarConnection(userId, updates);
         res.json({ success: true });
       } catch (err) {
         res.status(500).json({ error: String(err) });

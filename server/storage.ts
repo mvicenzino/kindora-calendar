@@ -820,6 +820,7 @@ export class MemStorage implements IStorage {
       isRecurringParent: insertEvent.isRecurringParent ?? null,
       isImportant: insertEvent.isImportant ?? false,
       googleEventId: insertEvent.googleEventId ?? null,
+      googleCalendarId: insertEvent.googleCalendarId ?? null,
       completed: false,
       completedAt: null,
       createdAt: new Date(),

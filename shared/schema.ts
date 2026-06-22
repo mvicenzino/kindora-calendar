@@ -128,6 +128,7 @@ export const events = pgTable("events", {
   isRecurringParent: boolean("is_recurring_parent").default(false), // True if this is the template event for a series
   isImportant: boolean("is_important").notNull().default(false),
   googleEventId: text("google_event_id"), // Set when event was synced from Google Calendar
+  googleCalendarId: text("google_calendar_id"), // Which Google calendar this event lives in (for two-way sync writes/deletes)
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => ({
   // Object-storage authorization resolves the owning event by photoUrl, so this
@@ -606,6 +607,9 @@ export const googleCalendarConnections = pgTable("google_calendar_connections", 
   accessTokenExpiresAt: timestamp("access_token_expires_at"),
   selectedCalendarIds: text("selected_calendar_ids").array().notNull().default(sql`'{}'::text[]`),
   lastSyncedAt: timestamp("last_synced_at"),
+  scope: text("scope"), // OAuth scopes granted (used to detect if two-way write access is available)
+  pushEnabled: boolean("push_enabled").notNull().default(false), // When true, Kindora events are pushed to Google
+  writeCalendarId: text("write_calendar_id").notNull().default("primary"), // Which Google calendar new Kindora events are written to
   createdAt: timestamp("created_at").defaultNow(),
 });
 export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSelect;
