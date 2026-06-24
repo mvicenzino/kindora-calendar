@@ -254,6 +254,13 @@ async function main() {
     familyId: B,
   });
 
+  // Meal planner
+  await expectForbidden("GET  /api/meals (family B)", "GET", `/api/meals?familyId=${B}`, userA);
+  await expectForbidden("POST /api/meals/chat (family B)", "POST", "/api/meals/chat", userA, {
+    familyId: B,
+    messages: [{ role: "user", content: "plan meals" }],
+  });
+
   // Object storage (vault file delivery). The actual file bytes are served by
   // GET /objects/...; these must never be reachable anonymously, and vault
   // files (care-documents/<familyId>/...) must reject members of other families.
@@ -393,6 +400,7 @@ async function main() {
   await expectAllowed("GET  /api/symptoms (own family)", "GET", `/api/symptoms?familyId=${A}`, userA);
   await expectAllowed("GET  /api/tasks (own family)", "GET", `/api/tasks?familyId=${A}`, userA);
   await expectAllowed("GET  /api/family-members (own family)", "GET", `/api/family-members?familyId=${A}`, userA);
+  await expectAllowed("GET  /api/meals (own family)", "GET", `/api/meals?familyId=${A}`, userA);
   // Own-family vault path passes the membership gate (404 for a missing file,
   // never 403/401) — proves the gate doesn't lock members out of their vault.
   await expectAllowed("GET /objects/care-documents (own family)", "GET", `/objects/care-documents/${A}/nope.pdf`, userA);

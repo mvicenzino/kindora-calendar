@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, boolean, index, uniqueIndex, numeric, integer, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, boolean, index, uniqueIndex, numeric, integer, serial, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -653,6 +653,125 @@ export const tasks = pgTable("tasks", {
 export const insertTaskSchema = createInsertSchema(tasks).omit({ id: true, completedAt: true, completedByUserId: true, createdAt: true });
 export type InsertTask = z.infer<typeof insertTaskSchema>;
 export type Task = typeof tasks.$inferSelect;
+
+// ── Chores & Rewards ────────────────────────────────────────────────────────
+// Chores are kid-friendly tasks worth points. They can be one-time (dueDate) or
+// recurring (rrule). Completing a chore for a member awards its points.
+export const chores = pgTable("chores", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  assignedMemberId: varchar("assigned_member_id"), // the family member responsible (usually a kid)
+  points: integer("points").notNull().default(5),
+  icon: varchar("icon", { length: 50 }), // optional icon key for kid-friendly display
+  rrule: text("rrule"), // RFC 5545 RRULE for recurring chores; null = one-time
+  dueDate: timestamp("due_date"), // one-time due date / recurrence anchor
+  isActive: boolean("is_active").notNull().default(true),
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// One row per (chore, member, occurrence date) completion. Points are snapshotted
+// so a chore's point value can change later without rewriting history.
+export const choreCompletions = pgTable("chore_completions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  choreId: varchar("chore_id").notNull(),
+  memberId: varchar("member_id").notNull(), // who earned the points
+  occurrenceDate: varchar("occurrence_date", { length: 10 }).notNull(), // YYYY-MM-DD
+  pointsAwarded: integer("points_awarded").notNull(),
+  completedByUserId: varchar("completed_by_user_id").notNull(),
+  completedAt: timestamp("completed_at").notNull().default(sql`now()`),
+}, (table) => ({
+  uniqCompletion: uniqueIndex("chore_completions_unique")
+    .on(table.choreId, table.memberId, table.occurrenceDate),
+}));
+
+// Rewards a member can redeem with points (family-wide store).
+export const rewards = pgTable("rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  cost: integer("cost").notNull().default(10),
+  icon: varchar("icon", { length: 50 }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+// One row per redemption; pointsSpent decrements a member's balance.
+export const rewardRedemptions = pgTable("reward_redemptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  rewardId: varchar("reward_id").notNull(),
+  memberId: varchar("member_id").notNull(),
+  rewardTitle: varchar("reward_title", { length: 200 }).notNull(), // snapshot
+  pointsSpent: integer("points_spent").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending | fulfilled
+  redeemedByUserId: varchar("redeemed_by_user_id").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertChoreSchema = createInsertSchema(chores).omit({
+  id: true, createdAt: true,
+}).extend({
+  title: z.string().min(1, "Title is required").trim(),
+  points: z.number().int().min(0).max(10000).default(5),
+});
+export type InsertChore = z.infer<typeof insertChoreSchema>;
+export type Chore = typeof chores.$inferSelect;
+export type ChoreCompletion = typeof choreCompletions.$inferSelect;
+
+export const insertRewardSchema = createInsertSchema(rewards).omit({
+  id: true, createdAt: true,
+}).extend({
+  title: z.string().min(1, "Title is required").trim(),
+  cost: z.number().int().min(1).max(1000000).default(10),
+});
+export type InsertReward = z.infer<typeof insertRewardSchema>;
+export type Reward = typeof rewards.$inferSelect;
+export type RewardRedemption = typeof rewardRedemptions.$inferSelect;
+
+// ── Meal Planner ────────────────────────────────────────────────────────────
+// AI-generated weekly meal plans. The AI interviews the caregiver first, then
+// produces a structured plan (days -> meals -> recipe) plus a consolidated,
+// category-grouped grocery list. Both are stored as JSON snapshots.
+export type MealPlanMeal = {
+  mealType: string; // breakfast | lunch | dinner | snack
+  name: string;
+  description?: string;
+  ingredients: string[];
+  steps: string[];
+};
+export type MealPlanDay = {
+  day: string; // e.g. "Monday" or "Day 1"
+  meals: MealPlanMeal[];
+};
+export type GroceryCategory = {
+  category: string; // e.g. "Produce", "Dairy", "Pantry"
+  items: string[];
+};
+
+export const mealPlans = pgTable("meal_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  familyId: varchar("family_id").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  summary: text("summary"), // short friendly description of the plan
+  days: jsonb("days").$type<MealPlanDay[]>().notNull(),
+  groceryList: jsonb("grocery_list").$type<GroceryCategory[]>().notNull(),
+  createdByUserId: varchar("created_by_user_id").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertMealPlanSchema = createInsertSchema(mealPlans).omit({
+  id: true, createdAt: true,
+}).extend({
+  title: z.string().min(1, "Title is required").trim(),
+});
+export type InsertMealPlan = z.infer<typeof insertMealPlanSchema>;
+export type MealPlan = typeof mealPlans.$inferSelect;
 
 // Family Member types
 export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;

@@ -35,6 +35,8 @@ import AccountSettings from "@/pages/AccountSettings";
 import Advisor from "@/pages/Advisor";
 import Health from "@/pages/Health";
 import Tasks from "@/pages/Tasks";
+import Chores from "@/pages/Chores";
+import MealPlanner from "@/pages/MealPlanner";
 import FamilyDashboard from "@/pages/FamilyDashboard";
 import NotFound from "@/pages/not-found";
 import AppSidebar from "@/components/AppSidebar";
@@ -310,6 +312,8 @@ function Router() {
                     <Route path="/" component={FamilyDashboard} />
                     <Route path="/calendar" component={Home} />
                     <Route path="/tasks" component={Tasks} />
+                    <Route path="/chores" component={Chores} />
+                    <Route path="/meals" component={MealPlanner} />
                     <Route path="/care" component={CaregiverDashboard} />
                     <Route path="/messages" component={Messages} />
                     <Route path="/documents" component={Documents} />

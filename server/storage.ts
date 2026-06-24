@@ -1,4 +1,4 @@
-import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type UpdateEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, type GoogleDriveConnection, type InsertGoogleDriveConnection, type Task, type InsertTask, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections, googleDriveConnections, tasks } from "@shared/schema";
+import { type FamilyMember, type InsertFamilyMember, type Event, type InsertEvent, type UpdateEvent, type Message, type InsertMessage, type User, type UpsertUser, type Family, type InsertFamily, type FamilyMembership, type EventNote, type InsertEventNote, type Medication, type InsertMedication, type MedicationLog, type InsertMedicationLog, type FamilyMessage, type InsertFamilyMessage, type CaregiverPayRate, type InsertCaregiverPayRate, type CaregiverTimeEntry, type InsertCaregiverTimeEntry, type WeeklySummarySchedule, type InsertWeeklySummarySchedule, type WeeklySummaryPreference, type InsertWeeklySummaryPreference, type CareDocument, type InsertCareDocument, type EmergencyBridgeToken, type ParsedInvoice, type InsertParsedInvoice, type AdvisorUsage, type BetaFeedback, type SymptomEntry, type InsertSymptomEntry, type SymptomSystemRating, type SymptomEntryWithSystems, type HydrationLog, type KiraMemory, type GoogleCalendarConnection, type InsertGoogleCalendarConnection, type GoogleDriveConnection, type InsertGoogleDriveConnection, type Task, type InsertTask, type Chore, type InsertChore, type ChoreCompletion, type Reward, type InsertReward, type RewardRedemption, type MealPlan, type InsertMealPlan, familyMembers, events, messages, users, families, familyMemberships, eventNotes, medications, medicationLogs, familyMessages, caregiverPayRates, caregiverTimeEntries, weeklySummarySchedules, weeklySummaryPreferences, careDocuments, emergencyBridgeTokens, parsedInvoices, advisorUsage, betaFeedback, symptomEntries, symptomSystemRatings, hydrationLogs, kiraMemories, googleCalendarConnections, googleDriveConnections, tasks, chores, choreCompletions, rewards, rewardRedemptions, mealPlans } from "@shared/schema";
 import { randomUUID } from "crypto";
 import pg from "pg";
 const { Pool } = pg;
@@ -32,6 +32,17 @@ export class NotFoundError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'NotFoundError';
+  }
+}
+
+export class InsufficientPointsError extends Error {
+  balance: number;
+  cost: number;
+  constructor(balance: number, cost: number) {
+    super('Not enough points');
+    this.name = 'InsufficientPointsError';
+    this.balance = balance;
+    this.cost = cost;
   }
 }
 
@@ -248,6 +259,26 @@ export interface IStorage {
   updateTask(taskId: string, familyId: string, updates: Partial<InsertTask>): Promise<Task>;
   deleteTask(taskId: string, familyId: string): Promise<void>;
   toggleTaskCompletion(taskId: string, familyId: string, userId: string): Promise<Task>;
+
+  // Chores & Rewards
+  getChores(familyId: string): Promise<Chore[]>;
+  createChore(chore: InsertChore): Promise<Chore>;
+  updateChore(choreId: string, familyId: string, updates: Partial<InsertChore>): Promise<Chore>;
+  deleteChore(choreId: string, familyId: string): Promise<void>;
+  getChoreCompletions(familyId: string): Promise<ChoreCompletion[]>;
+  completeChore(params: { familyId: string; choreId: string; memberId: string; occurrenceDate: string; pointsAwarded: number; completedByUserId: string }): Promise<ChoreCompletion>;
+  uncompleteChore(familyId: string, choreId: string, memberId: string, occurrenceDate: string): Promise<void>;
+  getRewards(familyId: string): Promise<Reward[]>;
+  createReward(reward: InsertReward): Promise<Reward>;
+  updateReward(rewardId: string, familyId: string, updates: Partial<InsertReward>): Promise<Reward>;
+  deleteReward(rewardId: string, familyId: string): Promise<void>;
+  getRewardRedemptions(familyId: string): Promise<RewardRedemption[]>;
+  createRewardRedemption(redemption: { familyId: string; rewardId: string; memberId: string; rewardTitle: string; pointsSpent: number; redeemedByUserId: string }): Promise<RewardRedemption>;
+  updateRewardRedemption(redemptionId: string, familyId: string, updates: { status?: string }): Promise<RewardRedemption>;
+  getMealPlans(familyId: string): Promise<MealPlan[]>;
+  getMealPlan(mealPlanId: string, familyId: string): Promise<MealPlan | undefined>;
+  createMealPlan(mealPlan: InsertMealPlan): Promise<MealPlan>;
+  deleteMealPlan(mealPlanId: string, familyId: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -1612,6 +1643,159 @@ export class MemStorage implements IStorage {
       ? { ...task, completedAt: null, completedByUserId: null }
       : { ...task, completedAt: new Date(), completedByUserId: userId };
     return this.tasksStore[idx];
+  }
+
+  // Chores & Rewards
+  private choresStore: Chore[] = [];
+  private choreCompletionsStore: ChoreCompletion[] = [];
+  private rewardsStore: Reward[] = [];
+  private rewardRedemptionsStore: RewardRedemption[] = [];
+  private mealPlansStore: MealPlan[] = [];
+
+  async getChores(familyId: string): Promise<Chore[]> {
+    return this.choresStore
+      .filter(c => c.familyId === familyId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+  async createChore(chore: InsertChore): Promise<Chore> {
+    const newChore: Chore = {
+      ...chore,
+      id: randomUUID(),
+      description: chore.description ?? null,
+      assignedMemberId: chore.assignedMemberId ?? null,
+      points: chore.points ?? 5,
+      icon: chore.icon ?? null,
+      rrule: chore.rrule ?? null,
+      dueDate: chore.dueDate ?? null,
+      isActive: chore.isActive ?? true,
+      createdAt: new Date(),
+    };
+    this.choresStore.push(newChore);
+    return newChore;
+  }
+  async updateChore(choreId: string, familyId: string, updates: Partial<InsertChore>): Promise<Chore> {
+    const idx = this.choresStore.findIndex(c => c.id === choreId && c.familyId === familyId);
+    if (idx === -1) throw new Error('Chore not found');
+    this.choresStore[idx] = { ...this.choresStore[idx], ...updates };
+    return this.choresStore[idx];
+  }
+  async deleteChore(choreId: string, familyId: string): Promise<void> {
+    this.choresStore = this.choresStore.filter(c => !(c.id === choreId && c.familyId === familyId));
+  }
+  async getChoreCompletions(familyId: string): Promise<ChoreCompletion[]> {
+    return this.choreCompletionsStore.filter(c => c.familyId === familyId);
+  }
+  async completeChore(params: { familyId: string; choreId: string; memberId: string; occurrenceDate: string; pointsAwarded: number; completedByUserId: string }): Promise<ChoreCompletion> {
+    const existing = this.choreCompletionsStore.find(
+      c => c.choreId === params.choreId && c.memberId === params.memberId && c.occurrenceDate === params.occurrenceDate
+    );
+    if (existing) return existing;
+    const completion: ChoreCompletion = {
+      id: randomUUID(),
+      familyId: params.familyId,
+      choreId: params.choreId,
+      memberId: params.memberId,
+      occurrenceDate: params.occurrenceDate,
+      pointsAwarded: params.pointsAwarded,
+      completedByUserId: params.completedByUserId,
+      completedAt: new Date(),
+    };
+    this.choreCompletionsStore.push(completion);
+    return completion;
+  }
+  async uncompleteChore(familyId: string, choreId: string, memberId: string, occurrenceDate: string): Promise<void> {
+    this.choreCompletionsStore = this.choreCompletionsStore.filter(
+      c => !(c.familyId === familyId && c.choreId === choreId && c.memberId === memberId && c.occurrenceDate === occurrenceDate)
+    );
+  }
+  async getRewards(familyId: string): Promise<Reward[]> {
+    return this.rewardsStore
+      .filter(r => r.familyId === familyId)
+      .sort((a, b) => a.cost - b.cost);
+  }
+  async createReward(reward: InsertReward): Promise<Reward> {
+    const newReward: Reward = {
+      ...reward,
+      id: randomUUID(),
+      description: reward.description ?? null,
+      cost: reward.cost ?? 10,
+      icon: reward.icon ?? null,
+      isActive: reward.isActive ?? true,
+      createdAt: new Date(),
+    };
+    this.rewardsStore.push(newReward);
+    return newReward;
+  }
+  async updateReward(rewardId: string, familyId: string, updates: Partial<InsertReward>): Promise<Reward> {
+    const idx = this.rewardsStore.findIndex(r => r.id === rewardId && r.familyId === familyId);
+    if (idx === -1) throw new Error('Reward not found');
+    this.rewardsStore[idx] = { ...this.rewardsStore[idx], ...updates };
+    return this.rewardsStore[idx];
+  }
+  async deleteReward(rewardId: string, familyId: string): Promise<void> {
+    this.rewardsStore = this.rewardsStore.filter(r => !(r.id === rewardId && r.familyId === familyId));
+  }
+  async getRewardRedemptions(familyId: string): Promise<RewardRedemption[]> {
+    return this.rewardRedemptionsStore
+      .filter(r => r.familyId === familyId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  async createRewardRedemption(redemption: { familyId: string; rewardId: string; memberId: string; rewardTitle: string; pointsSpent: number; redeemedByUserId: string }): Promise<RewardRedemption> {
+    // Enforce balance here so the check and the spend are a single step (no race).
+    const earned = this.choreCompletionsStore
+      .filter(c => c.familyId === redemption.familyId && c.memberId === redemption.memberId)
+      .reduce((s, c) => s + c.pointsAwarded, 0);
+    const spent = this.rewardRedemptionsStore
+      .filter(r => r.familyId === redemption.familyId && r.memberId === redemption.memberId)
+      .reduce((s, r) => s + r.pointsSpent, 0);
+    const balance = earned - spent;
+    if (balance < redemption.pointsSpent) {
+      throw new InsufficientPointsError(balance, redemption.pointsSpent);
+    }
+    const newRedemption: RewardRedemption = {
+      id: randomUUID(),
+      familyId: redemption.familyId,
+      rewardId: redemption.rewardId,
+      memberId: redemption.memberId,
+      rewardTitle: redemption.rewardTitle,
+      pointsSpent: redemption.pointsSpent,
+      status: 'pending',
+      redeemedByUserId: redemption.redeemedByUserId,
+      createdAt: new Date(),
+    };
+    this.rewardRedemptionsStore.push(newRedemption);
+    return newRedemption;
+  }
+  async updateRewardRedemption(redemptionId: string, familyId: string, updates: { status?: string }): Promise<RewardRedemption> {
+    const idx = this.rewardRedemptionsStore.findIndex(r => r.id === redemptionId && r.familyId === familyId);
+    if (idx === -1) throw new Error('Redemption not found');
+    this.rewardRedemptionsStore[idx] = { ...this.rewardRedemptionsStore[idx], ...updates };
+    return this.rewardRedemptionsStore[idx];
+  }
+  async getMealPlans(familyId: string): Promise<MealPlan[]> {
+    return this.mealPlansStore
+      .filter(p => p.familyId === familyId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+  async getMealPlan(mealPlanId: string, familyId: string): Promise<MealPlan | undefined> {
+    return this.mealPlansStore.find(p => p.id === mealPlanId && p.familyId === familyId);
+  }
+  async createMealPlan(mealPlan: InsertMealPlan): Promise<MealPlan> {
+    const newPlan: MealPlan = {
+      id: randomUUID(),
+      familyId: mealPlan.familyId,
+      title: mealPlan.title,
+      summary: mealPlan.summary ?? null,
+      days: mealPlan.days,
+      groceryList: mealPlan.groceryList,
+      createdByUserId: mealPlan.createdByUserId,
+      createdAt: new Date(),
+    };
+    this.mealPlansStore.push(newPlan);
+    return newPlan;
+  }
+  async deleteMealPlan(mealPlanId: string, familyId: string): Promise<void> {
+    this.mealPlansStore = this.mealPlansStore.filter(p => !(p.id === mealPlanId && p.familyId === familyId));
   }
 }
 
@@ -3111,6 +3295,123 @@ class DrizzleStorage implements IStorage {
     const [result] = await this.db.update(tasks).set(update).where(eq(tasks.id, taskId)).returning();
     return result;
   }
+
+  // Chores & Rewards
+  async getChores(familyId: string): Promise<Chore[]> {
+    return await this.db.select().from(chores)
+      .where(eq(chores.familyId, familyId))
+      .orderBy(chores.createdAt);
+  }
+  async createChore(chore: InsertChore): Promise<Chore> {
+    const [result] = await this.db.insert(chores).values(chore).returning();
+    return result;
+  }
+  async updateChore(choreId: string, familyId: string, updates: Partial<InsertChore>): Promise<Chore> {
+    const [result] = await this.db.update(chores).set(updates)
+      .where(and(eq(chores.id, choreId), eq(chores.familyId, familyId)))
+      .returning();
+    if (!result) throw new Error('Chore not found');
+    return result;
+  }
+  async deleteChore(choreId: string, familyId: string): Promise<void> {
+    await this.db.delete(chores).where(and(eq(chores.id, choreId), eq(chores.familyId, familyId)));
+  }
+  async getChoreCompletions(familyId: string): Promise<ChoreCompletion[]> {
+    return await this.db.select().from(choreCompletions).where(eq(choreCompletions.familyId, familyId));
+  }
+  async completeChore(params: { familyId: string; choreId: string; memberId: string; occurrenceDate: string; pointsAwarded: number; completedByUserId: string }): Promise<ChoreCompletion> {
+    const [inserted] = await this.db.insert(choreCompletions).values(params).onConflictDoNothing().returning();
+    if (inserted) return inserted;
+    const [existing] = await this.db.select().from(choreCompletions)
+      .where(and(
+        eq(choreCompletions.choreId, params.choreId),
+        eq(choreCompletions.memberId, params.memberId),
+        eq(choreCompletions.occurrenceDate, params.occurrenceDate),
+      ))
+      .limit(1);
+    return existing;
+  }
+  async uncompleteChore(familyId: string, choreId: string, memberId: string, occurrenceDate: string): Promise<void> {
+    await this.db.delete(choreCompletions).where(and(
+      eq(choreCompletions.familyId, familyId),
+      eq(choreCompletions.choreId, choreId),
+      eq(choreCompletions.memberId, memberId),
+      eq(choreCompletions.occurrenceDate, occurrenceDate),
+    ));
+  }
+  async getRewards(familyId: string): Promise<Reward[]> {
+    return await this.db.select().from(rewards)
+      .where(eq(rewards.familyId, familyId))
+      .orderBy(rewards.cost);
+  }
+  async createReward(reward: InsertReward): Promise<Reward> {
+    const [result] = await this.db.insert(rewards).values(reward).returning();
+    return result;
+  }
+  async updateReward(rewardId: string, familyId: string, updates: Partial<InsertReward>): Promise<Reward> {
+    const [result] = await this.db.update(rewards).set(updates)
+      .where(and(eq(rewards.id, rewardId), eq(rewards.familyId, familyId)))
+      .returning();
+    if (!result) throw new Error('Reward not found');
+    return result;
+  }
+  async deleteReward(rewardId: string, familyId: string): Promise<void> {
+    await this.db.delete(rewards).where(and(eq(rewards.id, rewardId), eq(rewards.familyId, familyId)));
+  }
+  async getRewardRedemptions(familyId: string): Promise<RewardRedemption[]> {
+    return await this.db.select().from(rewardRedemptions)
+      .where(eq(rewardRedemptions.familyId, familyId))
+      .orderBy(desc(rewardRedemptions.createdAt));
+  }
+  async createRewardRedemption(redemption: { familyId: string; rewardId: string; memberId: string; rewardTitle: string; pointsSpent: number; redeemedByUserId: string }): Promise<RewardRedemption> {
+    // Run inside a transaction with a per-member advisory lock so the balance
+    // check and the insert are atomic — concurrent redeems can't overspend.
+    return await this.db.transaction(async (tx: any) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${redemption.familyId + ':' + redemption.memberId}))`);
+      const [earnedRow] = await tx.select({
+        total: sql<number>`COALESCE(SUM(${choreCompletions.pointsAwarded}), 0)`,
+      }).from(choreCompletions).where(and(
+        eq(choreCompletions.familyId, redemption.familyId),
+        eq(choreCompletions.memberId, redemption.memberId),
+      ));
+      const [spentRow] = await tx.select({
+        total: sql<number>`COALESCE(SUM(${rewardRedemptions.pointsSpent}), 0)`,
+      }).from(rewardRedemptions).where(and(
+        eq(rewardRedemptions.familyId, redemption.familyId),
+        eq(rewardRedemptions.memberId, redemption.memberId),
+      ));
+      const balance = Number(earnedRow?.total ?? 0) - Number(spentRow?.total ?? 0);
+      if (balance < redemption.pointsSpent) {
+        throw new InsufficientPointsError(balance, redemption.pointsSpent);
+      }
+      const [result] = await tx.insert(rewardRedemptions).values(redemption).returning();
+      return result;
+    });
+  }
+  async updateRewardRedemption(redemptionId: string, familyId: string, updates: { status?: string }): Promise<RewardRedemption> {
+    const [result] = await this.db.update(rewardRedemptions).set(updates)
+      .where(and(eq(rewardRedemptions.id, redemptionId), eq(rewardRedemptions.familyId, familyId)))
+      .returning();
+    if (!result) throw new Error('Redemption not found');
+    return result;
+  }
+  async getMealPlans(familyId: string): Promise<MealPlan[]> {
+    return await this.db.select().from(mealPlans)
+      .where(eq(mealPlans.familyId, familyId))
+      .orderBy(desc(mealPlans.createdAt));
+  }
+  async getMealPlan(mealPlanId: string, familyId: string): Promise<MealPlan | undefined> {
+    const [result] = await this.db.select().from(mealPlans)
+      .where(and(eq(mealPlans.id, mealPlanId), eq(mealPlans.familyId, familyId)));
+    return result;
+  }
+  async createMealPlan(mealPlan: InsertMealPlan): Promise<MealPlan> {
+    const [result] = await this.db.insert(mealPlans).values(mealPlan).returning();
+    return result;
+  }
+  async deleteMealPlan(mealPlanId: string, familyId: string): Promise<void> {
+    await this.db.delete(mealPlans).where(and(eq(mealPlans.id, mealPlanId), eq(mealPlans.familyId, familyId)));
+  }
 }
 
 // Demo-aware storage wrapper that uses in-memory storage for demo users
@@ -3702,6 +4003,80 @@ class DemoAwareStorage implements IStorage {
   async toggleTaskCompletion(taskId: string, familyId: string, userId: string): Promise<Task> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.toggleTaskCompletion(taskId, familyId, userId);
+  }
+
+  // Chores & Rewards — route to family-appropriate storage
+  async getChores(familyId: string): Promise<Chore[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getChores(familyId);
+  }
+  async createChore(chore: InsertChore): Promise<Chore> {
+    const storage = await this.getStorageForFamily(chore.familyId);
+    return storage.createChore(chore);
+  }
+  async updateChore(choreId: string, familyId: string, updates: Partial<InsertChore>): Promise<Chore> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateChore(choreId, familyId, updates);
+  }
+  async deleteChore(choreId: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteChore(choreId, familyId);
+  }
+  async getChoreCompletions(familyId: string): Promise<ChoreCompletion[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getChoreCompletions(familyId);
+  }
+  async completeChore(params: { familyId: string; choreId: string; memberId: string; occurrenceDate: string; pointsAwarded: number; completedByUserId: string }): Promise<ChoreCompletion> {
+    const storage = await this.getStorageForFamily(params.familyId);
+    return storage.completeChore(params);
+  }
+  async uncompleteChore(familyId: string, choreId: string, memberId: string, occurrenceDate: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.uncompleteChore(familyId, choreId, memberId, occurrenceDate);
+  }
+  async getRewards(familyId: string): Promise<Reward[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getRewards(familyId);
+  }
+  async createReward(reward: InsertReward): Promise<Reward> {
+    const storage = await this.getStorageForFamily(reward.familyId);
+    return storage.createReward(reward);
+  }
+  async updateReward(rewardId: string, familyId: string, updates: Partial<InsertReward>): Promise<Reward> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateReward(rewardId, familyId, updates);
+  }
+  async deleteReward(rewardId: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteReward(rewardId, familyId);
+  }
+  async getRewardRedemptions(familyId: string): Promise<RewardRedemption[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getRewardRedemptions(familyId);
+  }
+  async createRewardRedemption(redemption: { familyId: string; rewardId: string; memberId: string; rewardTitle: string; pointsSpent: number; redeemedByUserId: string }): Promise<RewardRedemption> {
+    const storage = await this.getStorageForFamily(redemption.familyId);
+    return storage.createRewardRedemption(redemption);
+  }
+  async updateRewardRedemption(redemptionId: string, familyId: string, updates: { status?: string }): Promise<RewardRedemption> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.updateRewardRedemption(redemptionId, familyId, updates);
+  }
+  async getMealPlans(familyId: string): Promise<MealPlan[]> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getMealPlans(familyId);
+  }
+  async getMealPlan(mealPlanId: string, familyId: string): Promise<MealPlan | undefined> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.getMealPlan(mealPlanId, familyId);
+  }
+  async createMealPlan(mealPlan: InsertMealPlan): Promise<MealPlan> {
+    const storage = await this.getStorageForFamily(mealPlan.familyId);
+    return storage.createMealPlan(mealPlan);
+  }
+  async deleteMealPlan(mealPlanId: string, familyId: string): Promise<void> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.deleteMealPlan(mealPlanId, familyId);
   }
 }
 

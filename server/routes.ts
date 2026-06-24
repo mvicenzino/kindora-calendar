@@ -4,10 +4,11 @@ import { createServer, type Server } from "http";
 import path from "path";
 import { execSync } from "child_process";
 import fs from "fs";
-import { storage, NotFoundError } from "./storage";
+import { storage, NotFoundError, InsufficientPointsError } from "./storage";
 import { registerAdvisorRoutes } from "./advisorRoutes";
+import { registerMealPlannerRoutes } from "./mealPlannerRoutes";
 import { registerApiKeyRoutes } from "./apiKeyRoutes";
-import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema, insertTaskSchema } from "@shared/schema";
+import { insertFamilyMemberSchema, insertEventSchema, insertMessageSchema, insertEventNoteSchema, insertMedicationSchema, insertMedicationLogSchema, insertFamilyMessageSchema, insertCaregiverTimeEntrySchema, insertTaskSchema, insertChoreSchema, insertRewardSchema } from "@shared/schema";
 import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { requireFamily } from "./tierMiddleware";
@@ -5066,6 +5067,320 @@ Always return valid JSON matching one of the three formats above.`,
     }
   });
 
+  // ── Chores & Rewards ────────────────────────────────────────────────────────
+  // Does a chore occur on the given YYYY-MM-DD date?
+  function choreOccursOnDate(chore: any, dateStr: string): boolean {
+    const dayStart = new Date(dateStr + "T00:00:00");
+    const dayEnd = new Date(dateStr + "T23:59:59.999");
+    if (isNaN(dayStart.getTime())) return false;
+    if (chore.rrule) {
+      try {
+        const anchor = chore.dueDate ? new Date(chore.dueDate) : new Date(chore.createdAt);
+        const baseRule = RRule.fromString(chore.rrule);
+        const fullRule = new RRule({ ...baseRule.origOptions, dtstart: anchor });
+        return fullRule.between(dayStart, dayEnd, true).length > 0;
+      } catch {
+        return false;
+      }
+    }
+    if (chore.dueDate) {
+      const d = new Date(chore.dueDate);
+      return d >= dayStart && d <= dayEnd;
+    }
+    // One-time chore with no due date: always available until completed.
+    return true;
+  }
+
+  // The canonical occurrence key used to record a completion. Recurring chores
+  // use the actual calendar day (validated to be a real occurrence); one-time
+  // chores collapse to a single fixed key so they can only be completed once
+  // per member — preventing the same chore from being farmed across many dates.
+  // Returns null if the requested date is not a valid occurrence.
+  function choreOccurrenceKey(chore: any, requestedDate: string): string | null {
+    if (chore.rrule) {
+      return choreOccursOnDate(chore, requestedDate) ? requestedDate : null;
+    }
+    const anchor = chore.dueDate ? new Date(chore.dueDate) : new Date(chore.createdAt);
+    return format(anchor, "yyyy-MM-dd");
+  }
+
+  // List all chores (for management view)
+  app.get("/api/chores", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.query.familyId as string;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      res.json(await storage.getChores(familyId));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch chores" });
+    }
+  });
+
+  // Kid-friendly board for a given date: members + balances, chores due, completions, rewards
+  app.get("/api/chores/board", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.query.familyId as string;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      const dateStr = (req.query.date as string) || format(new Date(), "yyyy-MM-dd");
+
+      const [members, allChores, completions, rewardsList, redemptions] = await Promise.all([
+        storage.getFamilyMembers(familyId),
+        storage.getChores(familyId),
+        storage.getChoreCompletions(familyId),
+        storage.getRewards(familyId),
+        storage.getRewardRedemptions(familyId),
+      ]);
+
+      const earned: Record<string, number> = {};
+      const spent: Record<string, number> = {};
+      for (const c of completions) earned[c.memberId] = (earned[c.memberId] || 0) + c.pointsAwarded;
+      for (const r of redemptions) spent[r.memberId] = (spent[r.memberId] || 0) + r.pointsSpent;
+
+      const memberBalances = members.map((m) => ({
+        ...m,
+        earned: earned[m.id] || 0,
+        spent: spent[m.id] || 0,
+        balance: (earned[m.id] || 0) - (spent[m.id] || 0),
+      }));
+
+      // Recurring chores show on their occurrence days; one-time chores stay on
+      // the board until done. Completion state for one-time chores is keyed by
+      // chore (single completion), for recurring chores by the day shown.
+      const dueChores = allChores.filter(
+        (c) => c.isActive && (c.rrule ? choreOccursOnDate(c, dateStr) : true),
+      );
+      const dueChoreById = new Map(dueChores.map((c) => [c.id, c]));
+      const boardCompletions = completions
+        .filter((c) => {
+          const chore = dueChoreById.get(c.choreId);
+          if (!chore) return false;
+          return chore.rrule ? c.occurrenceDate === dateStr : true;
+        })
+        .map((c) => ({ choreId: c.choreId, memberId: c.memberId }));
+
+      res.json({
+        date: dateStr,
+        members: memberBalances,
+        chores: dueChores,
+        completions: boardCompletions,
+        rewards: rewardsList.filter((r) => r.isActive),
+        redemptions,
+      });
+    } catch (err) {
+      console.error("[Chores] board error:", err);
+      res.status(500).json({ message: "Failed to load chore board" });
+    }
+  });
+
+  app.post("/api/chores", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const body = { ...req.body, createdByUserId: userId };
+      if (body.dueDate && typeof body.dueDate === "string") body.dueDate = new Date(body.dueDate);
+      if (!body.familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, body.familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      const parsed = insertChoreSchema.safeParse(body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid chore data", errors: parsed.error.errors });
+      res.status(201).json(await storage.createChore(parsed.data));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create chore" });
+    }
+  });
+
+  app.put("/api/chores/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, createdByUserId, ...updates } = req.body;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      if (updates.dueDate && typeof updates.dueDate === "string") updates.dueDate = new Date(updates.dueDate);
+      res.json(await storage.updateChore(req.params.id, familyId, updates));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update chore" });
+    }
+  });
+
+  app.delete("/api/chores/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.query.familyId as string;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      await storage.deleteChore(req.params.id, familyId);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete chore" });
+    }
+  });
+
+  // Mark a chore complete for a member on a date (awards points)
+  app.post("/api/chores/:id/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, memberId, date } = req.body;
+      if (!familyId || !memberId) return res.status(400).json({ message: "familyId and memberId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      const requestedDate = (date as string) || format(new Date(), "yyyy-MM-dd");
+      const members = await storage.getFamilyMembers(familyId);
+      if (!members.some((m) => m.id === memberId)) {
+        return res.status(400).json({ message: "That family member doesn't belong to this family" });
+      }
+      const chore = (await storage.getChores(familyId)).find((c) => c.id === req.params.id);
+      if (!chore) return res.status(404).json({ message: "Chore not found" });
+      if (!chore.isActive) return res.status(400).json({ message: "This chore is no longer active" });
+      if (chore.assignedMemberId && chore.assignedMemberId !== memberId) {
+        return res.status(400).json({ message: "This chore is assigned to a different family member" });
+      }
+      const occurrenceDate = choreOccurrenceKey(chore, requestedDate);
+      if (!occurrenceDate) {
+        return res.status(400).json({ message: "This chore isn't scheduled for that day" });
+      }
+      const completion = await storage.completeChore({
+        familyId,
+        choreId: chore.id,
+        memberId,
+        occurrenceDate,
+        pointsAwarded: chore.points,
+        completedByUserId: userId,
+      });
+      res.status(201).json(completion);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to complete chore" });
+    }
+  });
+
+  // Undo a chore completion (removes points)
+  app.post("/api/chores/:id/uncomplete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, memberId, date } = req.body;
+      if (!familyId || !memberId) return res.status(400).json({ message: "familyId and memberId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      const requestedDate = (date as string) || format(new Date(), "yyyy-MM-dd");
+      const chore = (await storage.getChores(familyId)).find((c) => c.id === req.params.id);
+      if (!chore) return res.status(404).json({ message: "Chore not found" });
+      const occurrenceDate = choreOccurrenceKey(chore, requestedDate) ?? requestedDate;
+      await storage.uncompleteChore(familyId, req.params.id, memberId, occurrenceDate);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to undo chore" });
+    }
+  });
+
+  app.get("/api/rewards", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.query.familyId as string;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      res.json(await storage.getRewards(familyId));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch rewards" });
+    }
+  });
+
+  app.post("/api/rewards", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const body = { ...req.body, createdByUserId: userId };
+      if (!body.familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, body.familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      const parsed = insertRewardSchema.safeParse(body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid reward data", errors: parsed.error.errors });
+      res.status(201).json(await storage.createReward(parsed.data));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create reward" });
+    }
+  });
+
+  app.put("/api/rewards/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, createdByUserId, ...updates } = req.body;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      res.json(await storage.updateReward(req.params.id, familyId, updates));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update reward" });
+    }
+  });
+
+  app.delete("/api/rewards/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = req.query.familyId as string;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      await storage.deleteReward(req.params.id, familyId);
+      res.status(204).send();
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete reward" });
+    }
+  });
+
+  // Redeem a reward for a member (spends points if balance is sufficient)
+  app.post("/api/rewards/:id/redeem", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, memberId } = req.body;
+      if (!familyId || !memberId) return res.status(400).json({ message: "familyId and memberId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      const members = await storage.getFamilyMembers(familyId);
+      if (!members.some((m) => m.id === memberId)) {
+        return res.status(400).json({ message: "That family member doesn't belong to this family" });
+      }
+      const reward = (await storage.getRewards(familyId)).find((r) => r.id === req.params.id);
+      if (!reward) return res.status(404).json({ message: "Reward not found" });
+      if (!reward.isActive) return res.status(400).json({ message: "This reward is no longer available" });
+
+      // The balance check + spend is enforced atomically inside storage so two
+      // simultaneous redeems can't push the balance negative.
+      const redemption = await storage.createRewardRedemption({
+        familyId,
+        rewardId: reward.id,
+        memberId,
+        rewardTitle: reward.title,
+        pointsSpent: reward.cost,
+        redeemedByUserId: userId,
+      });
+      res.status(201).json(redemption);
+    } catch (err) {
+      if (err instanceof InsufficientPointsError) {
+        return res.status(400).json({ message: "Not enough points", balance: err.balance, cost: err.cost });
+      }
+      res.status(500).json({ message: "Failed to redeem reward" });
+    }
+  });
+
+  // Update a redemption (e.g. mark fulfilled)
+  app.patch("/api/rewards/redemptions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { familyId, status } = req.body;
+      if (!familyId) return res.status(400).json({ message: "familyId required" });
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) return res.status(403).json({ message: "You are not a member of this family" });
+      res.json(await storage.updateRewardRedemption(req.params.id, familyId, { status }));
+    } catch (err) {
+      res.status(500).json({ message: "Failed to update redemption" });
+    }
+  });
+
   // ── Beta Feedback ──────────────────────────────────────────────────────────
   app.post("/api/feedback", async (req: any, res) => {
     const { name, email, comments } = req.body;
@@ -5362,6 +5677,7 @@ Always return valid JSON matching one of the three formats above.`,
 
   registerAdvisorRoutes(app);
   registerApiKeyRoutes(app);
+  registerMealPlannerRoutes(app);
 
   const httpServer = createServer(app);
   return httpServer;
