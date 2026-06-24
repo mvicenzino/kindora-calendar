@@ -265,6 +265,133 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
 
+  // Serve the "Why Kindora" video file. sendFile supports HTTP Range requests
+  // (needed for in-page seeking and for social platforms that play inline video).
+  app.get('/kindora-why.mp4', (_req, res) => {
+    res.sendFile(path.join(process.cwd(), 'public', 'kindora-why.mp4'), (err) => {
+      if (err && !res.headersSent) res.status(404).end();
+    });
+  });
+
+  // Shareable "Why Kindora" page — server-rendered so social platforms
+  // (Facebook, X/Twitter, LinkedIn, iMessage) receive real Open Graph preview
+  // cards. Registered before Vite's catch-all so the SPA doesn't swallow it.
+  app.get('/why', (_req, res) => {
+    const base = 'https://kindora.ai';
+    const title = 'Why Kindora — The family calendar built for real life';
+    const description =
+      'Juggling kids, aging parents, and everything in between? See how Kindora keeps your whole family in sync — schedules, medications, care docs, and more.';
+    const image = `${base}/og-image.png?v=3`;
+    const video = `${base}/kindora-why.mp4`;
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${title}</title>
+  <meta name="description" content="${description}" />
+  <link rel="canonical" href="${base}/why" />
+
+  <meta property="og:type" content="video.other" />
+  <meta property="og:url" content="${base}/why" />
+  <meta property="og:title" content="${title}" />
+  <meta property="og:description" content="${description}" />
+  <meta property="og:image" content="${image}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Kindora — Family OS for the Sandwich Generation" />
+  <meta property="og:video" content="${video}" />
+  <meta property="og:video:secure_url" content="${video}" />
+  <meta property="og:video:type" content="video/mp4" />
+  <meta property="og:site_name" content="Kindora" />
+  <meta property="og:locale" content="en_US" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:url" content="${base}/why" />
+  <meta name="twitter:title" content="${title}" />
+  <meta name="twitter:description" content="${description}" />
+  <meta name="twitter:image" content="${image}" />
+
+  <meta name="theme-color" content="#0d121a" />
+  <link rel="icon" type="image/jpeg" href="/kindora-logo.jpeg?v=3" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 50% -10%, hsl(24 90% 55% / 0.18), transparent 60%),
+        hsl(216 28% 7%);
+      color: hsl(0 0% 96%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 20px 56px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 32px; text-decoration: none; color: inherit;
+    }
+    .logo img { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+    .logo span { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 20px; letter-spacing: -0.01em; }
+    .wrap { width: 100%; max-width: 860px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(28px, 5vw, 44px);
+      font-weight: 600; line-height: 1.1; letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+    p.lede { color: hsl(0 0% 72%); font-size: clamp(15px, 2.4vw, 18px); line-height: 1.6; max-width: 620px; margin-bottom: 28px; }
+    .player {
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px -20px rgba(0,0,0,0.7);
+      border: 1px solid hsl(0 0% 100% / 0.08);
+      background: #000;
+    }
+    .player video { width: 100%; height: auto; display: block; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 32px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 46px; padding: 0 22px; border-radius: 10px;
+      font-weight: 600; font-size: 15px; text-decoration: none; transition: transform .12s ease, opacity .12s ease;
+    }
+    .btn:active { transform: scale(0.985); }
+    .btn-primary { background: hsl(24 90% 55%); color: #fff; }
+    .btn-primary:hover { opacity: 0.92; }
+    .btn-ghost { background: hsl(0 0% 100% / 0.06); color: hsl(0 0% 92%); border: 1px solid hsl(0 0% 100% / 0.12); }
+    .btn-ghost:hover { background: hsl(0 0% 100% / 0.1); }
+    footer { margin-top: 44px; color: hsl(0 0% 50%); font-size: 13px; }
+    footer a { color: hsl(0 0% 70%); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <a class="logo" href="/" aria-label="Kindora home">
+    <img src="/kindora-logo.jpeg?v=3" alt="Kindora" />
+    <span>Kindora</span>
+  </a>
+  <main class="wrap">
+    <h1>Why Kindora</h1>
+    <p class="lede">${description}</p>
+    <div class="player">
+      <video src="${video}" poster="${image}" controls playsinline preload="metadata"></video>
+    </div>
+    <div class="cta">
+      <a class="btn btn-primary" href="/">Start your free trial</a>
+      <a class="btn btn-ghost" href="/about">Learn more about Kindora</a>
+    </div>
+  </main>
+  <footer>&copy; ${new Date().getFullYear()} Kindora &middot; <a href="/">kindora.ai</a></footer>
+</body>
+</html>`;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  });
+
   // Setup authentication
   await setupAuth(app);
   setupGoogleAuth(app);
