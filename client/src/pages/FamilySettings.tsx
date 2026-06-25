@@ -612,6 +612,115 @@ function MedicationManager({ familyId, isOwnerOrMember }: { familyId: string; is
   );
 }
 
+function MergeMembersCard({ familyId, isOwner }: { familyId: string; isOwner: boolean }) {
+  const { toast } = useToast();
+  const { data: members = [] } = useQuery<MemberRow[]>({ queryKey: ['/api/family-members', familyId], enabled: !!familyId });
+  const [targetId, setTargetId] = useState('');
+  const [sourceIds, setSourceIds] = useState<string[]>([]);
+
+  const mergeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/family-members/merge', { targetId, sourceIds, familyId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/family-members'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      toast({ title: 'Members merged', description: 'The duplicates were combined into one. All events and history were kept.' });
+      setTargetId('');
+      setSourceIds([]);
+    },
+    onError: (err: any) => {
+      toast({ title: "Couldn't merge", description: err?.message || 'Please try again.', variant: 'destructive' });
+    },
+  });
+
+  if (!isOwner || members.length < 2) return null;
+
+  const toggleSource = (id: string) => {
+    setSourceIds(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
+  };
+  const selectableSources = members.filter(m => m.id !== targetId);
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-primary" />
+          Merge duplicate members
+        </CardTitle>
+        <CardDescription>
+          Seeing the same person twice? Pick the one to keep, then choose the duplicates to fold into it. All their events, medications, and history move over — nothing is lost.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-sm">Keep this member</Label>
+          <Select value={targetId} onValueChange={(v) => { setTargetId(v); setSourceIds(prev => prev.filter(s => s !== v)); }}>
+            <SelectTrigger data-testid="select-merge-target"><SelectValue placeholder="Choose the member to keep" /></SelectTrigger>
+            <SelectContent>
+              {members.map((m) => (
+                <SelectItem key={m.id} value={m.id}>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: m.color }} />
+                    {m.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {targetId && (
+          <div className="space-y-1.5">
+            <Label className="text-sm">Duplicates to merge in &amp; remove</Label>
+            <div className="space-y-2">
+              {selectableSources.map((m) => {
+                const selected = sourceIds.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => toggleSource(m.id)}
+                    data-testid={`button-merge-source-${m.id}`}
+                    className={"w-full flex items-center gap-3 p-3 rounded-md border text-left transition-colors " + (selected ? "border-primary/40 bg-primary/5" : "border-border hover-elevate")}
+                  >
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: m.color }} />
+                    <span className="text-sm text-foreground">{m.name}</span>
+                    {selected && <CheckCircle2 className="w-4 h-4 text-primary ml-auto" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button disabled={!targetId || sourceIds.length === 0 || mergeMutation.isPending} data-testid="button-merge-members">
+                {mergeMutation.isPending ? 'Merging...' : (sourceIds.length > 0 ? `Merge ${sourceIds.length} into kept member` : 'Merge into kept member')}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Merge these members?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  The selected duplicate{sourceIds.length === 1 ? '' : 's'} will be removed and everything attached to {sourceIds.length === 1 ? 'it' : 'them'} — events, medications, documents, and history — moves to the member you're keeping. This can't be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => mergeMutation.mutate()}>Merge</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function FamilySettings() {
   const [, navigate] = useLocation();
   const { activeFamilyId } = useActiveFamily();
@@ -1145,6 +1254,7 @@ export default function FamilySettings() {
   return (
     <div className="space-y-6">
         {activeFamilyId && (<MedicationManager familyId={activeFamilyId} isOwnerOrMember={!!isOwnerOrMember} />)}
+        {activeFamilyId && (<MergeMembersCard familyId={activeFamilyId} isOwner={!!isOwner} />)}
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">

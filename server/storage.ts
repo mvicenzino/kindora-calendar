@@ -132,6 +132,7 @@ export interface IStorage {
   createFamilyMember(familyId: string, member: InsertFamilyMember): Promise<FamilyMember>;
   updateFamilyMember(id: string, familyId: string, updates: Partial<FamilyMember>): Promise<FamilyMember>;
   deleteFamilyMember(id: string, familyId: string): Promise<void>;
+  mergeFamilyMembers(familyId: string, targetId: string, sourceIds: string[], preferUserId?: string): Promise<FamilyMember>;
 
   // Events
   getEvents(familyId: string): Promise<Event[]>;
@@ -824,6 +825,94 @@ export class MemStorage implements IStorage {
         this.events.set(eventId, { ...event, memberIds: updatedMemberIds });
       }
     });
+  }
+
+  async mergeFamilyMembers(familyId: string, targetId: string, sourceIds: string[], preferUserId?: string): Promise<FamilyMember> {
+    const target = this.familyMembers.get(targetId);
+    if (!target || target.familyId !== familyId) {
+      throw new NotFoundError(`Family member with id ${targetId} not found`);
+    }
+    const sources = Array.from(new Set(sourceIds)).filter(id => id !== targetId);
+    const sourceMembers: FamilyMember[] = [];
+    for (const sid of sources) {
+      const m = this.familyMembers.get(sid);
+      if (!m || m.familyId !== familyId) {
+        throw new NotFoundError(`Family member with id ${sid} not found`);
+      }
+      sourceMembers.push(m);
+    }
+    if (sourceMembers.length === 0) return target;
+    const sourceSet = new Set(sources);
+
+    for (const [eventId, event] of Array.from(this.events.entries())) {
+      if (event.familyId === familyId && event.memberIds.some(mid => sourceSet.has(mid))) {
+        const next = Array.from(new Set(event.memberIds.map(mid => (sourceSet.has(mid) ? targetId : mid))));
+        this.events.set(eventId, { ...event, memberIds: next });
+      }
+    }
+    for (const [id, m] of Array.from(this.messages.entries())) {
+      if (m.familyId === familyId && sourceSet.has(m.memberId)) this.messages.set(id, { ...m, memberId: targetId });
+    }
+    for (const [id, m] of Array.from(this.medicationsMap.entries())) {
+      if (m.familyId === familyId && sourceSet.has(m.memberId)) this.medicationsMap.set(id, { ...m, memberId: targetId });
+    }
+    for (const [id, d] of Array.from(this.careDocumentsMap.entries())) {
+      if (d.familyId === familyId && d.memberId && sourceSet.has(d.memberId)) this.careDocumentsMap.set(id, { ...d, memberId: targetId });
+    }
+    for (const [id, s] of Array.from(this.symptomEntriesMap.entries())) {
+      if (s.familyId === familyId && sourceSet.has(s.memberId)) this.symptomEntriesMap.set(id, { ...s, memberId: targetId });
+    }
+    for (const [id, h] of Array.from(this.hydrationLogsMap.entries())) {
+      if (h.familyId === familyId && sourceSet.has(h.memberId)) this.hydrationLogsMap.set(id, { ...h, memberId: targetId });
+    }
+    this.tasksStore = this.tasksStore.map(t =>
+      t.familyId === familyId && t.assignedMemberId && sourceSet.has(t.assignedMemberId)
+        ? { ...t, assignedMemberId: targetId }
+        : t,
+    );
+    this.choresStore = this.choresStore.map(c =>
+      c.familyId === familyId && c.assignedMemberId && sourceSet.has(c.assignedMemberId)
+        ? { ...c, assignedMemberId: targetId }
+        : c,
+    );
+    this.rewardRedemptionsStore = this.rewardRedemptionsStore.map(r =>
+      r.familyId === familyId && sourceSet.has(r.memberId)
+        ? { ...r, memberId: targetId }
+        : r,
+    );
+    // chore_completions are unique on (choreId, memberId, occurrenceDate). Drop a
+    // source row when the target already holds the same slot, then reassign the rest.
+    const targetCompletionKeys = new Set(
+      this.choreCompletionsStore
+        .filter(c => c.familyId === familyId && c.memberId === targetId)
+        .map(c => `${c.choreId}|${c.occurrenceDate}`),
+    );
+    this.choreCompletionsStore = this.choreCompletionsStore.filter(c => {
+      if (c.familyId === familyId && sourceSet.has(c.memberId)) {
+        return !targetCompletionKeys.has(`${c.choreId}|${c.occurrenceDate}`);
+      }
+      return true;
+    });
+    this.choreCompletionsStore = this.choreCompletionsStore.map(c =>
+      c.familyId === familyId && sourceSet.has(c.memberId)
+        ? { ...c, memberId: targetId }
+        : c,
+    );
+
+    let newUserId: string | null = target.userId ?? null;
+    if (!newUserId) {
+      const withUser = sourceMembers.filter(s => s.userId);
+      if (withUser.length > 0) {
+        const preferred = preferUserId ? withUser.find(s => s.userId === preferUserId) : undefined;
+        newUserId = (preferred ?? withUser[0]).userId ?? null;
+      }
+    }
+
+    for (const sid of sources) this.familyMembers.delete(sid);
+    if (newUserId && newUserId !== (target.userId ?? null)) {
+      this.familyMembers.set(targetId, { ...target, userId: newUserId });
+    }
+    return this.familyMembers.get(targetId)!;
   }
 
   // Events
@@ -2222,6 +2311,48 @@ class DrizzleStorage implements IStorage {
         (user.email ? user.email.split('@')[0] : '') ||
         'Family Member';
 
+      const calendarRole = role === 'caregiver' ? 'caregiver' : 'family';
+
+      // Adopt an existing manual member (one with no linked account) whose name
+      // matches this user, instead of creating a duplicate calendar entry. This
+      // prevents the "Mike" + "Mike Vicenzino" double-up that happens when a
+      // person who was added by hand later signs in with a real account.
+      //
+      // Safety: we only auto-link when the match is UNAMBIGUOUS. A bare
+      // first-name fallback is dangerous (a parent and child can both be
+      // "Mike"), so the first-name path only fires when exactly one member in
+      // the whole family carries that name and it has no account yet. When in
+      // doubt we create a fresh entry — a harmless duplicate is far better than
+      // silently binding the wrong person's history to an account.
+      const norm = (s: string) => s.trim().toLowerCase();
+      const firstName = (user.firstName || '').trim();
+      const allMembers: FamilyMember[] = await this.db
+        .select()
+        .from(familyMembers)
+        .where(eq(familyMembers.familyId, familyId));
+      const unlinked = allMembers.filter((m) => !m.userId);
+
+      // 1) Prefer an exact full-name match among unlinked members.
+      const fullNameMatches = unlinked.filter((m) => norm(m.name) === norm(displayName));
+      let adopt: FamilyMember | undefined;
+      if (fullNameMatches.length === 1) {
+        adopt = fullNameMatches[0];
+      } else if (fullNameMatches.length === 0 && firstName !== '') {
+        // 2) First-name fallback, but only if the name is unique across the
+        //    ENTIRE family (linked + unlinked) and the sole match is unlinked.
+        const firstNameMatches = allMembers.filter((m) => norm(m.name) === norm(firstName));
+        if (firstNameMatches.length === 1 && !firstNameMatches[0].userId) {
+          adopt = firstNameMatches[0];
+        }
+      }
+      if (adopt) {
+        await this.db
+          .update(familyMembers)
+          .set({ userId, ...(calendarRole === 'caregiver' ? { role: 'caregiver' } : {}) })
+          .where(eq(familyMembers.id, adopt.id));
+        return;
+      }
+
       // Pick a color from the palette based on how many members already exist
       const palette = ['#f97316', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#f59e0b', '#14b8a6', '#ef4444'];
       const existingCount = await this.db
@@ -2229,8 +2360,6 @@ class DrizzleStorage implements IStorage {
         .from(familyMembers)
         .where(eq(familyMembers.familyId, familyId));
       const color = palette[existingCount.length % palette.length];
-
-      const calendarRole = role === 'caregiver' ? 'caregiver' : 'family';
 
       // ON CONFLICT DO NOTHING makes this race-safe under the partial unique
       // index on (family_id, user_id) WHERE user_id IS NOT NULL.
@@ -2371,34 +2500,10 @@ class DrizzleStorage implements IStorage {
 
   // Family Members
   async getFamilyMembers(familyId: string): Promise<FamilyMember[]> {
-    // Self-heal: any user-account in this family that doesn't yet have a
-    // calendar member row gets one auto-created. Idempotent thanks to the
-    // partial unique index on (family_id, user_id).
-    await this.backfillCalendarMembersForFamily(familyId);
+    // Calendar members are created at join time (ensureCalendarMemberForUser).
+    // We deliberately do NOT auto-create on read: a read-time backfill kept
+    // re-spawning duplicate/merged-away entries, undoing owner cleanups.
     return await this.db.select().from(familyMembers).where(eq(familyMembers.familyId, familyId));
-  }
-
-  private async backfillCalendarMembersForFamily(familyId: string): Promise<void> {
-    try {
-      const memberships = await this.db
-        .select({ userId: familyMemberships.userId, role: familyMemberships.role })
-        .from(familyMemberships)
-        .where(eq(familyMemberships.familyId, familyId));
-
-      const existing = await this.db
-        .select({ userId: familyMembers.userId })
-        .from(familyMembers)
-        .where(eq(familyMembers.familyId, familyId));
-      const existingUserIds = new Set(existing.map((e: { userId: string | null }) => e.userId).filter(Boolean));
-
-      for (const m of memberships) {
-        if (m.userId && !existingUserIds.has(m.userId)) {
-          await this.ensureCalendarMemberForUser(m.userId, familyId, m.role);
-        }
-      }
-    } catch (err) {
-      console.error('[backfillCalendarMembersForFamily] failed for', familyId, err);
-    }
   }
 
   async getFamilyMember(id: string, familyId: string): Promise<FamilyMember | undefined> {
@@ -2433,6 +2538,92 @@ class DrizzleStorage implements IStorage {
     if (!result[0]) {
       throw new NotFoundError(`Family member with id ${id} not found`);
     }
+  }
+
+  // Combine duplicate calendar members into one. All references to the source
+  // members (events, meds, docs, symptoms, hydration, tasks, chores, rewards)
+  // are reassigned to the target so no history is lost, then the sources are
+  // deleted. If the target has no linked account it inherits one from a source.
+  async mergeFamilyMembers(familyId: string, targetId: string, sourceIds: string[], preferUserId?: string): Promise<FamilyMember> {
+    const target = await this.getFamilyMember(targetId, familyId);
+    if (!target) {
+      throw new NotFoundError(`Family member with id ${targetId} not found`);
+    }
+    const sources = Array.from(new Set(sourceIds)).filter((id) => id !== targetId);
+    if (sources.length === 0) return target;
+
+    const sourceRows = await this.db
+      .select()
+      .from(familyMembers)
+      .where(and(eq(familyMembers.familyId, familyId), inArray(familyMembers.id, sources)));
+    if (sourceRows.length !== sources.length) {
+      throw new NotFoundError('One or more members to merge were not found in this family');
+    }
+
+    await this.db.transaction(async (tx: any) => {
+      for (const src of sources) {
+        // events.member_ids is a text[]; swap src -> target and de-dupe.
+        await tx.execute(sql`
+          UPDATE events
+          SET member_ids = (
+            SELECT array_agg(DISTINCT m)
+            FROM unnest(array_replace(member_ids, ${src}, ${targetId})) AS m
+          )
+          WHERE family_id = ${familyId} AND ${src} = ANY(member_ids)
+        `);
+        await tx.execute(sql`UPDATE messages SET member_id = ${targetId} WHERE family_id = ${familyId} AND member_id = ${src}`);
+        await tx.execute(sql`UPDATE medications SET member_id = ${targetId} WHERE family_id = ${familyId} AND member_id = ${src}`);
+        await tx.execute(sql`UPDATE care_documents SET member_id = ${targetId} WHERE family_id = ${familyId} AND member_id = ${src}`);
+        await tx.execute(sql`UPDATE symptom_entries SET member_id = ${targetId} WHERE family_id = ${familyId} AND member_id = ${src}`);
+        await tx.execute(sql`UPDATE tasks SET assigned_member_id = ${targetId} WHERE family_id = ${familyId} AND assigned_member_id = ${src}`);
+        await tx.execute(sql`UPDATE chores SET assigned_member_id = ${targetId} WHERE family_id = ${familyId} AND assigned_member_id = ${src}`);
+        await tx.execute(sql`UPDATE reward_redemptions SET member_id = ${targetId} WHERE family_id = ${familyId} AND member_id = ${src}`);
+        // hydration_logs is one row per (member, date) — drop colliding source rows first.
+        await tx.execute(sql`
+          DELETE FROM hydration_logs h
+          WHERE h.family_id = ${familyId} AND h.member_id = ${src}
+            AND EXISTS (
+              SELECT 1 FROM hydration_logs t
+              WHERE t.family_id = ${familyId} AND t.member_id = ${targetId} AND t.date = h.date
+            )
+        `);
+        await tx.execute(sql`UPDATE hydration_logs SET member_id = ${targetId} WHERE family_id = ${familyId} AND member_id = ${src}`);
+        // chore_completions is unique per (chore, member, date) — drop colliding source rows first.
+        await tx.execute(sql`
+          DELETE FROM chore_completions c
+          WHERE c.family_id = ${familyId} AND c.member_id = ${src}
+            AND EXISTS (
+              SELECT 1 FROM chore_completions t
+              WHERE t.family_id = ${familyId} AND t.member_id = ${targetId}
+                AND t.chore_id = c.chore_id AND t.occurrence_date = c.occurrence_date
+            )
+        `);
+        await tx.execute(sql`UPDATE chore_completions SET member_id = ${targetId} WHERE family_id = ${familyId} AND member_id = ${src}`);
+      }
+
+      // If the surviving member has no linked account, inherit one from a source.
+      let newUserId: string | null = target.userId ?? null;
+      if (!newUserId) {
+        const withUser = sourceRows.filter((s: FamilyMember) => s.userId);
+        if (withUser.length > 0) {
+          const preferred = preferUserId ? withUser.find((s: FamilyMember) => s.userId === preferUserId) : undefined;
+          newUserId = (preferred ?? withUser[0]).userId ?? null;
+        }
+      }
+
+      // Delete the duplicates first so the inherited user_id doesn't collide
+      // with the partial unique index on (family_id, user_id).
+      await tx.delete(familyMembers).where(
+        and(eq(familyMembers.familyId, familyId), inArray(familyMembers.id, sources))
+      );
+
+      if (newUserId && newUserId !== (target.userId ?? null)) {
+        await tx.update(familyMembers).set({ userId: newUserId }).where(eq(familyMembers.id, targetId));
+      }
+    });
+
+    const updated = await this.getFamilyMember(targetId, familyId);
+    return updated!;
   }
 
   // Events
@@ -3598,6 +3789,11 @@ class DemoAwareStorage implements IStorage {
   async deleteFamilyMember(id: string, familyId: string): Promise<void> {
     const storage = await this.getStorageForFamily(familyId);
     return storage.deleteFamilyMember(id, familyId);
+  }
+
+  async mergeFamilyMembers(familyId: string, targetId: string, sourceIds: string[], preferUserId?: string): Promise<FamilyMember> {
+    const storage = await this.getStorageForFamily(familyId);
+    return storage.mergeFamilyMembers(familyId, targetId, sourceIds, preferUserId);
   }
 
   // Events

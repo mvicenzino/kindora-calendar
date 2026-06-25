@@ -26,6 +26,7 @@ import { parseICalData } from "./icalParser";
 import { pushKindoraEvent, deleteKindoraEventFromGoogle } from "./googleCalendarSync";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "./db";
 import type Stripe from "stripe";
 
@@ -1574,6 +1575,52 @@ Visit Kindora Calendar: ${joinUrl}
         return res.status(403).json({ error: error.message });
       }
       res.status(500).json({ error: "Failed to delete family member" });
+    }
+  });
+
+  // Merge duplicate family members into one (keeps all events/history)
+  app.post("/api/family-members/merge", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const familyId = await getFamilyId(req, userId);
+      if (!familyId) {
+        return res.status(400).json({ error: "No family found for user" });
+      }
+
+      const role = await getUserFamilyRole(storage, userId, familyId);
+      if (!role) {
+        return res.status(403).json({ error: "You are not a member of this family" });
+      }
+
+      const context = { userId, familyId, role };
+      if (!hasPermission(context, 'canDeleteMembers')) {
+        return res.status(403).json({ error: "You don't have permission to merge family members" });
+      }
+
+      const mergeSchema = z.object({
+        targetId: z.string().min(1),
+        sourceIds: z.array(z.string().min(1)).min(1),
+      });
+      const result = mergeSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.message });
+      }
+
+      const member = await storage.mergeFamilyMembers(
+        familyId,
+        result.data.targetId,
+        result.data.sourceIds,
+        userId,
+      );
+      res.json(member);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return res.status(404).json({ error: error.message });
+      }
+      if (error instanceof PermissionError) {
+        return res.status(403).json({ error: error.message });
+      }
+      res.status(500).json({ error: "Failed to merge family members" });
     }
   });
 
