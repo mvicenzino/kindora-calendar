@@ -21,6 +21,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { UnverifiedAppNote } from "@/components/UnverifiedAppNote";
 import type { Family } from "@shared/schema";
 
 type OnboardingStep =
@@ -457,6 +458,16 @@ export default function Onboarding() {
                   <Users className="w-4 h-4 mr-2" />
                   Invite your first caregiver
                 </Button>
+                <Button
+                  onClick={() => { window.location.href = "/api/google-calendar/connect"; }}
+                  variant="outline"
+                  className="w-full"
+                  data-testid="button-connect-google-calendar"
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Connect Google Calendar
+                </Button>
+                <UnverifiedAppNote className="text-left" />
                 <Button
                   onClick={goToCalendar}
                   variant="outline"

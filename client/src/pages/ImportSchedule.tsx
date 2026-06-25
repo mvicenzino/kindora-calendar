@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { UnverifiedAppNote } from "@/components/UnverifiedAppNote";
 import { useLocation } from "wouter";
 import { 
   Calendar, 
@@ -243,6 +244,7 @@ function GoogleCalendarSync() {
                 <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline decoration-primary/40 hover:decoration-primary transition-colors" data-testid="link-gcal-privacy">Privacy Policy</a>.
               </p>
             </div>
+            <UnverifiedAppNote />
             <Button
               onClick={() => { window.location.href = "/api/google-calendar/connect"; }}
               data-testid="button-gcal-connect"
