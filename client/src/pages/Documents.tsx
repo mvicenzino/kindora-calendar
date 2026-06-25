@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveFamily } from "@/contexts/ActiveFamilyContext";
 import { ResourcesSection } from "@/components/ResourcesSection";
+import { UnverifiedAppNote } from "@/components/UnverifiedAppNote";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -488,6 +489,7 @@ export default function Documents() {
               These documents stay private to your family. Access is verified on our servers for every request, and role-based permissions control who can view each file. Connected Google accounts are tied to each person individually and never shared.
             </p>
           </div>
+          {canUpload && !driveStatus?.connected && <UnverifiedAppNote />}
           <Card>
             <CardContent className="pt-3">
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
