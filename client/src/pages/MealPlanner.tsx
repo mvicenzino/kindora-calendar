@@ -316,7 +316,7 @@ export default function MealPlanner() {
                   <div>
                     <p className="font-medium">Hi, I'm Kira</p>
                     <p className="text-sm text-muted-foreground max-w-sm">
-                      I'll ask you a few quick questions, then build a week of meals and a grocery list.
+                      I already know your family and your saved preferences. Tell me how many days to plan and I'll build a week of meals and a grocery list.
                     </p>
                   </div>
                   <Button onClick={() => send(QUICK_START)} data-testid="button-quick-start">

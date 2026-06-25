@@ -601,14 +601,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/families", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { name } = req.body;
+      const { name, preferences } = req.body;
 
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return res.status(400).json({ error: "Family name is required" });
       }
 
       const sanitizedName = name.replace(/[<>]/g, '').trim().slice(0, 100);
-      const family = await storage.createFamily(userId, { name: sanitizedName, createdBy: userId });
+      const cleanPreferences = typeof preferences === 'string' && preferences.trim().length > 0
+        ? preferences.slice(0, 2000)
+        : null;
+      const family = await storage.createFamily(userId, { name: sanitizedName, createdBy: userId, preferences: cleanPreferences });
       res.status(201).json(family);
     } catch (error) {
       console.error("Error creating family:", error);
@@ -620,19 +623,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const familyId = req.params.familyId;
-      const { name } = req.body;
+      const { name, preferences } = req.body;
 
       const membership = await storage.getUserFamilyMembership(userId, familyId);
       if (!membership || membership.role !== 'owner') {
         return res.status(403).json({ error: "Only family owners can update family settings" });
       }
 
-      if (!name || typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({ error: "Family name is required" });
+      const updates: { name?: string; preferences?: string | null } = {};
+
+      if (name !== undefined) {
+        if (typeof name !== 'string' || name.trim().length === 0) {
+          return res.status(400).json({ error: "Family name is required" });
+        }
+        updates.name = name.replace(/[<>]/g, '').trim().slice(0, 100);
       }
 
-      const sanitizedName = name.replace(/[<>]/g, '').trim().slice(0, 100);
-      const updated = await storage.updateFamily(familyId, { name: sanitizedName });
+      if (preferences !== undefined) {
+        updates.preferences = typeof preferences === 'string' && preferences.trim().length > 0
+          ? preferences.slice(0, 2000)
+          : null;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "Nothing to update" });
+      }
+
+      const updated = await storage.updateFamily(familyId, updates);
       res.json(updated);
     } catch (error) {
       console.error("Error updating family:", error);

@@ -579,6 +579,7 @@ export class MemStorage implements IStorage {
       advisorChildrenContext: familyData.advisorChildrenContext ?? null,
       advisorElderContext: familyData.advisorElderContext ?? null,
       advisorSelfContext: familyData.advisorSelfContext ?? null,
+      preferences: familyData.preferences ?? null,
     };
     this.families.set(id, family);
     

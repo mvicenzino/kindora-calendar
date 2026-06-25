@@ -78,6 +78,7 @@ export const families = pgTable("families", {
   advisorChildrenContext: text("advisor_children_context"),
   advisorElderContext: text("advisor_elder_context"),
   advisorSelfContext: text("advisor_self_context"),
+  preferences: text("preferences"),
 });
 
 // Family Memberships table (links users to families)

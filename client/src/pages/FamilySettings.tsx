@@ -25,6 +25,7 @@ interface Family {
   inviteCode: string;
   createdBy: string;
   createdAt: Date;
+  preferences?: string | null;
 }
 
 interface WeeklySummarySchedule {
@@ -637,6 +638,32 @@ export default function FamilySettings() {
     queryKey: ['/api/families'],
   });
 
+  const [preferencesDraft, setPreferencesDraft] = useState<string | null>(null);
+  const preferencesValue = preferencesDraft ?? family?.preferences ?? '';
+
+  const savePreferencesMutation = useMutation({
+    mutationFn: async (preferences: string) => {
+      const res = await apiRequest('PUT', `/api/families/${activeFamilyId}`, { preferences });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/family', activeFamilyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/families'] });
+      setPreferencesDraft(null);
+      toast({
+        title: "Preferences saved",
+        description: "Kira will use these for meal plans and chores.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to save preferences",
+        description: error.message || "Could not save preferences",
+        variant: "destructive",
+      });
+    },
+  });
+
   const leaveFamilyMutation = useMutation({
     mutationFn: async (familyId: string) => {
       const res = await apiRequest('POST', `/api/family/${familyId}/leave`);
@@ -788,6 +815,7 @@ export default function FamilySettings() {
 
   const isOwnerOrMember = roleData?.role === 'owner' || roleData?.role === 'member' || 
     (user?.id && family?.createdBy === user.id);
+  const isOwner = roleData?.role === 'owner' || (!!user?.id && family?.createdBy === user.id);
 
   const updateScheduleMutation = useMutation({
     mutationFn: async (schedule: Partial<WeeklySummarySchedule>) => {
@@ -1117,6 +1145,41 @@ export default function FamilySettings() {
   return (
     <div className="space-y-6">
         {activeFamilyId && (<MedicationManager familyId={activeFamilyId} isOwnerOrMember={!!isOwnerOrMember} />)}
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Family Preferences
+            </CardTitle>
+            <CardDescription>
+              Tell Kira about dietary needs, allergies, food likes and dislikes, and routines. Kira uses this for meal plans and chores so you never have to repeat yourself.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Textarea
+              value={preferencesValue}
+              onChange={(e) => setPreferencesDraft(e.target.value)}
+              placeholder="e.g., We're vegetarian, my son is allergic to peanuts, the kids hate mushrooms, weeknights need quick dinners."
+              className="text-sm min-h-[100px] resize-y"
+              maxLength={2000}
+              disabled={!isOwner}
+              data-testid="input-family-preferences"
+            />
+            {isOwner ? (
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => savePreferencesMutation.mutate(preferencesValue)}
+                  disabled={savePreferencesMutation.isPending || preferencesDraft === null}
+                  data-testid="button-save-preferences"
+                >
+                  {savePreferencesMutation.isPending ? "Saving..." : "Save preferences"}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Only the family owner can edit preferences.</p>
+            )}
+          </CardContent>
+        </Card>
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">

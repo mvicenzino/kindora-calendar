@@ -33,13 +33,12 @@ const openai = new OpenAI({
 const SYSTEM_PROMPT = `You are Kira, a warm and practical meal-planning assistant inside the Kindora family app. You help busy caregivers plan their family's meals for the week.
 
 HOW YOU WORK:
-1. First, you INTERVIEW the caregiver to understand their needs. Ask short, friendly questions — ONE or TWO at a time, never a long list. Keep the conversation natural and quick.
-2. Gather the essentials before planning:
-   - How many people you're cooking for (and any kids vs. adults)
+1. You ALREADY KNOW this family — their members and saved preferences are provided to you below under "WHAT YOU KNOW ABOUT THIS FAMILY." NEVER ask for information you already have. Don't ask how many people you're cooking for if the family members are listed, and don't re-ask about allergies or dietary needs that are already saved. Greet them by acknowledging what you know (e.g. "Planning for the 4 of you — and I'll keep it dairy-free like you mentioned").
+2. Only ask about what's genuinely MISSING for a good plan. Usually that's just:
    - How many days they want planned, and which meals (just dinners? all three?)
-   - Any allergies or dietary needs (vegetarian, gluten-free, dairy-free, etc.)
-   - Food preferences, favorite cuisines, or foods to avoid
-   - How much time/effort they have for cooking on a typical night
+   - How much time/effort they have for cooking this week
+   - Anything new or different this week (a craving, a busy night, guests coming)
+   Ask short, friendly questions — ONE or TWO at a time, never a long list. If their saved preferences already cover everything, you can skip straight to a quick confirmation.
 3. Once you have ENOUGH to make a good plan (you don't need every detail — be efficient), call the generate_meal_plan tool to build the plan. Don't keep asking endless questions.
 
 STYLE:
@@ -204,6 +203,34 @@ function renderPlanText(plan: MealPlan): string {
   return lines.join("\n");
 }
 
+// Build the "what Kira already knows about this family" block so she never
+// has to re-interview the caregiver about household size or dietary needs.
+async function buildFamilyContext(familyId: string): Promise<string> {
+  try {
+    const [family, members] = await Promise.all([
+      storage.getFamilyById(familyId),
+      storage.getFamilyMembers(familyId),
+    ]);
+
+    const lines: string[] = [];
+    if (family?.name) lines.push(`Family name: ${family.name}`);
+
+    if (members && members.length > 0) {
+      const names = members.map((m) => m.name).filter(Boolean);
+      lines.push(`Household members (${names.length}): ${names.join(", ")}`);
+    }
+
+    if (family?.preferences?.trim()) {
+      lines.push(`Saved family preferences (dietary needs, allergies, likes/dislikes, routines):\n${family.preferences.trim()}`);
+    }
+
+    if (lines.length === 0) return "";
+    return `\n\nWHAT YOU KNOW ABOUT THIS FAMILY:\n${lines.join("\n")}`;
+  } catch {
+    return "";
+  }
+}
+
 export function registerMealPlannerRoutes(app: Express): void {
   // Resolve the caller's family (meal plans are family-scoped, single family/user)
   async function resolveFamilyId(userId: string, bodyFamilyId?: string): Promise<string | null> {
@@ -244,9 +271,11 @@ export function registerMealPlannerRoutes(app: Express): void {
       const toolCallMap = new Map<number, ToolAcc>();
       let textContent = "";
 
+      const familyContext = await buildFamilyContext(familyId);
+
       const stream = await openai.chat.completions.create({
         model: "gpt-4.1-mini",
-        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...chatMessages],
+        messages: [{ role: "system", content: SYSTEM_PROMPT + familyContext }, ...chatMessages],
         tools: [MEAL_PLANNER_TOOL],
         tool_choice: "auto",
         stream: true,

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Users,
   Calendar,
@@ -39,6 +40,7 @@ export default function Onboarding() {
   const [step, setStep] = useState<OnboardingStep>("role");
   const [familyName, setFamilyName] = useState("");
   const [careContext, setCareContext] = useState<CareContextOption[]>([]);
+  const [familyPreferences, setFamilyPreferences] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [joinedFamily, setJoinedFamily] = useState<Family | null>(null);
   const [createdFamilyId, setCreatedFamilyId] = useState<string | null>(null);
@@ -58,8 +60,8 @@ export default function Onboarding() {
   }, [user]);
 
   const createFamilyMutation = useMutation({
-    mutationFn: async ({ name }: { name: string }) => {
-      const res = await apiRequest("POST", "/api/families", { name });
+    mutationFn: async ({ name, preferences }: { name: string; preferences?: string }) => {
+      const res = await apiRequest("POST", "/api/families", { name, preferences });
       return res.json() as Promise<Family>;
     },
     onSuccess: () => {
@@ -70,6 +72,16 @@ export default function Onboarding() {
   const renameFamilyMutation = useMutation({
     mutationFn: async ({ familyId, name }: { familyId: string; name: string }) => {
       const res = await apiRequest("PUT", `/api/families/${familyId}`, { name });
+      return res.json() as Promise<Family>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+    },
+  });
+
+  const savePreferencesMutation = useMutation({
+    mutationFn: async ({ familyId, preferences }: { familyId: string; preferences: string }) => {
+      const res = await apiRequest("PUT", `/api/families/${familyId}`, { preferences });
       return res.json() as Promise<Family>;
     },
     onSuccess: () => {
@@ -115,12 +127,26 @@ export default function Onboarding() {
     const ownerName = [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Me";
     setMemberEntries([{ name: ownerName }]);
     setNewMemberName("");
+
+    // Combine the "who do you care for" tags and the free-text notes into a
+    // single preferences blob Kira can use for meals and chores.
+    const careLabels = careContext
+      .map((id) => careOptions.find((o) => o.id === id)?.label)
+      .filter(Boolean);
+    const prefParts: string[] = [];
+    if (careLabels.length > 0) prefParts.push(`Caring for: ${careLabels.join(", ")}`);
+    if (familyPreferences.trim()) prefParts.push(familyPreferences.trim());
+    const preferences = prefParts.join("\n");
+
     try {
       if (families.length > 0) {
         await renameFamilyMutation.mutateAsync({ familyId: families[0].id, name });
+        if (preferences) {
+          await savePreferencesMutation.mutateAsync({ familyId: families[0].id, preferences });
+        }
         setCreatedFamilyId(families[0].id);
       } else {
-        const newFamily = await createFamilyMutation.mutateAsync({ name });
+        const newFamily = await createFamilyMutation.mutateAsync({ name, preferences });
         setCreatedFamilyId(newFamily.id);
       }
       setStep("add-members");
@@ -275,9 +301,26 @@ export default function Onboarding() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Anything Kira should know? (optional)
+                </Label>
+                <Textarea
+                  value={familyPreferences}
+                  onChange={(e) => setFamilyPreferences(e.target.value)}
+                  placeholder="e.g., We're vegetarian, my son is allergic to peanuts, the kids hate mushrooms, weeknights need quick dinners."
+                  className="text-sm min-h-[80px] resize-y"
+                  maxLength={2000}
+                  data-testid="input-family-preferences"
+                />
+                <p className="text-[11px] text-muted-foreground/70 leading-snug">
+                  Kira uses this for meal plans and chores so you never have to repeat yourself. You can change it anytime in Family settings.
+                </p>
+              </div>
+
               <Button
                 onClick={handleOwnerSubmit}
-                disabled={createFamilyMutation.isPending || renameFamilyMutation.isPending || !familyName.trim()}
+                disabled={createFamilyMutation.isPending || renameFamilyMutation.isPending || savePreferencesMutation.isPending || !familyName.trim()}
                 className="w-full"
                 data-testid="button-create-family"
               >
