@@ -22,7 +22,7 @@ import type { MealPlan, MealPlanDay, GroceryCategory } from "@shared/schema";
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
 const QUICK_START =
-  "Hi Sage! I'd like help planning meals for my family this week.";
+  "Hi Kira! I'd like help planning meals for my family this week.";
 
 function planToText(plan: MealPlan): string {
   const days = (plan.days as MealPlanDay[]) ?? [];
@@ -191,7 +191,7 @@ export default function MealPlanner() {
         let msg = "Please try again.";
         try { const j = await res.json(); if (j?.error) msg = j.error; } catch {}
         setIsStreaming(false);
-        toast({ title: "Could not reach Sage", description: msg, variant: "destructive" });
+        toast({ title: "Could not reach Kira", description: msg, variant: "destructive" });
         return;
       }
 
@@ -299,7 +299,7 @@ export default function MealPlanner() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold" data-testid="text-page-title">Meal Planner</h1>
-          <p className="text-sm text-muted-foreground">Chat with Sage to plan your family's meals.</p>
+          <p className="text-sm text-muted-foreground">Chat with Kira to plan your family's meals.</p>
         </div>
       </div>
 
@@ -314,7 +314,7 @@ export default function MealPlanner() {
                     <Sparkles className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium">Hi, I'm Sage</p>
+                    <p className="font-medium">Hi, I'm Kira</p>
                     <p className="text-sm text-muted-foreground max-w-sm">
                       I'll ask you a few quick questions, then build a week of meals and a grocery list.
                     </p>
@@ -351,7 +351,7 @@ export default function MealPlanner() {
               {isStreaming && !streamingContent && (
                 <div className="flex justify-start">
                   <div className="bg-muted rounded-md px-3 py-2 text-sm flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Sage is thinking…
+                    <Loader2 className="w-4 h-4 animate-spin" /> Kira is thinking…
                   </div>
                 </div>
               )}
