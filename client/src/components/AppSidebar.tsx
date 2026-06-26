@@ -47,6 +47,32 @@ const caregiverNavItems = [
 
 const RELEASE_NOTES = [
   {
+    date: "June 2026",
+    changes: [
+      "Meet Kira's Meal Planner — tell it your family size, which days and meals, and any allergies or dislikes, and it builds a full week of meals plus one organized grocery list (find it under Meals). Email or print any plan.",
+      "Your AI helper is now named Kira everywhere — one friendly, consistent name across the whole app",
+      "Kira now knows your family — add your preferences (allergies, foods you avoid, routines) during setup or in Settings → Family, and Kira remembers them so you never have to re-explain your household",
+      "Two-way Google Calendar sync — events now flow both directions between Kindora and your Google Calendar",
+      "Sign in with Google — faster, password-free login",
+      "Forgot your password? You can now reset it yourself, and verify your email to keep your account secure",
+      "Download your data or delete your account anytime from Settings — full control over your information",
+      "Merge duplicate family members — if the same person showed up twice, you can now combine them into one from Settings → Family, keeping all their events and history. New sign-ins no longer create duplicates.",
+      "Connect Google Calendar right from setup — an optional step when you first create your family",
+      "New 'Why Kindora' video page to share what Kindora is all about, plus an updated privacy policy with clear Google data disclosures",
+    ],
+  },
+  {
+    date: "May 2026",
+    changes: [
+      "Kindora Family Plan subscriptions launched — and every feature is free for you during the beta",
+      "Help & Support is now a prominent button at the top of the sidebar, so getting help is always one tap away",
+      "Smarter AI calendar — Kira can now update and reschedule existing events, and repeating events stay anchored to the right start date",
+      "Snap a school form (like a lunch menu) and have its items added straight to your family calendar",
+      "Calendar and event polish, plus security hardening to better protect your family's information",
+      "Fixed horizontal scrolling so every page sits correctly on any screen size",
+    ],
+  },
+  {
     date: "Apr 10, 2026",
     changes: [
       "New Tasks feature — family members can create, assign, and prioritize tasks right from the Care dashboard; caregivers can check them off as done",
