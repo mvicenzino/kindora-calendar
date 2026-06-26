@@ -83,7 +83,7 @@ const RELEASE_NOTES = [
     ],
   },
   {
-    date: "Apr 9, 2026",
+    date: "April 2026",
     changes: [
       "New Family Dashboard is now your home — see today's schedule, upcoming events, medications, and family messages all in one place",
       "Kira now writes a personalized daily insight on your dashboard based on what's actually happening with your family",
@@ -94,31 +94,15 @@ const RELEASE_NOTES = [
     ],
   },
   {
-    date: "Mar 27, 2026",
+    date: "March 2026",
     changes: [
       "Stripe checkout now works on the live site (falls back to test mode until live keys are added)",
-      "Admin dashboard now always loads fresh data — no more stale cache",
-      "Admin API access fixed — was returning 403 for all admin routes",
-      "Kira chat: delete button now always visible; added confirmation before deleting",
+      "Kira chat: delete button now always visible, with a confirmation before deleting",
       "Character limits added to all notes, messages, and feedback text fields",
-      "Time field colon alignment fixed in the event editor",
-    ],
-  },
-  {
-    date: "Mar 23, 2026",
-    changes: [
       "Public Resources page launched at /resources — accessible without login",
       "Landing page now features a Caregiver Resources preview section",
-      "Beta feedback now correctly returns server errors and logs every saved entry",
-      "Admin dashboard added a Refresh button to reload all data on demand",
-    ],
-  },
-  {
-    date: "Mar 18, 2026",
-    changes: [
-      "AI calendar bar now understands reschedule and move requests",
-      "Date picker in event editor replaced with a reliable cross-browser calendar",
-      "Event rescheduling via AI confirms the change with a summary card",
+      "AI calendar bar now understands reschedule and move requests, and confirms the change with a summary card",
+      "Date picker in the event editor replaced with a reliable cross-browser calendar",
     ],
   },
 ];
