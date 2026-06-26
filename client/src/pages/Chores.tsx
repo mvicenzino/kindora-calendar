@@ -53,18 +53,36 @@ export default function Chores() {
   const today = format(new Date(), "yyyy-MM-dd");
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
+  // These routes take familyId (and date) as query-string params, but the
+  // default fetcher would join the query key with "/" and hit the wrong URL.
+  // Explicit queryFns build the correct ?familyId=…&date=… URLs.
   const { data: board, isLoading } = useQuery<BoardData>({
     queryKey: ["/api/chores/board", activeFamilyId, today],
     enabled: !!activeFamilyId,
+    queryFn: async () => {
+      const res = await fetch(`/api/chores/board?familyId=${activeFamilyId}&date=${today}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load chore board");
+      return res.json();
+    },
   });
 
   const allChoresQuery = useQuery<Chore[]>({
     queryKey: ["/api/chores", activeFamilyId],
     enabled: !!activeFamilyId,
+    queryFn: async () => {
+      const res = await fetch(`/api/chores?familyId=${activeFamilyId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load chores");
+      return res.json();
+    },
   });
   const allRewardsQuery = useQuery<Reward[]>({
     queryKey: ["/api/rewards", activeFamilyId],
     enabled: !!activeFamilyId,
+    queryFn: async () => {
+      const res = await fetch(`/api/rewards?familyId=${activeFamilyId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load rewards");
+      return res.json();
+    },
   });
 
   const invalidate = () => {
