@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, MessageCircle, FileText, Image, Heart, Settings, Sparkles, HelpCircle, MessageSquarePlus, Loader2, Activity, BookOpen, ArrowRight, Shield, History, LayoutDashboard, CheckSquare, Trophy, UtensilsCrossed } from "lucide-react";
 import HelpDrawer from "./HelpDrawer";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -120,6 +120,34 @@ export default function AppSidebar() {
   const [feedbackEmail, setFeedbackEmail] = useState("");
   const [feedbackComments, setFeedbackComments] = useState("");
   const { toast } = useToast();
+
+  const latestReleaseId = RELEASE_NOTES[0]?.date ?? "";
+  const SEEN_KEY = user?.id ? `kindora_whatsnew_seen:${user.id}` : "kindora_whatsnew_seen";
+
+  const markReleaseNotesSeen = () => {
+    try {
+      if (latestReleaseId) localStorage.setItem(SEEN_KEY, latestReleaseId);
+    } catch {
+      /* ignore storage errors (e.g. private mode) */
+    }
+  };
+
+  // Auto-open "What's New" once per release. A user only sees it when the
+  // latest release differs from what they last dismissed, then it stays
+  // closed until the next update. Skips demo sessions.
+  useEffect(() => {
+    if (!user || (user as any).isDemo) return;
+    if (!latestReleaseId) return;
+    try {
+      const seen = localStorage.getItem(SEEN_KEY);
+      if (seen !== latestReleaseId) {
+        setReleaseNotesOpen(true);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, latestReleaseId]);
 
   const feedbackMutation = useMutation({
     mutationFn: async () => {
@@ -334,7 +362,10 @@ export default function AppSidebar() {
       </Sidebar>
       <HelpDrawer open={helpOpen} onClose={function() { setHelpOpen(false); }} />
 
-      <Dialog open={releaseNotesOpen} onOpenChange={setReleaseNotesOpen}>
+      <Dialog open={releaseNotesOpen} onOpenChange={(open) => {
+        setReleaseNotesOpen(open);
+        if (!open) markReleaseNotesSeen();
+      }}>
         <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
