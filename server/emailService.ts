@@ -4,12 +4,16 @@ import { storage } from './storage';
 // ── Unified email sender (Resend-first, SendGrid fallback) ─────────────────
 export async function sendEmail(options: {
   to: string;
+  cc?: string | string[];
   subject: string;
   html: string;
   text?: string;
   replyTo?: string;
   fromName?: string;
 }): Promise<{ success: boolean; error?: string; provider?: string }> {
+  const ccList = options.cc
+    ? (Array.isArray(options.cc) ? options.cc : [options.cc]).filter(Boolean)
+    : [];
   const resendApiKey   = process.env.RESEND_API_KEY;
   const sendgridApiKey = process.env.SENDGRID_API_KEY;
   const fromEmail      = process.env.EMAIL_FROM_ADDRESS || 'noreply@kindora.ai';
@@ -25,6 +29,7 @@ export async function sendEmail(options: {
       };
       if (options.text)    body.text     = options.text;
       if (options.replyTo) body.reply_to = options.replyTo;
+      if (ccList.length)   body.cc       = ccList;
 
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -53,7 +58,10 @@ export async function sendEmail(options: {
       content.push({ type: 'text/html', value: options.html });
 
       const body: Record<string, unknown> = {
-        personalizations: [{ to: [{ email: options.to }] }],
+        personalizations: [{
+          to: [{ email: options.to }],
+          ...(ccList.length ? { cc: ccList.map(email => ({ email })) } : {}),
+        }],
         from: { email: fromEmail, name: fromName },
         subject: options.subject,
         content,

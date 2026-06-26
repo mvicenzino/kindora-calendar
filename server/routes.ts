@@ -5045,6 +5045,7 @@ Always return valid JSON matching one of the three formats above.`,
 
     sendEmail({
       to: "mike@kindora.ai",
+      cc: "mvicenzino@gmail.com",
       subject: `[Kindora Support] ${subject || "General inquiry"} — from ${name}`,
       html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#f97316;padding:16px 24px;border-radius:8px 8px 0 0">
@@ -5593,6 +5594,7 @@ Always return valid JSON matching one of the three formats above.`,
     // Send notification email (fire-and-forget — don't block response)
     sendEmail({
       to: "mike@kindora.ai",
+      cc: "mvicenzino@gmail.com",
       subject: `[Kindora Beta Feedback] from ${name}`,
       html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
   <div style="background:#f97316;padding:16px 24px;border-radius:8px 8px 0 0">
