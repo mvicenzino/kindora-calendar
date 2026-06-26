@@ -13,7 +13,8 @@ linked to a login account (`user_id` set) or manual/unlinked (`user_id` null).
   re-spawning duplicates after any cleanup. **Never backfill/derive rows inside a read path** —
   it undoes merges and deletes silently.
 - `ensureCalendarMemberForUser` used to always INSERT a new row per account, so a person added
-  by hand ("Mike") plus their later login ("Mike Vicenzino") became two rows.
+  by hand (short first name) plus their later login (full account display name) became two rows
+  because the names didn't match exactly.
 
 ## Rules now in force
 - Account→member linking only happens at join/create time (`ensureCalendarMemberForUser`), never
@@ -22,7 +23,7 @@ linked to a login account (`user_id` set) or manual/unlinked (`user_id` null).
   1. exact full-name match among unlinked rows (exactly one) → adopt; else
   2. first-name fallback only if exactly one member in the WHOLE family carries that name and it
      is unlinked.
-- **Why:** a bare first-name match can bind the wrong person (parent and child both "Mike"),
+- **Why:** a bare first-name match can bind the wrong person (e.g. a parent and child sharing a first name),
   silently attaching one person's history to another's account — hard to undo and privacy-affecting.
   When ambiguous, create a fresh row: a harmless duplicate beats a wrong binding.
 
