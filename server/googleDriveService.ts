@@ -3,7 +3,10 @@ import { storage } from './storage';
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 
-export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.readonly";
+// drive.file is the lightest Drive scope: the app can only touch files the user
+// explicitly hands it via the Google Picker (or files it created). This avoids
+// Google's restricted-scope CASA security assessment that drive.readonly requires.
+export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
 // Resolve the Drive-specific OAuth callback URL
 export function resolveDriveCallbackURL(): string {

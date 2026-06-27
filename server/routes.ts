@@ -3830,7 +3830,6 @@ Visit Kindora Calendar: ${joinUrl}
       resolveDriveCallbackURL,
       getValidDriveAccessToken,
       fetchGoogleEmail,
-      listDriveFiles,
       getDriveFileMeta,
       downloadDriveFile,
       DRIVE_SCOPE,
@@ -3935,19 +3934,20 @@ Visit Kindora Calendar: ${joinUrl}
       }
     });
 
-    // GET /api/google-drive/files — list the connected user's Drive files
-    app.get("/api/google-drive/files", isAuthenticated, async (req: any, res) => {
+    // GET /api/google-drive/access-token — short-lived token for the Google Picker.
+    // Under the drive.file scope we can't browse the user's Drive server-side; the
+    // Google Picker (client-side) lets the user choose a file, which then grants our
+    // app access to that single file. The Picker needs a live OAuth token to render.
+    app.get("/api/google-drive/access-token", isAuthenticated, async (req: any, res) => {
       try {
         const userId = req.user.claims.sub;
         const conn = await storage.getGoogleDriveConnection(userId);
         if (!conn) return res.status(400).json({ error: "Google Drive not connected" });
 
-        const folderId = (req.query.folderId as string) || undefined;
-        const pageToken = (req.query.pageToken as string) || undefined;
-        const result = await listDriveFiles(userId, folderId, pageToken);
-        res.json(result);
+        const accessToken = await getValidDriveAccessToken(userId);
+        res.json({ accessToken });
       } catch (err) {
-        console.error("[Drive files] Error:", err);
+        console.error("[Drive access-token] Error:", err);
         res.status(500).json({ error: String(err) });
       }
     });
