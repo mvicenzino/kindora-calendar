@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { ResourcesSection } from "@/components/ResourcesSection";
 import { ArrowLeft } from "lucide-react";
@@ -8,6 +9,15 @@ const logo = "/kindora-logo.jpeg";
 export default function PublicResources() {
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Free Caregiver Resources — Checklists, Guides & Templates | Kindora</title>
+        <meta name="description" content="Free caregiver resources including the Parenting Aging Parents Checklist, Hospital Discharge Checklist, Caregiver Burnout Self-Assessment, Medicare vs. Medicaid Guide, and more. No account needed." />
+        <meta property="og:title" content="Free Caregiver Resources — Kindora" />
+        <meta property="og:description" content="Checklists, guides, assessments, and templates for families navigating eldercare, parenting, and the sandwich generation. Free, no sign-up required." />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://kindora.ai/resources" />
+      </Helmet>
+
       {/* Minimal nav */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">

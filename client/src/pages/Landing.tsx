@@ -1262,27 +1262,29 @@ export default function Landing() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {[
-              { icon: FileText, title: "Parenting Aging Parents Checklist", desc: "Key personal, health, financial, and legal info — all in one place.", badge: "Checklist", color: "text-blue-400" },
-              { icon: FileText, title: "When a Parent Can No Longer Live Alone", desc: "Warning signs, care options, and how to have the difficult conversation.", badge: "Checklist", color: "text-amber-400" },
-              { icon: FileText, title: "After a Hospital Discharge", desc: "Step-by-step for the critical days after a loved one comes home.", badge: "Checklist", color: "text-rose-400" },
-              { icon: BookOpen, title: "Medicare vs. Medicaid — Plain English", desc: "What each covers, who qualifies, and what to do when care is needed.", badge: "Guide", color: "text-emerald-400" },
-              { icon: Users, title: "Family Meeting Agenda", desc: "A fillable template to keep family members aligned and on track.", badge: "Template", color: "text-violet-400" },
-              { icon: Heart, title: "Caregiver Burnout Self-Assessment", desc: "10 questions to recognize burnout before it becomes a crisis.", badge: "Assessment", color: "text-pink-400" },
-              { icon: Zap, title: "ER vs. Urgent Care vs. Wait It Out", desc: "Know exactly where to go for any symptom — and how fast.", badge: "Guide", color: "text-orange-400" },
-              { icon: FileText, title: "Pediatric Medical Info Sheet", desc: "A printable card with providers, meds, allergies, and emergency contacts.", badge: "Template", color: "text-teal-400" },
+              { icon: FileText, title: "Parenting Aging Parents Checklist", desc: "Key personal, health, financial, and legal info — all in one place.", badge: "Checklist", color: "text-blue-400", slug: "parenting-aging-parents-checklist" },
+              { icon: FileText, title: "When a Parent Can No Longer Live Alone", desc: "Warning signs, care options, and how to have the difficult conversation.", badge: "Checklist", color: "text-amber-400", slug: "when-parent-cant-live-alone" },
+              { icon: FileText, title: "After a Hospital Discharge", desc: "Step-by-step for the critical days after a loved one comes home.", badge: "Checklist", color: "text-rose-400", slug: "hospital-discharge-checklist" },
+              { icon: BookOpen, title: "Medicare vs. Medicaid — Plain English", desc: "What each covers, who qualifies, and what to do when care is needed.", badge: "Guide", color: "text-emerald-400", slug: "medicare-vs-medicaid-guide" },
+              { icon: Users, title: "Family Meeting Agenda", desc: "A fillable template to keep family members aligned and on track.", badge: "Template", color: "text-violet-400", slug: "family-meeting-agenda" },
+              { icon: Heart, title: "Caregiver Burnout Self-Assessment", desc: "10 questions to recognize burnout before it becomes a crisis.", badge: "Assessment", color: "text-pink-400", slug: "caregiver-burnout-self-assessment" },
+              { icon: Zap, title: "ER vs. Urgent Care vs. Wait It Out", desc: "Know exactly where to go for any symptom — and how fast.", badge: "Guide", color: "text-orange-400", slug: "er-urgent-care-guide" },
+              { icon: FileText, title: "Pediatric Medical Info Sheet", desc: "A printable card with providers, meds, allergies, and emergency contacts.", badge: "Template", color: "text-teal-400", slug: "pediatric-medical-info-sheet" },
             ].map((r, i) => (
-              <div key={i} className="group rounded-xl border border-border/50 bg-card/50 p-4 hover-elevate flex flex-col gap-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className={`w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0`}>
-                    <r.icon className={`w-4 h-4 ${r.color}`} />
+              <Link key={i} href={`/resources/${r.slug}`}>
+                <a className="group rounded-xl border border-border/50 bg-card/50 p-4 hover-elevate flex flex-col gap-3 h-full">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className={`w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0`}>
+                      <r.icon className={`w-4 h-4 ${r.color}`} />
+                    </div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">{r.badge}</span>
                   </div>
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">{r.badge}</span>
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground leading-snug mb-1">{r.title}</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{r.desc}</p>
-                </div>
-              </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground leading-snug mb-1">{r.title}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{r.desc}</p>
+                  </div>
+                </a>
+              </Link>
             ))}
           </div>
 

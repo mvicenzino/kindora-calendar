@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,7 @@ type ResourceType = "Checklist" | "Assessment" | "Template" | "Guide";
 
 interface ResourceMeta {
   id: string;
+  slug: string;
   title: string;
   description: string;
   category: Category;
@@ -1060,9 +1062,10 @@ const CHECKLIST_SECTIONS: Record<string, ChecklistSection[]> = {
   "hospital-discharge": HOSPITAL_DISCHARGE_CHECKLIST,
 };
 
-const RESOURCES: ResourceMeta[] = [
+export const RESOURCES: ResourceMeta[] = [
   {
     id: "aging-parents",
+    slug: "parenting-aging-parents-checklist",
     title: "Parenting Aging Parents Checklist",
     description: "Gather key personal, health, financial, and legal info so you have it ready when you need it.",
     category: "Eldercare",
@@ -1072,6 +1075,7 @@ const RESOURCES: ResourceMeta[] = [
   },
   {
     id: "cant-live-alone",
+    slug: "when-parent-cant-live-alone",
     title: "When a Parent Can No Longer Live Alone",
     description: "Warning signs, home safety, care options, and a guide for having the difficult conversation.",
     category: "Eldercare",
@@ -1081,6 +1085,7 @@ const RESOURCES: ResourceMeta[] = [
   },
   {
     id: "hospital-discharge",
+    slug: "hospital-discharge-checklist",
     title: "After a Hospital Discharge",
     description: "A step-by-step checklist for the critical days after a parent or loved one comes home from the hospital.",
     category: "Eldercare",
@@ -1090,6 +1095,7 @@ const RESOURCES: ResourceMeta[] = [
   },
   {
     id: "medicare-guide",
+    slug: "medicare-vs-medicaid-guide",
     title: "Medicare vs. Medicaid — Plain English",
     description: "What each covers, who qualifies, and what happens when a parent needs long-term or nursing home care.",
     category: "Eldercare",
@@ -1098,6 +1104,7 @@ const RESOURCES: ResourceMeta[] = [
   },
   {
     id: "family-meeting",
+    slug: "family-meeting-agenda",
     title: "Family Meeting Agenda",
     description: "A fillable, printable template to keep family members aligned and action items accountable.",
     category: "Sandwich Generation",
@@ -1106,6 +1113,7 @@ const RESOURCES: ResourceMeta[] = [
   },
   {
     id: "burnout-assessment",
+    slug: "caregiver-burnout-self-assessment",
     title: "Caregiver Burnout Self-Assessment",
     description: "10 questions to help you recognize burnout before it becomes a crisis. Takes 2 minutes.",
     category: "Well-Being",
@@ -1114,6 +1122,7 @@ const RESOURCES: ResourceMeta[] = [
   },
   {
     id: "er-guide",
+    slug: "er-urgent-care-guide",
     title: "ER vs. Urgent Care vs. Wait It Out",
     description: "A quick symptom reference for kids and adults — so you know exactly where to go and how fast.",
     category: "Well-Being",
@@ -1122,6 +1131,7 @@ const RESOURCES: ResourceMeta[] = [
   },
   {
     id: "pediatric-info",
+    slug: "pediatric-medical-info-sheet",
     title: "Pediatric Medical Info Sheet",
     description: "A fillable, printable card covering providers, medications, allergies, and emergency contacts.",
     category: "Parenting",
@@ -1129,6 +1139,10 @@ const RESOURCES: ResourceMeta[] = [
     icon: FileText,
   },
 ];
+
+export const SLUG_TO_RESOURCE: Record<string, ResourceMeta> = Object.fromEntries(
+  RESOURCES.map(r => [r.slug, r])
+);
 
 // ─── Progress / status helpers ────────────────────────────────────────────────
 
@@ -1160,33 +1174,36 @@ function isTemplateFilled(id: string, familyId: string): boolean {
   return false;
 }
 
+// ─── Exported resource detail renderer ────────────────────────────────────────
+
+export function ResourceDetail({ id, familyId, onBack }: { id: string; familyId: string; onBack: () => void }) {
+  if (id === "aging-parents")
+    return <ChecklistView title="Parenting Aging Parents Checklist" subtitle="Gather this information so you have it ready when you need it" sections={AGING_PARENTS_CHECKLIST} storageId="aging-parents" familyId={familyId} onBack={onBack} />;
+  if (id === "cant-live-alone")
+    return <ChecklistView title="When a Parent Can No Longer Live Alone" subtitle="Work through warning signs, home safety, care options, and the conversation" sections={CANT_LIVE_ALONE_CHECKLIST} storageId="cant-live-alone" familyId={familyId} onBack={onBack} />;
+  if (id === "hospital-discharge")
+    return <ChecklistView title="After a Hospital Discharge" subtitle="Work through these steps in the days following discharge to support a smooth recovery" sections={HOSPITAL_DISCHARGE_CHECKLIST} storageId="hospital-discharge" familyId={familyId} onBack={onBack} />;
+  if (id === "burnout-assessment")
+    return <BurnoutAssessment familyId={familyId} onBack={onBack} />;
+  if (id === "pediatric-info")
+    return <PediatricInfoSheet familyId={familyId} onBack={onBack} />;
+  if (id === "family-meeting")
+    return <FamilyMeetingTemplate familyId={familyId} onBack={onBack} />;
+  if (id === "medicare-guide")
+    return <MedicareGuide onBack={onBack} />;
+  if (id === "er-guide")
+    return <ERGuide onBack={onBack} />;
+  return null;
+}
+
 // ─── Main ResourcesSection ────────────────────────────────────────────────────
 
 const ALL_CATEGORIES: Array<Category | "All"> = ["All", "Eldercare", "Parenting", "Well-Being", "Sandwich Generation"];
 const ALL_TYPES: Array<ResourceType | "All"> = ["All", "Checklist", "Assessment", "Template", "Guide"];
 
 export function ResourcesSection({ familyId }: { familyId: string }) {
-  const [openId, setOpenId] = useState<string | null>(null);
   const [catFilter, setCatFilter] = useState<Category | "All">("All");
   const [typeFilter, setTypeFilter] = useState<ResourceType | "All">("All");
-
-  // ── Resource detail views ──
-  if (openId === "aging-parents")
-    return <ChecklistView title="Parenting Aging Parents Checklist" subtitle="Gather this information so you have it ready when you need it" sections={AGING_PARENTS_CHECKLIST} storageId="aging-parents" familyId={familyId} onBack={() => setOpenId(null)} />;
-  if (openId === "cant-live-alone")
-    return <ChecklistView title="When a Parent Can No Longer Live Alone" subtitle="Work through warning signs, home safety, care options, and the conversation" sections={CANT_LIVE_ALONE_CHECKLIST} storageId="cant-live-alone" familyId={familyId} onBack={() => setOpenId(null)} />;
-  if (openId === "hospital-discharge")
-    return <ChecklistView title="After a Hospital Discharge" subtitle="Work through these steps in the days following discharge to support a smooth recovery" sections={HOSPITAL_DISCHARGE_CHECKLIST} storageId="hospital-discharge" familyId={familyId} onBack={() => setOpenId(null)} />;
-  if (openId === "burnout-assessment")
-    return <BurnoutAssessment familyId={familyId} onBack={() => setOpenId(null)} />;
-  if (openId === "pediatric-info")
-    return <PediatricInfoSheet familyId={familyId} onBack={() => setOpenId(null)} />;
-  if (openId === "family-meeting")
-    return <FamilyMeetingTemplate familyId={familyId} onBack={() => setOpenId(null)} />;
-  if (openId === "medicare-guide")
-    return <MedicareGuide onBack={() => setOpenId(null)} />;
-  if (openId === "er-guide")
-    return <ERGuide onBack={() => setOpenId(null)} />;
 
   const filtered = RESOURCES.filter(r =>
     (catFilter === "All" || r.category === catFilter) &&
@@ -1299,13 +1316,14 @@ export function ResourcesSection({ familyId }: { familyId: string }) {
                     </p>
                   )}
 
-                  <Button
-                    variant="outline" size="sm" className="w-full text-xs mt-auto"
-                    onClick={() => setOpenId(resource.id)}
-                    data-testid={`button-open-resource-${resource.id}`}
-                  >
-                    {actionLabel}
-                  </Button>
+                  <Link href={`/resources/${resource.slug}`}>
+                    <Button
+                      variant="outline" size="sm" className="w-full text-xs mt-auto"
+                      data-testid={`button-open-resource-${resource.id}`}
+                    >
+                      {actionLabel}
+                    </Button>
+                  </Link>
                 </CardContent>
               </Card>
             );

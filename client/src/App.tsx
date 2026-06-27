@@ -28,6 +28,7 @@ import Help from "@/pages/Help";
 import About from "@/pages/About";
 import Support from "@/pages/Support";
 import PublicResources from "@/pages/PublicResources";
+import PublicResourceDetail from "@/pages/PublicResourceDetail";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import VerifyEmail from "@/pages/VerifyEmail";
@@ -284,6 +285,7 @@ function Router() {
       <Switch>
         <Route path="/emergency-bridge/:token" component={EmergencyBridge} />
         <Route path="/resources" component={PublicResources} />
+        <Route path="/resources/:slug" component={PublicResourceDetail} />
         <Route path="/terms" component={Terms} />
         <Route path="/privacy" component={Privacy} />
         <Route path="/forgot-password" component={ForgotPassword} />
