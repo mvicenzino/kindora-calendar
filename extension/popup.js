@@ -36,8 +36,24 @@ function countdown(targetMs) {
 // ── DOM ───────────────────────────────────────────────────────
 const content = document.getElementById("content");
 const familyNameEl = document.getElementById("family-name");
+const addBtn = document.getElementById("btn-quick-add");
+
+// ── Shared state (set after a successful boot) ────────────────
+const appState = { familyId: null, families: [] };
+
+function setAddVisible(visible) {
+  if (addBtn) addBtn.style.display = visible ? "flex" : "none";
+}
+
+// Single managed refresh timer for the countdown; cleared when leaving the
+// schedule view (e.g. while the quick-add form is open) so it never clobbers it.
+let refreshTimer = null;
+function clearRefreshTimer() {
+  if (refreshTimer) { clearTimeout(refreshTimer); refreshTimer = null; }
+}
 
 function showSignIn() {
+  setAddVisible(false);
   content.innerHTML = `
     <div class="signin-state">
       <div class="signin-icon">
@@ -56,6 +72,7 @@ function showSignIn() {
 }
 
 function showError(msg) {
+  setAddVisible(false);
   content.innerHTML = `<div class="no-events">${msg}</div>`;
 }
 
@@ -160,9 +177,10 @@ function renderEvents(events, families, activeFamilyId) {
     });
   }
 
-  // Update the next-up countdown every 30 seconds
+  // Update the next-up countdown every 30 seconds (single managed timer)
+  clearRefreshTimer();
   if (nextEvt) {
-    setTimeout(() => renderEvents(events, families, activeFamilyId), 30000);
+    refreshTimer = setTimeout(() => renderEvents(events, families, activeFamilyId), 30000);
   }
 }
 
@@ -230,8 +248,197 @@ async function boot() {
   const activeFamily = families.find(f => f.id === activeFamilyId) || families[0];
   familyNameEl.textContent = activeFamily.name || activeFamily.familyName || "";
 
+  // Stash state for quick-add and reveal the button
+  appState.familyId = activeFamilyId;
+  appState.families = families;
+  setAddVisible(true);
+
   // 4. Load events
   await load(activeFamilyId, families);
 }
+
+// ── Quick add ─────────────────────────────────────────────────
+const QA_TYPES = [
+  { id: "event",    label: "Event" },
+  { id: "reminder", label: "Reminder" },
+  { id: "task",     label: "Task" },
+];
+
+function pad2(n) { return String(n).padStart(2, "0"); }
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function nextHourStr() {
+  const d = new Date();
+  d.setHours(d.getHours() + 1, 0, 0, 0);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function quickAddFields(type) {
+  if (type === "task") {
+    return `
+      <div class="qa-field">
+        <label class="qa-label" for="qa-title">Task</label>
+        <input class="qa-input" id="qa-title" type="text" placeholder="e.g. Refill prescription" autocomplete="off" />
+      </div>
+      <div class="qa-field">
+        <label class="qa-label" for="qa-date">Due date (optional)</label>
+        <input class="qa-input" id="qa-date" type="date" />
+      </div>`;
+  }
+  // event + reminder share a title + date + time
+  const titleLabel = type === "reminder" ? "Reminder" : "Event";
+  const placeholder = type === "reminder" ? "e.g. Call the doctor" : "e.g. Dentist appointment";
+  return `
+    <div class="qa-field">
+      <label class="qa-label" for="qa-title">${titleLabel}</label>
+      <input class="qa-input" id="qa-title" type="text" placeholder="${placeholder}" autocomplete="off" />
+    </div>
+    <div class="qa-row">
+      <div class="qa-field">
+        <label class="qa-label" for="qa-date">Date</label>
+        <input class="qa-input" id="qa-date" type="date" value="${todayStr()}" />
+      </div>
+      <div class="qa-field">
+        <label class="qa-label" for="qa-time">Time</label>
+        <input class="qa-input" id="qa-time" type="time" value="${nextHourStr()}" />
+      </div>
+    </div>
+    ${type === "event" ? '<div class="qa-hint">Defaults to a 1-hour block.</div>' : '<div class="qa-hint">A quick nudge on your calendar.</div>'}`;
+}
+
+function showQuickAdd(activeType) {
+  let type = activeType || "event";
+  clearRefreshTimer();
+  setAddVisible(false);
+
+  function render() {
+    content.innerHTML = `
+      <div class="qa-wrap">
+        <div class="qa-types">
+          ${QA_TYPES.map(t => `<button class="qa-type ${t.id === type ? "active" : ""}" data-type="${t.id}">${t.label}</button>`).join("")}
+        </div>
+        <div id="qa-fields">${quickAddFields(type)}</div>
+        <div class="qa-actions">
+          <button class="qa-btn qa-btn-secondary" id="qa-cancel">Cancel</button>
+          <button class="qa-btn qa-btn-primary" id="qa-save">Add</button>
+        </div>
+        <div class="qa-msg" id="qa-msg"></div>
+      </div>`;
+
+    // Type switching (preserve the typed title)
+    content.querySelectorAll(".qa-type").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const keepTitle = (document.getElementById("qa-title") || {}).value || "";
+        type = btn.dataset.type;
+        render();
+        const titleEl = document.getElementById("qa-title");
+        if (titleEl) { titleEl.value = keepTitle; titleEl.focus(); }
+      });
+    });
+
+    document.getElementById("qa-cancel").addEventListener("click", () => {
+      setAddVisible(true);
+      load(appState.familyId, appState.families);
+    });
+    document.getElementById("qa-save").addEventListener("click", () => saveQuickAdd(type));
+    const titleEl = document.getElementById("qa-title");
+    if (titleEl) titleEl.focus();
+    content.querySelectorAll(".qa-input").forEach(inp => {
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") saveQuickAdd(type); });
+    });
+  }
+
+  render();
+}
+
+async function saveQuickAdd(type) {
+  const msgEl = document.getElementById("qa-msg");
+  const saveBtn = document.getElementById("qa-save");
+  const title = (document.getElementById("qa-title").value || "").trim();
+  if (!title) {
+    msgEl.className = "qa-msg error";
+    msgEl.textContent = "Please enter a title.";
+    return;
+  }
+
+  let url, body;
+  try {
+    if (type === "task") {
+      const dateVal = (document.getElementById("qa-date").value || "").trim();
+      url = `${API}/api/tasks`;
+      body = { familyId: appState.familyId, title };
+      if (dateVal) body.dueDate = new Date(`${dateVal}T12:00`).toISOString();
+    } else {
+      const dateVal = (document.getElementById("qa-date").value || "").trim();
+      const timeVal = (document.getElementById("qa-time").value || "").trim();
+      if (!dateVal || !timeVal) {
+        msgEl.className = "qa-msg error";
+        msgEl.textContent = "Please pick a date and time.";
+        return;
+      }
+      const start = new Date(`${dateVal}T${timeVal}`);
+      const durationMins = type === "reminder" ? 15 : 60;
+      const end = new Date(start.getTime() + durationMins * 60000);
+      url = `${API}/api/events`;
+      body = {
+        familyId: appState.familyId,
+        title,
+        startTime: start.toISOString(),
+        endTime: end.toISOString(),
+        memberIds: [],
+        color: type === "reminder" ? "#f97316" : "#3b82f6",
+        category: "other",
+      };
+    }
+  } catch {
+    msgEl.className = "qa-msg error";
+    msgEl.textContent = "That date or time looks invalid.";
+    return;
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.textContent = "Adding…";
+  msgEl.className = "qa-msg";
+  msgEl.textContent = "";
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401 || res.status === 403) {
+      msgEl.className = "qa-msg error";
+      msgEl.textContent = "You don't have permission to add this.";
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Add";
+      return;
+    }
+    if (!res.ok) {
+      msgEl.className = "qa-msg error";
+      msgEl.textContent = "Couldn't save. Please try again.";
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Add";
+      return;
+    }
+    const label = type === "task" ? "Task" : type === "reminder" ? "Reminder" : "Event";
+    msgEl.className = "qa-msg success";
+    msgEl.textContent = `${label} added!`;
+    setTimeout(() => {
+      setAddVisible(true);
+      load(appState.familyId, appState.families);
+    }, 750);
+  } catch {
+    msgEl.className = "qa-msg error";
+    msgEl.textContent = "Couldn't reach Kindora. Check your connection.";
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Add";
+  }
+}
+
+if (addBtn) addBtn.addEventListener("click", () => showQuickAdd("event"));
 
 boot();

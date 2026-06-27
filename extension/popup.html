@@ -263,6 +263,88 @@
     .skeleton-title { height: 16px; width: 75%; margin-bottom: 4px; }
     .skeleton-sub { height: 11px; width: 50%; }
     .loading-wrap { padding: 18px 14px; }
+
+    /* ── Quick add ─────────────────────────────────────────── */
+    .add-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: none;
+      background: #f97316;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .add-btn:hover { background: #ea6c0a; }
+    .add-btn svg { width: 15px; height: 15px; }
+
+    .qa-wrap { padding: 14px; }
+    .qa-types { display: flex; gap: 6px; margin-bottom: 14px; }
+    .qa-type {
+      flex: 1;
+      padding: 7px 0;
+      border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent;
+      color: #8b949e;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .qa-type:hover { color: #e6edf3; }
+    .qa-type.active {
+      background: rgba(249,115,22,0.15);
+      border-color: #f97316;
+      color: #f97316;
+    }
+    .qa-field { margin-bottom: 10px; }
+    .qa-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8b949e;
+      margin-bottom: 5px;
+    }
+    .qa-input {
+      width: 100%;
+      background: #161b26;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 7px;
+      padding: 9px 10px;
+      color: #e6edf3;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .qa-input::placeholder { color: #6b7280; }
+    .qa-input:focus { outline: none; border-color: #f97316; }
+    .qa-row { display: flex; gap: 8px; }
+    .qa-row .qa-field { flex: 1; }
+    .qa-actions { display: flex; gap: 8px; margin-top: 14px; }
+    .qa-btn {
+      flex: 1;
+      padding: 9px 0;
+      border-radius: 7px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .qa-btn-primary { background: #f97316; color: #fff; }
+    .qa-btn-primary:hover { background: #ea6c0a; }
+    .qa-btn-primary:disabled { opacity: 0.55; cursor: default; }
+    .qa-btn-secondary { background: rgba(255,255,255,0.07); color: #e6edf3; }
+    .qa-btn-secondary:hover { background: rgba(255,255,255,0.12); }
+    .qa-hint { font-size: 11px; color: #8b949e; margin: -2px 0 10px; }
+    .qa-msg { font-size: 12px; margin-top: 10px; text-align: center; }
+    .qa-msg.error { color: #f85149; }
+    .qa-msg.success { color: #3fb950; }
   </style>
 </head>
 <body>
@@ -273,6 +355,11 @@
     </div>
     <div class="header-right">
       <span class="family-name" id="family-name"></span>
+      <button class="add-btn" id="btn-quick-add" title="Quick add" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
       <a class="open-link" id="open-app" href="https://kindora.ai" target="_blank" title="Open Kindora">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
