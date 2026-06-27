@@ -313,6 +313,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   <meta name="twitter:description" content="${description}" />
   <meta name="twitter:image" content="${image}" />
 
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    "name": "${title}",
+    "description": "${description}",
+    "thumbnailUrl": "${image}",
+    "contentUrl": "${video}",
+    "url": "${base}/why",
+    "uploadDate": "2025-01-01",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Kindora",
+      "url": "${base}",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "${base}/kindora-logo.jpeg?v=3"
+      }
+    }
+  }
+  </script>
+
   <meta name="theme-color" content="#0d121a" />
   <link rel="icon" type="image/jpeg" href="/kindora-logo.jpeg?v=3" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
