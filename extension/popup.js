@@ -195,7 +195,7 @@ async function boot() {
   // 1. Check authentication
   let user;
   try {
-    const res = await fetch(`${API}/api/user`, { credentials: "include", cache: "no-store" });
+    const res = await fetch(`${API}/api/auth/user`, { credentials: "include", cache: "no-store" });
     if (res.status === 401 || res.status === 403) { showSignIn(); return; }
     if (!res.ok) { showError("Couldn't connect to Kindora."); return; }
     user = await res.json();
