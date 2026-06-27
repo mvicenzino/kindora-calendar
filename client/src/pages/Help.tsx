@@ -136,18 +136,18 @@ export default function Help() {
             const isOpen = openIndex === index;
             return (
               <div key={index} className={`rounded-xl border transition-all ${isOpen ? "border-primary/30 bg-primary/5" : "border-border bg-card hover:border-primary/20"}`}>
-                <button onClick={() => setOpenIndex(isOpen ? null : index)} className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left">
+                <button onClick={() => setOpenIndex(isOpen ? null : index)} className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left" aria-expanded={isOpen}>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-primary/70 bg-primary/10 px-2 py-0.5 rounded-full border border-primary/15 whitespace-nowrap">{item.category}</span>
                     <span className="text-sm font-medium text-foreground">{item.question}</span>
                   </div>
                   {isOpen ? <ChevronUp className="w-4 h-4 text-primary flex-shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
                 </button>
-                {isOpen && (
+                <div className={`overflow-hidden transition-all duration-200 ${isOpen ? "max-h-96" : "max-h-0"}`} aria-hidden={!isOpen}>
                   <div className="px-5 pb-5 pt-0">
                     <p className="text-sm text-muted-foreground leading-relaxed ml-16">{item.answer}</p>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}

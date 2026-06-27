@@ -235,6 +235,7 @@ export default function Support() {
           <p className="text-sm text-muted-foreground">© 2026 Kindora Family, Inc.</p>
           <div className="flex items-center gap-4 flex-wrap">
             <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
+            <Link href="/help" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Help Center</Link>
             <Link href="/support" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Support</Link>
             <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
             <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>

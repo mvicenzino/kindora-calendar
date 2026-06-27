@@ -63,6 +63,20 @@ export default function PublicResources() {
           </Link>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t border-border px-4 md:px-6 py-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 flex-wrap">
+          <p className="text-sm text-muted-foreground">© 2026 Kindora Family, Inc.</p>
+          <div className="flex items-center gap-4 flex-wrap">
+            <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
+            <Link href="/help" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Help Center</Link>
+            <Link href="/support" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Support</Link>
+            <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms</Link>
+            <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy</Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
