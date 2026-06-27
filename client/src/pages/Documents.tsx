@@ -497,10 +497,6 @@ export default function Documents() {
             )}
           </div>
 
-          {canUpload && activeTab === "vault" && !driveStatus?.connected && (
-            <UnverifiedAppNote className="max-w-2xl" />
-          )}
-
           {/* Tab switcher */}
           <div className="flex gap-1 border-b border-border pb-0" data-testid="documents-tabs">
             <button

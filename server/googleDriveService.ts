@@ -91,30 +91,6 @@ export interface DriveFile {
   webViewLink?: string;
 }
 
-export async function listDriveFiles(userId: string, folderId?: string, pageToken?: string): Promise<{ files: DriveFile[], nextPageToken?: string }> {
-  const drive = await getDriveClientForUser(userId);
-
-  // Use 'root' to show items in My Drive root, or specific folder ID
-  const parentId = folderId || 'root';
-  const query = `'${parentId}' in parents and trashed = false`;
-
-  const response = await drive.files.list({
-    q: query,
-    pageSize: 50,
-    pageToken: pageToken,
-    fields: 'nextPageToken, files(id, name, mimeType, size, modifiedTime, iconLink, webViewLink)',
-    orderBy: 'folder,name',
-    // Include files from shared drives if user has access
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-  });
-
-  return {
-    files: (response.data.files || []) as DriveFile[],
-    nextPageToken: response.data.nextPageToken || undefined,
-  };
-}
-
 export async function getDriveFileMeta(userId: string, fileId: string): Promise<{ id: string; name: string; mimeType: string; size?: string }> {
   const drive = await getDriveClientForUser(userId);
   const response = await drive.files.get({
