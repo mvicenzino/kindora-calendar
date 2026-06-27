@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Helmet } from "react-helmet-async";
 import { Heart, ArrowRight, Users, Calendar, Sparkles, Quote } from "lucide-react";
 
 const logo = "/kindora-logo.jpeg";
@@ -7,6 +8,21 @@ const logo = "/kindora-logo.jpeg";
 export default function About() {
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <Helmet>
+        <title>About Kindora — Built for the Sandwich Generation</title>
+        <meta name="description" content="Learn why Kindora was built — a family calendar and caregiving coordination app designed for families managing children's activities and eldercare at the same time." />
+        <link rel="canonical" href="https://kindora.ai/about" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://kindora.ai/about" />
+        <meta property="og:title" content="About Kindora — Built for the Sandwich Generation" />
+        <meta property="og:description" content="Kindora was built by a caregiver for caregivers. Discover the story behind the family calendar designed for families managing children's activities and eldercare." />
+        <meta property="og:image" content="https://kindora.ai/og-image.png?v=3" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://kindora.ai/about" />
+        <meta name="twitter:title" content="About Kindora — Built for the Sandwich Generation" />
+        <meta name="twitter:description" content="Kindora was built by a caregiver for caregivers. Discover the story behind the family calendar designed for families managing children's activities and eldercare." />
+        <meta name="twitter:image" content="https://kindora.ai/og-image.png?v=3" />
+      </Helmet>
       {/* Nav */}
       <header className="border-b border-border px-4 md:px-6 py-4 sticky top-0 z-50 bg-background/95 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">

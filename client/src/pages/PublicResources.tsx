@@ -10,14 +10,20 @@ export default function PublicResources() {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Free Caregiver Resources — Checklists, Guides & Templates | Kindora</title>
+        <title>Free Caregiver Resources — Checklists, Guides &amp; Templates | Kindora</title>
         <meta name="description" content="Free caregiver resources including the Parenting Aging Parents Checklist, Hospital Discharge Checklist, Caregiver Burnout Self-Assessment, Medicare vs. Medicaid Guide, and more. No account needed." />
+        <link rel="canonical" href="https://kindora.ai/resources" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://kindora.ai/resources" />
         <meta property="og:title" content="Free Caregiver Resources — Kindora" />
         <meta property="og:description" content="Checklists, guides, assessments, and templates for families navigating eldercare, parenting, and the sandwich generation. Free, no sign-up required." />
-        <meta property="og:type" content="website" />
-        <link rel="canonical" href="https://kindora.ai/resources" />
+        <meta property="og:image" content="https://kindora.ai/og-image.png?v=3" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://kindora.ai/resources" />
+        <meta name="twitter:title" content="Free Caregiver Resources — Kindora" />
+        <meta name="twitter:description" content="Free checklists, guides, templates, and self-assessments for family caregivers. No account needed." />
+        <meta name="twitter:image" content="https://kindora.ai/og-image.png?v=3" />
       </Helmet>
-
       {/* Minimal nav */}
       <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">

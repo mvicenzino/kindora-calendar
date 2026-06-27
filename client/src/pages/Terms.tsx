@@ -7,12 +7,19 @@ export default function Terms() {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Terms of Service - Kindora</title>
+        <title>Terms of Service — Kindora</title>
         <meta name="description" content="Read the Kindora Terms of Service. Understand the rules and guidelines for using the Kindora family calendar and caregiving coordination platform." />
-        <meta property="og:title" content="Terms of Service - Kindora" />
-        <meta property="og:description" content="Read the Kindora Terms of Service for the family calendar and caregiving coordination platform." />
-        <meta property="og:url" content="https://kindora.ai/terms" />
         <link rel="canonical" href="https://kindora.ai/terms" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://kindora.ai/terms" />
+        <meta property="og:title" content="Terms of Service — Kindora" />
+        <meta property="og:description" content="Read the Kindora Terms of Service for the family calendar and caregiving coordination platform." />
+        <meta property="og:image" content="https://kindora.ai/og-image.png?v=3" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://kindora.ai/terms" />
+        <meta name="twitter:title" content="Terms of Service — Kindora" />
+        <meta name="twitter:description" content="Read the Kindora Terms of Service for the family calendar and caregiving coordination platform." />
+        <meta name="twitter:image" content="https://kindora.ai/og-image.png?v=3" />
       </Helmet>
 
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-muted/50 border-b border-border px-4 md:px-6 py-4">

@@ -7,12 +7,19 @@ export default function Privacy() {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>Privacy Policy - Kindora</title>
+        <title>Privacy Policy — Kindora</title>
         <meta name="description" content="Learn how Kindora collects, uses, and protects your personal and family data. Our Privacy Policy covers data security, retention, cookies, and your rights." />
-        <meta property="og:title" content="Privacy Policy - Kindora" />
-        <meta property="og:description" content="Learn how Kindora protects your personal and family data. Read our Privacy Policy." />
-        <meta property="og:url" content="https://kindora.ai/privacy" />
         <link rel="canonical" href="https://kindora.ai/privacy" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://kindora.ai/privacy" />
+        <meta property="og:title" content="Privacy Policy — Kindora" />
+        <meta property="og:description" content="Learn how Kindora protects your personal and family data. Our Privacy Policy covers data security, retention, cookies, and your rights." />
+        <meta property="og:image" content="https://kindora.ai/og-image.png?v=3" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://kindora.ai/privacy" />
+        <meta name="twitter:title" content="Privacy Policy — Kindora" />
+        <meta name="twitter:description" content="Learn how Kindora protects your personal and family data. Our Privacy Policy covers data security, retention, cookies, and your rights." />
+        <meta name="twitter:image" content="https://kindora.ai/og-image.png?v=3" />
       </Helmet>
 
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-muted/50 border-b border-border px-4 md:px-6 py-4">

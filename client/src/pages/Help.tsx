@@ -64,8 +64,19 @@ export default function Help() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Helmet>
-        <title>Help Center - Kindora</title>
-        <meta name="description" content="Get help with Kindora — family calendar, caregiver tools, medication logging, and more." />
+        <title>Help Center — Kindora</title>
+        <meta name="description" content="Get help with Kindora — family calendar, caregiver tools, medication logging, recurring events, document vault, and more. Browse our FAQ or contact support." />
+        <link rel="canonical" href="https://kindora.ai/help" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://kindora.ai/help" />
+        <meta property="og:title" content="Help Center — Kindora" />
+        <meta property="og:description" content="Get help with Kindora — family calendar, caregiver tools, medication logging, and more. Browse our FAQ or contact support." />
+        <meta property="og:image" content="https://kindora.ai/og-image.png?v=3" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://kindora.ai/help" />
+        <meta name="twitter:title" content="Help Center — Kindora" />
+        <meta name="twitter:description" content="Get help with Kindora — family calendar, caregiver tools, medication logging, and more. Browse our FAQ or contact support." />
+        <meta name="twitter:image" content="https://kindora.ai/og-image.png?v=3" />
       </Helmet>
 
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border px-4 md:px-6 py-4">

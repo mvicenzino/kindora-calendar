@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Helmet } from "react-helmet-async";
 import { ChevronRight, ArrowRight, Pill, Clock, Mail, Shield, Star, Heart, Calendar, MessageCircle, FolderLock, Image, Loader2 } from "lucide-react";
 const logoDark = "/kindora-logo.jpeg";
 import { useAuth } from "@/hooks/useAuth";
@@ -265,6 +266,21 @@ export default function Intro() {
         transition: "background 0.8s ease",
       }}
     >
+      <Helmet>
+        <title>Kindora — The family calendar built for real life</title>
+        <meta name="description" content="Kindora helps families and caregivers coordinate schedules, medical appointments, and care needs. Built for the Sandwich Generation managing children's activities and eldercare." />
+        <link rel="canonical" href="https://kindora.ai/intro" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://kindora.ai/intro" />
+        <meta property="og:title" content="Kindora — The family calendar built for real life" />
+        <meta property="og:description" content="Juggling kids, aging parents, and everything in between? Kindora keeps your whole family in sync — schedules, medications, care docs, and more." />
+        <meta property="og:image" content="https://kindora.ai/og-image.png?v=3" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content="https://kindora.ai/intro" />
+        <meta name="twitter:title" content="Kindora — The family calendar built for real life" />
+        <meta name="twitter:description" content="Juggling kids, aging parents, and everything in between? Kindora keeps your whole family in sync — schedules, medications, care docs, and more." />
+        <meta name="twitter:image" content="https://kindora.ai/og-image.png?v=3" />
+      </Helmet>
       <div className="flex items-center justify-between px-6 pt-6">
         <div className="flex items-center gap-2.5">
           <img src={logoDark} alt="Kindora" className="w-8 h-8 rounded-lg flex-shrink-0" />
