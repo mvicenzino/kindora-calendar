@@ -2791,16 +2791,34 @@ Visit Kindora Calendar: ${joinUrl}
         ? [author.firstName, author.lastName].filter(Boolean).join(' ') || author.email || 'Someone'
         : 'Someone';
       const familyMembers = await storage.getFamilyMembershipsWithUsers(familyId);
+      const { sendPushToUser } = await import("./pushService");
+      const pushBody = message.content && message.content.length > 140
+        ? message.content.slice(0, 137) + "…"
+        : (message.content || "Open Kindora to read it.");
       for (const fm of familyMembers) {
-        if (fm.userId !== userId) {
-          pushSSEEvent(fm.userId, 'new-message', {
-            id: message.id,
-            content: message.content,
-            familyId: message.familyId,
-            authorName,
-            authorAvatar: author?.profileImageUrl || null,
-          });
-        }
+        if (fm.userId === userId) continue;
+        // Respect message visibility: caregivers can only read 'caregiver'
+        // messages (mirrors GET /api/family-messages), so don't notify them
+        // about messages they aren't allowed to see.
+        if (fm.role === 'caregiver' && message.messageType !== 'caregiver') continue;
+        // Live in-app notification (only seen when the app is open)
+        pushSSEEvent(fm.userId, 'new-message', {
+          id: message.id,
+          content: message.content,
+          familyId: message.familyId,
+          authorName,
+          authorAvatar: author?.profileImageUrl || null,
+        });
+        // Web push notification to their phone (works when the app is closed,
+        // if they've opted in). Fire-and-forget — never blocks the response.
+        sendPushToUser(fm.userId, {
+          title: `New message from ${authorName}`,
+          body: pushBody,
+          url: "/messages",
+          tag: "kindora-family-message",
+        }).catch((err) =>
+          console.error("[push] family-message error:", err),
+        );
       }
 
       res.status(201).json(enrichedMessage);
