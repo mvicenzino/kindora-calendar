@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocation, Link } from "wouter";
-import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink, Play } from "lucide-react";
+import { Calendar, Zap, Users, Heart, LogOut, Sparkles, Facebook, Instagram, Twitter, HeartHandshake, Clock, Shield, CalendarCheck, DollarSign, Pill, X, Mail, Lock, User as UserIcon, Check, ArrowRight, Wand2, MessageCircle, MessageSquare, Send, AtSign, Image, Star, BookOpen, Camera, Mic, Search, FileText, FolderOpen, HardDrive, ExternalLink, Play, AlertTriangle } from "lucide-react";
 import heroVideo from "@assets/generated_videos/kindora_family_hero_smooth.mp4";
 import kindoraAnimation from "@assets/kindora_why_compressed.mp4";
 
@@ -15,6 +15,30 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 type AuthMode = "none" | "login" | "register";
 
+// Google blocks OAuth sign-in inside embedded/in-app browsers (the built-in
+// browsers used by LinkedIn, Instagram, Facebook, etc.) with an
+// "Error 403: disallowed_useragent". Detect those so we can guide people to
+// open the page in their real browser (Safari/Chrome) before using Google.
+function detectInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const tokens = [
+    "FBAN", "FBAV", "FB_IAB", // Facebook / Messenger
+    "Instagram",
+    "LinkedInApp",
+    "Twitter",
+    "Line/",
+    "Snapchat",
+    "Pinterest",
+    "MicroMessenger", // WeChat
+    "TikTok", "musical_ly", "BytedanceWebview",
+  ];
+  if (tokens.some((t) => ua.indexOf(t) !== -1)) return true;
+  // Generic Android in-app WebView
+  if (/Android/.test(ua) && /\bwv\b/.test(ua)) return true;
+  return false;
+}
+
 export default function Landing() {
   const [, setLocation] = useLocation();
   const { isAuthenticated } = useAuth();
@@ -25,6 +49,11 @@ export default function Landing() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [videoExpanded, setVideoExpanded] = useState(false);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+
+  useEffect(() => {
+    setIsInAppBrowser(detectInAppBrowser());
+  }, []);
 
   // Force dark mode on html element while on the landing page so all
   // CSS variables (inputs, buttons, etc.) resolve correctly regardless of user theme preference.
@@ -280,6 +309,25 @@ export default function Landing() {
               </div>
             )}
 
+            {isInAppBrowser && (
+              <div
+                className="mb-5 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200"
+                data-testid="banner-inapp-browser"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-amber-100">Open in your browser for Google sign-in</p>
+                    <p className="text-amber-200/90">
+                      You opened this inside another app, so Google sign-in is blocked here. Tap
+                      the menu (three dots) at the top corner and choose “Open in Safari” or
+                      “Open in Chrome” — or just create an account with your email below.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {authMode === "register" && (
                 <div className="grid grid-cols-2 gap-3">
@@ -381,7 +429,18 @@ export default function Landing() {
 
             <Button
               variant="outline"
-              onClick={() => { window.location.href = "/api/auth/google"; }}
+              onClick={() => {
+                if (isInAppBrowser) {
+                  toast({
+                    title: "Open in your browser first",
+                    description:
+                      "Google blocks sign-in inside in-app browsers like LinkedIn. Tap the menu (three dots) and choose “Open in Safari” or “Open in Chrome”, then try again — or sign up with your email here.",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                window.location.href = "/api/auth/google";
+              }}
               className="w-full"
               data-testid="button-google-signin"
             >
