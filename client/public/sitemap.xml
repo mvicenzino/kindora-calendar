@@ -19,6 +19,12 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://kindora.ai/help</loc>
+    <lastmod>2026-06-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://kindora.ai/resources</loc>
     <lastmod>2026-04-20</lastmod>
     <changefreq>weekly</changefreq>

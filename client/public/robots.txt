@@ -10,5 +10,14 @@ Disallow: /memories
 Disallow: /health
 Disallow: /tasks
 Disallow: /advisor
+Disallow: /calendar
+Disallow: /chores
+Disallow: /meals
+Disallow: /admin
+Disallow: /onboarding
+Disallow: /demo-welcome
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
 
 Sitemap: https://kindora.ai/sitemap.xml

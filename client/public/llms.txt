@@ -1,0 +1,14 @@
+# Kindora
+
+> Kindora is a family calendar and caregiving coordination app for the sandwich generation — people raising children while caring for aging parents. It helps families, trusted caregivers, and healthcare providers coordinate schedules, medical appointments, medications, and care needs in one shared place.
+
+## Public pages
+
+- https://kindora.ai/ — Home / landing page: product overview and sign-up
+- https://kindora.ai/why — Why Kindora: the sandwich generation problem we solve
+- https://kindora.ai/about — About us: mission, team, and story
+- https://kindora.ai/help — Help center: how-to guides and FAQs
+- https://kindora.ai/support — Support: contact form and troubleshooting
+- https://kindora.ai/resources — Public resources: eldercare checklists, guides, and assessments
+- https://kindora.ai/terms — Terms of Service
+- https://kindora.ai/privacy — Privacy Policy
