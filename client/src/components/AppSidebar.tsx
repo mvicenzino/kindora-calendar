@@ -47,11 +47,15 @@ const caregiverNavItems = [
 
 const RELEASE_NOTES = [
   {
-    date: "June 2026",
+    date: "June 27, 2026",
     changes: [
       "Meet Kira's Meal Planner — tell it your family size, which days and meals, and any allergies or dislikes, and it builds a full week of meals plus one organized grocery list (find it under Meals). Email or print any plan.",
       "Your AI helper is now named Kira everywhere — one friendly, consistent name across the whole app",
       "Kira now knows your family — add your preferences (allergies, foods you avoid, routines) during setup or in Settings → Family, and Kira remembers them so you never have to re-explain your household",
+      "New Health tracking is live — log daily symptoms, track hydration, spot trends over time, and generate doctor-friendly reports for each family member",
+      "Medications now live inside Health too, and you can import meds with AI from pasted text, a photo, or a file instead of typing everything by hand",
+      "Kira is now available from any page in a slide-out side panel, with personalized greetings, quick prompts, and full conversation history",
+      "Kira can now take action for you — ask it to create a calendar event or log a health note right from the chat",
       "Two-way Google Calendar sync — events now flow both directions between Kindora and your Google Calendar",
       "Sign in with Google — faster, password-free login",
       "Forgot your password? You can now reset it yourself, and verify your email to keep your account secure",
